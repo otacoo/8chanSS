@@ -1,0 +1,52 @@
+{
+  "name": "8chanSS",
+  "version": "1.2.26",
+  "description": "Userscript to style 8chan",
+  "meta": {
+    "name": "8chanSS",
+    "repo": "https://codeberg.org/omelet/8chanSS",
+    "page": "https://codeberg.org/omelet/8chanSS",
+    "downloads": "https://codeberg.org/omelet/8chanSS/releases/latest/download/",
+    "buildsPath": "builds/",
+    "mainBranch": "main",
+    "matches": [
+      "*://8chan.moe/*",
+      "*://8chan.se/*"
+    ],
+    "exclude_matches": [
+      "*://8chan.moe/login.html",
+      "*://8chan.se/login.html"
+    ],
+    "files": {
+      "metajs": "8chanSS.meta.js",
+      "userjs": "8chanSS.user.js"
+    },
+    "min": {
+      "chrome": "105",
+      "firefox": "121",
+      "greasemonkey": "4.3"
+    }
+  },
+  "devDependencies": {
+    "grunt": "^1.6.1",
+    "grunt-bump": "^0.8.0",
+    "grunt-contrib-clean": "^2.0.1",
+    "grunt-contrib-concat": "~2.1.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-cssmin": "^5.0.0",
+    "grunt-shell": "~4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://codeberg.org/omelet/8chanSS.git"
+  },
+  "author": "omelet",
+  "contributors": [
+    ""
+  ],
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "engines": {
+    "node": ">=0.10"
+  }
+}

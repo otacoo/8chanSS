@@ -1,0 +1,21 @@
+{
+  "name": "<%= meta.name %>",
+  "version": "<%= version %>",
+  "manifest_version": 2,
+  "description": "<%= description %>",
+  "content_scripts": [{
+    "js": ["script.js"],
+    "matches": <%= JSON.stringify(meta.matches) %>,
+    "exclude_matches": <%= JSON.stringify(meta.exclude_matches) %>,
+    "all_frames": true,
+    "run_at": "document_start"
+  }],
+  "homepage_url": "<%= meta.page %>",
+  "update_url": "<%= meta.downloads %>updates.xml",
+  "minimum_chrome_version": "<%= meta.min.chrome %>",
+  "permissions": [
+    "storage",
+    "*://8chan.moe/*",
+    "*://8chan.se/*"
+  ]
+}
