@@ -624,7 +624,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.textContent = "Press Save to apply changes. Page will reload.";
+        info.textContent = "Press Save to apply changes. Page will reload. - Ver. <%= version %>";
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -1299,7 +1299,7 @@ onReady(async function () {
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    /* --- Feature: Blur Spoilers + Remove Spoilers suboption --- */
+    // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
     function featureBlurSpoilers() {
         function revealSpoilers() {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
