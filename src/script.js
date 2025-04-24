@@ -2065,4 +2065,12 @@ onReady(async function () {
     document
         .getElementById("qrbody")
         ?.addEventListener("keydown", replyKeyboardShortcuts);
+
+    // --- Misc Fixes ---
+
+    // Captcha input no history
+    const captchaInput = document.getElementById("QRfieldCaptcha");
+    if (captchaInput) {
+        captchaInput.autocomplete = "off";
+    }
 });
