@@ -1,3 +1,12 @@
+## v1.29.0
+*2025-04-24*
+
+- New Option: Show Unread Line
+- Unread Line will now disappear if the page is scrolled to the bottom
+- Images on Hover will now show up while loading
+- Removed most of Thread Watcher CSS and JS styling for now as it's causing slow downs with large # of threads
+- Captcha input field will no longer show history (useless)
+
 ### v1.28.0
 *2025-04-24*
 
