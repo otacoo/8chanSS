@@ -63,31 +63,6 @@ nav.navHeader {
     min-width: 200px;
 }
 
-#watchedMenu .watchedCellLabel>a:after {
-    content: ' - ' attr(href);
-    filter: saturate(50%);
-    font-style: italic;
-    font-weight: bold;
-}
-
-#watchedMenu .watchedCellLabel>a::after {
-    visibility: hidden;
-}
-
-td.watchedCell>label.watchedCellLabel {
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    width: 180px;
-    display: block;
-}
-
-td.watchedCell>label.watchedCellLabel:hover {
-    overflow: unset;
-    width: auto;
-    white-space: normal;
-}
-
 .watchedNotification::before {
     padding-right: 2px;
 }
