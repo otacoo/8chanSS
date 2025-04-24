@@ -1,23 +1,16 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.2.27
+// @version      1.28.0
 // @namespace    8chanSS
 // @description  Userscript to style 8chan
+// @author       otakudude
 // @minGMVer     4.3
 // @minFFVer     121
 // @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
-// @match        http://8chan.moe/*
-// @match        https://8chan.moe/*
-// @match        http://8chan.se/*
-// @match        https://8chan.se/*
-// @exclude      http://8chan.moe/login.html
-// @exclude      https://8chan.moe/login.html
-// @exclude      http://8chan.se/login.html
-// @exclude      https://8chan.se/login.html
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        GM_deleteValue
-// @grant        GM_listValues
+// @match        *://8chan.moe/*
+// @match        *://8chan.se/*
+// @exclude      *://8chan.moe/login.html
+// @exclude      *://8chan.se/login.html
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.deleteValue
@@ -26,15 +19,11 @@
 // @updateURL    https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.meta.js
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
 // ==/UserScript==
-///// JANK THEME FLASH FIX LOAD ASAP /////////
+
 (function () {
-    // Get the user's selected theme from localStorage
     const userTheme = localStorage.selectedTheme;
     if (!userTheme) return;
-
-    // Try to swap the theme <link> as early as possible
     const swapTheme = () => {
-        // Find the <link rel="stylesheet"> for the board's theme
         const themeLink = Array.from(
             document.getElementsByTagName("link")
         ).find(
@@ -43,17 +32,12 @@
                 /\/\.static\/css\/themes\//.test(link.href)
         );
         if (themeLink) {
-            // Replace the href with the user's theme
             const themeBase = themeLink.href.replace(/\/[^\/]+\.css$/, "/");
             themeLink.href = themeBase + userTheme + ".css";
         }
     };
-
-    // Try immediately, and also on DOMContentLoaded in case elements aren't ready yet
     swapTheme();
     document.addEventListener("DOMContentLoaded", swapTheme);
-
-    // Also, if the theme selector exists, set its value to the user's theme
     document.addEventListener("DOMContentLoaded", function () {
         const themeSelector = document.getElementById("themeSelector");
         if (themeSelector) {
@@ -69,16 +53,12 @@
         }
     });
 })();
-////////// Disable native extension settings //////
 (function () {
     try {
-        // Image Hover
         localStorage.removeItem("hoveringImage");
     } catch (e) {
-        // Ignore errors (e.g., storage not available)
     }
 })();
-////////// ON READY HELPER ///////////////////////
 function onReady(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
@@ -86,9 +66,7 @@ function onReady(fn) {
         fn();
     }
 }
-//////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
-    // --- Default Settings ---
     const scriptSettings = {
         site: {
             alwaysShowTW: { label: "Pin Thread Watcher", default: false },
@@ -148,14 +126,11 @@ onReady(async function () {
             hideBanner: { label: "Hide Board Banners", default: false },
         },
     };
-
-    // Flatten settings for backward compatibility with existing functions
     const flatSettings = {};
     function flattenSettings() {
         Object.keys(scriptSettings).forEach((category) => {
             Object.keys(scriptSettings[category]).forEach((key) => {
                 flatSettings[key] = scriptSettings[category][key];
-                // Also flatten any sub-options
                 if (scriptSettings[category][key].subOptions) {
                     Object.keys(scriptSettings[category][key].subOptions).forEach(
                         (subKey) => {
@@ -169,8 +144,6 @@ onReady(async function () {
         });
     }
     flattenSettings();
-
-    // --- GM storage wrappers ---
     async function getSetting(key) {
         if (!flatSettings[key]) {
             console.warn(`Setting key not found: ${key}`);
@@ -183,11 +156,8 @@ onReady(async function () {
     }
 
     async function setSetting(key, value) {
-        // Always store as string for consistency
         await GM.setValue("8chanSS_" + key, String(value));
     }
-
-    // --- Root CSS Class Toggles ---
     async function featureCssClassToggles() {
         document.documentElement.classList.add("8chanSS");
         const classToggles = {
@@ -210,7 +180,6 @@ onReady(async function () {
                 document.documentElement.classList.remove(className);
             }
         }
-        // URL-based class toggling
         const urlClassMap = [
             { pattern: /\/catalog\.html$/i, className: "is-catalog" },
             { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
@@ -225,10 +194,7 @@ onReady(async function () {
             }
         });
     }
-    // Init
     featureCssClassToggles();
-
-    // --- Menu Icon ---
     const themeSelector = document.getElementById("themesBefore");
     let link = null;
     let bracketSpan = null;
@@ -247,21 +213,16 @@ onReady(async function () {
         );
         themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
     }
-
-    // --- Shortcuts tab ---
     function createShortcutsTab() {
         const container = document.createElement("div");
-        // Title
         const title = document.createElement("h3");
         title.textContent = "Keyboard Shortcuts";
         title.style.margin = "0 0 15px 0";
         title.style.fontSize = "16px";
         container.appendChild(title);
-        // Shortcuts table
         const table = document.createElement("table");
         table.style.width = "100%";
         table.style.borderCollapse = "collapse";
-        // Table styles
         const tableStyles = {
             th: {
                 textAlign: "left",
@@ -284,8 +245,6 @@ onReady(async function () {
                 fontFamily: "monospace",
             },
         };
-
-        // Create header row
         const headerRow = document.createElement("tr");
         const shortcutHeader = document.createElement("th");
         shortcutHeader.textContent = "Shortcut";
@@ -298,8 +257,6 @@ onReady(async function () {
         headerRow.appendChild(actionHeader);
 
         table.appendChild(headerRow);
-
-        // Shortcut data
         const shortcuts = [
             { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
             { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
@@ -314,23 +271,15 @@ onReady(async function () {
             { keys: ["Ctrl", "M"], action: "Moe text" },
             { keys: ["Alt", "C"], action: "Code block" },
         ];
-
-        // Create rows for each shortcut
         shortcuts.forEach((shortcut) => {
             const row = document.createElement("tr");
-
-            // Shortcut cell
             const shortcutCell = document.createElement("td");
             Object.assign(shortcutCell.style, tableStyles.td);
-
-            // Create kbd elements for each key
             shortcut.keys.forEach((key, index) => {
                 const kbd = document.createElement("kbd");
                 kbd.textContent = key;
                 Object.assign(kbd.style, tableStyles.kbd);
                 shortcutCell.appendChild(kbd);
-
-                // Add + between keys
                 if (index < shortcut.keys.length - 1) {
                     const plus = document.createTextNode(" + ");
                     shortcutCell.appendChild(plus);
@@ -338,8 +287,6 @@ onReady(async function () {
             });
 
             row.appendChild(shortcutCell);
-
-            // Action cell
             const actionCell = document.createElement("td");
             actionCell.textContent = shortcut.action;
             Object.assign(actionCell.style, tableStyles.td);
@@ -349,8 +296,6 @@ onReady(async function () {
         });
 
         container.appendChild(table);
-
-        // Add note about BBCode shortcuts
         const note = document.createElement("p");
         note.textContent =
             "Text formatting shortcuts work when text is selected or when inserting at cursor position.";
@@ -362,10 +307,6 @@ onReady(async function () {
 
         return container;
     }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // Custom CSS injection
     function addCustomCSS(css) {
         if (!css) return;
         const style = document.createElement("style");
@@ -374,265 +315,20 @@ onReady(async function () {
         style.appendChild(document.createTextNode(css));
         document.head.appendChild(style);
     }
-    // Get the current URL path
     const currentPath = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
-
-    // Apply CSS based on URL pattern
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        // General CSS for all pages
-        const css = `
-        /* Margins */
-        :not(.is-catalog) body {
-            margin: 0;
-        }
-        :root.ss-sidebar #mainPanel {
-            margin-right: 305px;
-        }
-        /* Side Catalog */
-        #sideCatalogDiv {
-            z-index: 200;
-            background: var(--background-gradient);
-        }
-        /* Cleanup */
-        :root.hide-posting-form #postingForm,
-        :root.hide-announcement #dynamicAnnouncement,
-        :root.hide-panelmessage #panelMessage,
-        #navFadeEnd,
-        #navFadeMid,
-        #navTopBoardsSpan {
-            display: none;
-        }
-        :root.is-catalog.show-catalog-form #postingForm {
-            display: block !important;
-        }
-        footer {
-            visibility: hidden;
-            height: 0;
-        }
-        /* Header */
-        nav.navHeader {
-            z-index: 300;
-        }
-        :not(:root.bottom-header) .navHeader {
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-        }
-        :root.bottom-header nav.navHeader {
-            top: auto !important;
-            bottom: 0 !important;
-            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
-        }
-        /* Thread Watcher */
-        .watchButton.watched-active::before {
-            color: #dd003e !important;
-        }
-        #watchedMenu {
-            font-size: smaller;
-            padding: 5px !important;
-            box-shadow: -3px 3px 2px 0px rgba(0,0,0,0.19);
-        }
-        #watchedMenu,
-        #watchedMenu .floatingContainer {
-            min-width: 200px;
-        }
-        #watchedMenu .watchedCellLabel > a:after {
-            content: " - "attr(href);
-            filter: saturate(50%);
-            font-style: italic;
-            font-weight: bold;
-        }
-        #watchedMenu .watchedCellLabel > a::after {
-            visibility: hidden;
-        }
-        td.watchedCell > label.watchedCellLabel {
-            text-overflow: ellipsis;
-            overflow: hidden;
-            white-space: nowrap;
-            width: 180px;
-            display: block;
-        }
-        td.watchedCell > label.watchedCellLabel:hover {
-            overflow: unset;
-            width: auto;
-            white-space: normal;
-        }
-        .watchedNotification::before {
-            padding-right: 2px;
-        }
-        .scroll-arrow-btn {
-            position: fixed;
-            right: 50px;
-            width: 36px;
-            height: 35px;
-            background: #222;
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-            font-size: 22px;
-            cursor: pointer;
-            opacity: 0.7;
-            z-index: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.2s, background 0.2s;
-         }
-        /* Up/Down Arrows */
-        :root.ss-sidebar .scroll-arrow-btn {
-            right: 330px !important;
-        }
-        .scroll-arrow-btn:hover {
-            opacity: 1;
-            background: #444;
-        }
-        #scroll-arrow-up {
-            bottom: 80px;
-        }
-        #scroll-arrow-down {
-            bottom: 32px;
-        }
-        /* Links at top of page */
-        .innerUtility.top {
-            margin-top: 2em;
-            background-color: transparent !important;
-            color: var(--link-color) !important;
-        }
-        .innerUtility.top a {
-            color: var(--link-color) !important;
-        }
-        .bumpLockIndicator::after {
-            padding-right: 3px;
-        }
-          `;
+        const css = ":not(.is-catalog) body{margin:0}:root.ss-sidebar #mainPanel{margin-right:305px}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,#navTopBoardsSpan,:root.hide-announcement #dynamicAnnouncement,:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}#watchedMenu .watchedCellLabel>a:after{content:' - ' attr(href);filter:saturate(50%);font-style:italic;font-weight:700}#watchedMenu .watchedCellLabel>a::after{visibility:hidden}td.watchedCell>label.watchedCellLabel{text-overflow:ellipsis;overflow:hidden;white-space:nowrap;width:180px;display:block}td.watchedCell>label.watchedCellLabel:hover{overflow:unset;width:auto;white-space:normal}.watchedNotification::before{padding-right:2px}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root.ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}";
         addCustomCSS(css);
     }
-
-    // Thread page CSS
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        const css = `
-        /* Quick Reply */
-        :root.sticky-qr #quick-reply {
-            display: block;
-            top: auto !important;
-            bottom: 0;
-            left: auto !important;
-            position: fixed;
-            right: 0 !important;
-        }
-        :root.sticky-qr #qrbody {
-            resize: vertical;
-            max-height: 50vh;
-            height: 130px;
-        }
-        #qrbody {
-            min-width: 300px;
-        }
-        :root.bottom-header #quick-reply {
-            bottom: 28px !important;
-        }
-        #quick-reply {
-            padding: 0;
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
-        }
-        #quick-reply:hover,
-        #quick-reply:focus-within {
-            opacity: 1;
-        }
-        .floatingMenu {
-            padding: 0 !important;
-        }
-        #qrFilesBody {
-            max-width: 300px;
-        }
-        /* Unread Line */
-        #unread-line {
-            height: 2px;
-            border: none !important;
-            pointer-events: none !important;
-            background-image: linear-gradient(to left, rgba(185, 185, 185, 0.2), var(--text-color), rgba(185, 185, 185, 0.2));
-            margin: -3px auto 0 auto;
-            width: 60%;
-        }
-        /* Banner */
-        :root.disable-banner #bannerImage {
-            display: none;
-        }
-        :root.ss-sidebar #bannerImage {
-            width: 305px;
-            right: 0;
-            position: fixed;
-            top: 26px;
-        }
-        :root.ss-sidebar.bottom-header #bannerImage {
-            top: 0 !important;
-        }
-        .quoteTooltip {
-            z-index: 999;
-        }
-        /* Posts */
-        .inlineQuote .replyPreview {
-            margin-left: 20px;
-            border-left: 1px solid #ccc;
-            padding-left: 10px;
-        }
-        .nestedQuoteLink {
-            text-decoration: underline dashed !important;
-        }
-        :root.hide-stub .unhideButton {
-            display: none;
-        }
-        .quoteTooltip .innerPost {
-            overflow: hidden;
-            box-shadow: -3px 3px 2px 0px rgba(0,0,0,0.19);
-        }
-        :root.fit-replies :not(.hidden).innerPost {
-            margin-left: 10px;
-            display: flow-root;
-        }
-        :root.fit-replies .quoteTooltip {
-            display: table !important;
-        }
-        /* (You) Replies */
-        :root.highlight-you .innerPost:has(.youName) {
-            border-left: dashed #68b723 3px;
-        }
-        :root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you) {
-            border-left: solid #dd003e 3px;
-        }
-        /* Filename & Thumbs */
-        .originalNameLink {
-            display: inline;
-            overflow-wrap: anywhere;
-            white-space: normal;
-        }
-        .multipleUploads .uploadCell:not(.expandedCell) {
-            max-width: 215px;
-        }
-        /* Not sure what this is about, guess we'll find out */
-        .postCell::before {
-            display: inline !important;
-            height: auto !important;
-        }
-          `;
+        const css = ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0;left:auto!important;position:fixed;right:0!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}#quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}#quick-reply:focus-within,#quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:300px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.disable-banner #bannerImage{display:none}:root.ss-sidebar #bannerImage{width:305px;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.inlineQuote .replyPreview{margin-left:20px;border-left:1px solid #ccc;padding-left:10px}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies .quoteTooltip{display:table!important}:root.highlight-you .innerPost:has(.youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you){border-left:solid #dd003e 3px}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}.postCell::before{display:inline!important;height:auto!important}";
         addCustomCSS(css);
     }
-
-    // Catalog page CSS
     if (/\/catalog\.html$/.test(currentPath)) {
-        const css = `
-          #dynamicAnnouncement {
-              display: none;
-          }
-          #postingForm {
-              margin: 2em auto;
-          }
-          `;
+        const css = "#dynamicAnnouncement{display:none}#postingForm{margin:2em auto}";
         addCustomCSS(css);
     }
-
-    // --- Floating Settings Menu with Tabs ---
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
         if (menu) return menu;
@@ -653,8 +349,6 @@ onReady(async function () {
         menu.style.maxWidth = "365px";
         menu.style.fontFamily = "sans-serif";
         menu.style.userSelect = "none";
-
-        // Draggable
         let isDragging = false,
             dragOffsetX = 0,
             dragOffsetY = 0;
@@ -694,8 +388,6 @@ onReady(async function () {
             isDragging = false;
             document.body.style.userSelect = "";
         });
-
-        // Title and close button
         const title = document.createElement("span");
         title.textContent = "8chanSS Settings";
         title.style.fontWeight = "bold";
@@ -715,28 +407,20 @@ onReady(async function () {
         header.appendChild(closeBtn);
 
         menu.appendChild(header);
-
-        // Tab navigation
         const tabNav = document.createElement("div");
         tabNav.style.display = "flex";
         tabNav.style.borderBottom = "1px solid #444";
         tabNav.style.background = "#2a2a2a";
-
-        // Tab content container
         const tabContent = document.createElement("div");
         tabContent.style.padding = "15px 18px";
         tabContent.style.maxHeight = "60vh";
         tabContent.style.overflowY = "auto";
-
-        // Store current (unsaved) values
         const tempSettings = {};
         await Promise.all(
             Object.keys(flatSettings).map(async (key) => {
                 tempSettings[key] = await getSetting(key);
             })
         );
-
-        // Create tabs
         const tabs = {
             site: {
                 label: "Site",
@@ -759,8 +443,6 @@ onReady(async function () {
                 content: createShortcutsTab(),
             },
         };
-
-        // Create tab buttons
         Object.keys(tabs).forEach((tabId, index, arr) => {
             const tab = tabs[tabId];
             const tabButton = document.createElement("button");
@@ -776,8 +458,6 @@ onReady(async function () {
             tabButton.style.flex = "1";
             tabButton.style.fontSize = "14px";
             tabButton.style.transition = "background 0.2s";
-
-            // Add rounded corners and margin to the first and last tab
             if (index === 0) {
                 tabButton.style.borderTopLeftRadius = "8px";
                 tabButton.style.margin = "5px 0 0 5px";
@@ -785,19 +465,14 @@ onReady(async function () {
             if (index === arr.length - 1) {
                 tabButton.style.borderTopRightRadius = "8px";
                 tabButton.style.margin = "5px 5px 0 0";
-                tabButton.style.borderRight = "none"; // Remove border on last tab
+                tabButton.style.borderRight = "none"; 
             }
 
             tabButton.addEventListener("click", () => {
-                // Hide all tab contents
                 Object.values(tabs).forEach((t) => {
                     t.content.style.display = "none";
                 });
-
-                // Show selected tab content
                 tab.content.style.display = "block";
-
-                // Update active tab button
                 tabNav.querySelectorAll("button").forEach((btn) => {
                     btn.style.background = "transparent";
                 });
@@ -808,22 +483,16 @@ onReady(async function () {
         });
 
         menu.appendChild(tabNav);
-
-        // Add all tab contents to the container
         Object.values(tabs).forEach((tab, index) => {
             tab.content.style.display = index === 0 ? "block" : "none";
             tabContent.appendChild(tab.content);
         });
 
         menu.appendChild(tabContent);
-
-        // Button container for Save and Reset buttons
         const buttonContainer = document.createElement("div");
         buttonContainer.style.display = "flex";
         buttonContainer.style.gap = "10px";
         buttonContainer.style.padding = "0 18px 15px";
-
-        // Save Button
         const saveBtn = document.createElement("button");
         saveBtn.textContent = "Save";
         saveBtn.style.background = "#4caf50";
@@ -847,8 +516,6 @@ onReady(async function () {
             }, 400);
         });
         buttonContainer.appendChild(saveBtn);
-
-        // Reset Button
         const resetBtn = document.createElement("button");
         resetBtn.textContent = "Reset";
         resetBtn.style.background = "#dd3333";
@@ -861,7 +528,6 @@ onReady(async function () {
         resetBtn.style.flex = "1";
         resetBtn.addEventListener("click", async function () {
             if (confirm("Reset all 8chanSS settings to defaults?")) {
-                // Remove all 8chanSS_ GM values
                 const keys = await GM.listValues();
                 for (const key of keys) {
                     if (key.startsWith("8chanSS_")) {
@@ -880,35 +546,27 @@ onReady(async function () {
         buttonContainer.appendChild(resetBtn);
 
         menu.appendChild(buttonContainer);
-
-        // Info
         const info = document.createElement("div");
         info.style.fontSize = "11px";
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.textContent = "Press Save to apply changes. Page will reload.";
+        info.textContent = "Press Save to apply changes. Page will reload. - Ver. 1.28.0";
         menu.appendChild(info);
 
         document.body.appendChild(menu);
         return menu;
     }
-
-    // Helper function to create tab content
     function createTabContent(category, tempSettings) {
         const container = document.createElement("div");
         const categorySettings = scriptSettings[category];
 
         Object.keys(categorySettings).forEach((key) => {
             const setting = categorySettings[key];
-
-            // Parent row: flex for checkbox, label, chevron
             const parentRow = document.createElement("div");
             parentRow.style.display = "flex";
             parentRow.style.alignItems = "center";
             parentRow.style.marginBottom = "0px";
-
-            // Special case: hoverVideoVolume slider
             if (key === "hoverVideoVolume" && setting.type === "number") {
                 const label = document.createElement("label");
                 label.htmlFor = "setting_" + key;
@@ -949,36 +607,28 @@ onReady(async function () {
 
                 parentRow.appendChild(label);
                 parentRow.appendChild(sliderContainer);
-
-                // Wrapper for parent row and sub-options
                 const wrapper = document.createElement("div");
                 wrapper.style.marginBottom = "10px";
                 wrapper.appendChild(parentRow);
                 container.appendChild(wrapper);
-                return; // Skip the rest for this key
+                return; 
             }
-
-            // Checkbox for boolean settings
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.id = "setting_" + key;
             checkbox.checked =
                 tempSettings[key] === true || tempSettings[key] === "true";
             checkbox.style.marginRight = "8px";
-
-            // Label
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
             label.textContent = setting.label;
             label.style.flex = "1";
-
-            // Chevron for subOptions
             let chevron = null;
             let subOptionsContainer = null;
             if (setting.subOptions) {
                 chevron = document.createElement("span");
                 chevron.className = "ss-chevron";
-                chevron.innerHTML = "&#9654;"; // Right-pointing triangle
+                chevron.innerHTML = "&#9654;"; 
                 chevron.style.display = "inline-block";
                 chevron.style.transition = "transform 0.2s";
                 chevron.style.marginLeft = "6px";
@@ -988,8 +638,6 @@ onReady(async function () {
                     ? "rotate(90deg)"
                     : "rotate(0deg)";
             }
-
-            // Checkbox change handler
             checkbox.addEventListener("change", function () {
                 tempSettings[key] = checkbox.checked;
                 if (setting.subOptions && subOptionsContainer) {
@@ -1007,14 +655,10 @@ onReady(async function () {
             parentRow.appendChild(checkbox);
             parentRow.appendChild(label);
             if (chevron) parentRow.appendChild(chevron);
-
-            // Wrapper for parent row and sub-options
             const wrapper = document.createElement("div");
             wrapper.style.marginBottom = "10px";
 
             wrapper.appendChild(parentRow);
-
-            // Handle sub-options if any exist
             if (setting.subOptions) {
                 subOptionsContainer = document.createElement("div");
                 subOptionsContainer.style.marginLeft = "25px";
@@ -1052,8 +696,6 @@ onReady(async function () {
 
             container.appendChild(wrapper);
         });
-
-        // Add minimal CSS for chevron (only once)
         if (!document.getElementById("ss-chevron-style")) {
             const style = document.createElement("style");
             style.id = "ss-chevron-style";
@@ -1070,8 +712,6 @@ onReady(async function () {
 
         return container;
     }
-
-    // Hook up the icon to open/close the menu
     if (link) {
         let menu = await createSettingsMenu();
         link.style.cursor = "pointer";
@@ -1082,49 +722,6 @@ onReady(async function () {
             menu.style.display = menu.style.display === "none" ? "block" : "none";
         });
     }
-
-    /* --- Scroll Arrows Feature --- */
-    function featureScrollArrows() {
-        // Only add once
-        if (
-            document.getElementById("scroll-arrow-up") ||
-            document.getElementById("scroll-arrow-down")
-        )
-            return;
-
-        // Up arrow
-        const upBtn = document.createElement("button");
-        upBtn.id = "scroll-arrow-up";
-        upBtn.className = "scroll-arrow-btn";
-        upBtn.title = "Scroll to top";
-        upBtn.innerHTML = "▲";
-        upBtn.addEventListener("click", () => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-
-        // Down arrow
-        const downBtn = document.createElement("button");
-        downBtn.id = "scroll-arrow-down";
-        downBtn.className = "scroll-arrow-btn";
-        downBtn.title = "Scroll to bottom";
-        downBtn.innerHTML = "▼";
-        downBtn.addEventListener("click", () => {
-            const footer = document.getElementById("footer");
-            if (footer) {
-                footer.scrollIntoView({ behavior: "smooth", block: "end" });
-            } else {
-                window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: "smooth",
-                });
-            }
-        });
-
-        document.body.appendChild(upBtn);
-        document.body.appendChild(downBtn);
-    }
-
-    // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
         async function appendCatalogToLinks() {
             const navboardsSpan = document.getElementById("navBoardsSpan");
@@ -1137,11 +734,9 @@ onReady(async function () {
                 for (let link of links) {
                     if (link.href && !link.href.endsWith("/catalog.html")) {
                         link.href += "/catalog.html";
-
-                        // Set target="_blank" if the option is enabled
                         if (openInNewTab) {
                             link.target = "_blank";
-                            link.rel = "noopener noreferrer"; // Security best practice
+                            link.rel = "noopener noreferrer"; 
                         } else {
                             link.target = "";
                             link.rel = "";
@@ -1159,183 +754,10 @@ onReady(async function () {
             observer.observe(navboardsSpan, config);
         }
     }
-
-    // --- Feature: Save Scroll Position (now with unread line) ---
-    async function featureSaveScroll() {
-        // Return early if root has .is-index
-        if (document.documentElement.classList.contains("is-index")) return;
-
-        const MAX_PAGES = 50;
-        const currentPage = window.location.href;
-        const excludedPagePatterns = [
-            /\/catalog\.html$/i,
-            /\/.media\/$/i,
-            /\/boards\.js$/i,
-            /\/login\.html$/i,
-            /\/overboard$/i,
-            /\/sfw$/i
-        ];
-
-        function isExcludedPage(url) {
-            return excludedPagePatterns.some((pattern) => pattern.test(url));
-        }
-
-        async function saveScrollPosition() {
-            if (isExcludedPage(currentPage)) return;
-
-            const scrollPosition = window.scrollY;
-            const timestamp = Date.now();
-
-            // Store both the scroll position and timestamp using GM storage
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: scrollPosition,
-                    timestamp: timestamp,
-                })
-            );
-
-            await manageScrollStorage();
-        }
-
-        async function manageScrollStorage() {
-            // Get all GM storage keys
-            const allKeys = await GM.listValues();
-
-            // Filter for scroll position keys
-            const scrollKeys = allKeys.filter((key) =>
-                key.startsWith("8chanSS_scrollPosition_")
-            );
-
-            if (scrollKeys.length > MAX_PAGES) {
-                // Create array of objects with key and timestamp
-                const keyData = await Promise.all(
-                    scrollKeys.map(async (key) => {
-                        let data;
-                        try {
-                            const savedValue = await GM.getValue(key, null);
-                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
-                        } catch (e) {
-                            data = { position: 0, timestamp: 0 };
-                        }
-                        return {
-                            key: key,
-                            timestamp: data.timestamp || 0,
-                        };
-                    })
-                );
-
-                // Sort by timestamp (oldest first)
-                keyData.sort((a, b) => a.timestamp - b.timestamp);
-
-                // Remove oldest entries until we're under the limit
-                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
-                for (const item of keysToRemove) {
-                    await GM.deleteValue(item.key);
-                }
-            }
-        }
-
-        async function addUnreadLine() {
-            // If the URL contains a hash (e.g. /res/1190.html#1534), do nothing
-            if (window.location.hash && window.location.hash.length > 1) {
-                return;
-            }
-
-            const savedData = await GM.getValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                null
-            );
-
-            if (savedData) {
-                let position;
-                try {
-                    // Try to parse as JSON (new format)
-                    const data = JSON.parse(savedData);
-                    position = data.position;
-
-                    // Update the timestamp to "refresh" this entry
-                    await GM.setValue(
-                        `8chanSS_scrollPosition_${currentPage}`,
-                        JSON.stringify({
-                            position: position,
-                            timestamp: Date.now(),
-                        })
-                    );
-                } catch (e) {
-                    // If parsing fails, skip (should not happen with cleaned storage)
-                    return;
-                }
-
-                if (!isNaN(position)) {
-                    window.scrollTo(0, position);
-
-                    // Only add unread-line if a saved position exists (i.e., not first visit)
-                    setTimeout(addUnreadLineAtViewportCenter, 100);
-                }
-            }
-        }
-
-        //---- Add an unread-line marker after the .postCell <div>  ----
-        function addUnreadLineAtViewportCenter() {
-            const divPosts = document.querySelector(".divPosts");
-            if (!divPosts) return;
-
-            // Find the element at the center of the viewport
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            let el = document.elementFromPoint(centerX, centerY);
-
-            // Traverse up to find the closest .postCell
-            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
-                el = el.parentElement;
-            }
-            if (!el || el === divPosts || !el.id) return;
-
-            // Ensure .postCell is a direct child of .divPosts
-            if (el.parentElement !== divPosts) return;
-
-            // Remove any existing unread-line
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-
-            // Insert the unread-line marker after the .postCell (as a sibling)
-            const marker = document.createElement("hr");
-            marker.id = "unread-line";
-            if (el.nextSibling) {
-                divPosts.insertBefore(marker, el.nextSibling);
-            } else {
-                divPosts.appendChild(marker);
-            }
-        }
-
-        // Use async event handlers
-        window.addEventListener("beforeunload", () => {
-            saveScrollPosition();
-        });
-
-        // For load event, we can use an async function
-        window.addEventListener("load", async () => {
-            await addUnreadLine();
-        });
-
-        // Initial restore attempt (in case the load event already fired)
-        await addUnreadLine();
-    }
-
-    // Init
-    featureSaveScroll();
-
-    // --- Feature: Catalog & Image Hover ---
     async function featureImageHover() {
-        // Accepts the thumb <img> node as the first argument
         function getFullMediaSrcFromMime(thumbNode, filemime) {
             if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
-
-            // If it's a t_ thumbnail
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
                 base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|webm|ogg|mp3|m4a|wav)$/i, "");
@@ -1357,8 +779,6 @@ onReady(async function () {
                 if (!ext) return null;
                 return base + ext;
             }
-
-            // If it's a /spoiler.png thumbnail or /custom.spoiler, use parent <a>'s href
             if (
                 /\/spoiler\.png$/i.test(thumbnailSrc) ||
                 /\/custom\.spoiler$/i.test(thumbnailSrc) ||
@@ -1366,22 +786,16 @@ onReady(async function () {
             ) {
                 const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
                 if (parentA && parentA.getAttribute("href")) {
-                    // Use the full file URL from href
                     return parentA.getAttribute("href");
                 }
                 return null;
             }
-
-            // Fallback: return null if not recognized
             return null;
         }
-
-        // Inject CSS for the audio indicator (only once)
         if (!document.getElementById("audio-preview-indicator-style")) {
             const style = document.createElement("style");
             style.id = "audio-preview-indicator-style";
             style.textContent = `
-                /* Make containers position:relative so absolute positioning works */
                 a.imgLink[data-filemime^="audio/"], 
                 a.originalNameLink[href$=".mp3"],
                 a.originalNameLink[href$=".ogg"],
@@ -1440,7 +854,6 @@ onReady(async function () {
                         floatingMedia.removeAttribute("src");
                         floatingMedia.load();
                     } catch (e) {
-                        // Silently handle media cleanup errors
                     }
                 }
 
@@ -1448,8 +861,6 @@ onReady(async function () {
                     floatingMedia.parentNode.removeChild(floatingMedia);
                 }
             }
-
-            // Remove any audio indicators
             const indicators = document.querySelectorAll(".audio-preview-indicator");
             indicators.forEach((indicator) => {
                 if (indicator.parentNode) {
@@ -1468,8 +879,6 @@ onReady(async function () {
 
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-
-            // Determine media dimensions based on type
             let mediaWidth = 0,
                 mediaHeight = 0;
 
@@ -1489,7 +898,6 @@ onReady(async function () {
                 mediaHeight =
                     floatingMedia.videoHeight || floatingMedia.offsetHeight || 0;
             } else if (floatingMedia.tagName === "AUDIO") {
-                // Don't move audio elements - they're hidden anyway
                 return;
             }
 
@@ -1522,8 +930,6 @@ onReady(async function () {
 
             cleanupFloatingMedia();
             isStillHovering = true;
-
-            // Get the actual container element (important for audio files)
             const container =
                 thumb.tagName === "IMG"
                     ? thumb.closest("a.linkThumb, a.imgLink")
@@ -1542,8 +948,6 @@ onReady(async function () {
 
                 let filemime = null;
                 let fullSrc = null;
-
-                // Case 1: Image/video thumbnail
                 if (thumb.tagName === "IMG") {
                     const parentA = thumb.closest("a.linkThumb, a.imgLink");
                     if (!parentA) return;
@@ -1571,7 +975,6 @@ onReady(async function () {
 
                     fullSrc = getFullMediaSrcFromMime(thumb, filemime);
                 }
-                // Case 2: Audio file download link
                 else if (thumb.classList.contains("originalNameLink")) {
                     const href = thumb.getAttribute("href");
                     if (!href) return;
@@ -1591,8 +994,6 @@ onReady(async function () {
                 if (!fullSrc || !filemime) return;
 
                 let loaded = false;
-
-                // Helper to set common styles for floating media
                 function setCommonStyles(el) {
                     el.style.position = "fixed";
                     el.style.zIndex = 9999;
@@ -1603,8 +1004,6 @@ onReady(async function () {
                     el.style.opacity = "0";
                     el.style.left = "-9999px";
                 }
-
-                // Setup cleanup listeners
                 removeListeners = function () {
                     window.removeEventListener("scroll", cleanupFloatingMedia, true);
                 };
@@ -1634,9 +1033,7 @@ onReady(async function () {
                     floatingMedia.loop = true;
                     floatingMedia.muted = false;
                     floatingMedia.playsInline = true;
-                    floatingMedia.controls = false; // No controls for videos
-
-                    // Set volume from settings (0-100)
+                    floatingMedia.controls = false; 
                     let volume = 50;
                     try {
                         if (typeof getSetting === "function") {
@@ -1646,7 +1043,6 @@ onReady(async function () {
                             }
                         }
                     } catch (e) {
-                        // Use default if setting can't be retrieved
                         volume = 50;
                     }
                     floatingMedia.volume = Math.max(0, Math.min(1, volume / 100));
@@ -1664,24 +1060,18 @@ onReady(async function () {
                     floatingMedia.onerror = cleanupFloatingMedia;
                     floatingMedia.src = fullSrc;
                 } else if (filemime.startsWith("audio/")) {
-                    // --- AUDIO HOVER INDICATOR LOGIC ---
-                    // Remove any lingering indicator first
                     const oldIndicator = container.querySelector(
                         ".audio-preview-indicator"
                     );
                     if (oldIndicator) oldIndicator.remove();
-
-                    // Make sure container has position:relative for proper indicator positioning
                     if (container && !container.style.position) {
                         container.style.position = "relative";
                     }
 
                     floatingMedia = document.createElement("audio");
                     floatingMedia.src = fullSrc;
-                    floatingMedia.controls = false; // No controls for audio
-                    floatingMedia.style.display = "none"; // Hide the element visually
-
-                    // Set volume from settings (0-100)
+                    floatingMedia.controls = false; 
+                    floatingMedia.style.display = "none"; 
                     let volume = 50;
                     try {
                         if (typeof getSetting === "function") {
@@ -1696,8 +1086,6 @@ onReady(async function () {
                     floatingMedia.volume = Math.max(0, Math.min(1, volume / 100));
 
                     document.body.appendChild(floatingMedia);
-
-                    // Add indicator to the container (parent a tag) instead of the img
                     const indicator = document.createElement("div");
                     indicator.classList.add("audio-preview-indicator");
                     indicator.textContent = "▶ Playing audio...";
@@ -1706,8 +1094,6 @@ onReady(async function () {
                     floatingMedia.play().catch((error) => {
                         console.error("Audio playback failed:", error);
                     });
-
-                    // Remove audio and indicator on click as well
                     function removeAudioAndIndicator() {
                         if (floatingMedia) {
                             floatingMedia.pause();
@@ -1724,11 +1110,10 @@ onReady(async function () {
                         once: true,
                     });
                 }
-            }, 120); // Short delay before showing preview
+            }, 120); 
         }
 
         function attachThumbListeners(root = document) {
-            // Attach to image thumbnails (works for both thread and catalog)
             const thumbs = root.querySelectorAll(
                 "a.linkThumb > img, a.imgLink > img"
             );
@@ -1738,8 +1123,6 @@ onReady(async function () {
                     thumb._fullImgHoverBound = true;
                 }
             });
-
-            // Always attach to audio download links (both catalog and thread)
             const audioLinks = root.querySelectorAll("a.originalNameLink");
             audioLinks.forEach((link) => {
                 const href = link.getAttribute("href") || "";
@@ -1753,11 +1136,7 @@ onReady(async function () {
                 }
             });
         }
-
-        // Initial attachment
         attachThumbListeners();
-
-        // Watch for new elements
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
@@ -1770,66 +1149,22 @@ onReady(async function () {
 
         observer.observe(document.body, { childList: true, subtree: true });
     }
-
-    // --- Feature: Delete (Save) Name Checkbox ---
-    // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
-    function featureDeleteNameCheckbox() {
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = "saveNameCheckbox";
-        checkbox.classList.add("postingCheckbox");
-        const label = document.createElement("label");
-        label.htmlFor = "saveNameCheckbox";
-        label.textContent = "Delete Name";
-        label.title = "Delete Name on refresh";
-        const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
-        if (alwaysUseBypassCheckbox) {
-            alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
-            alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
-
-            // Restore checkbox state
-            const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
-            checkbox.checked = savedCheckboxState;
-
-            const nameInput = document.getElementById("qrname");
-            if (nameInput) {
-                // If the checkbox is checked on load, clear the input and remove the name from storage
-                if (checkbox.checked) {
-                    nameInput.value = "";
-                    localStorage.removeItem("name");
-                }
-
-                // Save checkbox state
-                checkbox.addEventListener("change", function () {
-                    localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
-                });
-            }
-        }
-    }
-
-    /* --- Feature: Blur Spoilers + Remove Spoilers suboption --- */
     function featureBlurSpoilers() {
         function revealSpoilers() {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
             spoilerLinks.forEach(async (link) => {
                 const img = link.querySelector("img");
                 if (img) {
-                    // Check if this is a custom spoiler image
                     const isCustomSpoiler = img.src.includes("/custom.spoiler");
-                    // Check if this is NOT already a thumbnail
                     const isNotThumbnail = !img.src.includes("/.media/t_");
 
                     if (isNotThumbnail || isCustomSpoiler) {
                         let href = link.getAttribute("href");
                         if (href) {
-                            // Extract filename without extension
                             const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
                             if (match) {
-                                // Use the thumbnail path (t_filename)
                                 const transformedSrc = `/\.media/t_${match[1]}`;
                                 img.src = transformedSrc;
-
-                                // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
                                 if (await getSetting("blurSpoilers_removeSpoilers")) {
                                     img.style.filter = "";
                                     img.style.transition = "";
@@ -1852,27 +1187,337 @@ onReady(async function () {
                 }
             });
         }
-
-        // Initial run
         revealSpoilers();
-
-        // Observe for dynamically added spoilers
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
     }
+    async function featureWatchThreadOnReply() {
+        function getWatchButton() {
+            return document.querySelector(".watchButton");
+        }
+        function isThreadWatched() {
+            const btn = getWatchButton();
+            return btn && btn.classList.contains("watched-active");
+        }
+        function watchThreadIfNotWatched() {
+            const btn = getWatchButton();
+            if (btn && !isThreadWatched()) {
+                btn.click(); 
+                setTimeout(() => {
+                    btn.classList.add("watched-active");
+                }, 100);
+            }
+        }
+        const submitButton = document.getElementById("qrbutton");
+        if (submitButton) {
+            submitButton.addEventListener("click", async function () {
+                if (await getSetting("watchThreadOnReply")) {
+                    setTimeout(watchThreadIfNotWatched, 500); 
+                }
+            });
+        }
+        function updateWatchButtonClass() {
+            const btn = getWatchButton();
+            if (!btn) return;
+            if (isThreadWatched()) {
+                btn.classList.add("watched-active");
+            } else {
+                btn.classList.remove("watched-active");
+            }
+        }
+        updateWatchButtonClass();
+        const btn = getWatchButton();
+        if (btn) {
+            btn.addEventListener("click", function () {
+                setTimeout(updateWatchButtonClass, 100);
+            });
+        }
+    }
+    document.addEventListener("keydown", async function (event) {
+        if (
+            event.altKey &&
+            !event.ctrlKey &&
+            !event.shiftKey &&
+            !event.metaKey &&
+            (event.key === "w" || event.key === "W")
+        ) {
+            event.preventDefault();
+            if (
+                typeof getSetting === "function" &&
+                (await getSetting("watchThreadOnReply"))
+            ) {
+                const btn = document.querySelector(".watchButton");
+                if (btn && !btn.classList.contains("watched-active")) {
+                    btn.click();
+                    setTimeout(() => {
+                        btn.classList.add("watched-active");
+                    }, 100);
+                }
+            }
+        }
+    });
+    async function featureAlwaysShowTW() {
+        if (!(await getSetting("alwaysShowTW"))) return;
 
-    // --- Feature: Beep on (You) ---
+        function showThreadWatcher() {
+            const watchedMenu = document.getElementById("watchedMenu");
+            if (watchedMenu) {
+                watchedMenu.style.display = "flex";
+            }
+        }
+
+        function addCloseListener() {
+            const watchedMenu = document.getElementById("watchedMenu");
+            if (!watchedMenu) return;
+            const closeBtn = watchedMenu.querySelector(".close-btn");
+            if (closeBtn) {
+                closeBtn.addEventListener("click", () => {
+                    watchedMenu.style.display = "none";
+                });
+            }
+        }
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => {
+                showThreadWatcher();
+                addCloseListener();
+            });
+        } else {
+            showThreadWatcher();
+            addCloseListener();
+        }
+    }
+    function processWatchedLabels() {
+        document.querySelectorAll('.watchedCellLabel').forEach(label => {
+            if (!label.isConnected) return;
+
+            const notif = label.querySelector('.watchedNotification');
+            const link = label.querySelector('a');
+            if (!notif || !link) return;
+            if (label.firstElementChild !== notif) {
+                label.prepend(notif);
+            }
+            const match = link.getAttribute('href').match(/^\/([^\/]+)\//);
+            if (!match) return;
+            const board = `/${match[1]}/`;
+            link.textContent = link.textContent.replace(/^\([^)]+\)\s*-\s*|^\/[^\/]+\/\s*-\s*/i, '');
+            link.textContent = `${board} - ${link.textContent}`;
+        });
+    }
+    processWatchedLabels();
+    function getWatchedContainer() {
+        return document.querySelector('.floatingContainer, #watchedThreads, .watchedThreads');
+    }
+
+    const container = getWatchedContainer();
+    if (container) {
+        const observer = new MutationObserver(() => {
+            processWatchedLabels();
+        });
+        observer.observe(container, { childList: true, subtree: true });
+    }
+    window.addEventListener('DOMContentLoaded', processWatchedLabels);
+    window.addEventListener('load', processWatchedLabels);
+    function featureScrollArrows() {
+        if (
+            document.getElementById("scroll-arrow-up") ||
+            document.getElementById("scroll-arrow-down")
+        )
+            return;
+        const upBtn = document.createElement("button");
+        upBtn.id = "scroll-arrow-up";
+        upBtn.className = "scroll-arrow-btn";
+        upBtn.title = "Scroll to top";
+        upBtn.innerHTML = "▲";
+        upBtn.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        const downBtn = document.createElement("button");
+        downBtn.id = "scroll-arrow-down";
+        downBtn.className = "scroll-arrow-btn";
+        downBtn.title = "Scroll to bottom";
+        downBtn.innerHTML = "▼";
+        downBtn.addEventListener("click", () => {
+            const footer = document.getElementById("footer");
+            if (footer) {
+                footer.scrollIntoView({ behavior: "smooth", block: "end" });
+            } else {
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: "smooth",
+                });
+            }
+        });
+
+        document.body.appendChild(upBtn);
+        document.body.appendChild(downBtn);
+    }
+    async function featureSaveScroll() {
+        if (document.documentElement.classList.contains("is-index")) return;
+
+        const MAX_PAGES = 50;
+        const currentPage = window.location.href;
+        const excludedPagePatterns = [
+            /\/catalog\.html$/i,
+            /\/.media\/$/i,
+            /\/boards\.js$/i,
+            /\/login\.html$/i,
+            /\/overboard$/i,
+            /\/sfw$/i
+        ];
+
+        function isExcludedPage(url) {
+            return excludedPagePatterns.some((pattern) => pattern.test(url));
+        }
+
+        async function saveScrollPosition() {
+            if (isExcludedPage(currentPage)) return;
+
+            const scrollPosition = window.scrollY;
+            const timestamp = Date.now();
+            await GM.setValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                JSON.stringify({
+                    position: scrollPosition,
+                    timestamp: timestamp,
+                })
+            );
+
+            await manageScrollStorage();
+        }
+
+        async function manageScrollStorage() {
+            const allKeys = await GM.listValues();
+            const scrollKeys = allKeys.filter((key) =>
+                key.startsWith("8chanSS_scrollPosition_")
+            );
+
+            if (scrollKeys.length > MAX_PAGES) {
+                const keyData = await Promise.all(
+                    scrollKeys.map(async (key) => {
+                        let data;
+                        try {
+                            const savedValue = await GM.getValue(key, null);
+                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
+                        } catch (e) {
+                            data = { position: 0, timestamp: 0 };
+                        }
+                        return {
+                            key: key,
+                            timestamp: data.timestamp || 0,
+                        };
+                    })
+                );
+                keyData.sort((a, b) => a.timestamp - b.timestamp);
+                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
+                for (const item of keysToRemove) {
+                    await GM.deleteValue(item.key);
+                }
+            }
+        }
+
+        async function addUnreadLine() {
+            if (window.location.hash && window.location.hash.length > 1) {
+                return;
+            }
+
+            const savedData = await GM.getValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                null
+            );
+
+            if (savedData) {
+                let position;
+                try {
+                    const data = JSON.parse(savedData);
+                    position = data.position;
+                    await GM.setValue(
+                        `8chanSS_scrollPosition_${currentPage}`,
+                        JSON.stringify({
+                            position: position,
+                            timestamp: Date.now(),
+                        })
+                    );
+                } catch (e) {
+                    return;
+                }
+
+                if (!isNaN(position)) {
+                    window.scrollTo(0, position);
+                    setTimeout(addUnreadLineAtViewportCenter, 100);
+                }
+            }
+        }
+        function addUnreadLineAtViewportCenter() {
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return;
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            let el = document.elementFromPoint(centerX, centerY);
+            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
+                el = el.parentElement;
+            }
+            if (!el || el === divPosts || !el.id) return;
+            if (el.parentElement !== divPosts) return;
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+            const marker = document.createElement("hr");
+            marker.id = "unread-line";
+            if (el.nextSibling) {
+                divPosts.insertBefore(marker, el.nextSibling);
+            } else {
+                divPosts.appendChild(marker);
+            }
+        }
+        window.addEventListener("beforeunload", () => {
+            saveScrollPosition();
+        });
+        window.addEventListener("load", async () => {
+            await addUnreadLine();
+        });
+        await addUnreadLine();
+    }
+    featureSaveScroll();
+    function featureDeleteNameCheckbox() {
+        const nameExists = document.getElementById("qr-name-row");
+        if (nameExists && nameExists.classList.contains("hidden")) {
+            return;
+        }
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = "saveNameCheckbox";
+        checkbox.classList.add("postingCheckbox");
+        const label = document.createElement("label");
+        label.htmlFor = "saveNameCheckbox";
+        label.textContent = "Delete Name";
+        label.title = "Delete Name on refresh";
+        const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
+        if (alwaysUseBypassCheckbox) {
+            alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
+            alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
+            const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
+            checkbox.checked = savedCheckboxState;
+
+            const nameInput = document.getElementById("qrname");
+            if (nameInput) {
+                if (checkbox.checked) {
+                    nameInput.value = "";
+                    localStorage.removeItem("name");
+                }
+                checkbox.addEventListener("change", function () {
+                    localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
+                });
+            }
+        }
+    }
     function featureBeepOnYou() {
-        // Beep sound (base64)
         const beep = new Audio(
             "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
         );
-
-        // Store the original title
         const originalTitle = document.title;
         let isNotifying = false;
-
-        // Create MutationObserver to detect when you are quoted
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach(async (node) => {
@@ -1881,12 +1526,9 @@ onReady(async function () {
                         node.querySelector &&
                         node.querySelector("a.quoteLink.you")
                     ) {
-                        // Only play beep if the setting is enabled
                         if (await getSetting("beepOnYou")) {
                             playBeep();
                         }
-
-                        // Trigger notification in separate function if enabled
                         if (await getSetting("notifyOnYou")) {
                             featureNotifyOnYou();
                         }
@@ -1896,8 +1538,6 @@ onReady(async function () {
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
-
-        // Function to play the beep sound
         function playBeep() {
             if (beep.paused) {
                 beep.play().catch((e) => console.warn("Beep failed:", e));
@@ -1905,19 +1545,13 @@ onReady(async function () {
                 beep.addEventListener("ended", () => beep.play(), { once: true });
             }
         }
-        // Function to notify on (You)
         function featureNotifyOnYou() {
-            // Store the original title if not already stored
             if (!window.originalTitle) {
                 window.originalTitle = document.title;
             }
-
-            // Add notification to title if not already notifying and tab not focused
             if (!window.isNotifying && !document.hasFocus()) {
                 window.isNotifying = true;
                 document.title = "(!) " + window.originalTitle;
-
-                // Set up focus event listener if not already set
                 if (!window.notifyFocusListenerAdded) {
                     window.addEventListener("focus", () => {
                         if (window.isNotifying) {
@@ -1929,14 +1563,12 @@ onReady(async function () {
                 }
             }
         }
-        // Function to add notification to the title
         function addNotificationToTitle() {
             if (!isNotifying && !document.hasFocus()) {
                 isNotifying = true;
                 document.title = "(!) " + originalTitle;
             }
         }
-        // Remove notification when tab regains focus
         window.addEventListener("focus", () => {
             if (isNotifying) {
                 document.title = originalTitle;
@@ -1944,10 +1576,6 @@ onReady(async function () {
             }
         });
     }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Feature Initialization based on Settings ---
 
     if (await getSetting("enableScrollSave")) {
         featureSaveScroll();
@@ -1973,8 +1601,6 @@ onReady(async function () {
     if (await getSetting("alwaysShowTW")) {
         featureAlwaysShowTW();
     }
-
-    // Check if we should enable image hover based on the current page
     const isCatalogPage = /\/catalog\.html$/.test(
         window.location.pathname.toLowerCase()
     );
@@ -1984,181 +1610,6 @@ onReady(async function () {
     ) {
         featureImageHover();
     }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Feature: Watch Thread on Reply ---
-    async function featureWatchThreadOnReply() {
-        // Helper: Get the watch button element
-        function getWatchButton() {
-            return document.querySelector(".watchButton");
-        }
-
-        // Helper: Check if thread is watched (by presence of watched-active class)
-        function isThreadWatched() {
-            const btn = getWatchButton();
-            return btn && btn.classList.contains("watched-active");
-        }
-
-        // Helper: Trigger the native watch button click if not already watched
-        function watchThreadIfNotWatched() {
-            const btn = getWatchButton();
-            if (btn && !isThreadWatched()) {
-                btn.click(); // Triggers the site's watcher logic
-                // The site should add watched-active, but if not, we can add it ourselves:
-                setTimeout(() => {
-                    btn.classList.add("watched-active");
-                }, 100);
-            }
-        }
-
-        // On post submit (button)
-        const submitButton = document.getElementById("qrbutton");
-        if (submitButton) {
-            submitButton.addEventListener("click", async function () {
-                if (await getSetting("watchThreadOnReply")) {
-                    setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
-                }
-            });
-        }
-
-        // On page load, update the icon if already watched
-        function updateWatchButtonClass() {
-            const btn = getWatchButton();
-            if (!btn) return;
-            if (isThreadWatched()) {
-                btn.classList.add("watched-active");
-            } else {
-                btn.classList.remove("watched-active");
-            }
-        }
-        updateWatchButtonClass();
-
-        // Also update when the user manually clicks the watch button
-        const btn = getWatchButton();
-        if (btn) {
-            btn.addEventListener("click", function () {
-                setTimeout(updateWatchButtonClass, 100);
-            });
-        }
-    }
-
-    // --- Watch Thread on ALT+W Keyboard Shortcut ---
-    document.addEventListener("keydown", async function (event) {
-        // Only trigger if ALT+W is pressed and no input/textarea is focused
-        if (
-            event.altKey &&
-            !event.ctrlKey &&
-            !event.shiftKey &&
-            !event.metaKey &&
-            (event.key === "w" || event.key === "W")
-        ) {
-            // Prevent default browser behavior (e.g., closing tab in some browsers)
-            event.preventDefault();
-            // Only run if the setting is enabled
-            if (
-                typeof getSetting === "function" &&
-                (await getSetting("watchThreadOnReply"))
-            ) {
-                const btn = document.querySelector(".watchButton");
-                if (btn && !btn.classList.contains("watched-active")) {
-                    btn.click();
-                    setTimeout(() => {
-                        btn.classList.add("watched-active");
-                    }, 100);
-                }
-            }
-        }
-    });
-
-    // --- Feature: Pin Thread Watcher ---
-    async function featureAlwaysShowTW() {
-        if (!(await getSetting("alwaysShowTW"))) return;
-
-        function showThreadWatcher() {
-            const watchedMenu = document.getElementById("watchedMenu");
-            if (watchedMenu) {
-                watchedMenu.style.display = "flex";
-            }
-        }
-
-        function addCloseListener() {
-            const watchedMenu = document.getElementById("watchedMenu");
-            if (!watchedMenu) return;
-            const closeBtn = watchedMenu.querySelector(".close-btn");
-            if (closeBtn) {
-                closeBtn.addEventListener("click", () => {
-                    watchedMenu.style.display = "none";
-                });
-            }
-        }
-
-        // Run on DOM ready
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => {
-                showThreadWatcher();
-                addCloseListener();
-            });
-        } else {
-            showThreadWatcher();
-            addCloseListener();
-        }
-    }
-
-    // --- Feature: Move new post notification and show board ---
-    function processWatchedLabels() {
-        document.querySelectorAll('.watchedCellLabel').forEach(label => {
-            // Safety: Only operate if label is still in the DOM
-            if (!label.isConnected) return;
-
-            const notif = label.querySelector('.watchedNotification');
-            const link = label.querySelector('a');
-            if (!notif || !link) return;
-
-            // Move notif to the front if not already there
-            if (label.firstElementChild !== notif) {
-                label.prepend(notif);
-            }
-
-            // Extract board name from href (between first two slashes)
-            const match = link.getAttribute('href').match(/^\/([^\/]+)\//);
-            if (!match) return;
-            const board = `/${match[1]}/`;
-
-            // Remove any existing board prefix (e.g. "(b) - " or "/b/ - ")
-            link.textContent = link.textContent.replace(/^\([^)]+\)\s*-\s*|^\/[^\/]+\/\s*-\s*/i, '');
-
-            // Prepend the new board prefix
-            link.textContent = `${board} - ${link.textContent}`;
-        });
-    }
-
-    // Initial run
-    processWatchedLabels();
-
-    // Try to find the container for watched threads
-    function getWatchedContainer() {
-        // Try common selectors; adjust as needed for your board
-        return document.querySelector('.floatingContainer, #watchedThreads, .watchedThreads');
-    }
-
-    const container = getWatchedContainer();
-    if (container) {
-        // Observe for changes in the watched threads container
-        const observer = new MutationObserver(() => {
-            processWatchedLabels();
-        });
-        observer.observe(container, { childList: true, subtree: true });
-    }
-
-    // Optionally, re-run on page navigation
-    window.addEventListener('DOMContentLoaded', processWatchedLabels);
-    window.addEventListener('load', processWatchedLabels);
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Keyboard Shortcuts ---
-    // Open 8chanSS menu (CTRL + F1)
     document.addEventListener("keydown", async function (event) {
         if (event.ctrlKey && event.key === "F1") {
             event.preventDefault();
@@ -2171,8 +1622,6 @@ onReady(async function () {
                     : "none";
         }
     });
-
-    // Submit post (CTRL + Enter)
     async function submitWithCtrlEnter(event) {
         if (event.ctrlKey && event.key === "Enter") {
             event.preventDefault();
@@ -2197,20 +1646,14 @@ onReady(async function () {
     if (replyTextarea) {
         replyTextarea.addEventListener("keydown", submitWithCtrlEnter);
     }
-
-    // QR (CTRL + Q)
     function toggleQR(event) {
-        // Check if Ctrl + Q is pressed
         if (event.ctrlKey && (event.key === "q" || event.key === "Q")) {
             const hiddenDiv = document.getElementById("quick-reply");
-            // Toggle QR
             if (
                 hiddenDiv.style.display === "none" ||
                 hiddenDiv.style.display === ""
             ) {
-                hiddenDiv.style.display = "block"; // Show the div
-
-                // Focus the textarea after a small delay to ensure it's visible
+                hiddenDiv.style.display = "block"; 
                 setTimeout(() => {
                     const textarea = document.getElementById("qrbody");
                     if (textarea) {
@@ -2218,35 +1661,24 @@ onReady(async function () {
                     }
                 }, 50);
             } else {
-                hiddenDiv.style.display = "none"; // Hide the div
+                hiddenDiv.style.display = "none"; 
             }
         }
     }
     document.addEventListener("keydown", toggleQR);
-
-    // (ESC) Clear textarea and hide QR
     function clearTextarea(event) {
-        // Check if Escape key is pressed
         if (event.key === "Escape") {
-            // Clear the textarea
             const textarea = document.getElementById("qrbody");
             if (textarea) {
-                textarea.value = ""; // Clear the textarea
+                textarea.value = ""; 
             }
-
-            // Hide the quick-reply div
             const quickReply = document.getElementById("quick-reply");
             if (quickReply) {
-                quickReply.style.display = "none"; // Hide the quick-reply
+                quickReply.style.display = "none"; 
             }
         }
     }
     document.addEventListener("keydown", clearTextarea);
-
-    //--- Scroll to Reply scrolling between replies using Ctrl + Arrow Up/Down (and Shift for others' replies to you)
-
-
-    // BBCODE Combination keys and Tags
     const bbCodeCombinations = new Map([
         ["s", ["[spoiler]", "[/spoiler]"]],
         ["b", ["'''", "'''"]],
@@ -2259,7 +1691,6 @@ onReady(async function () {
 
     function replyKeyboardShortcuts(ev) {
         const key = ev.key.toLowerCase();
-        // Special case: alt+c for [code] tag
         if (
             key === "c" &&
             ev.altKey &&
@@ -2271,25 +1702,21 @@ onReady(async function () {
             const [openTag, closeTag] = bbCodeCombinations.get(key);
             const { selectionStart, selectionEnd, value } = textBox;
             if (selectionStart === selectionEnd) {
-                // No selection: insert empty tags and place cursor between them
                 const before = value.slice(0, selectionStart);
                 const after = value.slice(selectionEnd);
                 const newCursor = selectionStart + openTag.length;
                 textBox.value = before + openTag + closeTag + after;
                 textBox.selectionStart = textBox.selectionEnd = newCursor;
             } else {
-                // Replace selected text with tags around it
                 const before = value.slice(0, selectionStart);
                 const selected = value.slice(selectionStart, selectionEnd);
                 const after = value.slice(selectionEnd);
                 textBox.value = before + openTag + selected + closeTag + after;
-                // Keep selection around the newly wrapped text
                 textBox.selectionStart = selectionStart + openTag.length;
                 textBox.selectionEnd = selectionEnd + openTag.length;
             }
             return;
         }
-        // All other tags: ctrl+key
         if (
             ev.ctrlKey &&
             !ev.altKey &&
@@ -2301,19 +1728,16 @@ onReady(async function () {
             const [openTag, closeTag] = bbCodeCombinations.get(key);
             const { selectionStart, selectionEnd, value } = textBox;
             if (selectionStart === selectionEnd) {
-                // No selection: insert empty tags and place cursor between them
                 const before = value.slice(0, selectionStart);
                 const after = value.slice(selectionEnd);
                 const newCursor = selectionStart + openTag.length;
                 textBox.value = before + openTag + closeTag + after;
                 textBox.selectionStart = textBox.selectionEnd = newCursor;
             } else {
-                // Replace selected text with tags around it
                 const before = value.slice(0, selectionStart);
                 const selected = value.slice(selectionStart, selectionEnd);
                 const after = value.slice(selectionEnd);
                 textBox.value = before + openTag + selected + closeTag + after;
-                // Keep selection around the newly wrapped text
                 textBox.selectionStart = selectionStart + openTag.length;
                 textBox.selectionEnd = selectionEnd + openTag.length;
             }

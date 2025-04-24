@@ -1,3 +1,12 @@
+### v1.28.0
+*2025-04-24*
+
+- Versioning change again because 'tarded
+- Expanded images and video should now fit to viewport
+- Delete Name checkbox will no longer appear if there's no Name input
+- Give the side catalog a background so it's more readable
+- Fixed z-indexes for certain elements so they don't get hidden
+
 ### v1.2.27
 *2025-04-24*
 

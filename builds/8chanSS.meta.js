@@ -1,23 +1,16 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.2.27
+// @version      1.28.0
 // @namespace    8chanSS
 // @description  Userscript to style 8chan
+// @author       otakudude
 // @minGMVer     4.3
 // @minFFVer     121
 // @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
-// @match        http://8chan.moe/*
-// @match        https://8chan.moe/*
-// @match        http://8chan.se/*
-// @match        https://8chan.se/*
-// @exclude      http://8chan.moe/login.html
-// @exclude      https://8chan.moe/login.html
-// @exclude      http://8chan.se/login.html
-// @exclude      https://8chan.se/login.html
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        GM_deleteValue
-// @grant        GM_listValues
+// @match        *://8chan.moe/*
+// @match        *://8chan.se/*
+// @exclude      *://8chan.moe/login.html
+// @exclude      *://8chan.se/login.html
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.deleteValue
