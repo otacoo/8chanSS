@@ -1672,11 +1672,9 @@ onReady(async function () {
                     // If parsing fails, skip (should not happen with cleaned storage)
                     return;
                 }
-
+                // Only add unread-line if a saved position exists (i.e., not first visit)
                 if (!isNaN(position)) {
                     window.scrollTo(0, position);
-
-                    // Only add unread-line if a saved position exists (i.e., not first visit)
                     setTimeout(addUnreadLineAtViewportCenter, 100);
                 }
             }
@@ -1733,6 +1731,20 @@ onReady(async function () {
 
     // Init
     featureSaveScroll();
+
+    // --- Remove unread-line at bottom of page ---
+    function removeUnreadLineIfAtBottom() {
+        // Check if user is at the bottom (allowing for a small margin)
+        const margin = 20; // px
+        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+        }
+    }
+
+    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
 
     // --- Feature: Delete (Save) Name Checkbox ---
     // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
@@ -1968,6 +1980,8 @@ onReady(async function () {
         }
     }
     document.addEventListener("keydown", toggleQR);
+
+    // 
 
     // (ESC) Clear textarea and hide QR
     function clearTextarea(event) {
