@@ -2,7 +2,8 @@
 
 A :warning: WORK IN PROGRESS :warning: userscript to add functionality to 8chan, heavily influenced by 4chanSS, 4chanX and StyleChan.
 
-## [Click here to Install](https://github.com/otacoo/8chanSS/raw/refs/heads/main/builds/8chanSS.user.js)
+
+## [![install](https://github.com/user-attachments/assets/9a9d62fd-0b3e-460b-bb6c-092dd38b2b8d)](https://github.com/otacoo/8chanSS/raw/refs/heads/main/builds/8chanSS.user.js)
 
 
 #### Install instructions
