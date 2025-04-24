@@ -3,6 +3,7 @@
 // @version      <%= version %>
 // @namespace    <%= name %>
 // @description  <%= description %>
+// @author       <%= author %>
 // @minGMVer     <%= meta.min.greasemonkey %>
 // @minFFVer     <%= meta.min.firefox %>
 // @license      <%= license %>; <%= meta.repo %>blob/<%= meta.mainBranch %>/LICENSE 
@@ -17,7 +18,7 @@
     }
 
     function expandMatches(matches) {
-      return expand(matches, /^\*/, ['http', 'https']);
+      return expand(matches, /^\*/, ['*']);
     }
 
     return [
@@ -26,10 +27,6 @@
     ].join('\n');
   })()
 %>
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        GM_deleteValue
-// @grant        GM_listValues
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.deleteValue

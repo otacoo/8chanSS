@@ -140,7 +140,7 @@ td.watchedCell>label.watchedCellLabel:hover {
 .innerUtility.top a {
     color: var(--link-color) !important;
 }
-
+/* Smol padding fix for the anchor */
 .bumpLockIndicator::after {
     padding-right: 3px;
 }
