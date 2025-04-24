@@ -389,6 +389,11 @@ onReady(async function () {
         :root.ss-sidebar #mainPanel {
             margin-right: 305px;
         }
+        /* Side Catalog */
+        #sideCatalogDiv {
+            z-index: 200;
+            background: var(--background-gradient);
+        }
         /* Cleanup */
         :root.hide-posting-form #postingForm,
         :root.hide-announcement #dynamicAnnouncement,
@@ -406,6 +411,9 @@ onReady(async function () {
             height: 0;
         }
         /* Header */
+        nav.navHeader {
+            z-index: 300;
+        }
         :not(:root.bottom-header) .navHeader {
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
         }
@@ -464,7 +472,7 @@ onReady(async function () {
             font-size: 22px;
             cursor: pointer;
             opacity: 0.7;
-            z-index: 99998;
+            z-index: 800;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1940,7 +1948,6 @@ onReady(async function () {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Feature Initialization based on Settings ---
-    await featureCssClassToggles();
 
     if (await getSetting("enableScrollSave")) {
         featureSaveScroll();
