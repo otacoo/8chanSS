@@ -57,19 +57,14 @@
       grunt.registerTask('default', ['build']);
       grunt.registerTask('build', ['remove_comments', 'cssmin', 'concat:userscript', 'clean:tmp']);
       grunt.registerTask('release', ['default']);
-      grunt.registerTask('patch', ['bump-only', 'reloadPkg', 'updcl:3']);
-      grunt.registerTask('minor', ['bump-only:minor', 'reloadPkg', 'updcl:2']);
-      grunt.registerTask('major', ['bump-only:major', 'reloadPkg', 'updcl:1']);
-      grunt.registerTask('reloadPkg', 'Reload the package', function() {
-        pkg = grunt.file.readJSON('package.json');
-        grunt.config.data.pkg = concatOptions.process.data = pkg;
-        return grunt.log.ok('pkg reloaded.');
-      });
+      grunt.registerTask('patch', ['bump-only', 'updcl:3']);
+      grunt.registerTask('minor', ['bump-only:minor', 'updcl:2']);
+      grunt.registerTask('major', ['bump-only:major', 'updcl:1']);
       return grunt.registerTask('updcl', 'Update the changelog', function(i) {
         var version;
         version = [];
         version.length = +i + 1;
-        version = version.join('#') + ' v' + pkg.version + '\n*' + grunt.tmplate.today('yyyy-mm-dd') + '*\n';
+        version = version.join('#') + ' v' + pkg.version + '\n*' + grunt.template.today('yyyy-mm-dd') + '*\n';
         grunt.file.write('CHANGELOG.md', version + '\n' + grunt.file.read('CHANGELOG.md'));
         return grunt.log.ok('Changelog updated for v' + pkg.version + '.');
       });
