@@ -1737,6 +1737,12 @@ onReady(async function () {
     // --- Feature: Delete (Save) Name Checkbox ---
     // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
     function featureDeleteNameCheckbox() {
+        // Check if the #qr-name-row exists and has the 'hidden' class
+        const nameExists = document.getElementById("qr-name-row");
+        if (nameExists && nameExists.classList.contains("hidden")) {
+            return;
+        }
+
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.id = "saveNameCheckbox";
@@ -1895,7 +1901,7 @@ onReady(async function () {
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
     // --- Keyboard Shortcuts ---
     // Open 8chanSS menu (CTRL + F1)
     document.addEventListener("keydown", async function (event) {
@@ -1981,9 +1987,6 @@ onReady(async function () {
         }
     }
     document.addEventListener("keydown", clearTextarea);
-
-    //--- Scroll to Reply scrolling between replies using Ctrl + Arrow Up/Down (and Shift for others' replies to you)
-
 
     // BBCODE Combination keys and Tags
     const bbCodeCombinations = new Map([
