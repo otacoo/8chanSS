@@ -42,17 +42,17 @@ Then press the big install button to install the script.
 
 #### Keyboard Shortcuts:
 
-`CTRL` + `F1` : Opens 8chanSS settings menu
+`CTRL` + `F1` : Open 8chanSS settings menu
 
-`CTRL` + `Enter` : Submits post
+`CTRL` + `Enter` : Submit post
 
-`Esc` : Clears and closes the Quick Reply
+`Esc` : Clear and close the Quick Reply
 
 `CTRL` + `Q` : Toggle Quick Reply on/off
 
 `ALT` + `W` : Watch thread
 
-`CTRL` + `S` : Add spoilers tags
+`CTRL` + `S` : Add spoiler tags
 
 `ALT` + `C` : Add code tags
 
