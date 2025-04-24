@@ -1,0 +1,146 @@
+/* Margins */
+:not(.is-catalog) body {
+    margin: 0;
+}
+
+:root.ss-sidebar #mainPanel {
+    margin-right: 305px;
+}
+
+/* Side Catalog */
+#sideCatalogDiv {
+    z-index: 200;
+    background: var(--background-gradient);
+}
+
+/* Cleanup */
+:root.hide-posting-form #postingForm,
+:root.hide-announcement #dynamicAnnouncement,
+:root.hide-panelmessage #panelMessage,
+#navFadeEnd,
+#navFadeMid,
+#navTopBoardsSpan {
+    display: none;
+}
+
+:root.is-catalog.show-catalog-form #postingForm {
+    display: block !important;
+}
+
+footer {
+    visibility: hidden;
+    height: 0;
+}
+
+/* Header */
+nav.navHeader {
+    z-index: 300;
+}
+
+:not(:root.bottom-header) .navHeader {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+:root.bottom-header nav.navHeader {
+    top: auto !important;
+    bottom: 0 !important;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Thread Watcher */
+.watchButton.watched-active::before {
+    color: #dd003e !important;
+}
+
+#watchedMenu {
+    font-size: smaller;
+    padding: 5px !important;
+    box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
+}
+
+#watchedMenu,
+#watchedMenu .floatingContainer {
+    min-width: 200px;
+}
+
+#watchedMenu .watchedCellLabel>a:after {
+    content: " - " attr(href);
+    filter: saturate(50%);
+    font-style: italic;
+    font-weight: bold;
+}
+
+#watchedMenu .watchedCellLabel>a::after {
+    visibility: hidden;
+}
+
+td.watchedCell>label.watchedCellLabel {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    width: 180px;
+    display: block;
+}
+
+td.watchedCell>label.watchedCellLabel:hover {
+    overflow: unset;
+    width: auto;
+    white-space: normal;
+}
+
+.watchedNotification::before {
+    padding-right: 2px;
+}
+
+/* Up/Down Arrows */
+.scroll-arrow-btn {
+    position: fixed;
+    right: 50px;
+    width: 36px;
+    height: 35px;
+    background: #222;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    font-size: 22px;
+    cursor: pointer;
+    opacity: 0.7;
+    z-index: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+:root.ss-sidebar .scroll-arrow-btn {
+    right: 330px !important;
+}
+
+.scroll-arrow-btn:hover {
+    opacity: 1;
+    background: #444;
+}
+
+#scroll-arrow-up {
+    bottom: 80px;
+}
+
+#scroll-arrow-down {
+    bottom: 32px;
+}
+
+/* Links at top of page */
+.innerUtility.top {
+    margin-top: 2em;
+    background-color: transparent !important;
+    color: var(--link-color) !important;
+}
+
+.innerUtility.top a {
+    color: var(--link-color) !important;
+}
+
+.bumpLockIndicator::after {
+    padding-right: 3px;
+}

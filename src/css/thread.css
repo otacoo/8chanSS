@@ -1,0 +1,127 @@
+/* Quick Reply */
+:root.sticky-qr #quick-reply {
+    display: block;
+    top: auto !important;
+    bottom: 0;
+    left: auto !important;
+    position: fixed;
+    right: 0 !important;
+}
+
+:root.sticky-qr #qrbody {
+    resize: vertical;
+    max-height: 50vh;
+    height: 130px;
+}
+
+#qrbody {
+    min-width: 300px;
+}
+
+:root.bottom-header #quick-reply {
+    bottom: 28px !important;
+}
+
+#quick-reply {
+    padding: 0;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+#quick-reply:hover,
+#quick-reply:focus-within {
+    opacity: 1;
+}
+
+.floatingMenu {
+    padding: 0 !important;
+}
+
+#qrFilesBody {
+    max-width: 300px;
+}
+
+/* Unread Line */
+#unread-line {
+    height: 2px;
+    border: none !important;
+    pointer-events: none !important;
+    background-image: linear-gradient(to left, rgba(185, 185, 185, 0.2), var(--text-color), rgba(185, 185, 185, 0.2));
+    margin: -3px auto 0 auto;
+    width: 60%;
+}
+
+/* Banner */
+:root.disable-banner #bannerImage {
+    display: none;
+}
+
+:root.ss-sidebar #bannerImage {
+    width: 305px;
+    right: 0;
+    position: fixed;
+    top: 26px;
+}
+
+:root.ss-sidebar.bottom-header #bannerImage {
+    top: 0 !important;
+}
+
+.quoteTooltip {
+    z-index: 999;
+}
+
+/* Posts */
+.inlineQuote .replyPreview {
+    margin-left: 20px;
+    border-left: 1px solid #ccc;
+    padding-left: 10px;
+}
+
+.nestedQuoteLink {
+    text-decoration: underline dashed !important;
+}
+
+:root.hide-stub .unhideButton {
+    display: none;
+}
+
+.quoteTooltip .innerPost {
+    overflow: hidden;
+    box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
+}
+
+:root.fit-replies :not(.hidden).innerPost {
+    margin-left: 10px;
+    display: flow-root;
+}
+
+:root.fit-replies .quoteTooltip {
+    display: table !important;
+}
+
+/* (You) Replies */
+:root.highlight-you .innerPost:has(.youName) {
+    border-left: dashed #68b723 3px;
+}
+
+:root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you) {
+    border-left: solid #dd003e 3px;
+}
+
+/* Filename & Thumbs */
+.originalNameLink {
+    display: inline;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.multipleUploads .uploadCell:not(.expandedCell) {
+    max-width: 215px;
+}
+
+/* Not sure what this is about, guess we'll find out */
+.postCell::before {
+    display: inline !important;
+    height: auto !important;
+}

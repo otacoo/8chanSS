@@ -353,254 +353,19 @@ onReady(async function () {
     // Apply CSS based on URL pattern
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
         // General CSS for all pages
-        const css = `
-        /* Margins */
-        :not(.is-catalog) body {
-            margin: 0;
-        }
-        :root.ss-sidebar #mainPanel {
-            margin-right: 305px;
-        }
-        /* Side Catalog */
-        #sideCatalogDiv {
-            z-index: 200;
-            background: var(--background-gradient);
-        }
-        /* Cleanup */
-        :root.hide-posting-form #postingForm,
-        :root.hide-announcement #dynamicAnnouncement,
-        :root.hide-panelmessage #panelMessage,
-        #navFadeEnd,
-        #navFadeMid,
-        #navTopBoardsSpan {
-            display: none;
-        }
-        :root.is-catalog.show-catalog-form #postingForm {
-            display: block !important;
-        }
-        footer {
-            visibility: hidden;
-            height: 0;
-        }
-        /* Header */
-        nav.navHeader {
-            z-index: 300;
-        }
-        :not(:root.bottom-header) .navHeader {
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-        }
-        :root.bottom-header nav.navHeader {
-            top: auto !important;
-            bottom: 0 !important;
-            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
-        }
-        /* Thread Watcher */
-        .watchButton.watched-active::before {
-            color: #dd003e !important;
-        }
-        #watchedMenu {
-            font-size: smaller;
-            padding: 5px !important;
-            box-shadow: -3px 3px 2px 0px rgba(0,0,0,0.19);
-        }
-        #watchedMenu,
-        #watchedMenu .floatingContainer {
-            min-width: 200px;
-        }
-        #watchedMenu .watchedCellLabel > a:after {
-            content: " - "attr(href);
-            filter: saturate(50%);
-            font-style: italic;
-            font-weight: bold;
-        }
-        #watchedMenu .watchedCellLabel > a::after {
-            visibility: hidden;
-        }
-        td.watchedCell > label.watchedCellLabel {
-            text-overflow: ellipsis;
-            overflow: hidden;
-            white-space: nowrap;
-            width: 180px;
-            display: block;
-        }
-        td.watchedCell > label.watchedCellLabel:hover {
-            overflow: unset;
-            width: auto;
-            white-space: normal;
-        }
-        .watchedNotification::before {
-            padding-right: 2px;
-        }
-        .scroll-arrow-btn {
-            position: fixed;
-            right: 50px;
-            width: 36px;
-            height: 35px;
-            background: #222;
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-            font-size: 22px;
-            cursor: pointer;
-            opacity: 0.7;
-            z-index: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.2s, background 0.2s;
-         }
-        /* Up/Down Arrows */
-        :root.ss-sidebar .scroll-arrow-btn {
-            right: 330px !important;
-        }
-        .scroll-arrow-btn:hover {
-            opacity: 1;
-            background: #444;
-        }
-        #scroll-arrow-up {
-            bottom: 80px;
-        }
-        #scroll-arrow-down {
-            bottom: 32px;
-        }
-        /* Links at top of page */
-        .innerUtility.top {
-            margin-top: 2em;
-            background-color: transparent !important;
-            color: var(--link-color) !important;
-        }
-        .innerUtility.top a {
-            color: var(--link-color) !important;
-        }
-        .bumpLockIndicator::after {
-            padding-right: 3px;
-        }
-          `;
+        const css = "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";;
         addCustomCSS(css);
     }
 
     // Thread page CSS
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        const css = `
-        /* Quick Reply */
-        :root.sticky-qr #quick-reply {
-            display: block;
-            top: auto !important;
-            bottom: 0;
-            left: auto !important;
-            position: fixed;
-            right: 0 !important;
-        }
-        :root.sticky-qr #qrbody {
-            resize: vertical;
-            max-height: 50vh;
-            height: 130px;
-        }
-        #qrbody {
-            min-width: 300px;
-        }
-        :root.bottom-header #quick-reply {
-            bottom: 28px !important;
-        }
-        #quick-reply {
-            padding: 0;
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
-        }
-        #quick-reply:hover,
-        #quick-reply:focus-within {
-            opacity: 1;
-        }
-        .floatingMenu {
-            padding: 0 !important;
-        }
-        #qrFilesBody {
-            max-width: 300px;
-        }
-        /* Unread Line */
-        #unread-line {
-            height: 2px;
-            border: none !important;
-            pointer-events: none !important;
-            background-image: linear-gradient(to left, rgba(185, 185, 185, 0.2), var(--text-color), rgba(185, 185, 185, 0.2));
-            margin: -3px auto 0 auto;
-            width: 60%;
-        }
-        /* Banner */
-        :root.disable-banner #bannerImage {
-            display: none;
-        }
-        :root.ss-sidebar #bannerImage {
-            width: 305px;
-            right: 0;
-            position: fixed;
-            top: 26px;
-        }
-        :root.ss-sidebar.bottom-header #bannerImage {
-            top: 0 !important;
-        }
-        .quoteTooltip {
-            z-index: 999;
-        }
-        /* Posts */
-        .inlineQuote .replyPreview {
-            margin-left: 20px;
-            border-left: 1px solid #ccc;
-            padding-left: 10px;
-        }
-        .nestedQuoteLink {
-            text-decoration: underline dashed !important;
-        }
-        :root.hide-stub .unhideButton {
-            display: none;
-        }
-        .quoteTooltip .innerPost {
-            overflow: hidden;
-            box-shadow: -3px 3px 2px 0px rgba(0,0,0,0.19);
-        }
-        :root.fit-replies :not(.hidden).innerPost {
-            margin-left: 10px;
-            display: flow-root;
-        }
-        :root.fit-replies .quoteTooltip {
-            display: table !important;
-        }
-        /* (You) Replies */
-        :root.highlight-you .innerPost:has(.youName) {
-            border-left: dashed #68b723 3px;
-        }
-        :root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you) {
-            border-left: solid #dd003e 3px;
-        }
-        /* Filename & Thumbs */
-        .originalNameLink {
-            display: inline;
-            overflow-wrap: anywhere;
-            white-space: normal;
-        }
-        .multipleUploads .uploadCell:not(.expandedCell) {
-            max-width: 215px;
-        }
-        /* Not sure what this is about, guess we'll find out */
-        .postCell::before {
-            display: inline !important;
-            height: auto !important;
-        }
-          `;
+        const css = "<%= grunt.file.read('tmp/thread.min.css').replace(/\\(^\")/g, '') %>";
         addCustomCSS(css);
     }
 
     // Catalog page CSS
     if (/\/catalog\.html$/.test(currentPath)) {
-        const css = `
-          #dynamicAnnouncement {
-              display: none;
-          }
-          #postingForm {
-              margin: 2em auto;
-          }
-          `;
+        const css = "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
         addCustomCSS(css);
     }
 
@@ -1055,47 +820,6 @@ onReady(async function () {
         });
     }
 
-    /* --- Scroll Arrows Feature --- */
-    function featureScrollArrows() {
-        // Only add once
-        if (
-            document.getElementById("scroll-arrow-up") ||
-            document.getElementById("scroll-arrow-down")
-        )
-            return;
-
-        // Up arrow
-        const upBtn = document.createElement("button");
-        upBtn.id = "scroll-arrow-up";
-        upBtn.className = "scroll-arrow-btn";
-        upBtn.title = "Scroll to top";
-        upBtn.innerHTML = "▲";
-        upBtn.addEventListener("click", () => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-
-        // Down arrow
-        const downBtn = document.createElement("button");
-        downBtn.id = "scroll-arrow-down";
-        downBtn.className = "scroll-arrow-btn";
-        downBtn.title = "Scroll to bottom";
-        downBtn.innerHTML = "▼";
-        downBtn.addEventListener("click", () => {
-            const footer = document.getElementById("footer");
-            if (footer) {
-                footer.scrollIntoView({ behavior: "smooth", block: "end" });
-            } else {
-                window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: "smooth",
-                });
-            }
-        });
-
-        document.body.appendChild(upBtn);
-        document.body.appendChild(downBtn);
-    }
-
     // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
         async function appendCatalogToLinks() {
@@ -1131,174 +855,6 @@ onReady(async function () {
             observer.observe(navboardsSpan, config);
         }
     }
-
-    // --- Feature: Save Scroll Position (now with unread line) ---
-    async function featureSaveScroll() {
-        // Return early if root has .is-index
-        if (document.documentElement.classList.contains("is-index")) return;
-
-        const MAX_PAGES = 50;
-        const currentPage = window.location.href;
-        const excludedPagePatterns = [
-            /\/catalog\.html$/i,
-            /\/.media\/$/i,
-            /\/boards\.js$/i,
-            /\/login\.html$/i,
-            /\/overboard$/i,
-            /\/sfw$/i
-        ];
-
-        function isExcludedPage(url) {
-            return excludedPagePatterns.some((pattern) => pattern.test(url));
-        }
-
-        async function saveScrollPosition() {
-            if (isExcludedPage(currentPage)) return;
-
-            const scrollPosition = window.scrollY;
-            const timestamp = Date.now();
-
-            // Store both the scroll position and timestamp using GM storage
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: scrollPosition,
-                    timestamp: timestamp,
-                })
-            );
-
-            await manageScrollStorage();
-        }
-
-        async function manageScrollStorage() {
-            // Get all GM storage keys
-            const allKeys = await GM.listValues();
-
-            // Filter for scroll position keys
-            const scrollKeys = allKeys.filter((key) =>
-                key.startsWith("8chanSS_scrollPosition_")
-            );
-
-            if (scrollKeys.length > MAX_PAGES) {
-                // Create array of objects with key and timestamp
-                const keyData = await Promise.all(
-                    scrollKeys.map(async (key) => {
-                        let data;
-                        try {
-                            const savedValue = await GM.getValue(key, null);
-                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
-                        } catch (e) {
-                            data = { position: 0, timestamp: 0 };
-                        }
-                        return {
-                            key: key,
-                            timestamp: data.timestamp || 0,
-                        };
-                    })
-                );
-
-                // Sort by timestamp (oldest first)
-                keyData.sort((a, b) => a.timestamp - b.timestamp);
-
-                // Remove oldest entries until we're under the limit
-                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
-                for (const item of keysToRemove) {
-                    await GM.deleteValue(item.key);
-                }
-            }
-        }
-
-        async function addUnreadLine() {
-            // If the URL contains a hash (e.g. /res/1190.html#1534), do nothing
-            if (window.location.hash && window.location.hash.length > 1) {
-                return;
-            }
-
-            const savedData = await GM.getValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                null
-            );
-
-            if (savedData) {
-                let position;
-                try {
-                    // Try to parse as JSON (new format)
-                    const data = JSON.parse(savedData);
-                    position = data.position;
-
-                    // Update the timestamp to "refresh" this entry
-                    await GM.setValue(
-                        `8chanSS_scrollPosition_${currentPage}`,
-                        JSON.stringify({
-                            position: position,
-                            timestamp: Date.now(),
-                        })
-                    );
-                } catch (e) {
-                    // If parsing fails, skip (should not happen with cleaned storage)
-                    return;
-                }
-
-                if (!isNaN(position)) {
-                    window.scrollTo(0, position);
-
-                    // Only add unread-line if a saved position exists (i.e., not first visit)
-                    setTimeout(addUnreadLineAtViewportCenter, 100);
-                }
-            }
-        }
-
-        //---- Add an unread-line marker after the .postCell <div>  ----
-        function addUnreadLineAtViewportCenter() {
-            const divPosts = document.querySelector(".divPosts");
-            if (!divPosts) return;
-
-            // Find the element at the center of the viewport
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            let el = document.elementFromPoint(centerX, centerY);
-
-            // Traverse up to find the closest .postCell
-            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
-                el = el.parentElement;
-            }
-            if (!el || el === divPosts || !el.id) return;
-
-            // Ensure .postCell is a direct child of .divPosts
-            if (el.parentElement !== divPosts) return;
-
-            // Remove any existing unread-line
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-
-            // Insert the unread-line marker after the .postCell (as a sibling)
-            const marker = document.createElement("hr");
-            marker.id = "unread-line";
-            if (el.nextSibling) {
-                divPosts.insertBefore(marker, el.nextSibling);
-            } else {
-                divPosts.appendChild(marker);
-            }
-        }
-
-        // Use async event handlers
-        window.addEventListener("beforeunload", () => {
-            saveScrollPosition();
-        });
-
-        // For load event, we can use an async function
-        window.addEventListener("load", async () => {
-            await addUnreadLine();
-        });
-
-        // Initial restore attempt (in case the load event already fired)
-        await addUnreadLine();
-    }
-
-    // Init
-    featureSaveScroll();
 
     // --- Feature: Catalog & Image Hover ---
     async function featureImageHover() {
@@ -1743,42 +1299,6 @@ onReady(async function () {
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // --- Feature: Delete (Save) Name Checkbox ---
-    // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
-    function featureDeleteNameCheckbox() {
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = "saveNameCheckbox";
-        checkbox.classList.add("postingCheckbox");
-        const label = document.createElement("label");
-        label.htmlFor = "saveNameCheckbox";
-        label.textContent = "Delete Name";
-        label.title = "Delete Name on refresh";
-        const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
-        if (alwaysUseBypassCheckbox) {
-            alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
-            alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
-
-            // Restore checkbox state
-            const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
-            checkbox.checked = savedCheckboxState;
-
-            const nameInput = document.getElementById("qrname");
-            if (nameInput) {
-                // If the checkbox is checked on load, clear the input and remove the name from storage
-                if (checkbox.checked) {
-                    nameInput.value = "";
-                    localStorage.removeItem("name");
-                }
-
-                // Save checkbox state
-                checkbox.addEventListener("change", function () {
-                    localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
-                });
-            }
-        }
-    }
-
     /* --- Feature: Blur Spoilers + Remove Spoilers suboption --- */
     function featureBlurSpoilers() {
         function revealSpoilers() {
@@ -1831,130 +1351,6 @@ onReady(async function () {
         // Observe for dynamically added spoilers
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // --- Feature: Beep on (You) ---
-    function featureBeepOnYou() {
-        // Beep sound (base64)
-        const beep = new Audio(
-            "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
-        );
-
-        // Store the original title
-        const originalTitle = document.title;
-        let isNotifying = false;
-
-        // Create MutationObserver to detect when you are quoted
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach(async (node) => {
-                    if (
-                        node.nodeType === 1 &&
-                        node.querySelector &&
-                        node.querySelector("a.quoteLink.you")
-                    ) {
-                        // Only play beep if the setting is enabled
-                        if (await getSetting("beepOnYou")) {
-                            playBeep();
-                        }
-
-                        // Trigger notification in separate function if enabled
-                        if (await getSetting("notifyOnYou")) {
-                            featureNotifyOnYou();
-                        }
-                    }
-                });
-            });
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        // Function to play the beep sound
-        function playBeep() {
-            if (beep.paused) {
-                beep.play().catch((e) => console.warn("Beep failed:", e));
-            } else {
-                beep.addEventListener("ended", () => beep.play(), { once: true });
-            }
-        }
-        // Function to notify on (You)
-        function featureNotifyOnYou() {
-            // Store the original title if not already stored
-            if (!window.originalTitle) {
-                window.originalTitle = document.title;
-            }
-
-            // Add notification to title if not already notifying and tab not focused
-            if (!window.isNotifying && !document.hasFocus()) {
-                window.isNotifying = true;
-                document.title = "(!) " + window.originalTitle;
-
-                // Set up focus event listener if not already set
-                if (!window.notifyFocusListenerAdded) {
-                    window.addEventListener("focus", () => {
-                        if (window.isNotifying) {
-                            document.title = window.originalTitle;
-                            window.isNotifying = false;
-                        }
-                    });
-                    window.notifyFocusListenerAdded = true;
-                }
-            }
-        }
-        // Function to add notification to the title
-        function addNotificationToTitle() {
-            if (!isNotifying && !document.hasFocus()) {
-                isNotifying = true;
-                document.title = "(!) " + originalTitle;
-            }
-        }
-        // Remove notification when tab regains focus
-        window.addEventListener("focus", () => {
-            if (isNotifying) {
-                document.title = originalTitle;
-                isNotifying = false;
-            }
-        });
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Feature Initialization based on Settings ---
-
-    if (await getSetting("enableScrollSave")) {
-        featureSaveScroll();
-    }
-    if (await getSetting("watchThreadOnReply")) {
-        featureWatchThreadOnReply();
-    }
-    if (await getSetting("blurSpoilers")) {
-        featureBlurSpoilers();
-    }
-    if (await getSetting("enableHeaderCatalogLinks")) {
-        featureHeaderCatalogLinks();
-    }
-    if (await getSetting("deleteSavedName")) {
-        featureDeleteNameCheckbox();
-    }
-    if (await getSetting("enableScrollArrows")) {
-        featureScrollArrows();
-    }
-    if ((await getSetting("beepOnYou")) || (await getSetting("notifyOnYou"))) {
-        featureBeepOnYou();
-    }
-    if (await getSetting("alwaysShowTW")) {
-        featureAlwaysShowTW();
-    }
-
-    // Check if we should enable image hover based on the current page
-    const isCatalogPage = /\/catalog\.html$/.test(
-        window.location.pathname.toLowerCase()
-    );
-    if (
-        (isCatalogPage && (await getSetting("enableCatalogImageHover"))) ||
-        (!isCatalogPage && (await getSetting("enableThreadImageHover")))
-    ) {
-        featureImageHover();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2129,6 +1525,377 @@ onReady(async function () {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // --- Feature: Scroll Arrows ---
+    function featureScrollArrows() {
+        // Only add once
+        if (
+            document.getElementById("scroll-arrow-up") ||
+            document.getElementById("scroll-arrow-down")
+        )
+            return;
+
+        // Up arrow
+        const upBtn = document.createElement("button");
+        upBtn.id = "scroll-arrow-up";
+        upBtn.className = "scroll-arrow-btn";
+        upBtn.title = "Scroll to top";
+        upBtn.innerHTML = "▲";
+        upBtn.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        // Down arrow
+        const downBtn = document.createElement("button");
+        downBtn.id = "scroll-arrow-down";
+        downBtn.className = "scroll-arrow-btn";
+        downBtn.title = "Scroll to bottom";
+        downBtn.innerHTML = "▼";
+        downBtn.addEventListener("click", () => {
+            const footer = document.getElementById("footer");
+            if (footer) {
+                footer.scrollIntoView({ behavior: "smooth", block: "end" });
+            } else {
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: "smooth",
+                });
+            }
+        });
+
+        document.body.appendChild(upBtn);
+        document.body.appendChild(downBtn);
+    }
+
+    // --- Feature: Save Scroll Position (now with unread line) ---
+    async function featureSaveScroll() {
+        // Return early if root has .is-index
+        if (document.documentElement.classList.contains("is-index")) return;
+
+        const MAX_PAGES = 50;
+        const currentPage = window.location.href;
+        const excludedPagePatterns = [
+            /\/catalog\.html$/i,
+            /\/.media\/$/i,
+            /\/boards\.js$/i,
+            /\/login\.html$/i,
+            /\/overboard$/i,
+            /\/sfw$/i
+        ];
+
+        function isExcludedPage(url) {
+            return excludedPagePatterns.some((pattern) => pattern.test(url));
+        }
+
+        async function saveScrollPosition() {
+            if (isExcludedPage(currentPage)) return;
+
+            const scrollPosition = window.scrollY;
+            const timestamp = Date.now();
+
+            // Store both the scroll position and timestamp using GM storage
+            await GM.setValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                JSON.stringify({
+                    position: scrollPosition,
+                    timestamp: timestamp,
+                })
+            );
+
+            await manageScrollStorage();
+        }
+
+        async function manageScrollStorage() {
+            // Get all GM storage keys
+            const allKeys = await GM.listValues();
+
+            // Filter for scroll position keys
+            const scrollKeys = allKeys.filter((key) =>
+                key.startsWith("8chanSS_scrollPosition_")
+            );
+
+            if (scrollKeys.length > MAX_PAGES) {
+                // Create array of objects with key and timestamp
+                const keyData = await Promise.all(
+                    scrollKeys.map(async (key) => {
+                        let data;
+                        try {
+                            const savedValue = await GM.getValue(key, null);
+                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
+                        } catch (e) {
+                            data = { position: 0, timestamp: 0 };
+                        }
+                        return {
+                            key: key,
+                            timestamp: data.timestamp || 0,
+                        };
+                    })
+                );
+
+                // Sort by timestamp (oldest first)
+                keyData.sort((a, b) => a.timestamp - b.timestamp);
+
+                // Remove oldest entries until we're under the limit
+                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
+                for (const item of keysToRemove) {
+                    await GM.deleteValue(item.key);
+                }
+            }
+        }
+
+        async function addUnreadLine() {
+            // If the URL contains a hash (e.g. /res/1190.html#1534), do nothing
+            if (window.location.hash && window.location.hash.length > 1) {
+                return;
+            }
+
+            const savedData = await GM.getValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                null
+            );
+
+            if (savedData) {
+                let position;
+                try {
+                    // Try to parse as JSON (new format)
+                    const data = JSON.parse(savedData);
+                    position = data.position;
+
+                    // Update the timestamp to "refresh" this entry
+                    await GM.setValue(
+                        `8chanSS_scrollPosition_${currentPage}`,
+                        JSON.stringify({
+                            position: position,
+                            timestamp: Date.now(),
+                        })
+                    );
+                } catch (e) {
+                    // If parsing fails, skip (should not happen with cleaned storage)
+                    return;
+                }
+
+                if (!isNaN(position)) {
+                    window.scrollTo(0, position);
+
+                    // Only add unread-line if a saved position exists (i.e., not first visit)
+                    setTimeout(addUnreadLineAtViewportCenter, 100);
+                }
+            }
+        }
+
+        //---- Add an unread-line marker after the .postCell <div>  ----
+        function addUnreadLineAtViewportCenter() {
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return;
+
+            // Find the element at the center of the viewport
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            let el = document.elementFromPoint(centerX, centerY);
+
+            // Traverse up to find the closest .postCell
+            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
+                el = el.parentElement;
+            }
+            if (!el || el === divPosts || !el.id) return;
+
+            // Ensure .postCell is a direct child of .divPosts
+            if (el.parentElement !== divPosts) return;
+
+            // Remove any existing unread-line
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+
+            // Insert the unread-line marker after the .postCell (as a sibling)
+            const marker = document.createElement("hr");
+            marker.id = "unread-line";
+            if (el.nextSibling) {
+                divPosts.insertBefore(marker, el.nextSibling);
+            } else {
+                divPosts.appendChild(marker);
+            }
+        }
+
+        // Use async event handlers
+        window.addEventListener("beforeunload", () => {
+            saveScrollPosition();
+        });
+
+        // For load event, we can use an async function
+        window.addEventListener("load", async () => {
+            await addUnreadLine();
+        });
+
+        // Initial restore attempt (in case the load event already fired)
+        await addUnreadLine();
+    }
+
+    // Init
+    featureSaveScroll();
+
+    // --- Feature: Delete (Save) Name Checkbox ---
+    // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
+    function featureDeleteNameCheckbox() {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = "saveNameCheckbox";
+        checkbox.classList.add("postingCheckbox");
+        const label = document.createElement("label");
+        label.htmlFor = "saveNameCheckbox";
+        label.textContent = "Delete Name";
+        label.title = "Delete Name on refresh";
+        const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
+        if (alwaysUseBypassCheckbox) {
+            alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
+            alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
+
+            // Restore checkbox state
+            const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
+            checkbox.checked = savedCheckboxState;
+
+            const nameInput = document.getElementById("qrname");
+            if (nameInput) {
+                // If the checkbox is checked on load, clear the input and remove the name from storage
+                if (checkbox.checked) {
+                    nameInput.value = "";
+                    localStorage.removeItem("name");
+                }
+
+                // Save checkbox state
+                checkbox.addEventListener("change", function () {
+                    localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
+                });
+            }
+        }
+    }
+
+    // --- Feature: Beep on (You) ---
+    function featureBeepOnYou() {
+        // Beep sound (base64)
+        const beep = new Audio(
+            "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
+        );
+
+        // Store the original title
+        const originalTitle = document.title;
+        let isNotifying = false;
+
+        // Create MutationObserver to detect when you are quoted
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach(async (node) => {
+                    if (
+                        node.nodeType === 1 &&
+                        node.querySelector &&
+                        node.querySelector("a.quoteLink.you")
+                    ) {
+                        // Only play beep if the setting is enabled
+                        if (await getSetting("beepOnYou")) {
+                            playBeep();
+                        }
+
+                        // Trigger notification in separate function if enabled
+                        if (await getSetting("notifyOnYou")) {
+                            featureNotifyOnYou();
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Function to play the beep sound
+        function playBeep() {
+            if (beep.paused) {
+                beep.play().catch((e) => console.warn("Beep failed:", e));
+            } else {
+                beep.addEventListener("ended", () => beep.play(), { once: true });
+            }
+        }
+        // Function to notify on (You)
+        function featureNotifyOnYou() {
+            // Store the original title if not already stored
+            if (!window.originalTitle) {
+                window.originalTitle = document.title;
+            }
+
+            // Add notification to title if not already notifying and tab not focused
+            if (!window.isNotifying && !document.hasFocus()) {
+                window.isNotifying = true;
+                document.title = "(!) " + window.originalTitle;
+
+                // Set up focus event listener if not already set
+                if (!window.notifyFocusListenerAdded) {
+                    window.addEventListener("focus", () => {
+                        if (window.isNotifying) {
+                            document.title = window.originalTitle;
+                            window.isNotifying = false;
+                        }
+                    });
+                    window.notifyFocusListenerAdded = true;
+                }
+            }
+        }
+        // Function to add notification to the title
+        function addNotificationToTitle() {
+            if (!isNotifying && !document.hasFocus()) {
+                isNotifying = true;
+                document.title = "(!) " + originalTitle;
+            }
+        }
+        // Remove notification when tab regains focus
+        window.addEventListener("focus", () => {
+            if (isNotifying) {
+                document.title = originalTitle;
+                isNotifying = false;
+            }
+        });
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // --- Feature Initialization based on Settings ---
+
+    if (await getSetting("enableScrollSave")) {
+        featureSaveScroll();
+    }
+    if (await getSetting("watchThreadOnReply")) {
+        featureWatchThreadOnReply();
+    }
+    if (await getSetting("blurSpoilers")) {
+        featureBlurSpoilers();
+    }
+    if (await getSetting("enableHeaderCatalogLinks")) {
+        featureHeaderCatalogLinks();
+    }
+    if (await getSetting("deleteSavedName")) {
+        featureDeleteNameCheckbox();
+    }
+    if (await getSetting("enableScrollArrows")) {
+        featureScrollArrows();
+    }
+    if ((await getSetting("beepOnYou")) || (await getSetting("notifyOnYou"))) {
+        featureBeepOnYou();
+    }
+    if (await getSetting("alwaysShowTW")) {
+        featureAlwaysShowTW();
+    }
+
+    // Check if we should enable image hover based on the current page
+    const isCatalogPage = /\/catalog\.html$/.test(
+        window.location.pathname.toLowerCase()
+    );
+    if (
+        (isCatalogPage && (await getSetting("enableCatalogImageHover"))) ||
+        (!isCatalogPage && (await getSetting("enableThreadImageHover")))
+    ) {
+        featureImageHover();
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
     // --- Keyboard Shortcuts ---
     // Open 8chanSS menu (CTRL + F1)
     document.addEventListener("keydown", async function (event) {
