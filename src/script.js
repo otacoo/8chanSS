@@ -1912,7 +1912,6 @@ onReady(async function () {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Feature Initialization based on Settings ---
-    await featureCssClassToggles();
 
     if (await getSetting("enableScrollSave")) {
         featureSaveScroll();
