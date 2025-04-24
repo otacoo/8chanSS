@@ -75,7 +75,16 @@ onReady(async function () {
                 },
             },
             enableBottomHeader: { label: "Bottom Header", default: false },
-            enableScrollSave: { label: "Save Scroll Position", default: true },
+            enableScrollSave: {
+                label: "Save Scroll Position",
+                default: true,
+                subOptions: {
+                    showUnreadLine: {
+                        label: "Show Unread Line",
+                        default: true,
+                    },
+                },
+            },
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false, },
             hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100, },
         },
@@ -1473,56 +1482,6 @@ onReady(async function () {
         }
     }
 
-    // --- Feature: Move new post notification and show board ---
-    function processWatchedLabels() {
-        document.querySelectorAll('.watchedCellLabel').forEach(label => {
-            // Safety: Only operate if label is still in the DOM
-            if (!label.isConnected) return;
-
-            const notif = label.querySelector('.watchedNotification');
-            const link = label.querySelector('a');
-            if (!notif || !link) return;
-
-            // Move notif to the front if not already there
-            if (label.firstElementChild !== notif) {
-                label.prepend(notif);
-            }
-
-            // Extract board name from href (between first two slashes)
-            const match = link.getAttribute('href').match(/^\/([^\/]+)\//);
-            if (!match) return;
-            const board = `/${match[1]}/`;
-
-            // Remove any existing board prefix (e.g. "(b) - " or "/b/ - ")
-            link.textContent = link.textContent.replace(/^\([^)]+\)\s*-\s*|^\/[^\/]+\/\s*-\s*/i, '');
-
-            // Prepend the new board prefix
-            link.textContent = `${board} - ${link.textContent}`;
-        });
-    }
-
-    // Initial run
-    processWatchedLabels();
-
-    // Try to find the container for watched threads
-    function getWatchedContainer() {
-        // Try common selectors; adjust as needed for your board
-        return document.querySelector('.floatingContainer, #watchedThreads, .watchedThreads');
-    }
-
-    const container = getWatchedContainer();
-    if (container) {
-        // Observe for changes in the watched threads container
-        const observer = new MutationObserver(() => {
-            processWatchedLabels();
-        });
-        observer.observe(container, { childList: true, subtree: true });
-    }
-
-    // Optionally, re-run on page navigation
-    window.addEventListener('DOMContentLoaded', processWatchedLabels);
-    window.addEventListener('load', processWatchedLabels);
-
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Feature: Scroll Arrows ---
@@ -1566,7 +1525,7 @@ onReady(async function () {
         document.body.appendChild(downBtn);
     }
 
-    // --- Feature: Save Scroll Position (now with unread line) ---
+    // --- Feature: Save Scroll Position (now with optional unread line) ---
     async function featureSaveScroll() {
         // Return early if root has .is-index
         if (document.documentElement.classList.contains("is-index")) return;
@@ -1588,6 +1547,7 @@ onReady(async function () {
 
         async function saveScrollPosition() {
             if (isExcludedPage(currentPage)) return;
+            if (!(await getSetting("enableScrollSave"))) return;
 
             const scrollPosition = window.scrollY;
             const timestamp = Date.now();
@@ -1642,11 +1602,10 @@ onReady(async function () {
             }
         }
 
-        async function addUnreadLine() {
-            // If the URL contains a hash (e.g. /res/1190.html#1534), do nothing
-            if (window.location.hash && window.location.hash.length > 1) {
-                return;
-            }
+        // Restore scroll position (always, if enabled)
+        async function restoreScrollPosition() {
+            if (isExcludedPage(currentPage)) return;
+            if (!(await getSetting("enableScrollSave"))) return;
 
             const savedData = await GM.getValue(
                 `8chanSS_scrollPosition_${currentPage}`,
@@ -1672,22 +1631,30 @@ onReady(async function () {
                     // If parsing fails, skip (should not happen with cleaned storage)
                     return;
                 }
-                // Only add unread-line if a saved position exists (i.e., not first visit)
+                // Only restore scroll if a saved position exists (i.e., not first visit)
                 if (!isNaN(position)) {
                     window.scrollTo(0, position);
-                    setTimeout(addUnreadLineAtViewportCenter, 100);
+                    setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
                 }
             }
         }
 
-        //---- Add an unread-line marker after the .postCell <div>  ----
-        function addUnreadLineAtViewportCenter() {
+        // Add an unread-line marker after the .postCell <div>
+        async function addUnreadLineAtViewportCenter(scrollPosition) {
+            // Only add unread-line if showUnreadLine is enabled
+            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
+                return;
+            }
+
             const divPosts = document.querySelector(".divPosts");
             if (!divPosts) return;
 
-            // Find the element at the center of the viewport
+            // Find the element at the center of the viewport (after scroll restore)
             const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
+            // Use the restored scroll position if provided, otherwise current
+            const centerY = (typeof scrollPosition === "number")
+                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
+                : window.innerHeight / 2;
             let el = document.elementFromPoint(centerX, centerY);
 
             // Traverse up to find the closest .postCell
@@ -1720,20 +1687,25 @@ onReady(async function () {
             saveScrollPosition();
         });
 
-        // For load event, we can use an async function
+        // For load event, restore scroll and then add unread-line if enabled
         window.addEventListener("load", async () => {
-            await addUnreadLine();
+            await restoreScrollPosition();
         });
 
         // Initial restore attempt (in case the load event already fired)
-        await addUnreadLine();
+        await restoreScrollPosition();
     }
 
     // Init
     featureSaveScroll();
 
     // --- Remove unread-line at bottom of page ---
-    function removeUnreadLineIfAtBottom() {
+    async function removeUnreadLineIfAtBottom() {
+        // Check if showUnreadLine is enabled
+        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
+            return;
+        }
+
         // Check if user is at the bottom (allowing for a small margin)
         const margin = 20; // px
         if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
@@ -1832,45 +1804,39 @@ onReady(async function () {
                 beep.addEventListener("ended", () => beep.play(), { once: true });
             }
         }
-        // Function to notify on (You)
-        function featureNotifyOnYou() {
-            // Store the original title if not already stored
-            if (!window.originalTitle) {
-                window.originalTitle = document.title;
-            }
-
-            // Add notification to title if not already notifying and tab not focused
-            if (!window.isNotifying && !document.hasFocus()) {
-                window.isNotifying = true;
-                document.title = "(!) " + window.originalTitle;
-
-                // Set up focus event listener if not already set
-                if (!window.notifyFocusListenerAdded) {
-                    window.addEventListener("focus", () => {
-                        if (window.isNotifying) {
-                            document.title = window.originalTitle;
-                            window.isNotifying = false;
-                        }
-                    });
-                    window.notifyFocusListenerAdded = true;
-                }
-            }
-        }
-        // Function to add notification to the title
-        function addNotificationToTitle() {
-            if (!isNotifying && !document.hasFocus()) {
-                isNotifying = true;
-                document.title = "(!) " + originalTitle;
-            }
-        }
-        // Remove notification when tab regains focus
-        window.addEventListener("focus", () => {
-            if (isNotifying) {
-                document.title = originalTitle;
-                isNotifying = false;
-            }
-        });
     }
+
+    // --- Notification on (You) ---
+    // Store the original title if not already stored
+    if (!window.originalTitle) {
+        window.originalTitle = document.title;
+    }
+
+    function featureNotifyOnYou() {
+        if (!window.isNotifying && !document.hasFocus()) {
+            window.isNotifying = true;
+            document.title = "(!) " + window.originalTitle;
+
+            // Set up focus event listener if not already set
+            if (!window.notifyFocusListenerAdded) {
+                window.addEventListener("focus", () => {
+                    if (window.isNotifying) {
+                        document.title = window.originalTitle;
+                        window.isNotifying = false;
+                    }
+                });
+                window.notifyFocusListenerAdded = true;
+            }
+        }
+    }
+
+    // Remove notification when tab regains focus
+    window.addEventListener("focus", () => {
+        if (window.isNotifying) {
+            document.title = window.originalTitle;
+            window.isNotifying = false;
+        }
+    });
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1980,8 +1946,6 @@ onReady(async function () {
         }
     }
     document.addEventListener("keydown", toggleQR);
-
-    // 
 
     // (ESC) Clear textarea and hide QR
     function clearTextarea(event) {
