@@ -67,10 +67,15 @@ Then press the big install button to install the script.
 
 `CTRL` + `M` : Add moe tags
 
+#### How to add boards to your header:
 
+![fav](https://github.com/user-attachments/assets/8b97ca2b-8e9e-46e3-bc8b-37e4c7c42712)
 
-#### Contributing
+## Contributing
 Read [Contributing](https://github.com/otacoo/8chanSS/blob/main/CONTRIBUTING.md#development--contribution) first to set up, fork the repo, then do a pull request to here.
+
+#### Feature Request
+Open a [new issue](https://github.com/otacoo/8chanSS/issues) and request a feature.
 
 #### Reporting Bugs
 
