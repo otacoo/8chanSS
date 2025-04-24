@@ -34,6 +34,7 @@
     "grunt-contrib-concat": "~2.1.0",
     "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-cssmin": "^5.0.0",
+    "grunt-remove-comments": "^0.1.6",
     "grunt-shell": "~4.0.0"
   },
   "repository": {
