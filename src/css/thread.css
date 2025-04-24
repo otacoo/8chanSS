@@ -120,7 +120,12 @@
 .multipleUploads .uploadCell:not(.expandedCell) {
     max-width: 215px;
 }
-
+.imgExpanded,
+video {
+    max-height: 90vh !important;
+    object-fit: contain;
+    width: auto !important;
+}
 /* Not sure what this is about, guess we'll find out */
 .postCell::before {
     display: inline !important;
