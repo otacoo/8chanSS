@@ -4,9 +4,9 @@
   "description": "Userscript to style 8chan",
   "meta": {
     "name": "8chanSS",
-    "repo": "https://codeberg.org/omelet/8chanSS",
-    "page": "https://codeberg.org/omelet/8chanSS",
-    "downloads": "https://codeberg.org/omelet/8chanSS/releases/latest/download/",
+    "repo": "https://github.com/otacoo/8chanSS",
+    "page": "https://github.com/otacoo/8chanSS",
+    "downloads": "https://github.com/otacoo/8chanSS/releases/latest/download/",
     "buildsPath": "builds/",
     "mainBranch": "main",
     "matches": [
@@ -38,9 +38,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://codeberg.org/omelet/8chanSS.git"
+    "url": "https://github.com/otacoo/8chanSS.git"
   },
-  "author": "omelet",
+  "author": "otakudude",
   "contributors": [
     ""
   ],
