@@ -1,4 +1,4 @@
-// JANK THEME FLASH FIX LOAD ASAP
+///// JANK THEME FLASH FIX LOAD ASAP /////////
 (function () {
     // Get the user's selected theme from localStorage
     const userTheme = localStorage.selectedTheme;
@@ -41,7 +41,7 @@
         }
     });
 })();
-// Disable native extension settings //////
+////////// Disable native extension settings //////
 (function () {
     try {
         // Image Hover
@@ -50,8 +50,7 @@
         // Ignore errors (e.g., storage not available)
     }
 })();
-////////// ON READY HELPER ////////////////
-
+////////// ON READY HELPER ///////////////////////
 function onReady(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
@@ -59,9 +58,9 @@ function onReady(fn) {
         fn();
     }
 }
-
+//////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
-    // --- Settings ---
+    // --- Default Settings ---
     const scriptSettings = {
         site: {
             alwaysShowTW: { label: "Pin Thread Watcher", default: false },
@@ -159,6 +158,47 @@ onReady(async function () {
         // Always store as string for consistency
         await GM.setValue("8chanSS_" + key, String(value));
     }
+
+    // --- Root CSS Class Toggles ---
+    async function featureCssClassToggles() {
+        document.documentElement.classList.add("8chanSS");
+        const classToggles = {
+            enableFitReplies: "fit-replies",
+            enableSidebar: "ss-sidebar",
+            enableStickyQR: "sticky-qr",
+            enableBottomHeader: "bottom-header",
+            hideHiddenPostStub: "hide-stub",
+            hideBanner: "disable-banner",
+            hidePostingForm: "hide-posting-form",
+            hidePostingForm_showCatalogForm: "show-catalog-form",
+            hideAnnouncement: "hide-announcement",
+            hidePanelMessage: "hide-panelmessage",
+            highlightOnYou: "highlight-you",
+        };
+        for (const [settingKey, className] of Object.entries(classToggles)) {
+            if (await getSetting(settingKey)) {
+                document.documentElement.classList.add(className);
+            } else {
+                document.documentElement.classList.remove(className);
+            }
+        }
+        // URL-based class toggling
+        const urlClassMap = [
+            { pattern: /\/catalog\.html$/i, className: "is-catalog" },
+            { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
+            { pattern: /^\/$/, className: "is-index" },
+        ];
+        const currentPath = window.location.pathname.toLowerCase();
+        urlClassMap.forEach(({ pattern, className }) => {
+            if (pattern.test(currentPath)) {
+                document.documentElement.classList.add(className);
+            } else {
+                document.documentElement.classList.remove(className);
+            }
+        });
+    }
+    // Init
+    featureCssClassToggles();
 
     // --- Menu Icon ---
     const themeSelector = document.getElementById("themesBefore");
@@ -293,6 +333,267 @@ onReady(async function () {
         container.appendChild(note);
 
         return container;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // Custom CSS injection
+    function addCustomCSS(css) {
+        if (!css) return;
+        const style = document.createElement("style");
+        style.type = "text/css";
+        style.id = "8chSS";
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+    }
+    // Get the current URL path
+    const currentPath = window.location.pathname.toLowerCase();
+    const currentHost = window.location.hostname.toLowerCase();
+
+    // Apply CSS based on URL pattern
+    if (/^8chan\.(se|moe)$/.test(currentHost)) {
+        // General CSS for all pages
+        const css = `
+        /* Margins */
+        :not(.is-catalog) body {
+            margin: 0;
+        }
+        :root.ss-sidebar #mainPanel {
+            margin-right: 305px;
+        }
+        /* Cleanup */
+        :root.hide-posting-form #postingForm,
+        :root.hide-announcement #dynamicAnnouncement,
+        :root.hide-panelmessage #panelMessage,
+        #navFadeEnd,
+        #navFadeMid,
+        #navTopBoardsSpan {
+            display: none;
+        }
+        :root.is-catalog.show-catalog-form #postingForm {
+            display: block !important;
+        }
+        footer {
+            visibility: hidden;
+            height: 0;
+        }
+        /* Header */
+        :not(:root.bottom-header) .navHeader {
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        }
+        :root.bottom-header nav.navHeader {
+            top: auto !important;
+            bottom: 0 !important;
+            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
+        }
+        /* Thread Watcher */
+        .watchButton.watched-active::before {
+            color: #dd003e !important;
+        }
+        #watchedMenu {
+            font-size: smaller;
+            padding: 5px !important;
+            box-shadow: -3px 3px 2px 0px rgba(0,0,0,0.19);
+        }
+        #watchedMenu,
+        #watchedMenu .floatingContainer {
+            min-width: 200px;
+        }
+        #watchedMenu .watchedCellLabel > a:after {
+            content: " - "attr(href);
+            filter: saturate(50%);
+            font-style: italic;
+            font-weight: bold;
+        }
+        #watchedMenu .watchedCellLabel > a::after {
+            visibility: hidden;
+        }
+        td.watchedCell > label.watchedCellLabel {
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            width: 180px;
+            display: block;
+        }
+        td.watchedCell > label.watchedCellLabel:hover {
+            overflow: unset;
+            width: auto;
+            white-space: normal;
+        }
+        .watchedNotification::before {
+            padding-right: 2px;
+        }
+        .scroll-arrow-btn {
+            position: fixed;
+            right: 50px;
+            width: 36px;
+            height: 35px;
+            background: #222;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            font-size: 22px;
+            cursor: pointer;
+            opacity: 0.7;
+            z-index: 99998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s, background 0.2s;
+         }
+        /* Up/Down Arrows */
+        :root.ss-sidebar .scroll-arrow-btn {
+            right: 330px !important;
+        }
+        .scroll-arrow-btn:hover {
+            opacity: 1;
+            background: #444;
+        }
+        #scroll-arrow-up {
+            bottom: 80px;
+        }
+        #scroll-arrow-down {
+            bottom: 32px;
+        }
+        /* Links at top of page */
+        .innerUtility.top {
+            margin-top: 2em;
+            background-color: transparent !important;
+            color: var(--link-color) !important;
+        }
+        .innerUtility.top a {
+            color: var(--link-color) !important;
+        }
+        .bumpLockIndicator::after {
+            padding-right: 3px;
+        }
+          `;
+        addCustomCSS(css);
+    }
+
+    // Thread page CSS
+    if (/\/res\/[^/]+\.html$/.test(currentPath)) {
+        const css = `
+        /* Quick Reply */
+        :root.sticky-qr #quick-reply {
+            display: block;
+            top: auto !important;
+            bottom: 0;
+            left: auto !important;
+            position: fixed;
+            right: 0 !important;
+        }
+        :root.sticky-qr #qrbody {
+            resize: vertical;
+            max-height: 50vh;
+            height: 130px;
+        }
+        #qrbody {
+            min-width: 300px;
+        }
+        :root.bottom-header #quick-reply {
+            bottom: 28px !important;
+        }
+        #quick-reply {
+            padding: 0;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        #quick-reply:hover,
+        #quick-reply:focus-within {
+            opacity: 1;
+        }
+        .floatingMenu {
+            padding: 0 !important;
+        }
+        #qrFilesBody {
+            max-width: 300px;
+        }
+        /* Unread Line */
+        #unread-line {
+            height: 2px;
+            border: none !important;
+            pointer-events: none !important;
+            background-image: linear-gradient(to left, rgba(185, 185, 185, 0.2), var(--text-color), rgba(185, 185, 185, 0.2));
+            margin: -3px auto 0 auto;
+            width: 60%;
+        }
+        /* Banner */
+        :root.disable-banner #bannerImage {
+            display: none;
+        }
+        :root.ss-sidebar #bannerImage {
+            width: 305px;
+            right: 0;
+            position: fixed;
+            top: 26px;
+        }
+        :root.ss-sidebar.bottom-header #bannerImage {
+            top: 0 !important;
+        }
+        .quoteTooltip {
+            z-index: 999;
+        }
+        /* Posts */
+        .inlineQuote .replyPreview {
+            margin-left: 20px;
+            border-left: 1px solid #ccc;
+            padding-left: 10px;
+        }
+        .nestedQuoteLink {
+            text-decoration: underline dashed !important;
+        }
+        :root.hide-stub .glowOnHover {
+            display: none;
+        }
+        .quoteTooltip .innerPost {
+            overflow: hidden;
+            box-shadow: -3px 3px 2px 0px rgba(0,0,0,0.19);
+        }
+        :root.fit-replies :not(.hidden).innerPost {
+            margin-left: 10px;
+            display: flow-root;
+        }
+        :root.fit-replies .quoteTooltip {
+            display: table !important;
+        }
+        /* (You) Replies */
+        :root.highlight-you .innerPost:has(.youName) {
+            border-left: dashed #68b723 3px;
+        }
+        :root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you) {
+            border-left: solid #dd003e 3px;
+        }
+        /* Filename & Thumbs */
+        .originalNameLink {
+            display: inline;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+        .multipleUploads .uploadCell:not(.expandedCell) {
+            max-width: 215px;
+        }
+        /* Not sure what this is about, guess we'll find out */
+        .postCell::before {
+            display: inline !important;
+            height: auto !important;
+        }
+          `;
+        addCustomCSS(css);
+    }
+
+    // Catalog page CSS
+    if (/\/catalog\.html$/.test(currentPath)) {
+        const css = `
+          #dynamicAnnouncement {
+              display: none;
+          }
+          #postingForm {
+              margin: 2em auto;
+          }
+          `;
+        addCustomCSS(css);
     }
 
     // --- Floating Settings Menu with Tabs ---
@@ -785,90 +1086,6 @@ onReady(async function () {
 
         document.body.appendChild(upBtn);
         document.body.appendChild(downBtn);
-    }
-
-    // --- Feature: Beep on (You) ---
-    function featureBeepOnYou() {
-        // Beep sound (base64)
-        const beep = new Audio(
-            "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
-        );
-
-        // Store the original title
-        const originalTitle = document.title;
-        let isNotifying = false;
-
-        // Create MutationObserver to detect when you are quoted
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach(async (node) => {
-                    if (
-                        node.nodeType === 1 &&
-                        node.querySelector &&
-                        node.querySelector("a.quoteLink.you")
-                    ) {
-                        // Only play beep if the setting is enabled
-                        if (await getSetting("beepOnYou")) {
-                            playBeep();
-                        }
-
-                        // Trigger notification in separate function if enabled
-                        if (await getSetting("notifyOnYou")) {
-                            featureNotifyOnYou();
-                        }
-                    }
-                });
-            });
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        // Function to play the beep sound
-        function playBeep() {
-            if (beep.paused) {
-                beep.play().catch((e) => console.warn("Beep failed:", e));
-            } else {
-                beep.addEventListener("ended", () => beep.play(), { once: true });
-            }
-        }
-        // Function to notify on (You)
-        function featureNotifyOnYou() {
-            // Store the original title if not already stored
-            if (!window.originalTitle) {
-                window.originalTitle = document.title;
-            }
-
-            // Add notification to title if not already notifying and tab not focused
-            if (!window.isNotifying && !document.hasFocus()) {
-                window.isNotifying = true;
-                document.title = "(!) " + window.originalTitle;
-
-                // Set up focus event listener if not already set
-                if (!window.notifyFocusListenerAdded) {
-                    window.addEventListener("focus", () => {
-                        if (window.isNotifying) {
-                            document.title = window.originalTitle;
-                            window.isNotifying = false;
-                        }
-                    });
-                    window.notifyFocusListenerAdded = true;
-                }
-            }
-        }
-        // Function to add notification to the title
-        function addNotificationToTitle() {
-            if (!isNotifying && !document.hasFocus()) {
-                isNotifying = true;
-                document.title = "(!) " + originalTitle;
-            }
-        }
-        // Remove notification when tab regains focus
-        window.addEventListener("focus", () => {
-            if (isNotifying) {
-                document.title = originalTitle;
-                isNotifying = false;
-            }
-        });
     }
 
     // --- Feature: Header Catalog Links ---
@@ -1608,6 +1825,90 @@ onReady(async function () {
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
+    // --- Feature: Beep on (You) ---
+    function featureBeepOnYou() {
+        // Beep sound (base64)
+        const beep = new Audio(
+            "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
+        );
+
+        // Store the original title
+        const originalTitle = document.title;
+        let isNotifying = false;
+
+        // Create MutationObserver to detect when you are quoted
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach(async (node) => {
+                    if (
+                        node.nodeType === 1 &&
+                        node.querySelector &&
+                        node.querySelector("a.quoteLink.you")
+                    ) {
+                        // Only play beep if the setting is enabled
+                        if (await getSetting("beepOnYou")) {
+                            playBeep();
+                        }
+
+                        // Trigger notification in separate function if enabled
+                        if (await getSetting("notifyOnYou")) {
+                            featureNotifyOnYou();
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Function to play the beep sound
+        function playBeep() {
+            if (beep.paused) {
+                beep.play().catch((e) => console.warn("Beep failed:", e));
+            } else {
+                beep.addEventListener("ended", () => beep.play(), { once: true });
+            }
+        }
+        // Function to notify on (You)
+        function featureNotifyOnYou() {
+            // Store the original title if not already stored
+            if (!window.originalTitle) {
+                window.originalTitle = document.title;
+            }
+
+            // Add notification to title if not already notifying and tab not focused
+            if (!window.isNotifying && !document.hasFocus()) {
+                window.isNotifying = true;
+                document.title = "(!) " + window.originalTitle;
+
+                // Set up focus event listener if not already set
+                if (!window.notifyFocusListenerAdded) {
+                    window.addEventListener("focus", () => {
+                        if (window.isNotifying) {
+                            document.title = window.originalTitle;
+                            window.isNotifying = false;
+                        }
+                    });
+                    window.notifyFocusListenerAdded = true;
+                }
+            }
+        }
+        // Function to add notification to the title
+        function addNotificationToTitle() {
+            if (!isNotifying && !document.hasFocus()) {
+                isNotifying = true;
+                document.title = "(!) " + originalTitle;
+            }
+        }
+        // Remove notification when tab regains focus
+        window.addEventListener("focus", () => {
+            if (isNotifying) {
+                document.title = originalTitle;
+                isNotifying = false;
+            }
+        });
+    }
+
     // --- Feature: Nested replies ---
     function nestedRepliesFeature() {
         function closestAncestor(el, selector) {
@@ -1741,47 +2042,6 @@ onReady(async function () {
 
     // Init
     nestedRepliesFeature();
-
-    // --- Root CSS Class Toggles ---
-    async function featureCssClassToggles() {
-        document.documentElement.classList.add("8chanSS");
-        const classToggles = {
-            enableFitReplies: "fit-replies",
-            enableSidebar: "ss-sidebar",
-            enableStickyQR: "sticky-qr",
-            enableBottomHeader: "bottom-header",
-            hideHiddenPostStub: "hide-stub",
-            hideBanner: "disable-banner",
-            hidePostingForm: "hide-posting-form",
-            hidePostingForm_showCatalogForm: "show-catalog-form",
-            hideAnnouncement: "hide-announcement",
-            hidePanelMessage: "hide-panelmessage",
-            highlightOnYou: "highlight-you",
-        };
-        for (const [settingKey, className] of Object.entries(classToggles)) {
-            if (await getSetting(settingKey)) {
-                document.documentElement.classList.add(className);
-            } else {
-                document.documentElement.classList.remove(className);
-            }
-        }
-        // URL-based class toggling
-        const urlClassMap = [
-            { pattern: /\/catalog\.html$/i, className: "is-catalog" },
-            { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
-            { pattern: /^\/$/, className: "is-index" },
-        ];
-        const currentPath = window.location.pathname.toLowerCase();
-        urlClassMap.forEach(({ pattern, className }) => {
-            if (pattern.test(currentPath)) {
-                document.documentElement.classList.add(className);
-            } else {
-                document.documentElement.classList.remove(className);
-            }
-        });
-    }
-    // Init
-    featureCssClassToggles();
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2082,7 +2342,10 @@ onReady(async function () {
     }
     document.addEventListener("keydown", clearTextarea);
 
-    // Combination keys add Tags
+    //--- Scroll to Reply scrolling between replies using Ctrl + Arrow Up/Down (and Shift for others' replies to you)
+
+
+    // BBCODE Combination keys and Tags
     const bbCodeCombinations = new Map([
         ["s", ["[spoiler]", "[/spoiler]"]],
         ["b", ["'''", "'''"]],
@@ -2159,265 +2422,4 @@ onReady(async function () {
     document
         .getElementById("qrbody")
         ?.addEventListener("keydown", replyKeyboardShortcuts);
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // Custom CSS injection
-    function addCustomCSS(css) {
-        if (!css) return;
-        const style = document.createElement("style");
-        style.type = "text/css";
-        style.id = "8chSS";
-        style.appendChild(document.createTextNode(css));
-        document.head.appendChild(style);
-    }
-    // Get the current URL path
-    const currentPath = window.location.pathname.toLowerCase();
-    const currentHost = window.location.hostname.toLowerCase();
-
-    // Apply CSS based on URL pattern
-    if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        // General CSS for all pages
-        const css = `
-        /* Margins */
-        :not(.is-catalog) body {
-            margin: 0;
-        }
-        :root.ss-sidebar #mainPanel {
-            margin-right: 305px;
-        }
-        /* Cleanup */
-        :root.hide-posting-form #postingForm,
-        :root.hide-announcement #dynamicAnnouncement,
-        :root.hide-panelmessage #panelMessage,
-        #navFadeEnd,
-        #navFadeMid,
-        #navTopBoardsSpan {
-            display: none;
-        }
-        :root.is-catalog.show-catalog-form #postingForm {
-            display: block !important;
-        }
-        footer {
-            visibility: hidden;
-            height: 0;
-        }
-        /* Header */
-        :not(:root.bottom-header) .navHeader {
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-        }
-        :root.bottom-header nav.navHeader {
-            top: auto !important;
-            bottom: 0 !important;
-            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
-        }
-        /* Thread Watcher */
-        .watchButton.watched-active::before {
-            color: #dd003e !important;
-        }
-        #watchedMenu {
-            font-size: smaller;
-            padding: 5px !important;
-            box-shadow: -3px 3px 2px 0px rgba(0,0,0,0.19);
-        }
-        #watchedMenu,
-        #watchedMenu .floatingContainer {
-            min-width: 200px;
-        }
-        #watchedMenu .watchedCellLabel > a:after {
-            content: " - "attr(href);
-            filter: saturate(50%);
-            font-style: italic;
-            font-weight: bold;
-        }
-        #watchedMenu .watchedCellLabel > a::after {
-            visibility: hidden;
-        }
-        td.watchedCell > label.watchedCellLabel {
-            text-overflow: ellipsis;
-            overflow: hidden;
-            white-space: nowrap;
-            width: 180px;
-            display: block;
-        }
-        td.watchedCell > label.watchedCellLabel:hover {
-            overflow: unset;
-            width: auto;
-            white-space: normal;
-        }
-        .watchedNotification::before {
-            padding-right: 2px;
-        }
-        .scroll-arrow-btn {
-            position: fixed;
-            right: 50px;
-            width: 36px;
-            height: 35px;
-            background: #222;
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-            font-size: 22px;
-            cursor: pointer;
-            opacity: 0.7;
-            z-index: 99998;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.2s, background 0.2s;
-         }
-        /* Up/Down Arrows */
-        :root.ss-sidebar .scroll-arrow-btn {
-            right: 330px !important;
-        }
-        .scroll-arrow-btn:hover {
-            opacity: 1;
-            background: #444;
-        }
-        #scroll-arrow-up {
-            bottom: 80px;
-        }
-        #scroll-arrow-down {
-            bottom: 32px;
-        }
-        /* Links at top of page */
-        .innerUtility.top {
-            margin-top: 2em;
-            background-color: transparent !important;
-            color: var(--link-color) !important;
-        }
-        .innerUtility.top a {
-            color: var(--link-color) !important;
-        }
-        .bumpLockIndicator::after {
-            padding-right: 3px;
-        }
-          `;
-        addCustomCSS(css);
-    }
-
-    // Thread page CSS
-    if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        const css = `
-        /* Quick Reply */
-        :root.sticky-qr #quick-reply {
-            display: block;
-            top: auto !important;
-            bottom: 0;
-            left: auto !important;
-            position: fixed;
-            right: 0 !important;
-        }
-        :root.sticky-qr #qrbody {
-            resize: vertical;
-            max-height: 50vh;
-            height: 130px;
-        }
-        #qrbody {
-            min-width: 300px;
-        }
-        :root.bottom-header #quick-reply {
-            bottom: 28px !important;
-        }
-        #quick-reply {
-            padding: 0;
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
-        }
-        #quick-reply:hover,
-        #quick-reply:focus-within {
-            opacity: 1;
-        }
-        .floatingMenu {
-            padding: 0 !important;
-        }
-        #qrFilesBody {
-            max-width: 300px;
-        }
-        /* Unread Line */
-        #unread-line {
-            height: 2px;
-            border: none !important;
-            pointer-events: none !important;
-            background-image: linear-gradient(to left, rgba(185, 185, 185, 0.2), var(--text-color), rgba(185, 185, 185, 0.2));
-            margin: -3px auto 0 auto;
-            width: 60%;
-        }
-        /* Banner */
-        :root.disable-banner #bannerImage {
-            display: none;
-        }
-        :root.ss-sidebar #bannerImage {
-            width: 305px;
-            right: 0;
-            position: fixed;
-            top: 26px;
-        }
-        :root.ss-sidebar.bottom-header #bannerImage {
-            top: 0 !important;
-        }
-        .quoteTooltip {
-            z-index: 999;
-        }
-        /* Posts */
-        .inlineQuote .replyPreview {
-            margin-left: 20px;
-            border-left: 1px solid #ccc;
-            padding-left: 10px;
-        }
-        .nestedQuoteLink {
-            text-decoration: underline dashed !important;
-        }
-        :root.hide-stub .glowOnHover {
-            display: none;
-        }
-        .quoteTooltip .innerPost {
-            overflow: hidden;
-            box-shadow: -3px 3px 2px 0px rgba(0,0,0,0.19);
-        }
-        :root.fit-replies :not(.hidden).innerPost {
-            margin-left: 10px;
-            display: flow-root;
-        }
-        :root.fit-replies .quoteTooltip {
-            display: table !important;
-        }
-        /* (You) Replies */
-        :root.highlight-you .innerPost:has(.youName) {
-            border-left: dashed #68b723 3px;
-        }
-        :root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you) {
-            border-left: solid #dd003e 3px;
-        }
-        /* Filename & Thumbs */
-        .originalNameLink {
-            display: inline;
-            overflow-wrap: anywhere;
-            white-space: normal;
-        }
-        .multipleUploads .uploadCell:not(.expandedCell) {
-            max-width: 215px;
-        }
-        /* Not sure what this is about, guess we'll find out */
-        .postCell::before {
-            display: inline !important;
-            height: auto !important;
-        }
-          `;
-        addCustomCSS(css);
-    }
-
-    // Catalog page CSS
-    if (/\/catalog\.html$/.test(currentPath)) {
-        const css = `
-          #dynamicAnnouncement {
-              display: none;
-          }
-          #postingForm {
-              margin: 2em auto;
-          }
-          `;
-        addCustomCSS(css);
-    }
 });
