@@ -1,11 +1,11 @@
 {
   "name": "8chanSS",
-  "version": "1.2.26",
+  "version": "1.2.27",
   "description": "Userscript to style 8chan",
   "meta": {
     "name": "8chanSS",
-    "repo": "https://github.com/otacoo/8chanSS",
-    "page": "https://github.com/otacoo/8chanSS",
+    "repo": "https://github.com/otacoo/8chanSS/",
+    "page": "https://github.com/otacoo/8chanSS/",
     "downloads": "https://github.com/otacoo/8chanSS/releases/latest/download/",
     "buildsPath": "builds/",
     "mainBranch": "main",

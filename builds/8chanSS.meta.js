@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.2.26
+// @version      1.2.27
 // @namespace    8chanSS
 // @description  Userscript to style 8chan
 // @minGMVer     4.3
 // @minFFVer     121
-// @license      MIT; https://codeberg.org/omelet/8chanSSblob/main/LICENSE 
+// @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
 // @match        http://8chan.moe/*
 // @match        https://8chan.moe/*
 // @match        http://8chan.se/*
@@ -23,6 +23,6 @@
 // @grant        GM.deleteValue
 // @grant        GM.listValues
 // @run-at       document-start
-// @updateURL    https://codeberg.org/omelet/8chanSS/releases/latest/download/8chanSS.meta.js
-// @downloadURL  https://codeberg.org/omelet/8chanSS/releases/latest/download/8chanSS.user.js
+// @updateURL    https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.meta.js
+// @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
 // ==/UserScript==
