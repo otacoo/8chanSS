@@ -353,7 +353,7 @@ onReady(async function () {
     // Apply CSS based on URL pattern
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
         // General CSS for all pages
-        const css = "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";;
+        const css = "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
         addCustomCSS(css);
     }
 
