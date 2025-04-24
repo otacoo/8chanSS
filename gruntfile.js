@@ -14,25 +14,33 @@
       };
       grunt.initConfig({
         pkg: pkg,
-        concat: {
-          style: {
-            options: concatOptions,
-            files: {
-              'tmp/style.css': 'src/style.js'
-            }
+        remove_comments: {
+          js: {
+            options: {
+              multiline: true,
+              singleline: true,
+              keepSpecialComments: false
+            },
+            src: 'src/script.js',
+            dest: 'tmp/script.nocomment.js'
           },
+        },
+        cssmin: {
+          target: {
+            files: { //workaround cssmin bug by directly specifying files
+              'tmp/catalog.min.css': ['src/css/catalog.css'],
+              'tmp/site.min.css': ['src/css/site.css'],
+              'tmp/thread.min.css': ['src/css/thread.css']
+            }
+          }
+        },
+        concat: {
           userscript: {
             options: concatOptions,
             files: {
               'builds/<%= pkg.name %>.meta.js': 'src/meta/metadata.js',
-              'builds/<%= pkg.name %>.user.js': ['src/meta/metadata.js', 'src/script.js']
+              'builds/<%= pkg.name %>.user.js': ['src/meta/metadata.js', 'tmp/script.nocomment.js']
             }
-          }
-        },
-        cssmin: {
-          minify: {
-            src: 'tmp/style.css',
-            dest: 'tmp/style.min.css'
           }
         },
         clean: {
@@ -40,13 +48,14 @@
         }
       });
       grunt.loadNpmTasks('grunt-bump');
+      grunt.loadNpmTasks('grunt-remove-comments');
+      grunt.loadNpmTasks('grunt-contrib-cssmin');
       grunt.loadNpmTasks('grunt-contrib-clean');
       grunt.loadNpmTasks('grunt-contrib-concat');
       grunt.loadNpmTasks('grunt-contrib-copy');
       grunt.loadNpmTasks('grunt-shell');
-      grunt.loadNpmTasks('grunt-contrib-cssmin');
       grunt.registerTask('default', ['build']);
-      grunt.registerTask('build', ['concat:style', 'cssmin:minify', 'concat:userscript', 'clean:tmp']);
+      grunt.registerTask('build', ['remove_comments', 'cssmin', 'concat:userscript', 'clean:tmp']);
       grunt.registerTask('release', ['default']);
       grunt.registerTask('patch', ['bump-only', 'reloadPkg', 'updcl:3']);
       grunt.registerTask('minor', ['bump-only:minor', 'reloadPkg', 'updcl:2']);
@@ -60,7 +69,7 @@
         var version;
         version = [];
         version.length = +i + 1;
-        version = version.join('#') + ' v' + pkg.version + '\n*' + grunt.template.today('yyyy-mm-dd') + '*\n';
+        version = version.join('#') + ' v' + pkg.version + '\n*' + grunt.tmplate.today('yyyy-mm-dd') + '*\n';
         grunt.file.write('CHANGELOG.md', version + '\n' + grunt.file.read('CHANGELOG.md'));
         return grunt.log.ok('Changelog updated for v' + pkg.version + '.');
       });
