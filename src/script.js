@@ -1002,50 +1002,20 @@ onReady(async function () {
 
         function onMouseMove(event) {
             if (!floatingMedia) return;
-
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-
-            // Determine media dimensions based on type
-            let mediaWidth = 0,
-                mediaHeight = 0;
-
-            if (floatingMedia.tagName === "IMG") {
-                mediaWidth =
-                    floatingMedia.naturalWidth ||
-                    floatingMedia.width ||
-                    floatingMedia.offsetWidth ||
-                    0;
-                mediaHeight =
-                    floatingMedia.naturalHeight ||
-                    floatingMedia.height ||
-                    floatingMedia.offsetHeight ||
-                    0;
-            } else if (floatingMedia.tagName === "VIDEO") {
-                mediaWidth = floatingMedia.videoWidth || floatingMedia.offsetWidth || 0;
-                mediaHeight =
-                    floatingMedia.videoHeight || floatingMedia.offsetHeight || 0;
-            } else if (floatingMedia.tagName === "AUDIO") {
-                // Don't move audio elements - they're hidden anyway
-                return;
-            }
-
-            mediaWidth = Math.min(mediaWidth, viewportWidth * 0.9);
-            mediaHeight = Math.min(mediaHeight, viewportHeight * 0.9);
-
+            let mediaWidth = floatingMedia.offsetWidth || 0;
+            let mediaHeight = floatingMedia.offsetHeight || 0;
             let newX = event.clientX + 10;
             let newY = event.clientY + 10;
-
             if (newX + mediaWidth > viewportWidth) {
                 newX = viewportWidth - mediaWidth - 10;
             }
             if (newY + mediaHeight > viewportHeight) {
                 newY = viewportHeight - mediaHeight - 10;
             }
-
             newX = Math.max(newX, 0);
             newY = Math.max(newY, 0);
-
             floatingMedia.style.left = `${newX}px`;
             floatingMedia.style.top = `${newY}px`;
             floatingMedia.style.maxWidth = "90vw";
@@ -1137,8 +1107,15 @@ onReady(async function () {
                     el.style.maxWidth = "95vw";
                     el.style.maxHeight = "95vh";
                     el.style.transition = "opacity 0.15s";
-                    el.style.opacity = "0";
+                    el.style.opacity = "0.4"; // Start semi-transparent
                     el.style.left = "-9999px";
+                }
+
+                function showFloatingMediaImmediately(floatingMedia, e) {
+                    // Show the media at the mouse position, even before it's loaded
+                    document.body.appendChild(floatingMedia);
+                    document.addEventListener("mousemove", onMouseMove);
+                    onMouseMove(e);
                 }
 
                 // Setup cleanup listeners
@@ -1150,15 +1127,10 @@ onReady(async function () {
                 if (filemime.startsWith("image/")) {
                     floatingMedia = document.createElement("img");
                     setCommonStyles(floatingMedia);
-
+                    floatingMedia.src = fullSrc;
+                    showFloatingMediaImmediately(floatingMedia, e);
                     floatingMedia.onload = function () {
-                        if (!loaded && floatingMedia && isStillHovering) {
-                            loaded = true;
-                            floatingMedia.style.opacity = "1";
-                            document.body.appendChild(floatingMedia);
-                            document.addEventListener("mousemove", onMouseMove);
-                            onMouseMove(e);
-                        }
+                        floatingMedia.style.opacity = "1";
                     };
 
                     floatingMedia.onerror = cleanupFloatingMedia;
@@ -1166,12 +1138,16 @@ onReady(async function () {
                 } else if (filemime.startsWith("video/")) {
                     floatingMedia = document.createElement("video");
                     setCommonStyles(floatingMedia);
-
                     floatingMedia.autoplay = true;
                     floatingMedia.loop = true;
                     floatingMedia.muted = false;
                     floatingMedia.playsInline = true;
-                    floatingMedia.controls = false; // No controls for videos
+                    floatingMedia.controls = false;
+                    floatingMedia.src = fullSrc;
+                    showFloatingMediaImmediately(floatingMedia, e);
+                    floatingMedia.onloadeddata = function () {
+                        floatingMedia.style.opacity = "1";
+                    };
 
                     // Set volume from settings (0-100)
                     let volume = 50;
@@ -1199,7 +1175,6 @@ onReady(async function () {
                     };
 
                     floatingMedia.onerror = cleanupFloatingMedia;
-                    floatingMedia.src = fullSrc;
                 } else if (filemime.startsWith("audio/")) {
                     // --- AUDIO HOVER INDICATOR LOGIC ---
                     // Remove any lingering indicator first
