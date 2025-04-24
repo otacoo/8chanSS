@@ -544,7 +544,7 @@ onReady(async function () {
         .nestedQuoteLink {
             text-decoration: underline dashed !important;
         }
-        :root.hide-stub .glowOnHover {
+        :root.hide-stub .unhideButton {
             display: none;
         }
         .quoteTooltip .innerPost {
