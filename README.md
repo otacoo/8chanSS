@@ -1,6 +1,6 @@
-# 8chanSS
+# 8chanSS :beginner:
 
-A userscript to add functionality to 8chan, heavily influenced by 4chanSS, 4chanX and StyleChan.
+A :warning: WORK IN PROGRESS :warning: userscript to add functionality to 8chan, heavily influenced by 4chanSS, 4chanX and StyleChan.
 
 ## [Click here to Install](https://github.com/otacoo/8chanSS/raw/refs/heads/main/builds/8chanSS.user.js)
 
@@ -8,8 +8,8 @@ A userscript to add functionality to 8chan, heavily influenced by 4chanSS, 4chan
 #### Install instructions
 
 First install a userscript manager:
-- Firefox: Requires the [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/) addon.
-- Chrom*: Requires the [Violentmonkey](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag/) extension.
+- **Firefox**: Requires the [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/) addon.
+- **Chrome**: Requires the [Violentmonkey](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag/) extension.
 
 Then press the big install button to install the script.
 

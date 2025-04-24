@@ -3,5 +3,4 @@
 
 - Bug fix for Hide Stubs of Hidden Posts targeting the wrong class
 - Reorganized the code
-- Initial attempt at nested replies (buggy)
 - Versioning
