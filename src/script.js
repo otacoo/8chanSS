@@ -113,7 +113,16 @@ onReady(async function () {
         styling: {
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false, },
             enableFitReplies: { label: "Fit Replies", default: false },
-            enableSidebar: { label: "Enable Sidebar", default: false },
+            enableSidebar: {
+                label: "Enable Sidebar",
+                default: false,
+                subOptions: {
+                    leftSidebar: {
+                        label: "Sidebar on Left",
+                        default: false,
+                    },
+                },
+            },
             hideAnnouncement: { label: "Hide Announcement", default: false },
             hidePanelMessage: { label: "Hide Panel Message", default: false },
             hidePostingForm: {
@@ -171,9 +180,13 @@ onReady(async function () {
     // --- Root CSS Class Toggles ---
     async function featureCssClassToggles() {
         document.documentElement.classList.add("8chanSS");
+        const enableSidebar = await getSetting("enableSidebar");
+        const enableSidebar_leftSidebar = await getSetting("enableSidebar_leftSidebar");
+
         const classToggles = {
             enableFitReplies: "fit-replies",
-            enableSidebar: "ss-sidebar",
+            // enableSidebar handled below
+            enableSidebar_leftSidebar: "ss-leftsidebar",
             enableStickyQR: "sticky-qr",
             enableBottomHeader: "bottom-header",
             hideHiddenPostStub: "hide-stub",
@@ -184,6 +197,15 @@ onReady(async function () {
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",
         };
+
+        // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
+        if (enableSidebar && !enableSidebar_leftSidebar) {
+            document.documentElement.classList.add("ss-sidebar");
+        } else {
+            document.documentElement.classList.remove("ss-sidebar");
+        }
+
+        // All other toggles
         for (const [settingKey, className] of Object.entries(classToggles)) {
             if (await getSetting(settingKey)) {
                 document.documentElement.classList.add(className);
@@ -191,6 +213,7 @@ onReady(async function () {
                 document.documentElement.classList.remove(className);
             }
         }
+
         // URL-based class toggling
         const urlClassMap = [
             { pattern: /\/catalog\.html$/i, className: "is-catalog" },
@@ -208,6 +231,33 @@ onReady(async function () {
     }
     // Init
     featureCssClassToggles();
+
+    // Sidebar Right/Left
+    async function featureSidebar() {
+        const enableSidebar = await getSetting("enableSidebar");
+        const enableSidebar_leftSidebar = await getSetting("enableSidebar_leftSidebar");
+
+        const mainPanel = document.getElementById("mainPanel");
+        if (!mainPanel) return;
+
+        if (enableSidebar && enableSidebar_leftSidebar) {
+            mainPanel.style.marginLeft = "305px";
+            mainPanel.style.marginRight = "0";
+        } else if (enableSidebar) {
+            mainPanel.style.marginRight = "305px";
+            mainPanel.style.marginLeft = "0";
+        } else {
+            mainPanel.style.marginRight = "0";
+            mainPanel.style.marginLeft = "0";
+        }
+    }
+
+    // Call the function on DOM ready
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", featureSidebar, { once: true });
+    } else {
+        featureSidebar();
+    }
 
     // --- Menu Icon ---
     const themeSelector = document.getElementById("themesBefore");

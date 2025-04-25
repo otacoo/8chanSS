@@ -3,10 +3,6 @@
     margin: 0;
 }
 
-:root.ss-sidebar #mainPanel {
-    margin-right: 305px;
-}
-
 /* Side Catalog */
 #sideCatalogDiv {
     z-index: 200;
@@ -101,6 +97,9 @@ nav.navHeader {
 
 :root.ss-sidebar .scroll-arrow-btn {
     right: 330px !important;
+}
+:root.ss-leftsidebar .scroll-arrow-btn {
+    left: 330px !important;
 }
 
 .scroll-arrow-btn:hover {

@@ -3,9 +3,16 @@
     display: block;
     top: auto !important;
     bottom: 0;
+}
+
+:root.sticky-qr.ss-sidebar #quick-reply {
     left: auto !important;
-    position: fixed;
     right: 0 !important;
+}
+
+:root.sticky-qr.ss-leftsidebar #quick-reply {
+    left: 0 !important;
+    right: auto !important;
 }
 
 :root.sticky-qr #qrbody {
@@ -55,7 +62,7 @@
 :root.disable-banner #bannerImage {
     display: none;
 }
-
+/* Right Sidebar */
 :root.ss-sidebar #bannerImage {
     width: 305px;
     right: 0;
@@ -64,6 +71,17 @@
 }
 
 :root.ss-sidebar.bottom-header #bannerImage {
+    top: 0 !important;
+}
+/* Left Sidebar */
+:root.ss-leftsidebar #bannerImage {
+    width: 305px;
+    left: 0;
+    position: fixed;
+    top: 26px;
+}
+
+:root.ss-leftsidebar.bottom-header #bannerImage {
     top: 0 !important;
 }
 
