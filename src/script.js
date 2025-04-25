@@ -1712,6 +1712,13 @@ onReady(async function () {
                         node.querySelector &&
                         node.querySelector("a.quoteLink.you")
                     ) {
+                        // Find the first .quoteLink.you in this node
+                        const youLink = node.querySelector("a.quoteLink.you");
+                        if (youLink && youLink.closest(".innerPost")) {
+                            // If it's inside .innerPost, skip beep/notification
+                            return;
+                        }
+
                         // Only play beep if the setting is enabled
                         if (await getSetting("beepOnYou")) {
                             playBeep();
