@@ -337,7 +337,7 @@ onReady(async function () {
             { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
             { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
-            { keys: ["Ctrl", "W"], action: "Watch Thread" },
+            { keys: ["ALT", "W"], action: "Watch Thread" },
             { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
             { keys: ["Ctrl", "B"], action: "Bold text" },
             { keys: ["Ctrl", "I"], action: "Italic text" },
