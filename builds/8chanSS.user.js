@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.30.0
+// @version      1.31.0
 // @namespace    8chanSS
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -55,7 +55,14 @@
 })();
 (function () {
     try {
-        localStorage.removeItem("hoveringImage");
+        let keysToRemove = ["hoveringImage"];
+        for (key of keysToRemove) {
+            localStorage.removeItem(key);
+        }
+        let keystoEnable = ["inlineReplies"];
+        for (key of keystoEnable) {
+            localStorage.setItem(key);
+        }
     } catch (e) {
     }
 })();
@@ -142,7 +149,7 @@ onReady(async function () {
                 },
             },
             hideBanner: { label: "Hide Board Banners", default: false },
-            hideDefaultBL : { label: "Hide Default Board List", default: true },
+            hideDefaultBL: { label: "Hide Default Board List", default: true },
         },
     };
     const flatSettings = {};
@@ -312,7 +319,7 @@ onReady(async function () {
             { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
             { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
-            { keys: ["Ctrl", "W"], action: "Watch Thread" },
+            { keys: ["ALT", "W"], action: "Watch Thread" },
             { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
             { keys: ["Ctrl", "B"], action: "Bold text" },
             { keys: ["Ctrl", "I"], action: "Italic text" },
@@ -369,7 +376,7 @@ onReady(async function () {
     const currentPath = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        const css = ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,:root.hide-announcement #dynamicAnnouncement,:root.hide-defaultBL #navTopBoardsSpan,:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies .quoteTooltip{display:table!important}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root.ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}";
+        const css = ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,:root.hide-announcement #dynamicAnnouncement,:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies .quoteTooltip{display:table!important}#watchedMenu .floatingContainer{overflow:hidden;overflow-wrap:break-word;display:inline-table}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}";
         addCustomCSS(css);
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
@@ -602,7 +609,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.textContent = "Press Save to apply changes. Page will reload. - Ver. 1.30.0";
+        info.textContent = "Press Save to apply changes. Page will reload. - Ver. 1.31.0";
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -773,6 +780,152 @@ onReady(async function () {
             menu.style.display = menu.style.display === "none" ? "block" : "none";
         });
     }
+    async function featureSaveScroll() {
+        const MAX_PAGES = 50;
+        const currentPage = window.location.href;
+        const excludedPagePatterns = [
+            /\/catalog\.html$/i,
+            /\/.media\/$/i,
+            /\/boards\.js$/i,
+            /\/login\.html$/i,
+            /\/overboard$/i,
+            /\/sfw$/i
+        ];
+
+        function isExcludedPage(url) {
+            return excludedPagePatterns.some((pattern) => pattern.test(url));
+        }
+
+        async function saveScrollPosition() {
+            if (document.documentElement.classList.contains("is-index")) return;
+            if (isExcludedPage(currentPage)) return;
+            if (!(await getSetting("enableScrollSave"))) return;
+
+            const scrollPosition = window.scrollY;
+            const timestamp = Date.now();
+            await GM.setValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                JSON.stringify({
+                    position: scrollPosition,
+                    timestamp: timestamp,
+                })
+            );
+
+            await manageScrollStorage();
+        }
+
+        async function manageScrollStorage() {
+            const allKeys = await GM.listValues();
+            const scrollKeys = allKeys.filter((key) =>
+                key.startsWith("8chanSS_scrollPosition_")
+            );
+
+            if (scrollKeys.length > MAX_PAGES) {
+                const keyData = await Promise.all(
+                    scrollKeys.map(async (key) => {
+                        let data;
+                        try {
+                            const savedValue = await GM.getValue(key, null);
+                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
+                        } catch (e) {
+                            data = { position: 0, timestamp: 0 };
+                        }
+                        return {
+                            key: key,
+                            timestamp: data.timestamp || 0,
+                        };
+                    })
+                );
+                keyData.sort((a, b) => a.timestamp - b.timestamp);
+                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
+                for (const item of keysToRemove) {
+                    await GM.deleteValue(item.key);
+                }
+            }
+        }
+        async function restoreScrollPosition() {
+            if (document.documentElement.classList.contains("is-index")) return;
+            if (isExcludedPage(currentPage)) return;
+            if (!(await getSetting("enableScrollSave"))) return;
+
+            const savedData = await GM.getValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                null
+            );
+
+            if (savedData) {
+                let position;
+                try {
+                    const data = JSON.parse(savedData);
+                    position = data.position;
+                    await GM.setValue(
+                        `8chanSS_scrollPosition_${currentPage}`,
+                        JSON.stringify({
+                            position: position,
+                            timestamp: Date.now(),
+                        })
+                    );
+                } catch (e) {
+                    return;
+                }
+                if (!isNaN(position)) {
+                    window.scrollTo(0, position);
+                    setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
+                }
+            }
+        }
+        async function addUnreadLineAtViewportCenter(scrollPosition) {
+            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
+                return;
+            }
+
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return;
+            const centerX = window.innerWidth / 2;
+            const centerY = (typeof scrollPosition === "number")
+                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
+                : window.innerHeight / 2;
+            let el = document.elementFromPoint(centerX, centerY);
+            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
+                el = el.parentElement;
+            }
+            if (!el || el === divPosts || !el.id) return;
+            if (el.parentElement !== divPosts) return;
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+            const marker = document.createElement("hr");
+            marker.id = "unread-line";
+            if (el.nextSibling) {
+                divPosts.insertBefore(marker, el.nextSibling);
+            } else {
+                divPosts.appendChild(marker);
+            }
+        }
+        window.addEventListener("beforeunload", () => {
+            saveScrollPosition();
+        });
+        window.addEventListener("load", async () => {
+            await restoreScrollPosition();
+        });
+        await restoreScrollPosition();
+    }
+    featureSaveScroll();
+    async function removeUnreadLineIfAtBottom() {
+        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
+            return;
+        }
+        const margin = 20; 
+        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+        }
+    }
+
+    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
     async function featureHeaderCatalogLinks() {
         async function appendCatalogToLinks() {
             const navboardsSpan = document.getElementById("navBoardsSpan");
@@ -1082,6 +1235,53 @@ onReady(async function () {
             }
         }).observe(document.body, { childList: true, subtree: true });
     }
+    function ensureReplyPreviewPlacement(root = document) {
+        root.querySelectorAll('.innerPost').forEach(innerPost => {
+            const replyPreview = innerPost.querySelector('.replyPreview');
+            const divMessage = innerPost.querySelector('.divMessage');
+            if (replyPreview && divMessage && replyPreview.nextSibling !== divMessage) {
+                innerPost.insertBefore(replyPreview, divMessage);
+            }
+        });
+    }
+    ensureReplyPreviewPlacement();
+    const observer = new MutationObserver(mutations => {
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType !== 1) continue; 
+                if (node.matches && node.matches('.innerPost')) {
+                    ensureReplyPreviewPlacement(node);
+                } else if (node.querySelectorAll) {
+                    node.querySelectorAll('.innerPost').forEach(innerPost => {
+                        ensureReplyPreviewPlacement(innerPost);
+                    });
+                }
+            }
+        }
+    });
+    const postsContainer = document.querySelector('.divPosts');
+    if (postsContainer) {
+        observer.observe(postsContainer, { childList: true, subtree: true });
+    }
+    (function addReplyInlinedStyle() {
+        if (document.getElementById('reply-inlined-style')) return;
+        const style = document.createElement('style');
+        style.id = 'reply-inlined-style';
+        style.textContent = `
+        .reply-inlined {
+            text-decoration: underline dashed !important;
+            text-underline-offset: 2px;
+        }
+    `;
+        document.head.appendChild(style);
+    })();
+    document.addEventListener('click', function (e) {
+        const a = e.target.closest('.panelBacklinks > a');
+        if (!a) return;
+        setTimeout(() => {
+            a.classList.toggle('reply-inlined');
+        }, 0);
+    });
     function featureBlurSpoilers() {
         function revealSpoilers() {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
@@ -1123,6 +1323,42 @@ onReady(async function () {
         revealSpoilers();
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
+    }
+    function highlightMentions() {
+        document.querySelectorAll("#watchedMenu .watchedCell").forEach((cell) => {
+            const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
+            const labelLink = cell.querySelector(".watchedCellLabel a");
+
+            if (labelLink) {
+                if (!labelLink.dataset.board) {
+                    const href = labelLink.getAttribute("href");
+                    const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
+                    if (match) {
+                        labelLink.dataset.board = `/${match[1]}/ -`;
+                    }
+                    if (document.location.href.includes(href)) {
+                        const watchButton = document.querySelector(".opHead .watchButton");
+                        if (watchButton) {
+                            watchButton.style.color = "var(--board-title-color)";
+                            watchButton.title = "Watched";
+                        }
+                    }
+                }
+                if (notification && notification.textContent.includes("(you)")) {
+                    labelLink.style.color = "#ff0000f0";
+                } else {
+                    labelLink.style.color = "";
+                }
+            }
+        });
+    }
+    highlightMentions();
+    const watchedMenu = document.getElementById("watchedMenu");
+    if (watchedMenu) {
+        const observer = new MutationObserver(() => {
+            highlightMentions();
+        });
+        observer.observe(watchedMenu, { childList: true, subtree: true });
     }
     async function featureWatchThreadOnReply() {
         function getWatchButton() {
@@ -1253,152 +1489,6 @@ onReady(async function () {
         document.body.appendChild(upBtn);
         document.body.appendChild(downBtn);
     }
-    async function featureSaveScroll() {
-        const MAX_PAGES = 50;
-        const currentPage = window.location.href;
-        const excludedPagePatterns = [
-            /\/catalog\.html$/i,
-            /\/.media\/$/i,
-            /\/boards\.js$/i,
-            /\/login\.html$/i,
-            /\/overboard$/i,
-            /\/sfw$/i
-        ];
-
-        function isExcludedPage(url) {
-            return excludedPagePatterns.some((pattern) => pattern.test(url));
-        }
-
-        async function saveScrollPosition() {
-            if (document.documentElement.classList.contains("is-index")) return;
-            if (isExcludedPage(currentPage)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
-
-            const scrollPosition = window.scrollY;
-            const timestamp = Date.now();
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: scrollPosition,
-                    timestamp: timestamp,
-                })
-            );
-
-            await manageScrollStorage();
-        }
-
-        async function manageScrollStorage() {
-            const allKeys = await GM.listValues();
-            const scrollKeys = allKeys.filter((key) =>
-                key.startsWith("8chanSS_scrollPosition_")
-            );
-
-            if (scrollKeys.length > MAX_PAGES) {
-                const keyData = await Promise.all(
-                    scrollKeys.map(async (key) => {
-                        let data;
-                        try {
-                            const savedValue = await GM.getValue(key, null);
-                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
-                        } catch (e) {
-                            data = { position: 0, timestamp: 0 };
-                        }
-                        return {
-                            key: key,
-                            timestamp: data.timestamp || 0,
-                        };
-                    })
-                );
-                keyData.sort((a, b) => a.timestamp - b.timestamp);
-                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
-                for (const item of keysToRemove) {
-                    await GM.deleteValue(item.key);
-                }
-            }
-        }
-        async function restoreScrollPosition() {
-            if (document.documentElement.classList.contains("is-index")) return;
-            if (isExcludedPage(currentPage)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
-
-            const savedData = await GM.getValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                null
-            );
-
-            if (savedData) {
-                let position;
-                try {
-                    const data = JSON.parse(savedData);
-                    position = data.position;
-                    await GM.setValue(
-                        `8chanSS_scrollPosition_${currentPage}`,
-                        JSON.stringify({
-                            position: position,
-                            timestamp: Date.now(),
-                        })
-                    );
-                } catch (e) {
-                    return;
-                }
-                if (!isNaN(position)) {
-                    window.scrollTo(0, position);
-                    setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
-                }
-            }
-        }
-        async function addUnreadLineAtViewportCenter(scrollPosition) {
-            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-                return;
-            }
-
-            const divPosts = document.querySelector(".divPosts");
-            if (!divPosts) return;
-            const centerX = window.innerWidth / 2;
-            const centerY = (typeof scrollPosition === "number")
-                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
-                : window.innerHeight / 2;
-            let el = document.elementFromPoint(centerX, centerY);
-            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
-                el = el.parentElement;
-            }
-            if (!el || el === divPosts || !el.id) return;
-            if (el.parentElement !== divPosts) return;
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-            const marker = document.createElement("hr");
-            marker.id = "unread-line";
-            if (el.nextSibling) {
-                divPosts.insertBefore(marker, el.nextSibling);
-            } else {
-                divPosts.appendChild(marker);
-            }
-        }
-        window.addEventListener("beforeunload", () => {
-            saveScrollPosition();
-        });
-        window.addEventListener("load", async () => {
-            await restoreScrollPosition();
-        });
-        await restoreScrollPosition();
-    }
-    featureSaveScroll();
-    async function removeUnreadLineIfAtBottom() {
-        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-            return;
-        }
-        const margin = 20; 
-        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-        }
-    }
-
-    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
     function featureDeleteNameCheckbox() {
         const nameExists = document.getElementById("qr-name-row");
         if (nameExists && nameExists.classList.contains("hidden")) {
@@ -1436,8 +1526,6 @@ onReady(async function () {
         const beep = new Audio(
             "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
         );
-        const originalTitle = document.title;
-        let isNotifying = false;
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach(async (node) => {
@@ -1662,8 +1750,143 @@ onReady(async function () {
     document
         .getElementById("qrbody")
         ?.addEventListener("keydown", replyKeyboardShortcuts);
+    function featureCatalogThreadHideShortcut() {
+        const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
+        let showHiddenMode = false;
+        function getBoardAndThreadNumFromCell(cell) {
+            const link = cell.querySelector("a.linkThumb[href*='/res/']");
+            if (!link) return { board: null, threadNum: null };
+            const match = link.getAttribute("href").match(/^\/([^/]+)\/res\/(\d+)\.html/);
+            if (!match) return { board: null, threadNum: null };
+            return { board: match[1], threadNum: match[2] };
+        }
+        async function loadHiddenThreadsObj() {
+            const raw = await GM.getValue(STORAGE_KEY, "{}");
+            try {
+                const obj = JSON.parse(raw);
+                return typeof obj === "object" && obj !== null ? obj : {};
+            } catch {
+                return {};
+            }
+        }
+        async function saveHiddenThreadsObj(obj) {
+            await GM.setValue(STORAGE_KEY, JSON.stringify(obj));
+        }
+        async function applyHiddenThreads() {
+            const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
+            const hiddenThreadsObjRaw = await GM.getValue(STORAGE_KEY, "{}");
+            let hiddenThreadsObj;
+            try {
+                hiddenThreadsObj = JSON.parse(hiddenThreadsObjRaw);
+                if (typeof hiddenThreadsObj !== "object" || hiddenThreadsObj === null) hiddenThreadsObj = {};
+            } catch {
+                hiddenThreadsObj = {};
+            }
+            document.querySelectorAll(".catalogCell").forEach(cell => {
+                const { board, threadNum } = getBoardAndThreadNumFromCell(cell);
+                if (!board || !threadNum) return;
+                const hiddenThreads = hiddenThreadsObj[board] || [];
+
+                if (typeof showHiddenMode !== "undefined" && showHiddenMode) {
+                    if (hiddenThreads.includes(threadNum)) {
+                        cell.style.display = "";
+                        cell.classList.add("ss-unhide-thread");
+                        cell.classList.remove("ss-hidden-thread");
+                    } else {
+                        cell.style.display = "none";
+                        cell.classList.remove("ss-unhide-thread", "ss-hidden-thread");
+                    }
+                } else {
+                    if (hiddenThreads.includes(threadNum)) {
+                        cell.style.display = "none";
+                        cell.classList.add("ss-hidden-thread");
+                        cell.classList.remove("ss-unhide-thread");
+                    } else {
+                        cell.style.display = "";
+                        cell.classList.remove("ss-hidden-thread", "ss-unhide-thread");
+                    }
+                }
+            });
+        }
+        async function onCatalogCellClick(e) {
+            const cell = e.target.closest(".catalogCell");
+            if (!cell) return;
+            if (e.shiftKey && e.button === 0) {
+                const { board, threadNum } = getBoardAndThreadNumFromCell(cell);
+                if (!board || !threadNum) return;
+
+                let hiddenThreadsObj = await loadHiddenThreadsObj();
+                if (!hiddenThreadsObj[board]) hiddenThreadsObj[board] = [];
+                let hiddenThreads = hiddenThreadsObj[board];
+
+                if (showHiddenMode) {
+                    hiddenThreads = hiddenThreads.filter(num => num !== threadNum);
+                    hiddenThreadsObj[board] = hiddenThreads;
+                    await saveHiddenThreadsObj(hiddenThreadsObj);
+                    await applyHiddenThreads();
+                } else {
+                    if (!hiddenThreads.includes(threadNum)) {
+                        hiddenThreads.push(threadNum);
+                        hiddenThreadsObj[board] = hiddenThreads;
+                    }
+                    await saveHiddenThreadsObj(hiddenThreadsObj);
+                    cell.style.display = "none";
+                    cell.classList.add("ss-hidden-thread");
+                }
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+        async function showAllHiddenThreads() {
+            showHiddenMode = true;
+            await applyHiddenThreads();
+            const btn = document.getElementById("ss-show-hidden-btn");
+            if (btn) btn.textContent = "Hide Hidden";
+        }
+        async function hideAllHiddenThreads() {
+            showHiddenMode = false;
+            await applyHiddenThreads();
+            const btn = document.getElementById("ss-show-hidden-btn");
+            if (btn) btn.textContent = "Show Hidden";
+        }
+        async function toggleShowHiddenThreads() {
+            if (showHiddenMode) {
+                await hideAllHiddenThreads();
+            } else {
+                await showAllHiddenThreads();
+            }
+        }
+        function addShowHiddenButton() {
+            if (document.getElementById("ss-show-hidden-btn")) return;
+            const refreshBtn = document.querySelector("#catalogRefreshButton");
+            if (!refreshBtn) return;
+            const btn = document.createElement("button");
+            btn.id = "ss-show-hidden-btn";
+            btn.className = "catalogLabel";
+            btn.type = "button";
+            btn.textContent = "Show Hidden";
+            btn.style.marginRight = "8px";
+            btn.addEventListener("click", toggleShowHiddenThreads);
+            refreshBtn.parentNode.insertBefore(btn, refreshBtn);
+        }
+        function hideThreadsOnRefresh() {
+            if (!/\/catalog\.html$/.test(window.location.pathname)) return;
+            onReady(addShowHiddenButton);
+            onReady(applyHiddenThreads);
+            document.addEventListener("click", onCatalogCellClick, true);
+            const catalogContainer = document.querySelector(".catalogWrapper, .catalogDiv");
+            if (catalogContainer) {
+                const observer = new MutationObserver(applyHiddenThreads);
+                observer.observe(catalogContainer, { childList: true, subtree: true });
+            }
+        }
+
+        hideThreadsOnRefresh();
+    }
+    featureCatalogThreadHideShortcut();
     const captchaInput = document.getElementById("QRfieldCaptcha");
     if (captchaInput) {
         captchaInput.autocomplete = "off";
     }
+
 });

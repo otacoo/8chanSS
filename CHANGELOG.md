@@ -1,3 +1,13 @@
+## v1.31.0
+*2025-04-25*
+
+- New Feature: Hide Catalog Threads (Shift + Click), has a button to show hidden threads, shift + click again to unhide (saved per board)
+- New Feature: Better inline replies, inlined posts will now appear above the message, opened quotelinks will receive an dashed underline
+- Add some CSS to Thread Watcher again
+- Thread Watcher will now highlight threads where you got an (You) in red
+- Watched threads will now have their little eye colored to signify they're being watched
+- Scrolls Arrows will correctly be positioned for the Index and Catalog
+
 ## v1.30.0
 *2025-04-25*
 
