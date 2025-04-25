@@ -56,8 +56,13 @@ nav.navHeader {
     display: table !important;
 }
 
-
 /* Thread Watcher */
+#watchedMenu .floatingContainer {
+    overflow: hidden;
+    overflow-wrap: break-word;
+    display: inline-table;
+}
+
 .watchButton.watched-active::before {
     color: #dd003e !important;
 }
