@@ -1577,7 +1577,8 @@ onReady(async function () {
                     if (document.location.href.includes(href)) {
                         const watchButton = document.querySelector(".opHead .watchButton");
                         if (watchButton) {
-                            watchButton.style.color = "white";
+                            watchButton.style.color = "var(--board-title-color)";
+                            watchButton.title = "Watched";
                         }
                     }
                 }
