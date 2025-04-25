@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.29.0
+// @version      1.30.0
 // @namespace    8chanSS
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -119,7 +119,16 @@ onReady(async function () {
         styling: {
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false, },
             enableFitReplies: { label: "Fit Replies", default: false },
-            enableSidebar: { label: "Enable Sidebar", default: false },
+            enableSidebar: {
+                label: "Enable Sidebar",
+                default: false,
+                subOptions: {
+                    leftSidebar: {
+                        label: "Sidebar on Left",
+                        default: false,
+                    },
+                },
+            },
             hideAnnouncement: { label: "Hide Announcement", default: false },
             hidePanelMessage: { label: "Hide Panel Message", default: false },
             hidePostingForm: {
@@ -133,6 +142,7 @@ onReady(async function () {
                 },
             },
             hideBanner: { label: "Hide Board Banners", default: false },
+            hideDefaultBL : { label: "Hide Default Board List", default: true },
         },
     };
     const flatSettings = {};
@@ -169,19 +179,28 @@ onReady(async function () {
     }
     async function featureCssClassToggles() {
         document.documentElement.classList.add("8chanSS");
+        const enableSidebar = await getSetting("enableSidebar");
+        const enableSidebar_leftSidebar = await getSetting("enableSidebar_leftSidebar");
+
         const classToggles = {
             enableFitReplies: "fit-replies",
-            enableSidebar: "ss-sidebar",
+            enableSidebar_leftSidebar: "ss-leftsidebar",
             enableStickyQR: "sticky-qr",
             enableBottomHeader: "bottom-header",
             hideHiddenPostStub: "hide-stub",
             hideBanner: "disable-banner",
             hidePostingForm: "hide-posting-form",
             hidePostingForm_showCatalogForm: "show-catalog-form",
+            hideDefaultBL: "hide-defaultBL",
             hideAnnouncement: "hide-announcement",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",
         };
+        if (enableSidebar && !enableSidebar_leftSidebar) {
+            document.documentElement.classList.add("ss-sidebar");
+        } else {
+            document.documentElement.classList.remove("ss-sidebar");
+        }
         for (const [settingKey, className] of Object.entries(classToggles)) {
             if (await getSetting(settingKey)) {
                 document.documentElement.classList.add(className);
@@ -192,9 +211,9 @@ onReady(async function () {
         const urlClassMap = [
             { pattern: /\/catalog\.html$/i, className: "is-catalog" },
             { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
-            { pattern: /^\/$/, className: "is-index" },
+            { pattern: /\/[^/]+\/(#)?$/i, className: "is-index" },
         ];
-        const currentPath = window.location.pathname.toLowerCase();
+        const currentPath = window.location.pathname.toLowerCase() + window.location.hash;
         urlClassMap.forEach(({ pattern, className }) => {
             if (pattern.test(currentPath)) {
                 document.documentElement.classList.add(className);
@@ -204,6 +223,29 @@ onReady(async function () {
         });
     }
     featureCssClassToggles();
+    async function featureSidebar() {
+        const enableSidebar = await getSetting("enableSidebar");
+        const enableSidebar_leftSidebar = await getSetting("enableSidebar_leftSidebar");
+
+        const mainPanel = document.getElementById("mainPanel");
+        if (!mainPanel) return;
+
+        if (enableSidebar && enableSidebar_leftSidebar) {
+            mainPanel.style.marginLeft = "305px";
+            mainPanel.style.marginRight = "0";
+        } else if (enableSidebar) {
+            mainPanel.style.marginRight = "305px";
+            mainPanel.style.marginLeft = "0";
+        } else {
+            mainPanel.style.marginRight = "0";
+            mainPanel.style.marginLeft = "0";
+        }
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", featureSidebar, { once: true });
+    } else {
+        featureSidebar();
+    }
     const themeSelector = document.getElementById("themesBefore");
     let link = null;
     let bracketSpan = null;
@@ -327,11 +369,11 @@ onReady(async function () {
     const currentPath = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        const css = ":not(.is-catalog) body{margin:0}:root.ss-sidebar #mainPanel{margin-right:305px}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,#navTopBoardsSpan,:root.hide-announcement #dynamicAnnouncement,:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root.ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}";
+        const css = ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,:root.hide-announcement #dynamicAnnouncement,:root.hide-defaultBL #navTopBoardsSpan,:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies .quoteTooltip{display:table!important}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root.ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}";
         addCustomCSS(css);
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        const css = ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0;left:auto!important;position:fixed;right:0!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}#quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}#quick-reply:focus-within,#quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:300px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.disable-banner #bannerImage{display:none}:root.ss-sidebar #bannerImage{width:305px;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.inlineQuote .replyPreview{margin-left:20px;border-left:1px solid #ccc;padding-left:10px}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies .quoteTooltip{display:table!important}:root.highlight-you .innerPost:has(.youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you){border-left:solid #dd003e 3px}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}.postCell::before{display:inline!important;height:auto!important}";
+        const css = ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}#quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}#quick-reply:focus-within,#quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:300px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.disable-banner #bannerImage{display:none}:root.ss-sidebar #bannerImage{width:305px;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:305px;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.inlineQuote .replyPreview{margin-left:20px;border-left:1px solid #ccc;padding-left:10px}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}:root.highlight-you .innerPost:has(.youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you){border-left:solid #dd003e 3px}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}.postCell::before{display:inline!important;height:auto!important}";
         addCustomCSS(css);
     }
     if (/\/catalog\.html$/.test(currentPath)) {
@@ -560,7 +602,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.textContent = "Press Save to apply changes. Page will reload. - Ver. 1.29.0";
+        info.textContent = "Press Save to apply changes. Page will reload. - Ver. 1.30.0";
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -763,7 +805,55 @@ onReady(async function () {
             observer.observe(navboardsSpan, config);
         }
     }
-    async function featureImageHover() {
+    function featureImageHover() {
+        const DEFAULT_MEDIA_WIDTH = 320;
+        const DEFAULT_MEDIA_HEIGHT = 240;
+        const OFFSET = 10;
+
+        let floatingMedia = null;
+        let cleanupHandlers = [];
+        function positionFloatingMedia(event) {
+            if (!floatingMedia) return;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            let mediaWidth = floatingMedia.naturalWidth || floatingMedia.videoWidth || floatingMedia.offsetWidth || DEFAULT_MEDIA_WIDTH;
+            let mediaHeight = floatingMedia.naturalHeight || floatingMedia.videoHeight || floatingMedia.offsetHeight || DEFAULT_MEDIA_HEIGHT;
+            let x = event.clientX + OFFSET;
+            let y = event.clientY - mediaHeight - OFFSET;
+            if (x + mediaWidth > viewportWidth) {
+                x = event.clientX - mediaWidth - OFFSET;
+            }
+            if (x < 0) x = 0;
+            if (y < 0) {
+                y = event.clientY + OFFSET;
+            }
+            if (y + mediaHeight > viewportHeight) {
+                y = Math.max(viewportHeight - mediaHeight - OFFSET, 0);
+            }
+
+            floatingMedia.style.left = `${x}px`;
+            floatingMedia.style.top = `${y}px`;
+            floatingMedia.style.maxWidth = "90vw";
+            floatingMedia.style.maxHeight = "90vh";
+        }
+        function cleanupFloatingMedia() {
+            if (floatingMedia) {
+                if (floatingMedia.tagName === "VIDEO" || floatingMedia.tagName === "AUDIO") {
+                    try {
+                        floatingMedia.pause();
+                        floatingMedia.removeAttribute("src");
+                        floatingMedia.load();
+                    } catch (e) { }
+                }
+                floatingMedia.remove();
+                floatingMedia = null;
+            }
+            cleanupHandlers.forEach(fn => fn());
+            cleanupHandlers = [];
+            document.querySelectorAll(".audio-preview-indicator").forEach(indicator => {
+                if (indicator.parentNode) indicator.parentNode.removeChild(indicator);
+            });
+        }
         function getFullMediaSrcFromMime(thumbNode, filemime) {
             if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
@@ -782,7 +872,7 @@ onReady(async function () {
                     "audio/ogg": ".ogg",
                     "audio/mpeg": ".mp3",
                     "audio/x-m4a": ".m4a",
-                    "audio/wav": ".wav",
+                    "audio/x-wav": ".wav",
                 };
                 const ext = mimeToExt[filemime.toLowerCase()];
                 if (!ext) return null;
@@ -805,312 +895,171 @@ onReady(async function () {
             const style = document.createElement("style");
             style.id = "audio-preview-indicator-style";
             style.textContent = `
-                a.imgLink[data-filemime^="audio/"], 
-                a.originalNameLink[href$=".mp3"],
-                a.originalNameLink[href$=".ogg"],
-                a.originalNameLink[href$=".m4a"],
-                a.originalNameLink[href$=".wav"] {
-                    position: relative;
-                }
-                
-                .audio-preview-indicator {
-                    display: none;
-                    position: absolute;
-                    background: rgba(0, 0, 0, 0.7);
-                    color: #ffffff;
-                    padding: 5px;
-                    font-size: 12px;
-                    border-radius: 3px;
-                    z-index: 1000;
-                    left: 0;
-                    top: 0;
-                    white-space: nowrap;
-                    pointer-events: none;
-                }
-                
-                a[data-filemime^="audio/"]:hover .audio-preview-indicator,
-                a.originalNameLink:hover .audio-preview-indicator {
-                    display: block;
-                }
-            `;
+            a.imgLink[data-filemime^="audio/"], 
+            a.originalNameLink[href$=".mp3"],
+            a.originalNameLink[href$=".ogg"],
+            a.originalNameLink[href$=".m4a"],
+            a.originalNameLink[href$=".wav"] {
+                position: relative;
+            }
+            .audio-preview-indicator {
+                display: none;
+                position: absolute;
+                background: rgba(0, 0, 0, 0.7);
+                color: #fff;
+                padding: 5px;
+                font-size: 12px;
+                border-radius: 3px;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                white-space: nowrap;
+                pointer-events: none;
+            }
+            a[data-filemime^="audio/"]:hover .audio-preview-indicator,
+            a.originalNameLink:hover .audio-preview-indicator {
+                display: block;
+            }
+        `;
             document.head.appendChild(style);
         }
-
-        let floatingMedia = null;
-        let removeListeners = null;
-        let hoverTimeout = null;
-        let lastThumb = null;
-        let isStillHovering = false;
-
-        function cleanupFloatingMedia() {
-            if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-                hoverTimeout = null;
-            }
-
-            if (removeListeners) {
-                removeListeners();
-                removeListeners = null;
-            }
-
-            if (floatingMedia) {
-                if (
-                    floatingMedia.tagName === "VIDEO" ||
-                    floatingMedia.tagName === "AUDIO"
-                ) {
-                    try {
-                        floatingMedia.pause();
-                        floatingMedia.removeAttribute("src");
-                        floatingMedia.load();
-                    } catch (e) {
-                    }
-                }
-
-                if (floatingMedia.parentNode) {
-                    floatingMedia.parentNode.removeChild(floatingMedia);
-                }
-            }
-            const indicators = document.querySelectorAll(".audio-preview-indicator");
-            indicators.forEach((indicator) => {
-                if (indicator.parentNode) {
-                    indicator.parentNode.removeChild(indicator);
-                }
-            });
-
-            floatingMedia = null;
-            lastThumb = null;
-            isStillHovering = false;
-            document.removeEventListener("mousemove", onMouseMove);
-        }
-
-        function onMouseMove(event) {
-            if (!floatingMedia) return;
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            let mediaWidth = floatingMedia.offsetWidth || 0;
-            let mediaHeight = floatingMedia.offsetHeight || 0;
-            let newX = event.clientX + 10;
-            let newY = event.clientY + 10;
-            if (newX + mediaWidth > viewportWidth) {
-                newX = viewportWidth - mediaWidth - 10;
-            }
-            if (newY + mediaHeight > viewportHeight) {
-                newY = viewportHeight - mediaHeight - 10;
-            }
-            newX = Math.max(newX, 0);
-            newY = Math.max(newY, 0);
-            floatingMedia.style.left = `${newX}px`;
-            floatingMedia.style.top = `${newY}px`;
-            floatingMedia.style.maxWidth = "90vw";
-            floatingMedia.style.maxHeight = "90vh";
-        }
-
         async function onThumbEnter(e) {
-            const thumb = e.currentTarget;
-            if (lastThumb === thumb) return;
-            lastThumb = thumb;
-
             cleanupFloatingMedia();
-            isStillHovering = true;
-            const container =
-                thumb.tagName === "IMG"
+            const thumb = e.currentTarget;
+            let filemime = null, fullSrc = null, isVideo = false, isAudio = false;
+            if (thumb.tagName === "IMG") {
+                const parentA = thumb.closest("a.linkThumb, a.imgLink");
+                if (!parentA) return;
+                const href = parentA.getAttribute("href");
+                if (!href) return;
+                const ext = href.split(".").pop().toLowerCase();
+                filemime =
+                    parentA.getAttribute("data-filemime") ||
+                    {
+                        jpg: "image/jpeg",
+                        jpeg: "image/jpeg",
+                        png: "image/png",
+                        gif: "image/gif",
+                        webp: "image/webp",
+                        bmp: "image/bmp",
+                        mp4: "video/mp4",
+                        webm: "video/webm",
+                        ogg: "audio/ogg",
+                        mp3: "audio/mpeg",
+                        m4a: "audio/x-m4a",
+                        wav: "audio/wav",
+                    }[ext];
+                fullSrc = getFullMediaSrcFromMime(thumb, filemime);
+                isVideo = filemime && filemime.startsWith("video/");
+                isAudio = filemime && filemime.startsWith("audio/");
+            } else if (thumb.classList.contains("originalNameLink")) {
+                const href = thumb.getAttribute("href");
+                if (!href) return;
+                const ext = href.split(".").pop().toLowerCase();
+                if (["mp3", "ogg", "m4a", "wav"].includes(ext)) {
+                    filemime = {
+                        ogg: "audio/ogg",
+                        mp3: "audio/mpeg",
+                        m4a: "audio/x-m4a",
+                        wav: "audio/wav",
+                    }[ext];
+                    fullSrc = href;
+                    isAudio = true;
+                }
+            }
+
+            if (!fullSrc || !filemime) return;
+            if (isAudio) {
+                const container = thumb.tagName === "IMG"
                     ? thumb.closest("a.linkThumb, a.imgLink")
                     : thumb;
-
-            function onLeave() {
-                isStillHovering = false;
-                cleanupFloatingMedia();
-            }
-
-            thumb.addEventListener("mouseleave", onLeave, { once: true });
-
-            hoverTimeout = setTimeout(async () => {
-                hoverTimeout = null;
-                if (!isStillHovering) return;
-
-                let filemime = null;
-                let fullSrc = null;
-                if (thumb.tagName === "IMG") {
-                    const parentA = thumb.closest("a.linkThumb, a.imgLink");
-                    if (!parentA) return;
-
-                    const href = parentA.getAttribute("href");
-                    if (!href) return;
-
-                    const ext = href.split(".").pop().toLowerCase();
-                    filemime =
-                        parentA.getAttribute("data-filemime") ||
-                        {
-                            jpg: "image/jpeg",
-                            jpeg: "image/jpeg",
-                            png: "image/png",
-                            gif: "image/gif",
-                            webp: "image/webp",
-                            bmp: "image/bmp",
-                            mp4: "video/mp4",
-                            webm: "video/webm",
-                            ogg: "audio/ogg",
-                            mp3: "audio/mpeg",
-                            m4a: "audio/x-m4a",
-                            wav: "audio/wav",
-                        }[ext];
-
-                    fullSrc = getFullMediaSrcFromMime(thumb, filemime);
+                if (container && !container.style.position) {
+                    container.style.position = "relative";
                 }
-                else if (thumb.classList.contains("originalNameLink")) {
-                    const href = thumb.getAttribute("href");
-                    if (!href) return;
-
-                    const ext = href.split(".").pop().toLowerCase();
-                    if (["mp3", "ogg", "m4a", "wav"].includes(ext)) {
-                        filemime = {
-                            ogg: "audio/ogg",
-                            mp3: "audio/mpeg",
-                            m4a: "audio/x-m4a",
-                            wav: "audio/wav",
-                        }[ext];
-                        fullSrc = href;
+                floatingMedia = document.createElement("audio");
+                floatingMedia.src = fullSrc;
+                floatingMedia.controls = false;
+                floatingMedia.style.display = "none";
+                let volume = 0.5;
+                try {
+                    if (typeof getSetting === "function") {
+                        const v = await getSetting("hoverVideoVolume");
+                        if (typeof v === "number" && !isNaN(v)) {
+                            volume = v / 100;
+                        }
                     }
-                }
-
-                if (!fullSrc || !filemime) return;
-
-                let loaded = false;
-                function setCommonStyles(el) {
-                    el.style.position = "fixed";
-                    el.style.zIndex = 9999;
-                    el.style.pointerEvents = "none";
-                    el.style.maxWidth = "95vw";
-                    el.style.maxHeight = "95vh";
-                    el.style.transition = "opacity 0.15s";
-                    el.style.opacity = "0.4"; 
-                    el.style.left = "-9999px";
-                }
-
-                function showFloatingMediaImmediately(floatingMedia, e) {
-                    document.body.appendChild(floatingMedia);
-                    document.addEventListener("mousemove", onMouseMove);
-                    onMouseMove(e);
-                }
-                removeListeners = function () {
-                    window.removeEventListener("scroll", cleanupFloatingMedia, true);
+                } catch (e) { }
+                floatingMedia.volume = Math.max(0, Math.min(1, volume));
+                document.body.appendChild(floatingMedia);
+                floatingMedia.play().catch(() => { });
+                const indicator = document.createElement("div");
+                indicator.classList.add("audio-preview-indicator");
+                indicator.textContent = "▶ Playing audio...";
+                container.appendChild(indicator);
+                const cleanup = () => {
+                    if (floatingMedia) {
+                        floatingMedia.pause();
+                        floatingMedia.currentTime = 0;
+                        floatingMedia.remove();
+                        floatingMedia = null;
+                    }
+                    indicator.remove();
                 };
-                window.addEventListener("scroll", cleanupFloatingMedia, true);
-
-                if (filemime.startsWith("image/")) {
-                    floatingMedia = document.createElement("img");
-                    setCommonStyles(floatingMedia);
-                    floatingMedia.src = fullSrc;
-                    showFloatingMediaImmediately(floatingMedia, e);
-                    floatingMedia.onload = function () {
-                        floatingMedia.style.opacity = "1";
-                    };
-
-                    floatingMedia.onerror = cleanupFloatingMedia;
-                    floatingMedia.src = fullSrc;
-                } else if (filemime.startsWith("video/")) {
-                    floatingMedia = document.createElement("video");
-                    setCommonStyles(floatingMedia);
-                    floatingMedia.autoplay = true;
-                    floatingMedia.loop = true;
-                    floatingMedia.muted = false;
-                    floatingMedia.playsInline = true;
-                    floatingMedia.controls = false;
-                    floatingMedia.src = fullSrc;
-                    showFloatingMediaImmediately(floatingMedia, e);
-                    floatingMedia.onloadeddata = function () {
-                        floatingMedia.style.opacity = "1";
-                    };
-                    let volume = 50;
-                    try {
-                        if (typeof getSetting === "function") {
-                            const v = await getSetting("hoverVideoVolume");
-                            if (typeof v === "number" && !isNaN(v)) {
-                                volume = v;
-                            }
-                        }
-                    } catch (e) {
-                        volume = 50;
-                    }
-                    floatingMedia.volume = Math.max(0, Math.min(1, volume / 100));
-
-                    floatingMedia.onloadeddata = function () {
-                        if (!loaded && floatingMedia && isStillHovering) {
-                            loaded = true;
-                            floatingMedia.style.opacity = "1";
-                            document.body.appendChild(floatingMedia);
-                            document.addEventListener("mousemove", onMouseMove);
-                            onMouseMove(e);
-                        }
-                    };
-
-                    floatingMedia.onerror = cleanupFloatingMedia;
-                } else if (filemime.startsWith("audio/")) {
-                    const oldIndicator = container.querySelector(
-                        ".audio-preview-indicator"
-                    );
-                    if (oldIndicator) oldIndicator.remove();
-                    if (container && !container.style.position) {
-                        container.style.position = "relative";
-                    }
-
-                    floatingMedia = document.createElement("audio");
-                    floatingMedia.src = fullSrc;
-                    floatingMedia.controls = false; 
-                    floatingMedia.style.display = "none"; 
-                    let volume = 50;
-                    try {
-                        if (typeof getSetting === "function") {
-                            const v = await getSetting("hoverVideoVolume");
-                            if (typeof v === "number" && !isNaN(v)) {
-                                volume = v;
-                            }
-                        }
-                    } catch (e) {
-                        volume = 50;
-                    }
-                    floatingMedia.volume = Math.max(0, Math.min(1, volume / 100));
-
-                    document.body.appendChild(floatingMedia);
-                    const indicator = document.createElement("div");
-                    indicator.classList.add("audio-preview-indicator");
-                    indicator.textContent = "▶ Playing audio...";
-                    container.appendChild(indicator);
-
-                    floatingMedia.play().catch((error) => {
-                        console.error("Audio playback failed:", error);
-                    });
-                    function removeAudioAndIndicator() {
-                        if (floatingMedia) {
-                            floatingMedia.pause();
-                            floatingMedia.currentTime = 0;
-                            floatingMedia.remove();
-                            floatingMedia = null;
-                        }
-                        if (indicator) {
-                            indicator.remove();
-                        }
-                    }
-
-                    container.addEventListener("click", removeAudioAndIndicator, {
-                        once: true,
-                    });
-                }
-            }, 120); 
+                thumb.addEventListener("mouseleave", cleanup, { once: true });
+                container.addEventListener("click", cleanup, { once: true });
+                window.addEventListener("scroll", cleanup, { once: true });
+                cleanupHandlers.push(() => {
+                    try { cleanup(); } catch { }
+                });
+                return;
+            }
+            floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
+            floatingMedia.src = fullSrc;
+            floatingMedia.style.position = "fixed";
+            floatingMedia.style.zIndex = 9999;
+            floatingMedia.style.pointerEvents = "none";
+            floatingMedia.style.opacity = "0.75"; 
+            floatingMedia.style.left = "-9999px";
+            floatingMedia.style.top = "-9999px";
+            floatingMedia.style.maxWidth = "90vw";
+            floatingMedia.style.maxHeight = "90vh";
+            if (isVideo) {
+                floatingMedia.autoplay = true;
+                floatingMedia.loop = true;
+                floatingMedia.muted = false;
+                floatingMedia.playsInline = true;
+            }
+            document.body.appendChild(floatingMedia);
+            positionFloatingMedia(e);
+            if (isVideo) {
+                floatingMedia.onloadeddata = () => {
+                    floatingMedia.style.opacity = "1";
+                };
+            } else {
+                floatingMedia.onload = () => {
+                    floatingMedia.style.opacity = "1";
+                };
+            }
+            floatingMedia.onerror = cleanupFloatingMedia;
+            function mouseMoveHandler(ev) { positionFloatingMedia(ev); }
+            document.addEventListener("mousemove", mouseMoveHandler);
+            cleanupHandlers.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
+            function leaveHandler() { cleanupFloatingMedia(); }
+            thumb.addEventListener("mouseleave", leaveHandler, { once: true });
+            window.addEventListener("scroll", leaveHandler, { once: true });
+            cleanupHandlers.push(() => {
+                thumb.removeEventListener("mouseleave", leaveHandler);
+                window.removeEventListener("scroll", leaveHandler);
+            });
         }
-
         function attachThumbListeners(root = document) {
-            const thumbs = root.querySelectorAll(
-                "a.linkThumb > img, a.imgLink > img"
-            );
-            thumbs.forEach((thumb) => {
+            root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
                 if (!thumb._fullImgHoverBound) {
                     thumb.addEventListener("mouseenter", onThumbEnter);
                     thumb._fullImgHoverBound = true;
                 }
             });
-            const audioLinks = root.querySelectorAll("a.originalNameLink");
-            audioLinks.forEach((link) => {
+            root.querySelectorAll("a.originalNameLink").forEach(link => {
                 const href = link.getAttribute("href") || "";
                 const ext = href.split(".").pop().toLowerCase();
                 if (
@@ -1123,7 +1072,7 @@ onReady(async function () {
             });
         }
         attachThumbListeners();
-        const observer = new MutationObserver((mutations) => {
+        new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -1131,9 +1080,7 @@ onReady(async function () {
                     }
                 }
             }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
+        }).observe(document.body, { childList: true, subtree: true });
     }
     function featureBlurSpoilers() {
         function revealSpoilers() {
@@ -1307,8 +1254,6 @@ onReady(async function () {
         document.body.appendChild(downBtn);
     }
     async function featureSaveScroll() {
-        if (document.documentElement.classList.contains("is-index")) return;
-
         const MAX_PAGES = 50;
         const currentPage = window.location.href;
         const excludedPagePatterns = [
@@ -1325,6 +1270,7 @@ onReady(async function () {
         }
 
         async function saveScrollPosition() {
+            if (document.documentElement.classList.contains("is-index")) return;
             if (isExcludedPage(currentPage)) return;
             if (!(await getSetting("enableScrollSave"))) return;
 
@@ -1371,6 +1317,7 @@ onReady(async function () {
             }
         }
         async function restoreScrollPosition() {
+            if (document.documentElement.classList.contains("is-index")) return;
             if (isExcludedPage(currentPage)) return;
             if (!(await getSetting("enableScrollSave"))) return;
 

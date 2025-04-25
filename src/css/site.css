@@ -15,7 +15,7 @@
 :root.hide-panelmessage #panelMessage,
 #navFadeEnd,
 #navFadeMid,
-#navTopBoardsSpan {
+:root.hide-defaultBL #navTopBoardsSpan {
     display: none;
 }
 

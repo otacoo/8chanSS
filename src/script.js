@@ -136,6 +136,7 @@ onReady(async function () {
                 },
             },
             hideBanner: { label: "Hide Board Banners", default: false },
+            hideDefaultBL : { label: "Hide Default Board List", default: true },
         },
     };
 
@@ -193,6 +194,7 @@ onReady(async function () {
             hideBanner: "disable-banner",
             hidePostingForm: "hide-posting-form",
             hidePostingForm_showCatalogForm: "show-catalog-form",
+            hideDefaultBL: "hide-defaultBL",
             hideAnnouncement: "hide-announcement",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",

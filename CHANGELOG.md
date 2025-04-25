@@ -1,3 +1,11 @@
+## v1.30.0
+*2025-04-25*
+
+- New Option: Sidebar on Left
+- New Option: Hide Default Board List
+- Rewrote the Image/Video/Audio hover function, should be a bit better
+- Rewrote how Index is detected, will no longer have its Scroll Position saved
+
 ## v1.29.0
 *2025-04-24*
 
