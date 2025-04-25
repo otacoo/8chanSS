@@ -136,7 +136,7 @@ onReady(async function () {
                 },
             },
             hideBanner: { label: "Hide Board Banners", default: false },
-            hideDefaultBL : { label: "Hide Default Board List", default: true },
+            hideDefaultBL: { label: "Hide Default Board List", default: true },
         },
     };
 
@@ -1975,6 +1975,184 @@ onReady(async function () {
     document
         .getElementById("qrbody")
         ?.addEventListener("keydown", replyKeyboardShortcuts);
+
+    // ---- Feature: Hide catalog threads with SHIFT+click, per-board storage.
+    function featureCatalogThreadHideShortcut() {
+        const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
+        let showHiddenMode = false;
+
+        // Utility: Extract board name and thread number from a .catalogCell
+        function getBoardAndThreadNumFromCell(cell) {
+            const link = cell.querySelector("a.linkThumb[href*='/res/']");
+            if (!link) return { board: null, threadNum: null };
+            const match = link.getAttribute("href").match(/^\/([^/]+)\/res\/(\d+)\.html/);
+            if (!match) return { board: null, threadNum: null };
+            return { board: match[1], threadNum: match[2] };
+        }
+
+        // Utility: Load hidden threads object from storage
+        async function loadHiddenThreadsObj() {
+            const raw = await GM.getValue(STORAGE_KEY, "{}");
+            try {
+                const obj = JSON.parse(raw);
+                return typeof obj === "object" && obj !== null ? obj : {};
+            } catch {
+                return {};
+            }
+        }
+
+        // Utility: Save hidden threads object to storage
+        async function saveHiddenThreadsObj(obj) {
+            await GM.setValue(STORAGE_KEY, JSON.stringify(obj));
+        }
+
+        // Hide all catalog cells whose thread numbers are in the hidden list for this board
+        async function applyHiddenThreads() {
+            // Load the per-board hidden threads object from storage
+            const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
+            const hiddenThreadsObjRaw = await GM.getValue(STORAGE_KEY, "{}");
+            let hiddenThreadsObj;
+            try {
+                hiddenThreadsObj = JSON.parse(hiddenThreadsObjRaw);
+                if (typeof hiddenThreadsObj !== "object" || hiddenThreadsObj === null) hiddenThreadsObj = {};
+            } catch {
+                hiddenThreadsObj = {};
+            }
+
+            // Loop through all catalog cells
+            document.querySelectorAll(".catalogCell").forEach(cell => {
+                const { board, threadNum } = getBoardAndThreadNumFromCell(cell);
+                if (!board || !threadNum) return;
+                const hiddenThreads = hiddenThreadsObj[board] || [];
+
+                if (typeof showHiddenMode !== "undefined" && showHiddenMode) {
+                    // Show only hidden threads, hide all others
+                    if (hiddenThreads.includes(threadNum)) {
+                        cell.style.display = "";
+                        cell.classList.add("ss-unhide-thread");
+                        cell.classList.remove("ss-hidden-thread");
+                    } else {
+                        cell.style.display = "none";
+                        cell.classList.remove("ss-unhide-thread", "ss-hidden-thread");
+                    }
+                } else {
+                    // Normal mode: hide hidden threads, show all others
+                    if (hiddenThreads.includes(threadNum)) {
+                        cell.style.display = "none";
+                        cell.classList.add("ss-hidden-thread");
+                        cell.classList.remove("ss-unhide-thread");
+                    } else {
+                        cell.style.display = "";
+                        cell.classList.remove("ss-hidden-thread", "ss-unhide-thread");
+                    }
+                }
+            });
+        }
+
+        // Event handler for SHIFT+click to hide/unhide a thread
+        async function onCatalogCellClick(e) {
+            const cell = e.target.closest(".catalogCell");
+            if (!cell) return;
+
+            // Only act on shift+left-click
+            if (e.shiftKey && e.button === 0) {
+                const { board, threadNum } = getBoardAndThreadNumFromCell(cell);
+                if (!board || !threadNum) return;
+
+                let hiddenThreadsObj = await loadHiddenThreadsObj();
+                if (!hiddenThreadsObj[board]) hiddenThreadsObj[board] = [];
+                let hiddenThreads = hiddenThreadsObj[board];
+
+                if (showHiddenMode) {
+                    // Unhide: remove from hidden list
+                    hiddenThreads = hiddenThreads.filter(num => num !== threadNum);
+                    hiddenThreadsObj[board] = hiddenThreads;
+                    await saveHiddenThreadsObj(hiddenThreadsObj);
+                    await applyHiddenThreads();
+                } else {
+                    // Hide: add to hidden list
+                    if (!hiddenThreads.includes(threadNum)) {
+                        hiddenThreads.push(threadNum);
+                        hiddenThreadsObj[board] = hiddenThreads;
+                    }
+                    await saveHiddenThreadsObj(hiddenThreadsObj);
+                    cell.style.display = "none";
+                    cell.classList.add("ss-hidden-thread");
+                }
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+
+        // Show all hidden threads in the catalog
+        async function showAllHiddenThreads() {
+            showHiddenMode = true;
+            await applyHiddenThreads();
+            // Change button text to "Hide Hidden"
+            const btn = document.getElementById("ss-show-hidden-btn");
+            if (btn) btn.textContent = "Hide Hidden";
+        }
+
+        // Hide all hidden threads again
+        async function hideAllHiddenThreads() {
+            showHiddenMode = false;
+            await applyHiddenThreads();
+            // Change button text to "Show Hidden"
+            const btn = document.getElementById("ss-show-hidden-btn");
+            if (btn) btn.textContent = "Show Hidden";
+        }
+
+        // Toggle show/hide hidden threads
+        async function toggleShowHiddenThreads() {
+            if (showHiddenMode) {
+                await hideAllHiddenThreads();
+            } else {
+                await showAllHiddenThreads();
+            }
+        }
+
+        // Add the Show Hidden button
+        function addShowHiddenButton() {
+            if (document.getElementById("ss-show-hidden-btn")) return;
+            const refreshBtn = document.querySelector("#catalogRefreshButton");
+            if (!refreshBtn) return;
+            const btn = document.createElement("button");
+            btn.id = "ss-show-hidden-btn";
+            btn.className = "catalogLabel";
+            btn.type = "button";
+            btn.textContent = "Show Hidden";
+            btn.style.marginRight = "8px";
+            btn.addEventListener("click", toggleShowHiddenThreads);
+            refreshBtn.parentNode.insertBefore(btn, refreshBtn);
+        }
+
+        // Attach event listeners and apply hidden threads on catalog load
+        function hideThreadsOnRefresh() {
+            // Only run on catalog pages
+            if (!/\/catalog\.html$/.test(window.location.pathname)) return;
+
+            // Add the Show Hidden button
+            onReady(addShowHiddenButton);
+
+            // Apply hidden threads on load and after DOM mutations
+            onReady(applyHiddenThreads);
+
+            // Listen for SHIFT+clicks on catalog cells (event delegation)
+            document.addEventListener("click", onCatalogCellClick, true);
+
+            // Re-apply hidden threads if catalog is dynamically updated
+            const catalogContainer = document.querySelector(".catalogWrapper, .catalogDiv");
+            if (catalogContainer) {
+                const observer = new MutationObserver(applyHiddenThreads);
+                observer.observe(catalogContainer, { childList: true, subtree: true });
+            }
+        }
+
+        hideThreadsOnRefresh();
+    }
+
+    // Initialize the feature
+    featureCatalogThreadHideShortcut();
 
     // --- Misc Fixes ---
 
