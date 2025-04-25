@@ -1,5 +1,6 @@
 // @ts-check
 ///// JANK THEME FLASH FIX LOAD ASAP /////////
+// @ts-check
 (function () {
     // Get the user's selected theme from localStorage
     const userTheme = localStorage.selectedTheme;
@@ -28,16 +29,21 @@
 
     // Also, if the theme selector exists, set its value to the user's theme
     document.addEventListener("DOMContentLoaded", function () {
+        /** @type {HTMLElement & {options?: any, selectedIndex?: any} | null} */
         const themeSelector = document.getElementById("themeSelector");
-        if (themeSelector) {
-            for (let i = 0; i < themeSelector.options.length; i++) {
-                if (
-                    themeSelector.options[i].value === userTheme ||
-                    themeSelector.options[i].text === userTheme
-                ) {
-                    themeSelector.selectedIndex = i;
-                    break;
-                }
+        if (!themeSelector)
+            throw new Error(`themeSelector not found:\n${themeSelector}`);
+
+        if (!themeSelector?.options)
+            throw new Error(`themeSelector?.options not found:\n${themeSelector?.options}`);
+
+        for (let i = 0; i < themeSelector.options.length; i++) {
+            if (
+                themeSelector.options[i].value === userTheme ||
+                themeSelector.options[i].text === userTheme
+            ) {
+                themeSelector.selectedIndex = i;
+                break;
             }
         }
     });
@@ -158,16 +164,16 @@ onReady(async function () {
         Object.keys(scriptSettings).forEach((category) => {
             Object.keys(scriptSettings[category]).forEach((key) => {
                 flatSettings[key] = scriptSettings[category][key];
+
                 // Also flatten any sub-options
-                if (scriptSettings[category][key].subOptions) {
-                    Object.keys(scriptSettings[category][key].subOptions).forEach(
-                        (subKey) => {
-                            const fullKey = `${key}_${subKey}`;
-                            flatSettings[fullKey] =
-                                scriptSettings[category][key].subOptions[subKey];
-                        }
-                    );
-                }
+                if (!scriptSettings[category][key].subOptions) return;
+                Object.keys(scriptSettings[category][key].subOptions).forEach(
+                    (subKey) => {
+                        const fullKey = `${key}_${subKey}`;
+                        flatSettings[fullKey] =
+                            scriptSettings[category][key].subOptions[subKey];
+                    }
+                );
             });
         });
     }
@@ -186,7 +192,10 @@ onReady(async function () {
         return val === "true";
     }
 
-    async function setSetting(key, value) {
+    async function setSetting(key = '', value = '') {
+        if (!key) throw new Error(`key not found:\n${key}`);
+        if (!value) throw new Error(`value not found:\n${value}`);
+
         // Always store as string for consistency
         // @ts-ignore
         await GM.setValue("8chanSS_" + key, String(value));
@@ -288,11 +297,11 @@ onReady(async function () {
         link.textContent = "8chanSS";
         link.style.fontWeight = "bold";
 
-        themeSelector.parentNode.insertBefore(
+        themeSelector.parentNode?.insertBefore(
             bracketSpan,
             themeSelector.nextSibling
         );
-        themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
+        themeSelector.parentNode?.insertBefore(link, bracketSpan.nextSibling);
     }
 
     // --- Shortcuts tab ---
@@ -677,9 +686,11 @@ onReady(async function () {
         resetBtn.addEventListener("click", async function () {
             if (confirm("Reset all 8chanSS settings to defaults?")) {
                 // Remove all 8chanSS_ GM values
+                // @ts-ignore
                 const keys = await GM.listValues();
                 for (const key of keys) {
                     if (key.startsWith("8chanSS_")) {
+                        // @ts-ignore
                         await GM.deleteValue(key);
                     }
                 }
@@ -709,7 +720,9 @@ onReady(async function () {
         return menu;
     }
 
-    // Helper function to create tab content
+    /** Helper function to create tab content
+     * @param {string} category
+     *  @param {object} tempSettings */
     function createTabContent(category, tempSettings) {
         const container = document.createElement("div");
         const categorySettings = scriptSettings[category];
@@ -740,7 +753,7 @@ onReady(async function () {
                 slider.id = "setting_" + key;
                 slider.min = setting.min;
                 slider.max = setting.max;
-                slider.value = Number(tempSettings[key]);
+                slider.value = Number(tempSettings[key]).toString();
                 slider.style.flex = "unset";
                 slider.style.width = "100px";
                 slider.style.marginRight = "10px";
@@ -754,7 +767,7 @@ onReady(async function () {
                     let val = Number(slider.value);
                     if (isNaN(val)) val = setting.default;
                     val = Math.max(setting.min, Math.min(setting.max, val));
-                    slider.value = val;
+                    slider.value = val.toString();
                     tempSettings[key] = val;
                     valueLabel.textContent = val + "%";
                 });
@@ -790,7 +803,7 @@ onReady(async function () {
             // Chevron for subOptions
             let chevron = null;
             let subOptionsContainer = null;
-            if (setting.subOptions) {
+            if (setting?.subOptions) {
                 chevron = document.createElement("span");
                 chevron.className = "ss-chevron";
                 chevron.innerHTML = "&#9654;"; // Right-pointing triangle
@@ -807,16 +820,17 @@ onReady(async function () {
             // Checkbox change handler
             checkbox.addEventListener("change", function () {
                 tempSettings[key] = checkbox.checked;
-                if (setting.subOptions && subOptionsContainer) {
-                    subOptionsContainer.style.display = checkbox.checked
-                        ? "block"
-                        : "none";
-                    if (chevron) {
-                        chevron.style.transform = checkbox.checked
-                            ? "rotate(90deg)"
-                            : "rotate(0deg)";
-                    }
-                }
+                if (!setting?.subOptions) return;
+                if (!subOptionsContainer) return;
+
+                subOptionsContainer.style.display = checkbox.checked
+                    ? "block"
+                    : "none";
+
+                if (!chevron) return;
+                chevron.style.transform = checkbox.checked
+                    ? "rotate(90deg)"
+                    : "rotate(0deg)";
             });
 
             parentRow.appendChild(checkbox);
@@ -830,7 +844,7 @@ onReady(async function () {
             wrapper.appendChild(parentRow);
 
             // Handle sub-options if any exist
-            if (setting.subOptions) {
+            if (setting?.subOptions) {
                 subOptionsContainer = document.createElement("div");
                 subOptionsContainer.style.marginLeft = "25px";
                 subOptionsContainer.style.marginTop = "5px";
@@ -927,6 +941,7 @@ onReady(async function () {
             const timestamp = Date.now();
 
             // Store both the scroll position and timestamp using GM storage
+            // @ts-ignore
             await GM.setValue(
                 `8chanSS_scrollPosition_${currentPage}`,
                 JSON.stringify({
@@ -940,6 +955,7 @@ onReady(async function () {
 
         async function manageScrollStorage() {
             // Get all GM storage keys
+            // @ts-ignore
             const allKeys = await GM.listValues();
 
             // Filter for scroll position keys
@@ -953,6 +969,7 @@ onReady(async function () {
                     scrollKeys.map(async (key) => {
                         let data;
                         try {
+                            // @ts-ignore
                             const savedValue = await GM.getValue(key, null);
                             data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
                         } catch (e) {
@@ -971,6 +988,7 @@ onReady(async function () {
                 // Remove oldest entries until we're under the limit
                 const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
                 for (const item of keysToRemove) {
+                    // @ts-ignore
                     await GM.deleteValue(item.key);
                 }
             }
@@ -983,35 +1001,36 @@ onReady(async function () {
             if (isExcludedPage(currentPage)) return;
             if (!(await getSetting("enableScrollSave"))) return;
 
+            // @ts-ignore
             const savedData = await GM.getValue(
                 `8chanSS_scrollPosition_${currentPage}`,
                 null
             );
 
-            if (savedData) {
-                let position;
-                try {
-                    // Try to parse as JSON (new format)
-                    const data = JSON.parse(savedData);
-                    position = data.position;
+            if (!savedData) return;
+            let position;
+            try {
+                // Try to parse as JSON (new format)
+                const data = JSON.parse(savedData);
+                position = data.position;
 
-                    // Update the timestamp to "refresh" this entry
-                    await GM.setValue(
-                        `8chanSS_scrollPosition_${currentPage}`,
-                        JSON.stringify({
-                            position: position,
-                            timestamp: Date.now(),
-                        })
-                    );
-                } catch (e) {
-                    // If parsing fails, skip (should not happen with cleaned storage)
-                    return;
-                }
-                // Only restore scroll if a saved position exists (i.e., not first visit)
-                if (!isNaN(position)) {
-                    window.scrollTo(0, position);
-                    setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
-                }
+                // Update the timestamp to "refresh" this entry
+                // @ts-ignore
+                await GM.setValue(
+                    `8chanSS_scrollPosition_${currentPage}`,
+                    JSON.stringify({
+                        position: position,
+                        timestamp: Date.now(),
+                    })
+                );
+            } catch (e) {
+                // If parsing fails, skip (should not happen with cleaned storage)
+                return;
+            }
+            // Only restore scroll if a saved position exists (i.e., not first visit)
+            if (!isNaN(position)) {
+                window.scrollTo(0, position);
+                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
             }
         }
 
@@ -1129,9 +1148,10 @@ onReady(async function () {
 
     // --- Feature: Image/Video/Audio Hover Preview (Optimized) ---
     function featureImageHover() {
-        const DEFAULT_MEDIA_WIDTH = 320;
-        const DEFAULT_MEDIA_HEIGHT = 240;
-        const OFFSET = 10;
+        // TODO: remove unsed variables
+        // const DEFAULT_MEDIA_WIDTH = 320;
+        // const DEFAULT_MEDIA_HEIGHT = 240;
+        // const OFFSET = 10;
 
         let floatingMedia = null;
         let cleanupHandlers = [];
@@ -1511,41 +1531,41 @@ onReady(async function () {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
             spoilerLinks.forEach(async (link) => {
                 const img = link.querySelector("img");
-                if (img) {
-                    // Check if this is a custom spoiler image
-                    const isCustomSpoiler = img.src.includes("/custom.spoiler");
-                    // Check if this is NOT already a thumbnail
-                    const isNotThumbnail = !img.src.includes("/.media/t_");
+                if (!img) return;
 
-                    if (isNotThumbnail || isCustomSpoiler) {
-                        let href = link.getAttribute("href");
-                        if (href) {
-                            // Extract filename without extension
-                            const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
-                            if (match) {
-                                // Use the thumbnail path (t_filename)
-                                const transformedSrc = `/\.media/t_${match[1]}`;
-                                img.src = transformedSrc;
+                // Check if this is a custom spoiler image
+                const isCustomSpoiler = img.src.includes("/custom.spoiler");
+                // Check if this is NOT already a thumbnail
+                const isNotThumbnail = !img.src.includes("/.media/t_");
 
-                                // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                                if (await getSetting("blurSpoilers_removeSpoilers")) {
-                                    img.style.filter = "";
-                                    img.style.transition = "";
-                                    img.onmouseover = null;
-                                    img.onmouseout = null;
-                                    return;
-                                } else {
-                                    img.style.filter = "blur(5px)";
-                                    img.style.transition = "filter 0.3s ease";
-                                    img.addEventListener("mouseover", () => {
-                                        img.style.filter = "none";
-                                    });
-                                    img.addEventListener("mouseout", () => {
-                                        img.style.filter = "blur(5px)";
-                                    });
-                                }
-                            }
-                        }
+                if (isNotThumbnail || isCustomSpoiler) {
+                    let href = link.getAttribute("href");
+                    if (!href) return;
+
+                    // Extract filename without extension
+                    const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
+                    if (!match) return;
+
+                    // Use the thumbnail path (t_filename)
+                    const transformedSrc = `/\.media/t_${match[1]}`;
+                    img.src = transformedSrc;
+
+                    // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
+                    if (await getSetting("blurSpoilers_removeSpoilers")) {
+                        img.style.filter = "";
+                        img.style.transition = "";
+                        img.onmouseover = null;
+                        img.onmouseout = null;
+                        return;
+                    } else {
+                        img.style.filter = "blur(5px)";
+                        img.style.transition = "filter 0.3s ease";
+                        img.addEventListener("mouseover", () => {
+                            img.style.filter = "none";
+                        });
+                        img.addEventListener("mouseout", () => {
+                            img.style.filter = "blur(5px)";
+                        });
                     }
                 }
             });
@@ -1564,33 +1584,35 @@ onReady(async function () {
     // --- Feature: Highlight (You) and Board Name in TW
     function highlightMentions() {
         document.querySelectorAll("#watchedMenu .watchedCell").forEach((cell) => {
-            const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
+            /** @type {HTMLElement | null} */
             const labelLink = cell.querySelector(".watchedCellLabel a");
+            if (!labelLink) return;
 
-            if (labelLink) {
-                // Only set data-board if it doesn't already exist
-                if (!labelLink.dataset.board) {
-                    const href = labelLink.getAttribute("href");
-                    const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
-                    if (match) {
-                        labelLink.dataset.board = `/${match[1]}/ -`;
-                    }
-                    // Highlight the watch button if this thread is open
-                    if (document.location.href.includes(href)) {
-                        const watchButton = document.querySelector(".opHead .watchButton");
-                        if (watchButton) {
-                            watchButton.style.color = "var(--board-title-color)";
-                            watchButton.title = "Watched";
-                        }
-                    }
-                }
+            // Only set data-board if it doesn't already exist
+            if (!labelLink.dataset.board) {
+                const href = labelLink.getAttribute("href");
+                if (!href) return;
 
-                // Highlight if contains (you), else remove color
-                if (notification && notification.textContent.includes("(you)")) {
-                    labelLink.style.color = "#ff0000f0";
-                } else {
-                    labelLink.style.color = "";
-                }
+                const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
+                if (match) labelLink.dataset.board = `/${match[1]}/ -`;
+                
+                // Highlight the watch button if this thread is open
+                if (!document.location.href.includes(href)) return;
+
+                /** @type {HTMLElement | null} */
+                const watchButton = document.querySelector(".opHead .watchButton");
+                if (!watchButton) return;
+
+                watchButton.style.color = "var(--board-title-color)";
+                watchButton.title = "Watched";
+            }
+
+            // Highlight if contains (you), else remove color
+            const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
+            if (notification && notification.textContent?.includes("(you)")) {
+                labelLink.style.color = "#ff0000f0";
+            } else {
+                labelLink.style.color = "";
             }
         });
     }
@@ -1610,57 +1632,58 @@ onReady(async function () {
 
     // --- Feature: Watch Thread on Reply ---
     async function featureWatchThreadOnReply() {
-        // Helper: Get the watch button element
-        function getWatchButton() {
+
+        // On post submit (button)
+        const submitButton = document.getElementById("qrbutton");
+        submitButton?.addEventListener("click", async function () {
+            if (await getSetting("watchThreadOnReply")) {
+                setTimeout(_watchThreadIfNotWatched, 500); // Wait for post to go through
+            }
+        });
+
+        // On page load, update the icon if already watched
+        updateWatchButtonClass();
+
+        // Also update when the user manually clicks the watch button
+        const btn = _getWatchButton();
+        btn?.addEventListener("click", function () {
+            setTimeout(updateWatchButtonClass, 100);
+        });
+
+        /* Helper functions */
+        function updateWatchButtonClass() {
+            const btn = _getWatchButton();
+            if (!btn) return;
+
+            if (_isThreadWatched()) {
+                btn.classList.add("watched-active");
+            } else {
+                btn.classList.remove("watched-active");
+            }
+        }
+
+        /** Get the watch button element
+         * @return {HTMLElement | null} */
+        function _getWatchButton() {
             return document.querySelector(".watchButton");
         }
 
-        // Helper: Check if thread is watched (by presence of watched-active class)
-        function isThreadWatched() {
-            const btn = getWatchButton();
+        /** Check if thread is watched (by presence of watched-active class) */
+        function _isThreadWatched() {
+            const btn = _getWatchButton();
             return btn && btn.classList.contains("watched-active");
         }
 
-        // Helper: Trigger the native watch button click if not already watched
-        function watchThreadIfNotWatched() {
-            const btn = getWatchButton();
-            if (btn && !isThreadWatched()) {
+        /** Trigger the native watch button click if not already watched */
+        function _watchThreadIfNotWatched() {
+            const btn = _getWatchButton();
+            if (btn && !_isThreadWatched()) {
                 btn.click(); // Triggers the site's watcher logic
                 // The site should add watched-active, but if not, we can add it ourselves:
                 setTimeout(() => {
                     btn.classList.add("watched-active");
                 }, 100);
             }
-        }
-
-        // On post submit (button)
-        const submitButton = document.getElementById("qrbutton");
-        if (submitButton) {
-            submitButton.addEventListener("click", async function () {
-                if (await getSetting("watchThreadOnReply")) {
-                    setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
-                }
-            });
-        }
-
-        // On page load, update the icon if already watched
-        function updateWatchButtonClass() {
-            const btn = getWatchButton();
-            if (!btn) return;
-            if (isThreadWatched()) {
-                btn.classList.add("watched-active");
-            } else {
-                btn.classList.remove("watched-active");
-            }
-        }
-        updateWatchButtonClass();
-
-        // Also update when the user manually clicks the watch button
-        const btn = getWatchButton();
-        if (btn) {
-            btn.addEventListener("click", function () {
-                setTimeout(updateWatchButtonClass, 100);
-            });
         }
     }
 
@@ -2107,6 +2130,7 @@ onReady(async function () {
 
         // Utility: Load hidden threads object from storage
         async function loadHiddenThreadsObj() {
+            // @ts-ignore
             const raw = await GM.getValue(STORAGE_KEY, "{}");
             try {
                 const obj = JSON.parse(raw);
@@ -2118,6 +2142,7 @@ onReady(async function () {
 
         // Utility: Save hidden threads object to storage
         async function saveHiddenThreadsObj(obj) {
+            // @ts-ignore
             await GM.setValue(STORAGE_KEY, JSON.stringify(obj));
         }
 
@@ -2125,6 +2150,7 @@ onReady(async function () {
         async function applyHiddenThreads() {
             // Load the per-board hidden threads object from storage
             const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
+            // @ts-ignore
             const hiddenThreadsObjRaw = await GM.getValue(STORAGE_KEY, "{}");
             let hiddenThreadsObj;
             try {
