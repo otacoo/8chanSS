@@ -95,7 +95,7 @@ nav.navHeader {
     transition: opacity 0.2s, background 0.2s;
 }
 
-:root.ss-sidebar .scroll-arrow-btn {
+:root:not(.is-index).ss-sidebar .scroll-arrow-btn {
     right: 330px !important;
 }
 
