@@ -1869,8 +1869,11 @@ onReady(async function () {
     if (await getSetting("enableScrollArrows")) {
         featureScrollArrows();
     }
-    if ((await getSetting("beepOnYou")) || (await getSetting("notifyOnYou"))) {
+    if (await getSetting("beepOnYou")) {
         featureBeepOnYou();
+    }
+    if (await getSetting("notifyOnYou")) {
+        featureNotifyOnYou();
     }
     if (await getSetting("alwaysShowTW")) {
         featureAlwaysShowTW();
@@ -2238,23 +2241,5 @@ onReady(async function () {
     if (captchaInput) {
         captchaInput.autocomplete = "off";
     }
-
-    // Scroll anchor posts into view
-    function scrollAnchorPostIntoView() {
-        const targetCell = document.querySelector('.postCell:target .innerPost');
-        if (targetCell) {
-            const innerPost = targetCell.querySelector('.innerPost');
-            if (innerPost) {
-                // Use scrollIntoView with smooth behavior
-                innerPost.scrollIntoView({ behavior: "smooth", block: "center" });
-            } else {
-                // Fallback: scroll the postCell itself
-                targetCell.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-        }
-    }
-    
-    // Run after DOM is ready
-    scrollAnchorPostIntoView();
 
 });
