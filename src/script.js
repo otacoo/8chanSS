@@ -52,7 +52,7 @@
         // Inline Replies
         const keystoEnable = ["inlineReplies"];
         for (const key of keystoEnable) {
-            localStorage.setItem(key);
+            localStorage.setItem(key, "true");
         }
     } catch (e) {
         // Ignore errors (e.g., storage not available)
