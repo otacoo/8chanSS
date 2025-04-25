@@ -1,6 +1,12 @@
-// @ts-check
+////////// HELPERS ///////////////////////
+function onReady(fn) {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", fn, { once: true });
+    } else {
+        fn();
+    }
+}
 ///// JANK THEME FLASH FIX LOAD ASAP /////////
-// @ts-check
 (function () {
     // Get the user's selected theme from localStorage
     const userTheme = localStorage.selectedTheme;
@@ -24,26 +30,20 @@
     };
 
     // Try immediately, and also on DOMContentLoaded in case elements aren't ready yet
-    swapTheme();
-    document.addEventListener("DOMContentLoaded", swapTheme);
+    onReady(swapTheme);
 
     // Also, if the theme selector exists, set its value to the user's theme
-    document.addEventListener("DOMContentLoaded", function () {
-        /** @type {HTMLElement & {options?: any, selectedIndex?: any} | null} */
+    onReady(function () {
         const themeSelector = document.getElementById("themeSelector");
-        if (!themeSelector)
-            throw new Error(`themeSelector not found:\n${themeSelector}`);
-
-        if (!themeSelector?.options)
-            throw new Error(`themeSelector?.options not found:\n${themeSelector?.options}`);
-
-        for (let i = 0; i < themeSelector.options.length; i++) {
-            if (
-                themeSelector.options[i].value === userTheme ||
-                themeSelector.options[i].text === userTheme
-            ) {
-                themeSelector.selectedIndex = i;
-                break;
+        if (themeSelector) {
+            for (let i = 0; i < themeSelector.options.length; i++) {
+                if (
+                    themeSelector.options[i].value === userTheme ||
+                    themeSelector.options[i].text === userTheme
+                ) {
+                    themeSelector.selectedIndex = i;
+                    break;
+                }
             }
         }
     });
@@ -68,14 +68,7 @@
         // Ignore errors (e.g., storage not available)
     }
 })();
-////////// HELPERS ///////////////////////
-function onReady(fn) {
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", fn, { once: true });
-    } else {
-        fn();
-    }
-}
+
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     // --- Default Settings ---
@@ -164,16 +157,16 @@ onReady(async function () {
         Object.keys(scriptSettings).forEach((category) => {
             Object.keys(scriptSettings[category]).forEach((key) => {
                 flatSettings[key] = scriptSettings[category][key];
-
                 // Also flatten any sub-options
-                if (!scriptSettings[category][key].subOptions) return;
-                Object.keys(scriptSettings[category][key].subOptions).forEach(
-                    (subKey) => {
-                        const fullKey = `${key}_${subKey}`;
-                        flatSettings[fullKey] =
-                            scriptSettings[category][key].subOptions[subKey];
-                    }
-                );
+                if (scriptSettings[category][key].subOptions) {
+                    Object.keys(scriptSettings[category][key].subOptions).forEach(
+                        (subKey) => {
+                            const fullKey = `${key}_${subKey}`;
+                            flatSettings[fullKey] =
+                                scriptSettings[category][key].subOptions[subKey];
+                        }
+                    );
+                }
             });
         });
     }
@@ -185,19 +178,14 @@ onReady(async function () {
             console.warn(`Setting key not found: ${key}`);
             return false;
         }
-        // @ts-ignore
         let val = await GM.getValue("8chanSS_" + key, null);
         if (val === null) return flatSettings[key].default;
         if (flatSettings[key].type === "number") return Number(val);
         return val === "true";
     }
 
-    async function setSetting(key = '', value = '') {
-        if (!key) throw new Error(`key not found:\n${key}`);
-        if (!value) throw new Error(`value not found:\n${value}`);
-
+    async function setSetting(key, value) {
         // Always store as string for consistency
-        // @ts-ignore
         await GM.setValue("8chanSS_" + key, String(value));
     }
 
@@ -278,11 +266,7 @@ onReady(async function () {
     }
 
     // Call the function on DOM ready
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", featureSidebar, { once: true });
-    } else {
-        featureSidebar();
-    }
+    onReady(featureSidebar);
 
     // --- Menu Icon ---
     const themeSelector = document.getElementById("themesBefore");
@@ -297,11 +281,11 @@ onReady(async function () {
         link.textContent = "8chanSS";
         link.style.fontWeight = "bold";
 
-        themeSelector.parentNode?.insertBefore(
+        themeSelector.parentNode.insertBefore(
             bracketSpan,
             themeSelector.nextSibling
         );
-        themeSelector.parentNode?.insertBefore(link, bracketSpan.nextSibling);
+        themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
     }
 
     // --- Shortcuts tab ---
@@ -465,7 +449,7 @@ onReady(async function () {
         menu.style.position = "fixed";
         menu.style.top = "80px";
         menu.style.left = "30px";
-        menu.style.zIndex = "99999";
+        menu.style.zIndex = 99999;
         menu.style.background = "#222";
         menu.style.color = "#fff";
         menu.style.padding = "0";
@@ -686,11 +670,9 @@ onReady(async function () {
         resetBtn.addEventListener("click", async function () {
             if (confirm("Reset all 8chanSS settings to defaults?")) {
                 // Remove all 8chanSS_ GM values
-                // @ts-ignore
                 const keys = await GM.listValues();
                 for (const key of keys) {
                     if (key.startsWith("8chanSS_")) {
-                        // @ts-ignore
                         await GM.deleteValue(key);
                     }
                 }
@@ -720,9 +702,7 @@ onReady(async function () {
         return menu;
     }
 
-    /** Helper function to create tab content
-     * @param {string} category
-     *  @param {object} tempSettings */
+    // Helper function to create tab content
     function createTabContent(category, tempSettings) {
         const container = document.createElement("div");
         const categorySettings = scriptSettings[category];
@@ -753,7 +733,7 @@ onReady(async function () {
                 slider.id = "setting_" + key;
                 slider.min = setting.min;
                 slider.max = setting.max;
-                slider.value = Number(tempSettings[key]).toString();
+                slider.value = Number(tempSettings[key]);
                 slider.style.flex = "unset";
                 slider.style.width = "100px";
                 slider.style.marginRight = "10px";
@@ -767,7 +747,7 @@ onReady(async function () {
                     let val = Number(slider.value);
                     if (isNaN(val)) val = setting.default;
                     val = Math.max(setting.min, Math.min(setting.max, val));
-                    slider.value = val.toString();
+                    slider.value = val;
                     tempSettings[key] = val;
                     valueLabel.textContent = val + "%";
                 });
@@ -803,7 +783,7 @@ onReady(async function () {
             // Chevron for subOptions
             let chevron = null;
             let subOptionsContainer = null;
-            if (setting?.subOptions) {
+            if (setting.subOptions) {
                 chevron = document.createElement("span");
                 chevron.className = "ss-chevron";
                 chevron.innerHTML = "&#9654;"; // Right-pointing triangle
@@ -820,17 +800,16 @@ onReady(async function () {
             // Checkbox change handler
             checkbox.addEventListener("change", function () {
                 tempSettings[key] = checkbox.checked;
-                if (!setting?.subOptions) return;
-                if (!subOptionsContainer) return;
-
-                subOptionsContainer.style.display = checkbox.checked
-                    ? "block"
-                    : "none";
-
-                if (!chevron) return;
-                chevron.style.transform = checkbox.checked
-                    ? "rotate(90deg)"
-                    : "rotate(0deg)";
+                if (setting.subOptions && subOptionsContainer) {
+                    subOptionsContainer.style.display = checkbox.checked
+                        ? "block"
+                        : "none";
+                    if (chevron) {
+                        chevron.style.transform = checkbox.checked
+                            ? "rotate(90deg)"
+                            : "rotate(0deg)";
+                    }
+                }
             });
 
             parentRow.appendChild(checkbox);
@@ -844,7 +823,7 @@ onReady(async function () {
             wrapper.appendChild(parentRow);
 
             // Handle sub-options if any exist
-            if (setting?.subOptions) {
+            if (setting.subOptions) {
                 subOptionsContainer = document.createElement("div");
                 subOptionsContainer.style.marginLeft = "25px";
                 subOptionsContainer.style.marginTop = "5px";
@@ -941,7 +920,6 @@ onReady(async function () {
             const timestamp = Date.now();
 
             // Store both the scroll position and timestamp using GM storage
-            // @ts-ignore
             await GM.setValue(
                 `8chanSS_scrollPosition_${currentPage}`,
                 JSON.stringify({
@@ -955,7 +933,6 @@ onReady(async function () {
 
         async function manageScrollStorage() {
             // Get all GM storage keys
-            // @ts-ignore
             const allKeys = await GM.listValues();
 
             // Filter for scroll position keys
@@ -969,7 +946,6 @@ onReady(async function () {
                     scrollKeys.map(async (key) => {
                         let data;
                         try {
-                            // @ts-ignore
                             const savedValue = await GM.getValue(key, null);
                             data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
                         } catch (e) {
@@ -988,7 +964,6 @@ onReady(async function () {
                 // Remove oldest entries until we're under the limit
                 const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
                 for (const item of keysToRemove) {
-                    // @ts-ignore
                     await GM.deleteValue(item.key);
                 }
             }
@@ -1001,36 +976,35 @@ onReady(async function () {
             if (isExcludedPage(currentPage)) return;
             if (!(await getSetting("enableScrollSave"))) return;
 
-            // @ts-ignore
             const savedData = await GM.getValue(
                 `8chanSS_scrollPosition_${currentPage}`,
                 null
             );
 
-            if (!savedData) return;
-            let position;
-            try {
-                // Try to parse as JSON (new format)
-                const data = JSON.parse(savedData);
-                position = data.position;
+            if (savedData) {
+                let position;
+                try {
+                    // Try to parse as JSON (new format)
+                    const data = JSON.parse(savedData);
+                    position = data.position;
 
-                // Update the timestamp to "refresh" this entry
-                // @ts-ignore
-                await GM.setValue(
-                    `8chanSS_scrollPosition_${currentPage}`,
-                    JSON.stringify({
-                        position: position,
-                        timestamp: Date.now(),
-                    })
-                );
-            } catch (e) {
-                // If parsing fails, skip (should not happen with cleaned storage)
-                return;
-            }
-            // Only restore scroll if a saved position exists (i.e., not first visit)
-            if (!isNaN(position)) {
-                window.scrollTo(0, position);
-                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
+                    // Update the timestamp to "refresh" this entry
+                    await GM.setValue(
+                        `8chanSS_scrollPosition_${currentPage}`,
+                        JSON.stringify({
+                            position: position,
+                            timestamp: Date.now(),
+                        })
+                    );
+                } catch (e) {
+                    // If parsing fails, skip (should not happen with cleaned storage)
+                    return;
+                }
+                // Only restore scroll if a saved position exists (i.e., not first visit)
+                if (!isNaN(position)) {
+                    window.scrollTo(0, position);
+                    setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
+                }
             }
         }
 
@@ -1121,17 +1095,31 @@ onReady(async function () {
                 );
 
                 for (let link of links) {
-                    if (link.href && !link.href.endsWith("/catalog.html")) {
-                        link.href += "/catalog.html";
+                    try {
+                        // Parse the link's href using the URL constructor
+                        const url = new URL(link.href, window.location.origin);
 
-                        // Set target="_blank" if the option is enabled
-                        if (openInNewTab) {
-                            link.target = "_blank";
-                            link.rel = "noopener noreferrer"; // Security best practice
-                        } else {
-                            link.target = "";
-                            link.rel = "";
+                        // Only append if not already a catalog link
+                        if (!url.pathname.endsWith("/catalog.html")) {
+                            // Remove trailing slash if present (to avoid double slashes)
+                            let basePath = url.pathname.replace(/\/$/, "");
+                            url.pathname = basePath + "/catalog.html";
+                            // The search and hash are preserved
+
+                            link.href = url.toString();
+
+                            // Set target and rel attributes based on setting
+                            if (openInNewTab) {
+                                link.target = "_blank";
+                                link.rel = "noopener noreferrer";
+                            } else {
+                                link.target = "";
+                                link.rel = "";
+                            }
                         }
+                    } catch (e) {
+                        // If URL parsing fails, skip this link
+                        console.warn("[8chanSS] Could not parse link for catalog appending:", link.href, e);
                     }
                 }
             }
@@ -1148,13 +1136,13 @@ onReady(async function () {
 
     // --- Feature: Image/Video/Audio Hover Preview (Optimized) ---
     function featureImageHover() {
-        // TODO: remove unsed variables
-        // const DEFAULT_MEDIA_WIDTH = 320;
-        // const DEFAULT_MEDIA_HEIGHT = 240;
-        // const OFFSET = 10;
+        const DEFAULT_MEDIA_WIDTH = 320;
+        const DEFAULT_MEDIA_HEIGHT = 240;
+        const OFFSET = 10;
 
         let floatingMedia = null;
         let cleanupHandlers = [];
+        let currentAudioIndicator = null;
 
         // --- Utility: Position floating media at mouse, clamped to viewport ---
         function positionFloatingMedia(event) {
@@ -1200,10 +1188,11 @@ onReady(async function () {
             }
             cleanupHandlers.forEach(fn => fn());
             cleanupHandlers = [];
-            // Remove any audio indicators
-            document.querySelectorAll(".audio-preview-indicator").forEach(indicator => {
-                if (indicator.parentNode) indicator.parentNode.removeChild(indicator);
-            });
+            // Remove only the current audio indicator
+            if (currentAudioIndicator && currentAudioIndicator.parentNode) {
+                currentAudioIndicator.parentNode.removeChild(currentAudioIndicator);
+                currentAudioIndicator = null;
+            }
         }
 
         // --- Helper: Get full media URL from thumbnail and MIME type ---
@@ -1359,6 +1348,7 @@ onReady(async function () {
                 indicator.classList.add("audio-preview-indicator");
                 indicator.textContent = "▶ Playing audio...";
                 container.appendChild(indicator);
+                currentAudioIndicator = indicator; // Track the indicator
                 // Cleanup on leave/click/scroll
                 const cleanup = () => {
                     if (floatingMedia) {
@@ -1367,7 +1357,8 @@ onReady(async function () {
                         floatingMedia.remove();
                         floatingMedia = null;
                     }
-                    indicator.remove();
+                    if (indicator.parentNode) indicator.parentNode.removeChild(indicator);
+                    if (currentAudioIndicator === indicator) currentAudioIndicator = null;
                 };
                 thumb.addEventListener("mouseleave", cleanup, { once: true });
                 container.addEventListener("click", cleanup, { once: true });
@@ -1382,7 +1373,7 @@ onReady(async function () {
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
             floatingMedia.src = fullSrc;
             floatingMedia.style.position = "fixed";
-            floatingMedia.style.zIndex = "9999";
+            floatingMedia.style.zIndex = 9999;
             floatingMedia.style.pointerEvents = "none";
             floatingMedia.style.opacity = "0.75"; // Loading transparency
             floatingMedia.style.left = "-9999px";
@@ -1531,41 +1522,41 @@ onReady(async function () {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
             spoilerLinks.forEach(async (link) => {
                 const img = link.querySelector("img");
-                if (!img) return;
+                if (img) {
+                    // Check if this is a custom spoiler image
+                    const isCustomSpoiler = img.src.includes("/custom.spoiler");
+                    // Check if this is NOT already a thumbnail
+                    const isNotThumbnail = !img.src.includes("/.media/t_");
 
-                // Check if this is a custom spoiler image
-                const isCustomSpoiler = img.src.includes("/custom.spoiler");
-                // Check if this is NOT already a thumbnail
-                const isNotThumbnail = !img.src.includes("/.media/t_");
+                    if (isNotThumbnail || isCustomSpoiler) {
+                        let href = link.getAttribute("href");
+                        if (href) {
+                            // Extract filename without extension
+                            const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
+                            if (match) {
+                                // Use the thumbnail path (t_filename)
+                                const transformedSrc = `/.media/t_${match[1]}`;
+                                img.src = transformedSrc;
 
-                if (isNotThumbnail || isCustomSpoiler) {
-                    let href = link.getAttribute("href");
-                    if (!href) return;
-
-                    // Extract filename without extension
-                    const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
-                    if (!match) return;
-
-                    // Use the thumbnail path (t_filename)
-                    const transformedSrc = `/\.media/t_${match[1]}`;
-                    img.src = transformedSrc;
-
-                    // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                    if (await getSetting("blurSpoilers_removeSpoilers")) {
-                        img.style.filter = "";
-                        img.style.transition = "";
-                        img.onmouseover = null;
-                        img.onmouseout = null;
-                        return;
-                    } else {
-                        img.style.filter = "blur(5px)";
-                        img.style.transition = "filter 0.3s ease";
-                        img.addEventListener("mouseover", () => {
-                            img.style.filter = "none";
-                        });
-                        img.addEventListener("mouseout", () => {
-                            img.style.filter = "blur(5px)";
-                        });
+                                // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
+                                if (await getSetting("blurSpoilers_removeSpoilers")) {
+                                    img.style.filter = "";
+                                    img.style.transition = "";
+                                    img.onmouseover = null;
+                                    img.onmouseout = null;
+                                    return;
+                                } else {
+                                    img.style.filter = "blur(5px)";
+                                    img.style.transition = "filter 0.3s ease";
+                                    img.addEventListener("mouseover", () => {
+                                        img.style.filter = "none";
+                                    });
+                                    img.addEventListener("mouseout", () => {
+                                        img.style.filter = "blur(5px)";
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -1584,35 +1575,33 @@ onReady(async function () {
     // --- Feature: Highlight (You) and Board Name in TW
     function highlightMentions() {
         document.querySelectorAll("#watchedMenu .watchedCell").forEach((cell) => {
-            /** @type {HTMLElement | null} */
-            const labelLink = cell.querySelector(".watchedCellLabel a");
-            if (!labelLink) return;
-
-            // Only set data-board if it doesn't already exist
-            if (!labelLink.dataset.board) {
-                const href = labelLink.getAttribute("href");
-                if (!href) return;
-
-                const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
-                if (match) labelLink.dataset.board = `/${match[1]}/ -`;
-                
-                // Highlight the watch button if this thread is open
-                if (!document.location.href.includes(href)) return;
-
-                /** @type {HTMLElement | null} */
-                const watchButton = document.querySelector(".opHead .watchButton");
-                if (!watchButton) return;
-
-                watchButton.style.color = "var(--board-title-color)";
-                watchButton.title = "Watched";
-            }
-
-            // Highlight if contains (you), else remove color
             const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
-            if (notification && notification.textContent?.includes("(you)")) {
-                labelLink.style.color = "#ff0000f0";
-            } else {
-                labelLink.style.color = "";
+            const labelLink = cell.querySelector(".watchedCellLabel a");
+
+            if (labelLink) {
+                // Only set data-board if it doesn't already exist
+                if (!labelLink.dataset.board) {
+                    const href = labelLink.getAttribute("href");
+                    const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
+                    if (match) {
+                        labelLink.dataset.board = `/${match[1]}/ -`;
+                    }
+                    // Highlight the watch button if this thread is open
+                    if (document.location.href.includes(href)) {
+                        const watchButton = document.querySelector(".opHead .watchButton");
+                        if (watchButton) {
+                            watchButton.style.color = "var(--board-title-color)";
+                            watchButton.title = "Watched";
+                        }
+                    }
+                }
+
+                // Highlight if contains (you), else remove color
+                if (notification && notification.textContent.includes("(you)")) {
+                    labelLink.style.color = "#ff0000f0";
+                } else {
+                    labelLink.style.color = "";
+                }
             }
         });
     }
@@ -1623,67 +1612,65 @@ onReady(async function () {
     // Observe #watchedMenu for changes to update highlights dynamically
     const watchedMenu = document.getElementById("watchedMenu");
     if (watchedMenu) {
-        MutationObserverManager.observe(
-            watchedMenu,
-            { childList: true, subtree: true },
-            handleWatchedMenuMutations
-        );
+        const observer = new MutationObserver(() => {
+            highlightMentions();
+        });
+        observer.observe(watchedMenu, { childList: true, subtree: true });
     }
 
     // --- Feature: Watch Thread on Reply ---
     async function featureWatchThreadOnReply() {
-
-        // On post submit (button)
-        const submitButton = document.getElementById("qrbutton");
-        submitButton?.addEventListener("click", async function () {
-            if (await getSetting("watchThreadOnReply")) {
-                setTimeout(_watchThreadIfNotWatched, 500); // Wait for post to go through
-            }
-        });
-
-        // On page load, update the icon if already watched
-        updateWatchButtonClass();
-
-        // Also update when the user manually clicks the watch button
-        const btn = _getWatchButton();
-        btn?.addEventListener("click", function () {
-            setTimeout(updateWatchButtonClass, 100);
-        });
-
-        /* Helper functions */
-        function updateWatchButtonClass() {
-            const btn = _getWatchButton();
-            if (!btn) return;
-
-            if (_isThreadWatched()) {
-                btn.classList.add("watched-active");
-            } else {
-                btn.classList.remove("watched-active");
-            }
-        }
-
-        /** Get the watch button element
-         * @return {HTMLElement | null} */
-        function _getWatchButton() {
+        // Helper: Get the watch button element
+        function getWatchButton() {
             return document.querySelector(".watchButton");
         }
 
-        /** Check if thread is watched (by presence of watched-active class) */
-        function _isThreadWatched() {
-            const btn = _getWatchButton();
+        // Helper: Check if thread is watched (by presence of watched-active class)
+        function isThreadWatched() {
+            const btn = getWatchButton();
             return btn && btn.classList.contains("watched-active");
         }
 
-        /** Trigger the native watch button click if not already watched */
-        function _watchThreadIfNotWatched() {
-            const btn = _getWatchButton();
-            if (btn && !_isThreadWatched()) {
+        // Helper: Trigger the native watch button click if not already watched
+        function watchThreadIfNotWatched() {
+            const btn = getWatchButton();
+            if (btn && !isThreadWatched()) {
                 btn.click(); // Triggers the site's watcher logic
                 // The site should add watched-active, but if not, we can add it ourselves:
                 setTimeout(() => {
                     btn.classList.add("watched-active");
                 }, 100);
             }
+        }
+
+        // On post submit (button)
+        const submitButton = document.getElementById("qrbutton");
+        if (submitButton) {
+            submitButton.addEventListener("click", async function () {
+                if (await getSetting("watchThreadOnReply")) {
+                    setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
+                }
+            });
+        }
+
+        // On page load, update the icon if already watched
+        function updateWatchButtonClass() {
+            const btn = getWatchButton();
+            if (!btn) return;
+            if (isThreadWatched()) {
+                btn.classList.add("watched-active");
+            } else {
+                btn.classList.remove("watched-active");
+            }
+        }
+        updateWatchButtonClass();
+
+        // Also update when the user manually clicks the watch button
+        const btn = getWatchButton();
+        if (btn) {
+            btn.addEventListener("click", function () {
+                setTimeout(updateWatchButtonClass, 100);
+            });
         }
     }
 
@@ -1738,15 +1725,10 @@ onReady(async function () {
         }
 
         // Run on DOM ready
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => {
-                showThreadWatcher();
-                addCloseListener();
-            });
-        } else {
+        onReady(() => {
             showThreadWatcher();
             addCloseListener();
-        }
+        });
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1810,29 +1792,34 @@ onReady(async function () {
         label.textContent = "Delete Name";
         label.title = "Delete Name on refresh";
         const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
-        if (alwaysUseBypassCheckbox) {
-            alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
-            alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
+        if (!alwaysUseBypassCheckbox) {
+            // Log a warning
+            console.warn("[8chanSS] Could not find #qralwaysUseBypassCheckBox. 'Delete Name' checkbox not added.");
+            return;
+        }
 
-            // Restore checkbox state
-            const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
-            checkbox.checked = savedCheckboxState;
+        alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
+        alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
 
-            const nameInput = document.getElementById("qrname");
-            if (nameInput) {
-                // If the checkbox is checked on load, clear the input and remove the name from storage
-                if (checkbox.checked) {
-                    nameInput.value = "";
-                    localStorage.removeItem("name");
-                }
+        // Restore checkbox state
+        const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
+        checkbox.checked = savedCheckboxState;
 
-                // Save checkbox state
-                checkbox.addEventListener("change", function () {
-                    localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
-                });
+        const nameInput = document.getElementById("qrname");
+        if (nameInput) {
+            // If the checkbox is checked on load, clear the input and remove the name from storage
+            if (checkbox.checked) {
+                nameInput.value = "";
+                localStorage.removeItem("name");
             }
+
+            // Save checkbox state
+            checkbox.addEventListener("change", function () {
+                localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
+            });
         }
     }
+
 
     // --- Feature: Beep on (You) ---
     function featureBeepOnYou() {
@@ -1840,6 +1827,13 @@ onReady(async function () {
         const beep = new Audio(
             "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
         );
+
+        // Function to play the beep sound
+        function playBeep(audioElement) {
+            if (!audioElement) return;
+            audioElement.currentTime = 0;
+            audioElement.play();
+        }
 
         // Create MutationObserver to detect when you are quoted
         const observer = new MutationObserver((mutations) => {
@@ -1852,7 +1846,7 @@ onReady(async function () {
                     ) {
                         // Only play beep if the setting is enabled
                         if (await getSetting("beepOnYou")) {
-                            playBeep();
+                            playBeep(beep);
                         }
 
                         // Trigger notification in separate function if enabled
@@ -1865,16 +1859,7 @@ onReady(async function () {
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
-
-        // Function to play the beep sound
-        function playBeep() {
-            if (beep.paused) {
-                beep.play().catch((e) => console.warn("Beep failed:", e));
-            } else {
-                beep.addEventListener("ended", () => beep.play(), { once: true });
-            }
-        }
-    }
+    };
 
     // --- Notification on (You) ---
     // Store the original title if not already stored
@@ -2130,7 +2115,6 @@ onReady(async function () {
 
         // Utility: Load hidden threads object from storage
         async function loadHiddenThreadsObj() {
-            // @ts-ignore
             const raw = await GM.getValue(STORAGE_KEY, "{}");
             try {
                 const obj = JSON.parse(raw);
@@ -2142,7 +2126,6 @@ onReady(async function () {
 
         // Utility: Save hidden threads object to storage
         async function saveHiddenThreadsObj(obj) {
-            // @ts-ignore
             await GM.setValue(STORAGE_KEY, JSON.stringify(obj));
         }
 
@@ -2150,7 +2133,6 @@ onReady(async function () {
         async function applyHiddenThreads() {
             // Load the per-board hidden threads object from storage
             const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
-            // @ts-ignore
             const hiddenThreadsObjRaw = await GM.getValue(STORAGE_KEY, "{}");
             let hiddenThreadsObj;
             try {
@@ -2278,12 +2260,12 @@ onReady(async function () {
             // Apply hidden threads on load and after DOM mutations
             onReady(applyHiddenThreads);
 
-            // Listen for SHIFT+clicks on catalog cells (event delegation)
-            document.addEventListener("click", onCatalogCellClick, true);
-
-            // Re-apply hidden threads if catalog is dynamically updated
+            // Scope event listener to catalog container only
             const catalogContainer = document.querySelector(".catalogWrapper, .catalogDiv");
             if (catalogContainer) {
+                catalogContainer.addEventListener("click", onCatalogCellClick, true);
+
+                // Re-apply hidden threads if catalog is dynamically updated
                 const observer = new MutationObserver(applyHiddenThreads);
                 observer.observe(catalogContainer, { childList: true, subtree: true });
             }
