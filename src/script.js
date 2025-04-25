@@ -409,34 +409,32 @@ onReady(async function () {
     // Custom CSS injection
     function addCustomCSS(css) {
         if (!css) return;
-        const style = document.createElement("style");
-        style.type = "text/css";
-        style.id = "8chSS";
-        style.appendChild(document.createTextNode(css));
-        document.head.appendChild(style);
+        let style = document.getElementById("8chSS");
+        if (!style) {
+            style = document.createElement("style");
+            style.type = "text/css";
+            style.id = "8chSS";
+            document.head.appendChild(style);
+        }
+        style.textContent = css;
     }
-    // Get the current URL path
+    
     const currentPath = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
-
-    // Apply CSS based on URL pattern
+    
+    let css = "";
+    
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        // General CSS for all pages
-        const css = "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
-        addCustomCSS(css);
+        css += "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
     }
-
-    // Thread page CSS
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        const css = "<%= grunt.file.read('tmp/thread.min.css').replace(/\\(^\")/g, '') %>";
-        addCustomCSS(css);
+        css += "<%= grunt.file.read('tmp/thread.min.css').replace(/\\(^\")/g, '') %>";
     }
-
-    // Catalog page CSS
     if (/\/catalog\.html$/.test(currentPath)) {
-        const css = "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
-        addCustomCSS(css);
+        css += "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
     }
+    
+    addCustomCSS(css);
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
