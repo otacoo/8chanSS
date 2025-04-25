@@ -91,16 +91,6 @@
     box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
 }
 
-/* Fit Replies */
-:root.fit-replies :not(.hidden).innerPost {
-    margin-left: 10px;
-    display: flow-root;
-}
-
-:root.fit-replies .quoteTooltip {
-    display: table !important;
-}
-
 /* (You) Replies */
 :root.highlight-you .innerPost:has(.youName) {
     border-left: dashed #68b723 3px;
@@ -120,12 +110,14 @@
 .multipleUploads .uploadCell:not(.expandedCell) {
     max-width: 215px;
 }
+
 .imgExpanded,
 video {
     max-height: 90vh !important;
     object-fit: contain;
     width: auto !important;
 }
+
 /* Not sure what this is about, guess we'll find out */
 .postCell::before {
     display: inline !important;

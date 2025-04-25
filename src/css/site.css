@@ -47,6 +47,17 @@ nav.navHeader {
     box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
 }
 
+/* Fit Replies */
+:root.fit-replies :not(.hidden).innerPost {
+    margin-left: 10px;
+    display: flow-root;
+}
+
+:root.fit-replies .quoteTooltip {
+    display: table !important;
+}
+
+
 /* Thread Watcher */
 .watchButton.watched-active::before {
     color: #dd003e !important;
@@ -115,6 +126,7 @@ nav.navHeader {
 .innerUtility.top a {
     color: var(--link-color) !important;
 }
+
 /* Smol padding fix for the anchor */
 .bumpLockIndicator::after {
     padding-right: 3px;
