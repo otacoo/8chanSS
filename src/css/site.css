@@ -63,6 +63,13 @@ nav.navHeader {
     display: inline-table;
 }
 
+.watchedCellLabel a::before {
+    content: attr(data-board);
+    color: #aaa;
+    margin-right: 4px;
+    font-weight: bold;
+}
+
 .watchButton.watched-active::before {
     color: #dd003e !important;
 }
