@@ -45,13 +45,13 @@
 (function () {
     try {
         // Image Hover
-        let keysToRemove = ["hoveringImage"];
-        for (key of keysToRemove) {
+        const keysToRemove = ["hoveringImage"];
+        for (const key of keysToRemove) {
             localStorage.removeItem(key);
         }
         // Inline Replies
-        let keystoEnable = ["inlineReplies"];
-        for (key of keystoEnable) {
+        const keystoEnable = ["inlineReplies"];
+        for (const key of keystoEnable) {
             localStorage.setItem(key);
         }
     } catch (e) {
@@ -346,6 +346,7 @@ onReady(async function () {
             { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
             { keys: ["ALT", "W"], action: "Watch Thread" },
+            { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
             { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
             { keys: ["Ctrl", "B"], action: "Bold text" },
             { keys: ["Ctrl", "I"], action: "Italic text" },
@@ -437,6 +438,8 @@ onReady(async function () {
         const css = "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
         addCustomCSS(css);
     }
+
+    ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Floating Settings Menu with Tabs ---
     async function createSettingsMenu() {
@@ -889,6 +892,8 @@ onReady(async function () {
         });
     }
 
+    //////// MENU END ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     // --- Feature: Save Scroll Position (now with optional unread line) ---
     async function featureSaveScroll() {
         const MAX_PAGES = 50;
@@ -1061,9 +1066,6 @@ onReady(async function () {
         await restoreScrollPosition();
     }
 
-    // Init
-    featureSaveScroll();
-
     // --- Remove unread-line at bottom of page ---
     async function removeUnreadLineIfAtBottom() {
         // Check if showUnreadLine is enabled
@@ -1133,32 +1135,26 @@ onReady(async function () {
             if (!floatingMedia) return;
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-
-            // Use loaded size if available, otherwise default
-            let mediaWidth = floatingMedia.naturalWidth || floatingMedia.videoWidth || floatingMedia.offsetWidth || DEFAULT_MEDIA_WIDTH;
-            let mediaHeight = floatingMedia.naturalHeight || floatingMedia.videoHeight || floatingMedia.offsetHeight || DEFAULT_MEDIA_HEIGHT;
-
-            // Default: top-right of cursor
-            let x = event.clientX + OFFSET;
-            let y = event.clientY - mediaHeight - OFFSET;
-
-            // If overflowing right, flip to left of cursor
-            if (x + mediaWidth > viewportWidth) {
-                x = event.clientX - mediaWidth - OFFSET;
+            const mediaWidth = floatingMedia.offsetWidth || 0;
+            const mediaHeight = floatingMedia.offsetHeight || 0;
+            let newX = event.clientX + 10;
+            let newY = event.clientY + 10;
+        
+            // Clamp X so the media doesn't overflow the right edge
+            if (newX + mediaWidth > viewportWidth) {
+                newX = viewportWidth - mediaWidth - 10;
             }
-            if (x < 0) x = 0;
-
-            // If overflowing top, flip to below cursor
-            if (y < 0) {
-                y = event.clientY + OFFSET;
+            // Clamp Y so the media doesn't overflow the bottom edge
+            if (newY + mediaHeight > viewportHeight) {
+                newY = viewportHeight - mediaHeight - 10;
             }
-            // If still overflowing bottom, clamp to bottom edge
-            if (y + mediaHeight > viewportHeight) {
-                y = Math.max(viewportHeight - mediaHeight - OFFSET, 0);
-            }
-
-            floatingMedia.style.left = `${x}px`;
-            floatingMedia.style.top = `${y}px`;
+        
+            // Ensure the media doesn't go off the left/top edge
+            newX = Math.max(newX, 0);
+            newY = Math.max(newY, 0);
+        
+            floatingMedia.style.left = `${newX}px`;
+            floatingMedia.style.top = `${newY}px`;
             floatingMedia.style.maxWidth = "90vw";
             floatingMedia.style.maxHeight = "90vh";
         }
