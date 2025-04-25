@@ -892,32 +892,58 @@ onReady(async function () {
 
     //////// MENU END ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // --- Feature: Save Scroll Position (now with optional unread line) ---
+    // --- Feature: Save Scroll Position (anchor-aware, optimized)
     async function featureSaveScroll() {
         const MAX_PAGES = 50;
-        const currentPage = window.location.href;
+        // Use URL without hash for storage key
+        const currentPage = window.location.origin + window.location.pathname + window.location.search;
+        const hasAnchor = !!window.location.hash;
+    
         const excludedPagePatterns = [
             /\/catalog\.html$/i,
             /\/.media\/$/i,
             /\/boards\.js$/i,
             /\/login\.html$/i,
+            /\/\.static\/oekaki\/[^/]+\/index\.html$/i,
             /\/overboard$/i,
             /\/sfw$/i
         ];
-
+    
         function isExcludedPage(url) {
             return excludedPagePatterns.some((pattern) => pattern.test(url));
         }
-
+    
+        async function getSavedScrollData() {
+            const savedData = await GM.getValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                null
+            );
+            if (!savedData) return null;
+            try {
+                return JSON.parse(savedData);
+            } catch (e) {
+                return null;
+            }
+        }
+    
         async function saveScrollPosition() {
             // Return early if root has .is-index
             if (document.documentElement.classList.contains("is-index")) return;
             if (isExcludedPage(currentPage)) return;
             if (!(await getSetting("enableScrollSave"))) return;
-
+    
             const scrollPosition = window.scrollY;
             const timestamp = Date.now();
-
+    
+            // Only save if scrolled further down than last saved position
+            const savedData = await getSavedScrollData();
+            if (savedData && typeof savedData.position === "number") {
+                if (scrollPosition <= savedData.position) {
+                    // Do not update if not scrolled further down
+                    return;
+                }
+            }
+    
             // Store both the scroll position and timestamp using GM storage
             await GM.setValue(
                 `8chanSS_scrollPosition_${currentPage}`,
@@ -926,19 +952,19 @@ onReady(async function () {
                     timestamp: timestamp,
                 })
             );
-
+    
             await manageScrollStorage();
         }
-
+    
         async function manageScrollStorage() {
             // Get all GM storage keys
             const allKeys = await GM.listValues();
-
+    
             // Filter for scroll position keys
             const scrollKeys = allKeys.filter((key) =>
                 key.startsWith("8chanSS_scrollPosition_")
             );
-
+    
             if (scrollKeys.length > MAX_PAGES) {
                 // Create array of objects with key and timestamp
                 const keyData = await Promise.all(
@@ -956,10 +982,10 @@ onReady(async function () {
                         };
                     })
                 );
-
+    
                 // Sort by timestamp (oldest first)
                 keyData.sort((a, b) => a.timestamp - b.timestamp);
-
+    
                 // Remove oldest entries until we're under the limit
                 const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
                 for (const item of keysToRemove) {
@@ -967,56 +993,51 @@ onReady(async function () {
                 }
             }
         }
-
+    
         // Restore scroll position (always, if enabled)
         async function restoreScrollPosition() {
             // Return early if root has .is-index
             if (document.documentElement.classList.contains("is-index")) return;
             if (isExcludedPage(currentPage)) return;
             if (!(await getSetting("enableScrollSave"))) return;
-
-            const savedData = await GM.getValue(
+    
+            const savedData = await getSavedScrollData();
+            if (!savedData || typeof savedData.position !== "number") return;
+            const position = savedData.position;
+    
+            // Update the timestamp to "refresh" this entry
+            await GM.setValue(
                 `8chanSS_scrollPosition_${currentPage}`,
-                null
+                JSON.stringify({
+                    position: position,
+                    timestamp: Date.now(),
+                })
             );
-
-            if (!savedData) return;
-            let position;
-            try {
-                // Try to parse as JSON (new format)
-                const data = JSON.parse(savedData);
-                position = data.position;
-
-                // Update the timestamp to "refresh" this entry
-                // @ts-ignore
-                await GM.setValue(
-                    `8chanSS_scrollPosition_${currentPage}`,
-                    JSON.stringify({
-                        position: position,
-                        timestamp: Date.now(),
-                    })
-                );
-            } catch (e) {
-                // If parsing fails, skip (should not happen with cleaned storage)
+    
+            if (hasAnchor) {
+                // Do NOT scroll, let browser handle anchor
+                // But still add unread-line at saved position (not anchor)
+                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
                 return;
             }
+    
             // Only restore scroll if a saved position exists (i.e., not first visit)
             if (!isNaN(position)) {
                 window.scrollTo(0, position);
                 setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
             }
         }
-
+    
         // Add an unread-line marker after the .postCell <div>
         async function addUnreadLineAtViewportCenter(scrollPosition) {
             // Only add unread-line if showUnreadLine is enabled
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
                 return;
             }
-
+    
             const divPosts = document.querySelector(".divPosts");
             if (!divPosts) return;
-
+    
             // Find the element at the center of the viewport (after scroll restore)
             const centerX = window.innerWidth / 2;
             // Use the restored scroll position if provided, otherwise current
@@ -1024,22 +1045,22 @@ onReady(async function () {
                 ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
                 : window.innerHeight / 2;
             let el = document.elementFromPoint(centerX, centerY);
-
+    
             // Traverse up to find the closest .postCell
             while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
                 el = el.parentElement;
             }
             if (!el || el === divPosts || !el.id) return;
-
+    
             // Ensure .postCell is a direct child of .divPosts
             if (el.parentElement !== divPosts) return;
-
+    
             // Remove any existing unread-line
             const oldMarker = document.getElementById("unread-line");
             if (oldMarker && oldMarker.parentNode) {
                 oldMarker.parentNode.removeChild(oldMarker);
             }
-
+    
             // Insert the unread-line marker after the .postCell (as a sibling)
             const marker = document.createElement("hr");
             marker.id = "unread-line";
@@ -1049,17 +1070,17 @@ onReady(async function () {
                 divPosts.appendChild(marker);
             }
         }
-
+    
         // Use async event handlers
         window.addEventListener("beforeunload", () => {
             saveScrollPosition();
         });
-
+    
         // For load event, restore scroll and then add unread-line if enabled
         window.addEventListener("load", async () => {
             await restoreScrollPosition();
         });
-
+    
         // Initial restore attempt (in case the load event already fired)
         await restoreScrollPosition();
     }
