@@ -1915,11 +1915,8 @@ onReady(async function () {
     if (await getSetting("enableScrollArrows")) {
         featureScrollArrows();
     }
-    if (await getSetting("beepOnYou")) {
+    if ((await getSetting("beepOnYou")) || (await getSetting("notifyOnYou"))) {
         featureBeepOnYou();
-    }
-    if (await getSetting("notifyOnYou")) {
-        featureNotifyOnYou();
     }
     if (await getSetting("alwaysShowTW")) {
         featureAlwaysShowTW();
