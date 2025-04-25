@@ -135,3 +135,8 @@ nav.navHeader {
 .bumpLockIndicator::after {
     padding-right: 3px;
 }
+
+/* Native Settings */
+.floatingMenu.focused {
+    z-index: 305 !important;
+}
