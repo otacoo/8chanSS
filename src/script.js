@@ -889,6 +889,200 @@ onReady(async function () {
         });
     }
 
+    // --- Feature: Save Scroll Position (now with optional unread line) ---
+    async function featureSaveScroll() {
+        const MAX_PAGES = 50;
+        const currentPage = window.location.href;
+        const excludedPagePatterns = [
+            /\/catalog\.html$/i,
+            /\/.media\/$/i,
+            /\/boards\.js$/i,
+            /\/login\.html$/i,
+            /\/overboard$/i,
+            /\/sfw$/i
+        ];
+
+        function isExcludedPage(url) {
+            return excludedPagePatterns.some((pattern) => pattern.test(url));
+        }
+
+        async function saveScrollPosition() {
+            // Return early if root has .is-index
+            if (document.documentElement.classList.contains("is-index")) return;
+            if (isExcludedPage(currentPage)) return;
+            if (!(await getSetting("enableScrollSave"))) return;
+
+            const scrollPosition = window.scrollY;
+            const timestamp = Date.now();
+
+            // Store both the scroll position and timestamp using GM storage
+            await GM.setValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                JSON.stringify({
+                    position: scrollPosition,
+                    timestamp: timestamp,
+                })
+            );
+
+            await manageScrollStorage();
+        }
+
+        async function manageScrollStorage() {
+            // Get all GM storage keys
+            const allKeys = await GM.listValues();
+
+            // Filter for scroll position keys
+            const scrollKeys = allKeys.filter((key) =>
+                key.startsWith("8chanSS_scrollPosition_")
+            );
+
+            if (scrollKeys.length > MAX_PAGES) {
+                // Create array of objects with key and timestamp
+                const keyData = await Promise.all(
+                    scrollKeys.map(async (key) => {
+                        let data;
+                        try {
+                            const savedValue = await GM.getValue(key, null);
+                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
+                        } catch (e) {
+                            data = { position: 0, timestamp: 0 };
+                        }
+                        return {
+                            key: key,
+                            timestamp: data.timestamp || 0,
+                        };
+                    })
+                );
+
+                // Sort by timestamp (oldest first)
+                keyData.sort((a, b) => a.timestamp - b.timestamp);
+
+                // Remove oldest entries until we're under the limit
+                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
+                for (const item of keysToRemove) {
+                    await GM.deleteValue(item.key);
+                }
+            }
+        }
+
+        // Restore scroll position (always, if enabled)
+        async function restoreScrollPosition() {
+            // Return early if root has .is-index
+            if (document.documentElement.classList.contains("is-index")) return;
+            if (isExcludedPage(currentPage)) return;
+            if (!(await getSetting("enableScrollSave"))) return;
+
+            const savedData = await GM.getValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                null
+            );
+
+            if (savedData) {
+                let position;
+                try {
+                    // Try to parse as JSON (new format)
+                    const data = JSON.parse(savedData);
+                    position = data.position;
+
+                    // Update the timestamp to "refresh" this entry
+                    await GM.setValue(
+                        `8chanSS_scrollPosition_${currentPage}`,
+                        JSON.stringify({
+                            position: position,
+                            timestamp: Date.now(),
+                        })
+                    );
+                } catch (e) {
+                    // If parsing fails, skip (should not happen with cleaned storage)
+                    return;
+                }
+                // Only restore scroll if a saved position exists (i.e., not first visit)
+                if (!isNaN(position)) {
+                    window.scrollTo(0, position);
+                    setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
+                }
+            }
+        }
+
+        // Add an unread-line marker after the .postCell <div>
+        async function addUnreadLineAtViewportCenter(scrollPosition) {
+            // Only add unread-line if showUnreadLine is enabled
+            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
+                return;
+            }
+
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return;
+
+            // Find the element at the center of the viewport (after scroll restore)
+            const centerX = window.innerWidth / 2;
+            // Use the restored scroll position if provided, otherwise current
+            const centerY = (typeof scrollPosition === "number")
+                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
+                : window.innerHeight / 2;
+            let el = document.elementFromPoint(centerX, centerY);
+
+            // Traverse up to find the closest .postCell
+            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
+                el = el.parentElement;
+            }
+            if (!el || el === divPosts || !el.id) return;
+
+            // Ensure .postCell is a direct child of .divPosts
+            if (el.parentElement !== divPosts) return;
+
+            // Remove any existing unread-line
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+
+            // Insert the unread-line marker after the .postCell (as a sibling)
+            const marker = document.createElement("hr");
+            marker.id = "unread-line";
+            if (el.nextSibling) {
+                divPosts.insertBefore(marker, el.nextSibling);
+            } else {
+                divPosts.appendChild(marker);
+            }
+        }
+
+        // Use async event handlers
+        window.addEventListener("beforeunload", () => {
+            saveScrollPosition();
+        });
+
+        // For load event, restore scroll and then add unread-line if enabled
+        window.addEventListener("load", async () => {
+            await restoreScrollPosition();
+        });
+
+        // Initial restore attempt (in case the load event already fired)
+        await restoreScrollPosition();
+    }
+
+    // Init
+    featureSaveScroll();
+
+    // --- Remove unread-line at bottom of page ---
+    async function removeUnreadLineIfAtBottom() {
+        // Check if showUnreadLine is enabled
+        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
+            return;
+        }
+
+        // Check if user is at the bottom (allowing for a small margin)
+        const margin = 20; // px
+        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+        }
+    }
+
+    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
+
     // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
         async function appendCatalogToLinks() {
@@ -1365,6 +1559,51 @@ onReady(async function () {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // --- Feature: Highlight (You) and Board Name in TW
+    function highlightMentions() {
+        document.querySelectorAll("#watchedMenu .watchedCell").forEach((cell) => {
+            const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
+            const labelLink = cell.querySelector(".watchedCellLabel a");
+
+            if (labelLink) {
+                // Only set data-board if it doesn't already exist
+                if (!labelLink.dataset.board) {
+                    const href = labelLink.getAttribute("href");
+                    const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
+                    if (match) {
+                        labelLink.dataset.board = `/${match[1]}/ -`;
+                    }
+                    // Highlight the watch button if this thread is open
+                    if (document.location.href.includes(href)) {
+                        const watchButton = document.querySelector(".opHead .watchButton");
+                        if (watchButton) {
+                            watchButton.style.color = "white";
+                        }
+                    }
+                }
+
+                // Highlight if contains (you), else remove color
+                if (notification && notification.textContent.includes("(you)")) {
+                    labelLink.style.color = "#ff0000f0";
+                } else {
+                    labelLink.style.color = "";
+                }
+            }
+        });
+    }
+
+    // Initial highlight on page load
+    highlightMentions();
+
+    // Observe #watchedMenu for changes to update highlights dynamically
+    const watchedMenu = document.getElementById("watchedMenu");
+    if (watchedMenu) {
+        const observer = new MutationObserver(() => {
+            highlightMentions();
+        });
+        observer.observe(watchedMenu, { childList: true, subtree: true });
+    }
+
     // --- Feature: Watch Thread on Reply ---
     async function featureWatchThreadOnReply() {
         // Helper: Get the watch button element
@@ -1525,200 +1764,6 @@ onReady(async function () {
         document.body.appendChild(upBtn);
         document.body.appendChild(downBtn);
     }
-
-    // --- Feature: Save Scroll Position (now with optional unread line) ---
-    async function featureSaveScroll() {
-        const MAX_PAGES = 50;
-        const currentPage = window.location.href;
-        const excludedPagePatterns = [
-            /\/catalog\.html$/i,
-            /\/.media\/$/i,
-            /\/boards\.js$/i,
-            /\/login\.html$/i,
-            /\/overboard$/i,
-            /\/sfw$/i
-        ];
-
-        function isExcludedPage(url) {
-            return excludedPagePatterns.some((pattern) => pattern.test(url));
-        }
-
-        async function saveScrollPosition() {
-            // Return early if root has .is-index
-            if (document.documentElement.classList.contains("is-index")) return;
-            if (isExcludedPage(currentPage)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
-
-            const scrollPosition = window.scrollY;
-            const timestamp = Date.now();
-
-            // Store both the scroll position and timestamp using GM storage
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: scrollPosition,
-                    timestamp: timestamp,
-                })
-            );
-
-            await manageScrollStorage();
-        }
-
-        async function manageScrollStorage() {
-            // Get all GM storage keys
-            const allKeys = await GM.listValues();
-
-            // Filter for scroll position keys
-            const scrollKeys = allKeys.filter((key) =>
-                key.startsWith("8chanSS_scrollPosition_")
-            );
-
-            if (scrollKeys.length > MAX_PAGES) {
-                // Create array of objects with key and timestamp
-                const keyData = await Promise.all(
-                    scrollKeys.map(async (key) => {
-                        let data;
-                        try {
-                            const savedValue = await GM.getValue(key, null);
-                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
-                        } catch (e) {
-                            data = { position: 0, timestamp: 0 };
-                        }
-                        return {
-                            key: key,
-                            timestamp: data.timestamp || 0,
-                        };
-                    })
-                );
-
-                // Sort by timestamp (oldest first)
-                keyData.sort((a, b) => a.timestamp - b.timestamp);
-
-                // Remove oldest entries until we're under the limit
-                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
-                for (const item of keysToRemove) {
-                    await GM.deleteValue(item.key);
-                }
-            }
-        }
-
-        // Restore scroll position (always, if enabled)
-        async function restoreScrollPosition() {
-            // Return early if root has .is-index
-            if (document.documentElement.classList.contains("is-index")) return;
-            if (isExcludedPage(currentPage)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
-
-            const savedData = await GM.getValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                null
-            );
-
-            if (savedData) {
-                let position;
-                try {
-                    // Try to parse as JSON (new format)
-                    const data = JSON.parse(savedData);
-                    position = data.position;
-
-                    // Update the timestamp to "refresh" this entry
-                    await GM.setValue(
-                        `8chanSS_scrollPosition_${currentPage}`,
-                        JSON.stringify({
-                            position: position,
-                            timestamp: Date.now(),
-                        })
-                    );
-                } catch (e) {
-                    // If parsing fails, skip (should not happen with cleaned storage)
-                    return;
-                }
-                // Only restore scroll if a saved position exists (i.e., not first visit)
-                if (!isNaN(position)) {
-                    window.scrollTo(0, position);
-                    setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
-                }
-            }
-        }
-
-        // Add an unread-line marker after the .postCell <div>
-        async function addUnreadLineAtViewportCenter(scrollPosition) {
-            // Only add unread-line if showUnreadLine is enabled
-            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-                return;
-            }
-
-            const divPosts = document.querySelector(".divPosts");
-            if (!divPosts) return;
-
-            // Find the element at the center of the viewport (after scroll restore)
-            const centerX = window.innerWidth / 2;
-            // Use the restored scroll position if provided, otherwise current
-            const centerY = (typeof scrollPosition === "number")
-                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
-                : window.innerHeight / 2;
-            let el = document.elementFromPoint(centerX, centerY);
-
-            // Traverse up to find the closest .postCell
-            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
-                el = el.parentElement;
-            }
-            if (!el || el === divPosts || !el.id) return;
-
-            // Ensure .postCell is a direct child of .divPosts
-            if (el.parentElement !== divPosts) return;
-
-            // Remove any existing unread-line
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-
-            // Insert the unread-line marker after the .postCell (as a sibling)
-            const marker = document.createElement("hr");
-            marker.id = "unread-line";
-            if (el.nextSibling) {
-                divPosts.insertBefore(marker, el.nextSibling);
-            } else {
-                divPosts.appendChild(marker);
-            }
-        }
-
-        // Use async event handlers
-        window.addEventListener("beforeunload", () => {
-            saveScrollPosition();
-        });
-
-        // For load event, restore scroll and then add unread-line if enabled
-        window.addEventListener("load", async () => {
-            await restoreScrollPosition();
-        });
-
-        // Initial restore attempt (in case the load event already fired)
-        await restoreScrollPosition();
-    }
-
-    // Init
-    featureSaveScroll();
-
-    // --- Remove unread-line at bottom of page ---
-    async function removeUnreadLineIfAtBottom() {
-        // Check if showUnreadLine is enabled
-        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-            return;
-        }
-
-        // Check if user is at the bottom (allowing for a small margin)
-        const margin = 20; // px
-        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-        }
-    }
-
-    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
 
     // --- Feature: Delete (Save) Name Checkbox ---
     // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
