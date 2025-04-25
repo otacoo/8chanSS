@@ -1,3 +1,4 @@
+// @ts-check
 ///// JANK THEME FLASH FIX LOAD ASAP /////////
 (function () {
     // Get the user's selected theme from localStorage
@@ -43,22 +44,25 @@
 })();
 ////////// Disable/Enable native extension settings //////
 (function () {
-    try {
-        // Image Hover
-        const keysToRemove = ["hoveringImage"];
-        for (const key of keysToRemove) {
+    function updateLocalStorage(removeKeys = [], setMap = {}) {
+        for (const key of removeKeys) {
             localStorage.removeItem(key);
         }
-        // Inline Replies
-        const keystoEnable = ["inlineReplies"];
-        for (const key of keystoEnable) {
-            localStorage.setItem(key, "true");
+        for (const [key, value] of Object.entries(setMap)) {
+            localStorage.setItem(key, value);
         }
+    }
+
+    try {
+        updateLocalStorage(
+            ["hoveringImage"],           // Keys to remove
+            { inlineReplies: "true" }    // Keys to set
+        );
     } catch (e) {
         // Ignore errors (e.g., storage not available)
     }
 })();
-////////// ON READY HELPER ///////////////////////
+////////// HELPERS ///////////////////////
 function onReady(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
@@ -175,6 +179,7 @@ onReady(async function () {
             console.warn(`Setting key not found: ${key}`);
             return false;
         }
+        // @ts-ignore
         let val = await GM.getValue("8chanSS_" + key, null);
         if (val === null) return flatSettings[key].default;
         if (flatSettings[key].type === "number") return Number(val);
@@ -183,6 +188,7 @@ onReady(async function () {
 
     async function setSetting(key, value) {
         // Always store as string for consistency
+        // @ts-ignore
         await GM.setValue("8chanSS_" + key, String(value));
     }
 
@@ -450,7 +456,7 @@ onReady(async function () {
         menu.style.position = "fixed";
         menu.style.top = "80px";
         menu.style.left = "30px";
-        menu.style.zIndex = 99999;
+        menu.style.zIndex = "99999";
         menu.style.background = "#222";
         menu.style.color = "#fff";
         menu.style.padding = "0";
@@ -1139,7 +1145,7 @@ onReady(async function () {
             const mediaHeight = floatingMedia.offsetHeight || 0;
             let newX = event.clientX + 10;
             let newY = event.clientY + 10;
-        
+
             // Clamp X so the media doesn't overflow the right edge
             if (newX + mediaWidth > viewportWidth) {
                 newX = viewportWidth - mediaWidth - 10;
@@ -1148,11 +1154,11 @@ onReady(async function () {
             if (newY + mediaHeight > viewportHeight) {
                 newY = viewportHeight - mediaHeight - 10;
             }
-        
+
             // Ensure the media doesn't go off the left/top edge
             newX = Math.max(newX, 0);
             newY = Math.max(newY, 0);
-        
+
             floatingMedia.style.left = `${newX}px`;
             floatingMedia.style.top = `${newY}px`;
             floatingMedia.style.maxWidth = "90vw";
@@ -1356,7 +1362,7 @@ onReady(async function () {
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
             floatingMedia.src = fullSrc;
             floatingMedia.style.position = "fixed";
-            floatingMedia.style.zIndex = 9999;
+            floatingMedia.style.zIndex = "9999";
             floatingMedia.style.pointerEvents = "none";
             floatingMedia.style.opacity = "0.75"; // Loading transparency
             floatingMedia.style.left = "-9999px";
@@ -1595,10 +1601,11 @@ onReady(async function () {
     // Observe #watchedMenu for changes to update highlights dynamically
     const watchedMenu = document.getElementById("watchedMenu");
     if (watchedMenu) {
-        const observer = new MutationObserver(() => {
-            highlightMentions();
-        });
-        observer.observe(watchedMenu, { childList: true, subtree: true });
+        MutationObserverManager.observe(
+            watchedMenu,
+            { childList: true, subtree: true },
+            handleWatchedMenuMutations
+        );
     }
 
     // --- Feature: Watch Thread on Reply ---
