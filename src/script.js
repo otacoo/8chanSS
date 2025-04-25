@@ -157,16 +157,16 @@ onReady(async function () {
         Object.keys(scriptSettings).forEach((category) => {
             Object.keys(scriptSettings[category]).forEach((key) => {
                 flatSettings[key] = scriptSettings[category][key];
+
                 // Also flatten any sub-options
-                if (scriptSettings[category][key].subOptions) {
-                    Object.keys(scriptSettings[category][key].subOptions).forEach(
-                        (subKey) => {
-                            const fullKey = `${key}_${subKey}`;
-                            flatSettings[fullKey] =
-                                scriptSettings[category][key].subOptions[subKey];
-                        }
-                    );
-                }
+                if (!scriptSettings[category][key].subOptions) return;
+                Object.keys(scriptSettings[category][key].subOptions).forEach(
+                    (subKey) => {
+                        const fullKey = `${key}_${subKey}`;
+                        flatSettings[fullKey] =
+                            scriptSettings[category][key].subOptions[subKey];
+                    }
+                );
             });
         });
     }
@@ -418,12 +418,12 @@ onReady(async function () {
         }
         style.textContent = css;
     }
-    
+
     const currentPath = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
-    
+
     let css = "";
-    
+
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
         css += "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
     }
@@ -433,7 +433,7 @@ onReady(async function () {
     if (/\/catalog\.html$/.test(currentPath)) {
         css += "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
     }
-    
+
     addCustomCSS(css);
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -447,7 +447,7 @@ onReady(async function () {
         menu.style.position = "fixed";
         menu.style.top = "80px";
         menu.style.left = "30px";
-        menu.style.zIndex = 99999;
+        menu.style.zIndex = "99999";
         menu.style.background = "#222";
         menu.style.color = "#fff";
         menu.style.padding = "0";
@@ -731,7 +731,7 @@ onReady(async function () {
                 slider.id = "setting_" + key;
                 slider.min = setting.min;
                 slider.max = setting.max;
-                slider.value = Number(tempSettings[key]);
+                slider.value = Number(tempSettings[key]).toString();
                 slider.style.flex = "unset";
                 slider.style.width = "100px";
                 slider.style.marginRight = "10px";
@@ -745,7 +745,7 @@ onReady(async function () {
                     let val = Number(slider.value);
                     if (isNaN(val)) val = setting.default;
                     val = Math.max(setting.min, Math.min(setting.max, val));
-                    slider.value = val;
+                    slider.value = val.toString();
                     tempSettings[key] = val;
                     valueLabel.textContent = val + "%";
                 });
@@ -781,7 +781,7 @@ onReady(async function () {
             // Chevron for subOptions
             let chevron = null;
             let subOptionsContainer = null;
-            if (setting.subOptions) {
+            if (setting?.subOptions) {
                 chevron = document.createElement("span");
                 chevron.className = "ss-chevron";
                 chevron.innerHTML = "&#9654;"; // Right-pointing triangle
@@ -798,16 +798,17 @@ onReady(async function () {
             // Checkbox change handler
             checkbox.addEventListener("change", function () {
                 tempSettings[key] = checkbox.checked;
-                if (setting.subOptions && subOptionsContainer) {
-                    subOptionsContainer.style.display = checkbox.checked
-                        ? "block"
-                        : "none";
-                    if (chevron) {
-                        chevron.style.transform = checkbox.checked
-                            ? "rotate(90deg)"
-                            : "rotate(0deg)";
-                    }
-                }
+                if (!setting?.subOptions) return;
+                if (!subOptionsContainer) return;
+
+                subOptionsContainer.style.display = checkbox.checked
+                    ? "block"
+                    : "none";
+
+                if (!chevron) return;
+                chevron.style.transform = checkbox.checked
+                    ? "rotate(90deg)"
+                    : "rotate(0deg)";
             });
 
             parentRow.appendChild(checkbox);
@@ -821,7 +822,7 @@ onReady(async function () {
             wrapper.appendChild(parentRow);
 
             // Handle sub-options if any exist
-            if (setting.subOptions) {
+            if (setting?.subOptions) {
                 subOptionsContainer = document.createElement("div");
                 subOptionsContainer.style.marginLeft = "25px";
                 subOptionsContainer.style.marginTop = "5px";
@@ -979,30 +980,30 @@ onReady(async function () {
                 null
             );
 
-            if (savedData) {
-                let position;
-                try {
-                    // Try to parse as JSON (new format)
-                    const data = JSON.parse(savedData);
-                    position = data.position;
+            if (!savedData) return;
+            let position;
+            try {
+                // Try to parse as JSON (new format)
+                const data = JSON.parse(savedData);
+                position = data.position;
 
-                    // Update the timestamp to "refresh" this entry
-                    await GM.setValue(
-                        `8chanSS_scrollPosition_${currentPage}`,
-                        JSON.stringify({
-                            position: position,
-                            timestamp: Date.now(),
-                        })
-                    );
-                } catch (e) {
-                    // If parsing fails, skip (should not happen with cleaned storage)
-                    return;
-                }
-                // Only restore scroll if a saved position exists (i.e., not first visit)
-                if (!isNaN(position)) {
-                    window.scrollTo(0, position);
-                    setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
-                }
+                // Update the timestamp to "refresh" this entry
+                // @ts-ignore
+                await GM.setValue(
+                    `8chanSS_scrollPosition_${currentPage}`,
+                    JSON.stringify({
+                        position: position,
+                        timestamp: Date.now(),
+                    })
+                );
+            } catch (e) {
+                // If parsing fails, skip (should not happen with cleaned storage)
+                return;
+            }
+            // Only restore scroll if a saved position exists (i.e., not first visit)
+            if (!isNaN(position)) {
+                window.scrollTo(0, position);
+                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
             }
         }
 
@@ -1093,31 +1094,17 @@ onReady(async function () {
                 );
 
                 for (let link of links) {
-                    try {
-                        // Parse the link's href using the URL constructor
-                        const url = new URL(link.href, window.location.origin);
+                    if (link.href && !link.href.endsWith("/catalog.html")) {
+                        link.href += "/catalog.html";
 
-                        // Only append if not already a catalog link
-                        if (!url.pathname.endsWith("/catalog.html")) {
-                            // Remove trailing slash if present (to avoid double slashes)
-                            let basePath = url.pathname.replace(/\/$/, "");
-                            url.pathname = basePath + "/catalog.html";
-                            // The search and hash are preserved
-
-                            link.href = url.toString();
-
-                            // Set target and rel attributes based on setting
-                            if (openInNewTab) {
-                                link.target = "_blank";
-                                link.rel = "noopener noreferrer";
-                            } else {
-                                link.target = "";
-                                link.rel = "";
-                            }
+                        // Set target="_blank" if the option is enabled
+                        if (openInNewTab) {
+                            link.target = "_blank";
+                            link.rel = "noopener noreferrer"; // Security best practice
+                        } else {
+                            link.target = "";
+                            link.rel = "";
                         }
-                    } catch (e) {
-                        // If URL parsing fails, skip this link
-                        console.warn("[8chanSS] Could not parse link for catalog appending:", link.href, e);
                     }
                 }
             }
@@ -1372,7 +1359,7 @@ onReady(async function () {
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
             floatingMedia.src = fullSrc;
             floatingMedia.style.position = "fixed";
-            floatingMedia.style.zIndex = 9999;
+            floatingMedia.style.zIndex = "9999";
             floatingMedia.style.pointerEvents = "none";
             floatingMedia.style.opacity = "0.75"; // Loading transparency
             floatingMedia.style.left = "-9999px";
@@ -1521,41 +1508,41 @@ onReady(async function () {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
             spoilerLinks.forEach(async (link) => {
                 const img = link.querySelector("img");
-                if (img) {
-                    // Check if this is a custom spoiler image
-                    const isCustomSpoiler = img.src.includes("/custom.spoiler");
-                    // Check if this is NOT already a thumbnail
-                    const isNotThumbnail = !img.src.includes("/.media/t_");
+                if (!img) return;
 
-                    if (isNotThumbnail || isCustomSpoiler) {
-                        let href = link.getAttribute("href");
-                        if (href) {
-                            // Extract filename without extension
-                            const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
-                            if (match) {
-                                // Use the thumbnail path (t_filename)
-                                const transformedSrc = `/.media/t_${match[1]}`;
-                                img.src = transformedSrc;
+                // Check if this is a custom spoiler image
+                const isCustomSpoiler = img.src.includes("/custom.spoiler");
+                // Check if this is NOT already a thumbnail
+                const isNotThumbnail = !img.src.includes("/.media/t_");
 
-                                // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                                if (await getSetting("blurSpoilers_removeSpoilers")) {
-                                    img.style.filter = "";
-                                    img.style.transition = "";
-                                    img.onmouseover = null;
-                                    img.onmouseout = null;
-                                    return;
-                                } else {
-                                    img.style.filter = "blur(5px)";
-                                    img.style.transition = "filter 0.3s ease";
-                                    img.addEventListener("mouseover", () => {
-                                        img.style.filter = "none";
-                                    });
-                                    img.addEventListener("mouseout", () => {
-                                        img.style.filter = "blur(5px)";
-                                    });
-                                }
-                            }
-                        }
+                if (isNotThumbnail || isCustomSpoiler) {
+                    let href = link.getAttribute("href");
+                    if (!href) return;
+
+                    // Extract filename without extension
+                    const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
+                    if (!match) return;
+
+                    // Use the thumbnail path (t_filename)
+                    const transformedSrc = `/.media/t_${match[1]}`;
+                    img.src = transformedSrc;
+
+                    // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
+                    if (await getSetting("blurSpoilers_removeSpoilers")) {
+                        img.style.filter = "";
+                        img.style.transition = "";
+                        img.onmouseover = null;
+                        img.onmouseout = null;
+                        return;
+                    } else {
+                        img.style.filter = "blur(5px)";
+                        img.style.transition = "filter 0.3s ease";
+                        img.addEventListener("mouseover", () => {
+                            img.style.filter = "none";
+                        });
+                        img.addEventListener("mouseout", () => {
+                            img.style.filter = "blur(5px)";
+                        });
                     }
                 }
             });
@@ -1644,32 +1631,54 @@ onReady(async function () {
 
         // On post submit (button)
         const submitButton = document.getElementById("qrbutton");
-        if (submitButton) {
-            submitButton.addEventListener("click", async function () {
-                if (await getSetting("watchThreadOnReply")) {
-                    setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
-                }
-            });
-        }
+        submitButton?.addEventListener("click", async function () {
+            if (await getSetting("watchThreadOnReply")) {
+                setTimeout(_watchThreadIfNotWatched, 500); // Wait for post to go through
+            }
+        });
 
         // On page load, update the icon if already watched
+        updateWatchButtonClass();
+
+        // Also update when the user manually clicks the watch button
+        const btn = _getWatchButton();
+        btn?.addEventListener("click", function () {
+            setTimeout(updateWatchButtonClass, 100);
+        });
+
+        /* Helper functions */
         function updateWatchButtonClass() {
-            const btn = getWatchButton();
+            const btn = _getWatchButton();
             if (!btn) return;
-            if (isThreadWatched()) {
+
+            if (_isThreadWatched()) {
                 btn.classList.add("watched-active");
             } else {
                 btn.classList.remove("watched-active");
             }
         }
-        updateWatchButtonClass();
 
-        // Also update when the user manually clicks the watch button
-        const btn = getWatchButton();
-        if (btn) {
-            btn.addEventListener("click", function () {
-                setTimeout(updateWatchButtonClass, 100);
-            });
+        // Get the watch button element
+        function _getWatchButton() {
+            return document.querySelector(".watchButton");
+        }
+
+        // Check if thread is watched (by presence of watched-active class)
+        function _isThreadWatched() {
+            const btn = _getWatchButton();
+            return btn && btn.classList.contains("watched-active");
+        }
+
+        // Trigger the native watch button click if not already watched 
+        function _watchThreadIfNotWatched() {
+            const btn = _getWatchButton();
+            if (btn && !_isThreadWatched()) {
+                btn.click(); // Triggers the site's watcher logic
+                // The site should add watched-active, but if not, we can add it ourselves:
+                setTimeout(() => {
+                    btn.classList.add("watched-active");
+                }, 100);
+            }
         }
     }
 
