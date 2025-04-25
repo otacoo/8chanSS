@@ -1198,7 +1198,6 @@ onReady(async function () {
                     "video/webm": ".webm",
                     "audio/ogg": ".ogg",
                     "audio/mpeg": ".mp3",
-                    "audio/mpeg": ".m4a",
                     "audio/x-m4a": ".m4a",
                     "audio/x-wav": ".wav",
                 };
