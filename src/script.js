@@ -865,14 +865,75 @@ onReady(async function () {
         }
     }
 
-    // --- Feature: Catalog & Image Hover ---
-    async function featureImageHover() {
-        // Accepts the thumb <img> node as the first argument
+    // --- Feature: Image/Video/Audio Hover Preview (Optimized) ---
+    function featureImageHover() {
+        const DEFAULT_MEDIA_WIDTH = 320;
+        const DEFAULT_MEDIA_HEIGHT = 240;
+        const OFFSET = 10;
+
+        let floatingMedia = null;
+        let cleanupHandlers = [];
+
+        // --- Utility: Position floating media at mouse, clamped to viewport ---
+        function positionFloatingMedia(event) {
+            if (!floatingMedia) return;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // Use loaded size if available, otherwise default
+            let mediaWidth = floatingMedia.naturalWidth || floatingMedia.videoWidth || floatingMedia.offsetWidth || DEFAULT_MEDIA_WIDTH;
+            let mediaHeight = floatingMedia.naturalHeight || floatingMedia.videoHeight || floatingMedia.offsetHeight || DEFAULT_MEDIA_HEIGHT;
+
+            // Default: top-right of cursor
+            let x = event.clientX + OFFSET;
+            let y = event.clientY - mediaHeight - OFFSET;
+
+            // If overflowing right, flip to left of cursor
+            if (x + mediaWidth > viewportWidth) {
+                x = event.clientX - mediaWidth - OFFSET;
+            }
+            if (x < 0) x = 0;
+
+            // If overflowing top, flip to below cursor
+            if (y < 0) {
+                y = event.clientY + OFFSET;
+            }
+            // If still overflowing bottom, clamp to bottom edge
+            if (y + mediaHeight > viewportHeight) {
+                y = Math.max(viewportHeight - mediaHeight - OFFSET, 0);
+            }
+
+            floatingMedia.style.left = `${x}px`;
+            floatingMedia.style.top = `${y}px`;
+            floatingMedia.style.maxWidth = "90vw";
+            floatingMedia.style.maxHeight = "90vh";
+        }
+
+        // --- Utility: Clean up floating media and event listeners ---
+        function cleanupFloatingMedia() {
+            if (floatingMedia) {
+                if (floatingMedia.tagName === "VIDEO" || floatingMedia.tagName === "AUDIO") {
+                    try {
+                        floatingMedia.pause();
+                        floatingMedia.removeAttribute("src");
+                        floatingMedia.load();
+                    } catch (e) { }
+                }
+                floatingMedia.remove();
+                floatingMedia = null;
+            }
+            cleanupHandlers.forEach(fn => fn());
+            cleanupHandlers = [];
+            // Remove any audio indicators
+            document.querySelectorAll(".audio-preview-indicator").forEach(indicator => {
+                if (indicator.parentNode) indicator.parentNode.removeChild(indicator);
+            });
+        }
+
+        // --- Helper: Get full media URL from thumbnail and MIME type ---
         function getFullMediaSrcFromMime(thumbNode, filemime) {
             if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
-
-            // If it's a t_ thumbnail
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
                 base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|webm|ogg|mp3|m4a|wav)$/i, "");
@@ -888,14 +949,12 @@ onReady(async function () {
                     "audio/ogg": ".ogg",
                     "audio/mpeg": ".mp3",
                     "audio/x-m4a": ".m4a",
-                    "audio/wav": ".wav",
+                    "audio/x-wav": ".wav",
                 };
                 const ext = mimeToExt[filemime.toLowerCase()];
                 if (!ext) return null;
                 return base + ext;
             }
-
-            // If it's a /spoiler.png thumbnail or /custom.spoiler, use parent <a>'s href
             if (
                 /\/spoiler\.png$/i.test(thumbnailSrc) ||
                 /\/custom\.spoiler$/i.test(thumbnailSrc) ||
@@ -903,357 +962,204 @@ onReady(async function () {
             ) {
                 const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
                 if (parentA && parentA.getAttribute("href")) {
-                    // Use the full file URL from href
                     return parentA.getAttribute("href");
                 }
                 return null;
             }
-
-            // Fallback: return null if not recognized
             return null;
         }
 
-        // Inject CSS for the audio indicator (only once)
+        // --- Audio indicator CSS (inject once) ---
         if (!document.getElementById("audio-preview-indicator-style")) {
             const style = document.createElement("style");
             style.id = "audio-preview-indicator-style";
             style.textContent = `
-                /* Make containers position:relative so absolute positioning works */
-                a.imgLink[data-filemime^="audio/"], 
-                a.originalNameLink[href$=".mp3"],
-                a.originalNameLink[href$=".ogg"],
-                a.originalNameLink[href$=".m4a"],
-                a.originalNameLink[href$=".wav"] {
-                    position: relative;
-                }
-                
-                .audio-preview-indicator {
-                    display: none;
-                    position: absolute;
-                    background: rgba(0, 0, 0, 0.7);
-                    color: #ffffff;
-                    padding: 5px;
-                    font-size: 12px;
-                    border-radius: 3px;
-                    z-index: 1000;
-                    left: 0;
-                    top: 0;
-                    white-space: nowrap;
-                    pointer-events: none;
-                }
-                
-                a[data-filemime^="audio/"]:hover .audio-preview-indicator,
-                a.originalNameLink:hover .audio-preview-indicator {
-                    display: block;
-                }
-            `;
+            a.imgLink[data-filemime^="audio/"], 
+            a.originalNameLink[href$=".mp3"],
+            a.originalNameLink[href$=".ogg"],
+            a.originalNameLink[href$=".m4a"],
+            a.originalNameLink[href$=".wav"] {
+                position: relative;
+            }
+            .audio-preview-indicator {
+                display: none;
+                position: absolute;
+                background: rgba(0, 0, 0, 0.7);
+                color: #fff;
+                padding: 5px;
+                font-size: 12px;
+                border-radius: 3px;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                white-space: nowrap;
+                pointer-events: none;
+            }
+            a[data-filemime^="audio/"]:hover .audio-preview-indicator,
+            a.originalNameLink:hover .audio-preview-indicator {
+                display: block;
+            }
+        `;
             document.head.appendChild(style);
         }
 
-        let floatingMedia = null;
-        let removeListeners = null;
-        let hoverTimeout = null;
-        let lastThumb = null;
-        let isStillHovering = false;
-
-        function cleanupFloatingMedia() {
-            if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-                hoverTimeout = null;
-            }
-
-            if (removeListeners) {
-                removeListeners();
-                removeListeners = null;
-            }
-
-            if (floatingMedia) {
-                if (
-                    floatingMedia.tagName === "VIDEO" ||
-                    floatingMedia.tagName === "AUDIO"
-                ) {
-                    try {
-                        floatingMedia.pause();
-                        floatingMedia.removeAttribute("src");
-                        floatingMedia.load();
-                    } catch (e) {
-                        // Silently handle media cleanup errors
-                    }
-                }
-
-                if (floatingMedia.parentNode) {
-                    floatingMedia.parentNode.removeChild(floatingMedia);
-                }
-            }
-
-            // Remove any audio indicators
-            const indicators = document.querySelectorAll(".audio-preview-indicator");
-            indicators.forEach((indicator) => {
-                if (indicator.parentNode) {
-                    indicator.parentNode.removeChild(indicator);
-                }
-            });
-
-            floatingMedia = null;
-            lastThumb = null;
-            isStillHovering = false;
-            document.removeEventListener("mousemove", onMouseMove);
-        }
-
-        function onMouseMove(event) {
-            if (!floatingMedia) return;
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            let mediaWidth = floatingMedia.offsetWidth || 0;
-            let mediaHeight = floatingMedia.offsetHeight || 0;
-            let newX = event.clientX + 10;
-            let newY = event.clientY + 10;
-            if (newX + mediaWidth > viewportWidth) {
-                newX = viewportWidth - mediaWidth - 10;
-            }
-            if (newY + mediaHeight > viewportHeight) {
-                newY = viewportHeight - mediaHeight - 10;
-            }
-            newX = Math.max(newX, 0);
-            newY = Math.max(newY, 0);
-            floatingMedia.style.left = `${newX}px`;
-            floatingMedia.style.top = `${newY}px`;
-            floatingMedia.style.maxWidth = "90vw";
-            floatingMedia.style.maxHeight = "90vh";
-        }
-
+        // --- Main hover handler ---
         async function onThumbEnter(e) {
-            const thumb = e.currentTarget;
-            if (lastThumb === thumb) return;
-            lastThumb = thumb;
-
             cleanupFloatingMedia();
-            isStillHovering = true;
+            const thumb = e.currentTarget;
+            let filemime = null, fullSrc = null, isVideo = false, isAudio = false;
 
-            // Get the actual container element (important for audio files)
-            const container =
-                thumb.tagName === "IMG"
+            // Determine file type and source
+            if (thumb.tagName === "IMG") {
+                const parentA = thumb.closest("a.linkThumb, a.imgLink");
+                if (!parentA) return;
+                const href = parentA.getAttribute("href");
+                if (!href) return;
+                const ext = href.split(".").pop().toLowerCase();
+                filemime =
+                    parentA.getAttribute("data-filemime") ||
+                    {
+                        jpg: "image/jpeg",
+                        jpeg: "image/jpeg",
+                        png: "image/png",
+                        gif: "image/gif",
+                        webp: "image/webp",
+                        bmp: "image/bmp",
+                        mp4: "video/mp4",
+                        webm: "video/webm",
+                        ogg: "audio/ogg",
+                        mp3: "audio/mpeg",
+                        m4a: "audio/x-m4a",
+                        wav: "audio/wav",
+                    }[ext];
+                fullSrc = getFullMediaSrcFromMime(thumb, filemime);
+                isVideo = filemime && filemime.startsWith("video/");
+                isAudio = filemime && filemime.startsWith("audio/");
+            } else if (thumb.classList.contains("originalNameLink")) {
+                const href = thumb.getAttribute("href");
+                if (!href) return;
+                const ext = href.split(".").pop().toLowerCase();
+                if (["mp3", "ogg", "m4a", "wav"].includes(ext)) {
+                    filemime = {
+                        ogg: "audio/ogg",
+                        mp3: "audio/mpeg",
+                        m4a: "audio/x-m4a",
+                        wav: "audio/wav",
+                    }[ext];
+                    fullSrc = href;
+                    isAudio = true;
+                }
+            }
+
+            if (!fullSrc || !filemime) return;
+
+            // --- Setup floating media element ---
+            if (isAudio) {
+                // Audio: show indicator, play audio (hidden)
+                const container = thumb.tagName === "IMG"
                     ? thumb.closest("a.linkThumb, a.imgLink")
                     : thumb;
-
-            function onLeave() {
-                isStillHovering = false;
-                cleanupFloatingMedia();
+                if (container && !container.style.position) {
+                    container.style.position = "relative";
+                }
+                floatingMedia = document.createElement("audio");
+                floatingMedia.src = fullSrc;
+                floatingMedia.controls = false;
+                floatingMedia.style.display = "none";
+                let volume = 0.5;
+                try {
+                    if (typeof getSetting === "function") {
+                        const v = await getSetting("hoverVideoVolume");
+                        if (typeof v === "number" && !isNaN(v)) {
+                            volume = v / 100;
+                        }
+                    }
+                } catch (e) { }
+                floatingMedia.volume = Math.max(0, Math.min(1, volume));
+                document.body.appendChild(floatingMedia);
+                floatingMedia.play().catch(() => { });
+                // Show indicator
+                const indicator = document.createElement("div");
+                indicator.classList.add("audio-preview-indicator");
+                indicator.textContent = "▶ Playing audio...";
+                container.appendChild(indicator);
+                // Cleanup on leave/click/scroll
+                const cleanup = () => {
+                    if (floatingMedia) {
+                        floatingMedia.pause();
+                        floatingMedia.currentTime = 0;
+                        floatingMedia.remove();
+                        floatingMedia = null;
+                    }
+                    indicator.remove();
+                };
+                thumb.addEventListener("mouseleave", cleanup, { once: true });
+                container.addEventListener("click", cleanup, { once: true });
+                window.addEventListener("scroll", cleanup, { once: true });
+                cleanupHandlers.push(() => {
+                    try { cleanup(); } catch { }
+                });
+                return;
             }
 
-            thumb.addEventListener("mouseleave", onLeave, { once: true });
+            // --- Image or Video ---
+            floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
+            floatingMedia.src = fullSrc;
+            floatingMedia.style.position = "fixed";
+            floatingMedia.style.zIndex = 9999;
+            floatingMedia.style.pointerEvents = "none";
+            floatingMedia.style.opacity = "0.75"; // Loading transparency
+            floatingMedia.style.left = "-9999px";
+            floatingMedia.style.top = "-9999px";
+            floatingMedia.style.maxWidth = "90vw";
+            floatingMedia.style.maxHeight = "90vh";
+            if (isVideo) {
+                floatingMedia.autoplay = true;
+                floatingMedia.loop = true;
+                floatingMedia.muted = false;
+                floatingMedia.playsInline = true;
+            }
+            document.body.appendChild(floatingMedia);
 
-            hoverTimeout = setTimeout(async () => {
-                hoverTimeout = null;
-                if (!isStillHovering) return;
+            // Position immediately using the event
+            positionFloatingMedia(e);
 
-                let filemime = null;
-                let fullSrc = null;
-
-                // Case 1: Image/video thumbnail
-                if (thumb.tagName === "IMG") {
-                    const parentA = thumb.closest("a.linkThumb, a.imgLink");
-                    if (!parentA) return;
-
-                    const href = parentA.getAttribute("href");
-                    if (!href) return;
-
-                    const ext = href.split(".").pop().toLowerCase();
-                    filemime =
-                        parentA.getAttribute("data-filemime") ||
-                        {
-                            jpg: "image/jpeg",
-                            jpeg: "image/jpeg",
-                            png: "image/png",
-                            gif: "image/gif",
-                            webp: "image/webp",
-                            bmp: "image/bmp",
-                            mp4: "video/mp4",
-                            webm: "video/webm",
-                            ogg: "audio/ogg",
-                            mp3: "audio/mpeg",
-                            m4a: "audio/x-m4a",
-                            wav: "audio/wav",
-                        }[ext];
-
-                    fullSrc = getFullMediaSrcFromMime(thumb, filemime);
-                }
-                // Case 2: Audio file download link
-                else if (thumb.classList.contains("originalNameLink")) {
-                    const href = thumb.getAttribute("href");
-                    if (!href) return;
-
-                    const ext = href.split(".").pop().toLowerCase();
-                    if (["mp3", "ogg", "m4a", "wav"].includes(ext)) {
-                        filemime = {
-                            ogg: "audio/ogg",
-                            mp3: "audio/mpeg",
-                            m4a: "audio/x-m4a",
-                            wav: "audio/wav",
-                        }[ext];
-                        fullSrc = href;
-                    }
-                }
-
-                if (!fullSrc || !filemime) return;
-
-                let loaded = false;
-
-                // Helper to set common styles for floating media
-                function setCommonStyles(el) {
-                    el.style.position = "fixed";
-                    el.style.zIndex = 9999;
-                    el.style.pointerEvents = "none";
-                    el.style.maxWidth = "95vw";
-                    el.style.maxHeight = "95vh";
-                    el.style.transition = "opacity 0.15s";
-                    el.style.opacity = "0.4"; // Start semi-transparent
-                    el.style.left = "-9999px";
-                }
-
-                function showFloatingMediaImmediately(floatingMedia, e) {
-                    // Show the media at the mouse position, even before it's loaded
-                    document.body.appendChild(floatingMedia);
-                    document.addEventListener("mousemove", onMouseMove);
-                    onMouseMove(e);
-                }
-
-                // Setup cleanup listeners
-                removeListeners = function () {
-                    window.removeEventListener("scroll", cleanupFloatingMedia, true);
+            // On load, just update opacity (no reposition needed)
+            if (isVideo) {
+                floatingMedia.onloadeddata = () => {
+                    floatingMedia.style.opacity = "1";
                 };
-                window.addEventListener("scroll", cleanupFloatingMedia, true);
+            } else {
+                floatingMedia.onload = () => {
+                    floatingMedia.style.opacity = "1";
+                };
+            }
+            floatingMedia.onerror = cleanupFloatingMedia;
 
-                if (filemime.startsWith("image/")) {
-                    floatingMedia = document.createElement("img");
-                    setCommonStyles(floatingMedia);
-                    floatingMedia.src = fullSrc;
-                    showFloatingMediaImmediately(floatingMedia, e);
-                    floatingMedia.onload = function () {
-                        floatingMedia.style.opacity = "1";
-                    };
+            // Follow mouse
+            function mouseMoveHandler(ev) { positionFloatingMedia(ev); }
+            document.addEventListener("mousemove", mouseMoveHandler);
+            cleanupHandlers.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
 
-                    floatingMedia.onerror = cleanupFloatingMedia;
-                    floatingMedia.src = fullSrc;
-                } else if (filemime.startsWith("video/")) {
-                    floatingMedia = document.createElement("video");
-                    setCommonStyles(floatingMedia);
-                    floatingMedia.autoplay = true;
-                    floatingMedia.loop = true;
-                    floatingMedia.muted = false;
-                    floatingMedia.playsInline = true;
-                    floatingMedia.controls = false;
-                    floatingMedia.src = fullSrc;
-                    showFloatingMediaImmediately(floatingMedia, e);
-                    floatingMedia.onloadeddata = function () {
-                        floatingMedia.style.opacity = "1";
-                    };
-
-                    // Set volume from settings (0-100)
-                    let volume = 50;
-                    try {
-                        if (typeof getSetting === "function") {
-                            const v = await getSetting("hoverVideoVolume");
-                            if (typeof v === "number" && !isNaN(v)) {
-                                volume = v;
-                            }
-                        }
-                    } catch (e) {
-                        // Use default if setting can't be retrieved
-                        volume = 50;
-                    }
-                    floatingMedia.volume = Math.max(0, Math.min(1, volume / 100));
-
-                    floatingMedia.onloadeddata = function () {
-                        if (!loaded && floatingMedia && isStillHovering) {
-                            loaded = true;
-                            floatingMedia.style.opacity = "1";
-                            document.body.appendChild(floatingMedia);
-                            document.addEventListener("mousemove", onMouseMove);
-                            onMouseMove(e);
-                        }
-                    };
-
-                    floatingMedia.onerror = cleanupFloatingMedia;
-                } else if (filemime.startsWith("audio/")) {
-                    // --- AUDIO HOVER INDICATOR LOGIC ---
-                    // Remove any lingering indicator first
-                    const oldIndicator = container.querySelector(
-                        ".audio-preview-indicator"
-                    );
-                    if (oldIndicator) oldIndicator.remove();
-
-                    // Make sure container has position:relative for proper indicator positioning
-                    if (container && !container.style.position) {
-                        container.style.position = "relative";
-                    }
-
-                    floatingMedia = document.createElement("audio");
-                    floatingMedia.src = fullSrc;
-                    floatingMedia.controls = false; // No controls for audio
-                    floatingMedia.style.display = "none"; // Hide the element visually
-
-                    // Set volume from settings (0-100)
-                    let volume = 50;
-                    try {
-                        if (typeof getSetting === "function") {
-                            const v = await getSetting("hoverVideoVolume");
-                            if (typeof v === "number" && !isNaN(v)) {
-                                volume = v;
-                            }
-                        }
-                    } catch (e) {
-                        volume = 50;
-                    }
-                    floatingMedia.volume = Math.max(0, Math.min(1, volume / 100));
-
-                    document.body.appendChild(floatingMedia);
-
-                    // Add indicator to the container (parent a tag) instead of the img
-                    const indicator = document.createElement("div");
-                    indicator.classList.add("audio-preview-indicator");
-                    indicator.textContent = "▶ Playing audio...";
-                    container.appendChild(indicator);
-
-                    floatingMedia.play().catch((error) => {
-                        console.error("Audio playback failed:", error);
-                    });
-
-                    // Remove audio and indicator on click as well
-                    function removeAudioAndIndicator() {
-                        if (floatingMedia) {
-                            floatingMedia.pause();
-                            floatingMedia.currentTime = 0;
-                            floatingMedia.remove();
-                            floatingMedia = null;
-                        }
-                        if (indicator) {
-                            indicator.remove();
-                        }
-                    }
-
-                    container.addEventListener("click", removeAudioAndIndicator, {
-                        once: true,
-                    });
-                }
-            }, 120); // Short delay before showing preview
+            // Cleanup on leave/scroll
+            function leaveHandler() { cleanupFloatingMedia(); }
+            thumb.addEventListener("mouseleave", leaveHandler, { once: true });
+            window.addEventListener("scroll", leaveHandler, { once: true });
+            cleanupHandlers.push(() => {
+                thumb.removeEventListener("mouseleave", leaveHandler);
+                window.removeEventListener("scroll", leaveHandler);
+            });
         }
 
+        // Attach listeners to thumbnails and audio links
         function attachThumbListeners(root = document) {
-            // Attach to image thumbnails (works for both thread and catalog)
-            const thumbs = root.querySelectorAll(
-                "a.linkThumb > img, a.imgLink > img"
-            );
-            thumbs.forEach((thumb) => {
+            root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
                 if (!thumb._fullImgHoverBound) {
                     thumb.addEventListener("mouseenter", onThumbEnter);
                     thumb._fullImgHoverBound = true;
                 }
             });
-
-            // Always attach to audio download links (both catalog and thread)
-            const audioLinks = root.querySelectorAll("a.originalNameLink");
-            audioLinks.forEach((link) => {
+            root.querySelectorAll("a.originalNameLink").forEach(link => {
                 const href = link.getAttribute("href") || "";
                 const ext = href.split(".").pop().toLowerCase();
                 if (
@@ -1266,11 +1172,11 @@ onReady(async function () {
             });
         }
 
-        // Initial attachment
+        // Init
         attachThumbListeners();
 
         // Watch for new elements
-        const observer = new MutationObserver((mutations) => {
+        new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -1278,9 +1184,7 @@ onReady(async function () {
                     }
                 }
             }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
+        }).observe(document.body, { childList: true, subtree: true });
     }
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
