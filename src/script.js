@@ -195,9 +195,9 @@ onReady(async function () {
         const urlClassMap = [
             { pattern: /\/catalog\.html$/i, className: "is-catalog" },
             { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
-            { pattern: /^\/$/, className: "is-index" },
+            { pattern: /\/[^/]+\/(#)?$/i, className: "is-index" },
         ];
-        const currentPath = window.location.pathname.toLowerCase();
+        const currentPath = window.location.pathname.toLowerCase() + window.location.hash;
         urlClassMap.forEach(({ pattern, className }) => {
             if (pattern.test(currentPath)) {
                 document.documentElement.classList.add(className);
@@ -1502,9 +1502,6 @@ onReady(async function () {
 
     // --- Feature: Save Scroll Position (now with optional unread line) ---
     async function featureSaveScroll() {
-        // Return early if root has .is-index
-        if (document.documentElement.classList.contains("is-index")) return;
-
         const MAX_PAGES = 50;
         const currentPage = window.location.href;
         const excludedPagePatterns = [
@@ -1521,6 +1518,8 @@ onReady(async function () {
         }
 
         async function saveScrollPosition() {
+            // Return early if root has .is-index
+            if (document.documentElement.classList.contains("is-index")) return;
             if (isExcludedPage(currentPage)) return;
             if (!(await getSetting("enableScrollSave"))) return;
 
@@ -1579,6 +1578,8 @@ onReady(async function () {
 
         // Restore scroll position (always, if enabled)
         async function restoreScrollPosition() {
+            // Return early if root has .is-index
+            if (document.documentElement.classList.contains("is-index")) return;
             if (isExcludedPage(currentPage)) return;
             if (!(await getSetting("enableScrollSave"))) return;
 
