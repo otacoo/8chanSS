@@ -41,11 +41,19 @@
         }
     });
 })();
-////////// Disable native extension settings //////
+////////// Disable/Enable native extension settings //////
 (function () {
     try {
         // Image Hover
-        localStorage.removeItem("hoveringImage");
+        let keysToRemove = ["hoveringImage"];
+        for (key of keysToRemove) {
+            localStorage.removeItem(key);
+        }
+        // Inline Replies
+        let keystoEnable = ["inlineReplies"];
+        for (key of keystoEnable) {
+            localStorage.setItem(key);
+        }
     } catch (e) {
         // Ignore errors (e.g., storage not available)
     }
@@ -1238,6 +1246,68 @@ onReady(async function () {
             }
         }).observe(document.body, { childList: true, subtree: true });
     }
+
+    // --- Feature: Inline replies (barebones) ---
+    // Set inline above the message
+    function ensureReplyPreviewPlacement(root = document) {
+        root.querySelectorAll('.innerPost').forEach(innerPost => {
+            const replyPreview = innerPost.querySelector('.replyPreview');
+            const divMessage = innerPost.querySelector('.divMessage');
+            if (replyPreview && divMessage && replyPreview.nextSibling !== divMessage) {
+                innerPost.insertBefore(replyPreview, divMessage);
+            }
+        });
+    }
+
+    // Initial placement for existing posts
+    ensureReplyPreviewPlacement();
+
+    // Set up a MutationObserver to handle dynamically added posts
+    const observer = new MutationObserver(mutations => {
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType !== 1) continue; // Only process element nodes
+                // If the added node is an .innerPost, or contains any .innerPost
+                if (node.matches && node.matches('.innerPost')) {
+                    ensureReplyPreviewPlacement(node);
+                } else if (node.querySelectorAll) {
+                    node.querySelectorAll('.innerPost').forEach(innerPost => {
+                        ensureReplyPreviewPlacement(innerPost);
+                    });
+                }
+            }
+        }
+    });
+
+    // Observe divPosts for new posts
+    const postsContainer = document.querySelector('.divPosts');
+    if (postsContainer) {
+        observer.observe(postsContainer, { childList: true, subtree: true });
+    }
+
+    // --- Feature: Dashed underline for inlined reply backlinks ---
+    // Add CSS for dashed underline (only once)
+    (function addReplyInlinedStyle() {
+        if (document.getElementById('reply-inlined-style')) return;
+        const style = document.createElement('style');
+        style.id = 'reply-inlined-style';
+        style.textContent = `
+        .reply-inlined {
+            text-decoration: underline dashed !important;
+            text-underline-offset: 2px;
+        }
+    `;
+        document.head.appendChild(style);
+    })();
+
+    // Toggle underline on/off for clicked .panelBacklinks > a
+    document.addEventListener('click', function (e) {
+        const a = e.target.closest('.panelBacklinks > a');
+        if (!a) return;
+        setTimeout(() => {
+            a.classList.toggle('reply-inlined');
+        }, 0);
+    });
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
     function featureBlurSpoilers() {
