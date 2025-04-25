@@ -14,9 +14,12 @@
 :root.hide-announcement #dynamicAnnouncement,
 :root.hide-panelmessage #panelMessage,
 #navFadeEnd,
-#navFadeMid,
-:root.hide-defaultBL #navTopBoardsSpan {
+#navFadeMid {
     display: none;
+}
+/* Deal with FchX */
+:root.hide-defaultBL #navTopBoardsSpan {
+    display: none !important;
 }
 
 :root.is-catalog.show-catalog-form #postingForm {
