@@ -1427,16 +1427,6 @@ onReady(async function () {
     if (link) {
         let menu = await createSettingsMenu();
         link.style.cursor = "pointer";
-        link.title = "Open 8chanSS settings";
-        link.addEventListener("click", async function (e) {
-            e.preventDefault();
-            let menu = await createSettingsMenu();
-            menu.style.display = menu.style.display === "none" ? "block" : "none";
-        });
-    }
-
-    //////// MENU END ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     // --- Feature: Save Scroll Position (anchor-aware, optimized)
     async function featureSaveScroll() {
         const MAX_PAGES = 50;
@@ -1675,61 +1665,110 @@ onReady(async function () {
         }
     }
 
-    // --- Feature: Image/Video/Audio Hover Preview (Optimized) ---
+    // ---- Feature: Image/Video/Audio Hover Preview (Refactored)
     function featureImageHover() {
-        const DEFAULT_MEDIA_WIDTH = 320;
-        const DEFAULT_MEDIA_HEIGHT = 240;
-        const OFFSET = 10;
+        // --- Config ---
+        const MEDIA_MAX_WIDTH = "90vw";
+        const MEDIA_MAX_HEIGHT = "99vh";
+        const MEDIA_OPACITY_LOADING = "0.75";
+        const MEDIA_OPACITY_LOADED = "1";
+        const MEDIA_OFFSET = 50; // Margin between cursor and image
+        const MEDIA_BOTTOM_MARGIN = 32; // Margin from bottom of viewport to avoid browser UI
+        const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
 
+        // --- State ---
         let floatingMedia = null;
-        let cleanupHandlers = [];
+        let cleanupFns = [];
         let currentAudioIndicator = null;
 
-        // --- Utility: Position floating media at mouse, clamped to viewport ---
+        // --- Utility: Clamp value between min and max ---
+        function clamp(val, min, max) {
+            return Math.max(min, Math.min(max, val));
+        }
+
+        // --- Utility: Position floating media to the right of mouse, never touching bottom ---
         function positionFloatingMedia(event) {
             if (!floatingMedia) return;
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const mediaWidth = floatingMedia.offsetWidth || 0;
-            const mediaHeight = floatingMedia.offsetHeight || 0;
-            let newX = event.clientX + 10;
-            let newY = event.clientY + 10;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const mw = floatingMedia.offsetWidth || 0;
+            const mh = floatingMedia.offsetHeight || 0;
 
-            // Clamp X so the media doesn't overflow the right edge
-            if (newX + mediaWidth > viewportWidth) {
-                newX = viewportWidth - mediaWidth - 10;
+            // Always to the right of the cursor, with margin
+            let x = event.clientX + MEDIA_OFFSET;
+            // If it would overflow right, move to left of cursor if possible
+            if (x + mw > vw) {
+                // Try to fit to the left of the cursor
+                if (event.clientX - MEDIA_OFFSET - mw >= 0) {
+                    x = event.clientX - MEDIA_OFFSET - mw;
+                } else {
+                    // Clamp to right edge
+                    x = vw - mw - MEDIA_OFFSET;
+                }
             }
-            // Clamp Y so the media doesn't overflow the bottom edge
-            if (newY + mediaHeight > viewportHeight) {
-                newY = viewportHeight - mediaHeight - 10;
+            x = clamp(x, 0, vw - mw);
+
+            // Vertically, align top to cursor, but clamp so it never touches bottom
+            let y = event.clientY;
+            if (y + mh > vh - MEDIA_BOTTOM_MARGIN) {
+                y = vh - mh - MEDIA_BOTTOM_MARGIN;
             }
+            y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN);
 
-            // Ensure the media doesn't go off the left/top edge
-            newX = Math.max(newX, 0);
-            newY = Math.max(newY, 0);
+            floatingMedia.style.left = `${x}px`;
+            floatingMedia.style.top = `${y}px`;
+        }
 
-            floatingMedia.style.left = `${newX}px`;
-            floatingMedia.style.top = `${newY}px`;
-            floatingMedia.style.maxWidth = "90vw";
-            floatingMedia.style.maxHeight = "90vh";
+        // --- Utility: Position floating media initially to the right of mouse, never touching bottom ---
+        function positionFloatingMediaInitial(event) {
+            if (!floatingMedia) return;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const mw = floatingMedia.offsetWidth || 320;
+            const mh = floatingMedia.offsetHeight || 240;
+
+            // Use last mouse position if available, else center
+            let x = vw / 2, y = vh / 2;
+            if (event && typeof event.clientX === "number" && typeof event.clientY === "number") {
+                x = event.clientX + MEDIA_OFFSET;
+                if (x + mw > vw) {
+                    if (event.clientX - MEDIA_OFFSET - mw >= 0) {
+                        x = event.clientX - MEDIA_OFFSET - mw;
+                    } else {
+                        x = vw - mw - MEDIA_OFFSET;
+                    }
+                }
+                x = clamp(x, 0, vw - mw);
+
+                y = event.clientY;
+                if (y + mh > vh - MEDIA_BOTTOM_MARGIN) {
+                    y = vh - mh - MEDIA_BOTTOM_MARGIN;
+                }
+                y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN);
+            } else {
+                // Fallback: center
+                x = clamp((vw - mw) / 2, 0, vw - mw);
+                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN) / 2, 0, vh - mh - MEDIA_BOTTOM_MARGIN);
+            }
+            floatingMedia.style.left = `${x}px`;
+            floatingMedia.style.top = `${y}px`;
         }
 
         // --- Utility: Clean up floating media and event listeners ---
         function cleanupFloatingMedia() {
+            cleanupFns.forEach(fn => { try { fn(); } catch { } });
+            cleanupFns = [];
             if (floatingMedia) {
-                if (floatingMedia.tagName === "VIDEO" || floatingMedia.tagName === "AUDIO") {
+                if (["VIDEO", "AUDIO"].includes(floatingMedia.tagName)) {
                     try {
                         floatingMedia.pause();
                         floatingMedia.removeAttribute("src");
                         floatingMedia.load();
-                    } catch (e) { }
+                    } catch { }
                 }
                 floatingMedia.remove();
                 floatingMedia = null;
             }
-            cleanupHandlers.forEach(fn => fn());
-            cleanupHandlers = [];
-            // Remove only the current audio indicator
             if (currentAudioIndicator && currentAudioIndicator.parentNode) {
                 currentAudioIndicator.parentNode.removeChild(currentAudioIndicator);
                 currentAudioIndicator = null;
@@ -1737,12 +1776,12 @@ onReady(async function () {
         }
 
         // --- Helper: Get full media URL from thumbnail and MIME type ---
-        function getFullMediaSrcFromMime(thumbNode, filemime) {
+        function getFullMediaSrc(thumbNode, filemime) {
             if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
-                base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|webm|ogg|mp3|m4a|wav)$/i, "");
+                base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|ogg|mp3|m4a|wav)$/i, "");
                 const mimeToExt = {
                     "image/jpeg": ".jpg",
                     "image/jpg": ".jpg",
@@ -1776,7 +1815,8 @@ onReady(async function () {
         }
 
         // --- Audio indicator CSS (inject once) ---
-        if (!document.getElementById("audio-preview-indicator-style")) {
+        function injectAudioIndicatorStyle() {
+            if (document.getElementById("audio-preview-indicator-style")) return;
             const style = document.createElement("style");
             style.id = "audio-preview-indicator-style";
             style.textContent = `
@@ -1838,7 +1878,7 @@ onReady(async function () {
                         m4a: "audio/x-m4a",
                         wav: "audio/wav",
                     }[ext];
-                fullSrc = getFullMediaSrcFromMime(thumb, filemime);
+                fullSrc = getFullMediaSrc(thumb, filemime);
                 isVideo = filemime && filemime.startsWith("video/");
                 isAudio = filemime && filemime.startsWith("audio/");
             } else if (thumb.classList.contains("originalNameLink")) {
@@ -1880,33 +1920,26 @@ onReady(async function () {
                             volume = v / 100;
                         }
                     }
-                } catch (e) { }
-                floatingMedia.volume = Math.max(0, Math.min(1, volume));
+                } catch { }
+                floatingMedia.volume = clamp(volume, 0, 1);
                 document.body.appendChild(floatingMedia);
                 floatingMedia.play().catch(() => { });
+
                 // Show indicator
                 const indicator = document.createElement("div");
                 indicator.classList.add("audio-preview-indicator");
-                indicator.textContent = "▶ Playing audio...";
+                indicator.textContent = AUDIO_INDICATOR_TEXT;
                 container.appendChild(indicator);
-                currentAudioIndicator = indicator; // Track the indicator
+                currentAudioIndicator = indicator;
+
                 // Cleanup on leave/click/scroll
-                const cleanup = () => {
-                    if (floatingMedia) {
-                        floatingMedia.pause();
-                        floatingMedia.currentTime = 0;
-                        floatingMedia.remove();
-                        floatingMedia = null;
-                    }
-                    if (indicator.parentNode) indicator.parentNode.removeChild(indicator);
-                    if (currentAudioIndicator === indicator) currentAudioIndicator = null;
-                };
+                const cleanup = () => cleanupFloatingMedia();
                 thumb.addEventListener("mouseleave", cleanup, { once: true });
                 container.addEventListener("click", cleanup, { once: true });
                 window.addEventListener("scroll", cleanup, { once: true });
-                cleanupHandlers.push(() => {
-                    try { cleanup(); } catch { }
-                });
+                cleanupFns.push(() => thumb.removeEventListener("mouseleave", cleanup));
+                cleanupFns.push(() => container.removeEventListener("click", cleanup));
+                cleanupFns.push(() => window.removeEventListener("scroll", cleanup));
                 return;
             }
 
@@ -1916,11 +1949,11 @@ onReady(async function () {
             floatingMedia.style.position = "fixed";
             floatingMedia.style.zIndex = "9999";
             floatingMedia.style.pointerEvents = "none";
-            floatingMedia.style.opacity = "0.75"; // Loading transparency
+            floatingMedia.style.opacity = MEDIA_OPACITY_LOADING;
             floatingMedia.style.left = "-9999px";
             floatingMedia.style.top = "-9999px";
-            floatingMedia.style.maxWidth = "90vw";
-            floatingMedia.style.maxHeight = "90vh";
+            floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
+            floatingMedia.style.maxHeight = MEDIA_MAX_HEIGHT;
             if (isVideo) {
                 floatingMedia.autoplay = true;
                 floatingMedia.loop = true;
@@ -1929,37 +1962,51 @@ onReady(async function () {
             }
             document.body.appendChild(floatingMedia);
 
-            // Position immediately using the event
-            positionFloatingMedia(e);
-
-            // On load, just update opacity (no reposition needed)
-            if (isVideo) {
-                floatingMedia.onloadeddata = () => {
-                    floatingMedia.style.opacity = "1";
-                };
-            } else {
-                floatingMedia.onload = () => {
-                    floatingMedia.style.opacity = "1";
-                };
+            // --- Initial placement ---
+            // Wait for media to load enough to get dimensions, then place
+            function initialPlacement() {
+                positionFloatingMediaInitial(e);
             }
+            if (isVideo) {
+                floatingMedia.onloadeddata = initialPlacement;
+            } else {
+                floatingMedia.onload = initialPlacement;
+            }
+            // If error, cleanup
             floatingMedia.onerror = cleanupFloatingMedia;
 
-            // Follow mouse
-            function mouseMoveHandler(ev) { positionFloatingMedia(ev); }
-            document.addEventListener("mousemove", mouseMoveHandler);
-            cleanupHandlers.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
+            // --- After first mousemove, follow mouse ---
+            function mouseMoveHandler(ev) {
+                positionFloatingMedia(ev);
+            }
+            // Only add mousemove after initial placement
+            function enableMouseMove() {
+                document.addEventListener("mousemove", mouseMoveHandler);
+                cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
+            }
+            if (isVideo) {
+                floatingMedia.onloadeddata = function () {
+                    initialPlacement();
+                    enableMouseMove();
+                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                };
+            } else {
+                floatingMedia.onload = function () {
+                    initialPlacement();
+                    enableMouseMove();
+                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                };
+            }
 
             // Cleanup on leave/scroll
             function leaveHandler() { cleanupFloatingMedia(); }
             thumb.addEventListener("mouseleave", leaveHandler, { once: true });
             window.addEventListener("scroll", leaveHandler, { once: true });
-            cleanupHandlers.push(() => {
-                thumb.removeEventListener("mouseleave", leaveHandler);
-                window.removeEventListener("scroll", leaveHandler);
-            });
+            cleanupFns.push(() => thumb.removeEventListener("mouseleave", leaveHandler));
+            cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
         }
 
-        // Attach listeners to thumbnails and audio links
+        // --- Attach listeners to thumbnails and audio links ---
         function attachThumbListeners(root = document) {
             root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
                 if (!thumb._fullImgHoverBound) {
@@ -1980,10 +2027,11 @@ onReady(async function () {
             });
         }
 
-        // Init
+        // --- Initialization ---
+        injectAudioIndicatorStyle();
         attachThumbListeners();
 
-        // Watch for new elements
+        // --- Watch for new elements ---
         new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
@@ -2384,20 +2432,26 @@ onReady(async function () {
     }
 
 
-    // --- Feature: Beep on (You) ---
+    // --- Feature: Beep and/or notify on (You) ---
     function featureBeepOnYou() {
         // Beep sound (base64)
         const beep = new Audio(
             "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
         );
-
+    
+        // Store the original title globally so all functions can access it
+        window.originalTitle = document.title;
+        let isNotifying = false;
+    
         // Function to play the beep sound
-        function playBeep(audioElement) {
-            if (!audioElement) return;
-            audioElement.currentTime = 0;
-            audioElement.play();
+        function playBeep() {
+            if (beep.paused) {
+                beep.play().catch((e) => console.warn("Beep failed:", e));
+            } else {
+                beep.addEventListener("ended", () => beep.play(), { once: true });
+            }
         }
-
+    
         // Create MutationObserver to detect when you are quoted
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -2407,11 +2461,15 @@ onReady(async function () {
                         node.querySelector &&
                         node.querySelector("a.quoteLink.you")
                     ) {
+                        // If the quote is inside .innerPost, do not beep or notify
+                        if (node.closest('.innerPost')) {
+                            return;
+                        }
                         // Only play beep if the setting is enabled
                         if (await getSetting("beepOnYou")) {
-                            playBeep(beep);
+                            playBeep();
                         }
-
+    
                         // Trigger notification in separate function if enabled
                         if (await getSetting("notifyOnYou")) {
                             featureNotifyOnYou();
@@ -2420,43 +2478,43 @@ onReady(async function () {
                 });
             });
         });
-
+    
         observer.observe(document.body, { childList: true, subtree: true });
-    };
-
-    // --- Notification on (You) ---
-    // Store the original title if not already stored
-    if (!window.originalTitle) {
-        window.originalTitle = document.title;
-    }
-
-    function featureNotifyOnYou() {
-        if (!window.isNotifying && !document.hasFocus()) {
-            window.isNotifying = true;
-            document.title = "(!) " + window.originalTitle;
-
-            // Set up focus event listener if not already set
-            if (!window.notifyFocusListenerAdded) {
-                window.addEventListener("focus", () => {
-                    if (window.isNotifying) {
-                        document.title = window.originalTitle;
-                        window.isNotifying = false;
-                    }
-                });
-                window.notifyFocusListenerAdded = true;
+    
+        // Function to notify on (You)
+        async function featureNotifyOnYou() {
+            if (!window.isNotifying && !document.hasFocus()) {
+                window.isNotifying = true;
+                // Get custom message, fallback to default
+                let customMsg = await getSetting("notifyOnYou_customMessage");
+                if (!customMsg) customMsg = "(!) ";
+                document.title = customMsg + " " + window.originalTitle;
+    
+                // Set up focus event listener if not already set
+                if (!window.notifyFocusListenerAdded) {
+                    window.addEventListener("focus", () => {
+                        if (window.isNotifying) {
+                            document.title = window.originalTitle;
+                            window.isNotifying = false;
+                        }
+                    });
+                    window.notifyFocusListenerAdded = true;
+                }
             }
         }
+    
+        // Remove notification when tab regains focus
+        window.addEventListener("focus", () => {
+            if (isNotifying) {
+                document.title = window.originalTitle;
+                isNotifying = false;
+            }
+        });
     }
+    // Init
+    featureBeepOnYou();
 
-    // Remove notification when tab regains focus
-    window.addEventListener("focus", () => {
-        if (window.isNotifying) {
-            document.title = window.originalTitle;
-            window.isNotifying = false;
-        }
-    });
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////// KEYBOARD SHORTCUTS ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Keyboard Shortcuts ---
     // Open 8chanSS menu (CTRL + F1)
