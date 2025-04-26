@@ -102,6 +102,7 @@ onReady(async function () {
         threads: {
             enableThreadImageHover: { label: "Thread Image Hover", default: true, },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true, },
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true, },
             beepOnYou: { label: "Beep on (You)", default: false },
             notifyOnYou: { label: "Notify when (You) (!)", default: true },
             highlightOnYou: { label: "Highlight (You) posts", default: true },
@@ -435,6 +436,54 @@ onReady(async function () {
     }
 
     addCustomCSS(css);
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // --- Feature Initialization based on Settings ---
+
+    if (await getSetting("enableScrollSave")) {
+        featureSaveScroll();
+    }
+    if (await getSetting("watchThreadOnReply")) {
+        featureWatchThreadOnReply();
+    }
+    if (await getSetting("blurSpoilers")) {
+        featureBlurSpoilers();
+    }
+    if (await getSetting("enableHeaderCatalogLinks")) {
+        featureHeaderCatalogLinks();
+    }
+    if (await getSetting("deleteSavedName")) {
+        featureDeleteNameCheckbox();
+    }
+    if (await getSetting("enableScrollArrows")) {
+        featureScrollArrows();
+    }
+    if ((await getSetting("beepOnYou")) || (await getSetting("notifyOnYou"))) {
+        featureBeepOnYou();
+    }
+    if (await getSetting("alwaysShowTW")) {
+        featureAlwaysShowTW();
+    }
+    if (await getSetting("scrollToBottom")) {
+        preventFooterScrollIntoView();
+    }
+
+    // Check if we should enable image hover based on the current page
+    async function initImageHover() {
+        const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
+        let enabled = false;
+        if (isCatalogPage) {
+            enabled = await getSetting("enableCatalogImageHover");
+        } else {
+            enabled = await getSetting("enableThreadImageHover");
+        }
+        if (enabled) {
+            featureImageHover();
+        }
+    }
+    // Init
+    initImageHover();
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1913,46 +1962,6 @@ onReady(async function () {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // --- Feature Initialization based on Settings ---
-
-    if (await getSetting("enableScrollSave")) {
-        featureSaveScroll();
-    }
-    if (await getSetting("watchThreadOnReply")) {
-        featureWatchThreadOnReply();
-    }
-    if (await getSetting("blurSpoilers")) {
-        featureBlurSpoilers();
-    }
-    if (await getSetting("enableHeaderCatalogLinks")) {
-        featureHeaderCatalogLinks();
-    }
-    if (await getSetting("deleteSavedName")) {
-        featureDeleteNameCheckbox();
-    }
-    if (await getSetting("enableScrollArrows")) {
-        featureScrollArrows();
-    }
-    if ((await getSetting("beepOnYou")) || (await getSetting("notifyOnYou"))) {
-        featureBeepOnYou();
-    }
-    if (await getSetting("alwaysShowTW")) {
-        featureAlwaysShowTW();
-    }
-
-    // Check if we should enable image hover based on the current page
-    const isCatalogPage = /\/catalog\.html$/.test(
-        window.location.pathname.toLowerCase()
-    );
-    if (
-        (isCatalogPage && (await getSetting("enableCatalogImageHover"))) ||
-        (!isCatalogPage && (await getSetting("enableThreadImageHover")))
-    ) {
-        featureImageHover();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     // --- Keyboard Shortcuts ---
     // Open 8chanSS menu (CTRL + F1)
     document.addEventListener("keydown", async function (event) {
@@ -2301,6 +2310,15 @@ onReady(async function () {
     const captchaInput = document.getElementById("QRfieldCaptcha");
     if (captchaInput) {
         captchaInput.autocomplete = "off";
+    }
+
+    // Don't scroll to bottom on post
+    function preventFooterScrollIntoView() {
+        const footer = document.getElementById('footer');
+        if (footer && !footer._scrollBlocked) {
+            footer._scrollBlocked = true; // Prevent double-wrapping
+            footer.scrollIntoView = function () { };
+        }
     }
 
 });
