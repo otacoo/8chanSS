@@ -1,3 +1,28 @@
+## v1.32.0
+*2025-04-26*
+
+- New Option: "Custom Notification Text" for (You)s in the tab 🔥 (8 chars max.)
+- New Option: "Don't Scroll To Bottom on Reply"
+- New Feature: "Mark Post as Yours" in the post menu, click again to unmark
+- Refactored and optimized lot of the code thanks to @bapao1
+- Save Scroll *should* now correctly save position regardless of URL anchor
+- Thread Watcher can be expanded again
+- Threads in the TW that quote you will get a (You) notification
+- Uploads and images for OP will now be appended below the name
+- Slightly expanded the native inline feature to also append inline quotes above the original message and give the opened quotelink a dashed underline
+- Inlined posts will no longer beep if the post contains a (You) quote
+- Better targeting for (You) highlighting of posts
+- Hovered images should no longer touch the bottom of the viewport
+
+
+#### PR by @bapao1:
+- add // @ts-check for typescript linting;
+- add // @ts-ignore above GM variables;
+- change style.zIndex value types from int to string;
+- refactor nested if statements by changing it into null checks and gaurd clasuses with early returns;
+- refactor featureWatchThreadOnReply() function slightly better readability;
+
+
 ## v1.31.0
 *2025-04-25*
 
