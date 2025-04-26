@@ -52,6 +52,10 @@ nav.navHeader {
     display: flow-root;
 }
 
+:root.fit-replies :not(.hidden, .inlineQuote).innerPost {
+    margin-left: 0;
+}
+
 :root.fit-replies .quoteTooltip {
     display: table !important;
 }

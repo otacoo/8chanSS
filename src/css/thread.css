@@ -110,11 +110,11 @@
 }
 
 /* (You) Replies */
-:root.highlight-you .innerPost:has(.youName) {
+:root.highlight-you .innerPost:has(> .postInfo.title > .youName) {
     border-left: dashed #68b723 3px;
 }
 
-:root.highlight-you .innerPost:not(:has(.youName)):has(.quoteLink.you) {
+:root.highlight-you .innerPost:has(.divMessage:nth-child(3) > .quoteLink.you:first-child) {
     border-left: solid #dd003e 3px;
 }
 
