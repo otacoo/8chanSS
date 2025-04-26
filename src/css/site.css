@@ -13,6 +13,7 @@
 :root.hide-posting-form #postingForm,
 :root.hide-announcement #dynamicAnnouncement,
 :root.hide-panelmessage #panelMessage,
+.inlineQuote > .innerPost > .postInfo.title > a:nth-child(1),
 #navFadeEnd,
 #navFadeMid {
     display: none;
@@ -62,9 +63,8 @@ nav.navHeader {
 
 /* Thread Watcher */
 #watchedMenu .floatingContainer {
-    overflow: hidden;
+    overflow-x: hidden;
     overflow-wrap: break-word;
-    display: inline-table;
 }
 
 .watchedCellLabel a::before {
