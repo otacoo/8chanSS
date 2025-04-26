@@ -24,12 +24,13 @@ Then press the big install button to install the script.
 - Catalog links for the header
 - Image hover for catalog and thread images, videos and audio (new)
 - Image Hover for spoilers
-- Autoscroll page to last read post
+- Autoscroll page to last read post + unread line
 - Sidebar
 - Quick Reply to sidebar
 - Blur or remove spoilers
 - Beep on getting a (You)
-- Cleanup of certain elements
+- Custom text for (You) notification in the tab
+- Improved styling of the site
 - Adds a checkbox to the Quick Reply to save (or not save) the name field on refresh
 - Hide Posting Form and Announcements
 - Show full filename of media posts
@@ -38,8 +39,10 @@ Then press the big install button to install the script.
 - Bottom Header
 - Up/Down Arrows
 - Pin Thread Watcher
-- Minimal styling and cleanup (wip)
-- Much more incoming
+- Hide/unhide threads in the catalog
+- Mark/unmark posts as yours
+
+More incoming...
 
 #### Keyboard Shortcuts:
 
