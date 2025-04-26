@@ -1723,13 +1723,14 @@ onReady(async function () {
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Feature: Highlight (You) and Board Name in TW
     function highlightMentions() {
         document.querySelectorAll("#watchedMenu .watchedCell").forEach((cell) => {
             const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
             const labelLink = cell.querySelector(".watchedCellLabel a");
+            const watchedCellLabel = cell.querySelector(".watchedCellLabel");
 
             if (labelLink) {
                 // Only set data-board if it doesn't already exist
@@ -1751,9 +1752,24 @@ onReady(async function () {
 
                 // Highlight if contains (you), else remove color
                 if (notification && notification.textContent.includes("(you)")) {
-                    labelLink.style.color = "#ff0000f0";
+                    labelLink.style.color = "var(--board-title-color)";
+
+                    // Add the "(You)" text if it doesn't already exist
+                    if (watchedCellLabel && !watchedCellLabel.querySelector(".you-mention-label")) {
+                        const youLabel = document.createElement("span");
+                        youLabel.className = "you-mention-label";
+                        youLabel.textContent = " - (You)";
+                        youLabel.style.color = "var(--board-title-color)";
+                        watchedCellLabel.appendChild(youLabel);
+                    }
                 } else {
                     labelLink.style.color = "";
+
+                    // Remove the "(You)" text if it exists
+                    const youLabel = watchedCellLabel?.querySelector(".you-mention-label");
+                    if (youLabel) {
+                        youLabel.remove();
+                    }
                 }
             }
         });
@@ -1775,7 +1791,7 @@ onReady(async function () {
     async function featureWatchThreadOnReply() {
         // --- Helpers ---
         const getWatchButton = () => document.querySelector(".watchButton");
-    
+
         // Watch the thread if not already watched
         function watchThreadIfNotWatched() {
             const btn = getWatchButton();
@@ -1787,7 +1803,7 @@ onReady(async function () {
                 }, 100);
             }
         }
-    
+
         // Update the watch button's class to reflect watched state
         function updateWatchButtonClass() {
             const btn = getWatchButton();
@@ -1803,7 +1819,7 @@ onReady(async function () {
         const submitButton = document.getElementById("qrbutton");
         if (submitButton) {
             // Remove any previous handler to avoid duplicates
-            submitButton.removeEventListener("click", submitButton._watchThreadHandler || (() => {}));
+            submitButton.removeEventListener("click", submitButton._watchThreadHandler || (() => { }));
             submitButton._watchThreadHandler = async function () {
                 if (await getSetting("watchThreadOnReply")) {
                     setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
@@ -1811,15 +1827,15 @@ onReady(async function () {
             };
             submitButton.addEventListener("click", submitButton._watchThreadHandler);
         }
-    
+
         // On page load, sync the watch button UI
         updateWatchButtonClass();
-    
+
         // Keep UI in sync when user manually clicks the watch button
         const btn = getWatchButton();
         if (btn) {
             // Remove any previous handler to avoid duplicates
-            btn.removeEventListener("click", btn._updateWatchHandler || (() => {}));
+            btn.removeEventListener("click", btn._updateWatchHandler || (() => { }));
             btn._updateWatchHandler = () => setTimeout(updateWatchButtonClass, 100);
             btn.addEventListener("click", btn._updateWatchHandler);
         }
@@ -1884,6 +1900,139 @@ onReady(async function () {
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function featureMarkYourPost() {
+        // --- Board Key Detection ---
+        function getBoardName() {
+            const postCell = document.querySelector('.postCell[data-boarduri]');
+            if (postCell) return postCell.getAttribute('data-boarduri');
+            const match = location.pathname.match(/^\/([^\/]+)\//);
+            return match ? match[1] : 'unknown';
+        }
+
+        const BOARD_NAME = getBoardName();
+        const T_YOUS_KEY = `${BOARD_NAME}-yous`;
+        const MENU_ENTRY_CLASS = "markYourPostMenuEntry";
+        const MENU_SELECTOR = ".floatingList.extraMenu";
+
+        // --- Storage Helpers (always use numeric IDs) ---
+        function getTYous() {
+            try {
+                const val = localStorage.getItem(T_YOUS_KEY);
+                if (!val) return [];
+                return JSON.parse(val);
+            } catch {
+                return [];
+            }
+        }
+        function setTYous(arr) {
+            // Convert all IDs to numbers before storing
+            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
+        }
+
+        // --- Menu/Post Association ---
+        document.body.addEventListener('click', function (e) {
+            if (e.target.matches('.extraMenuButton')) {
+                const postCell = e.target.closest('.postCell');
+                setTimeout(() => {
+                    const menu = document.querySelector(MENU_SELECTOR);
+                    if (menu && postCell) {
+                        menu.setAttribute('data-post-id', postCell.id);
+                    }
+                }, 0);
+            }
+        });
+
+        function getPostIdFromMenu(menu) {
+            return menu.getAttribute('data-post-id') || null;
+        }
+
+        function toggleYouNameClass(postId, add) {
+            const postCell = document.getElementById(postId);
+            if (!postCell) return;
+            const nameLink = postCell.querySelector(".linkName.noEmailName");
+            if (nameLink) {
+                nameLink.classList.toggle("youName", add);
+            }
+        }
+
+        // --- Menu Entry Logic ---
+        function addMenuEntries(root = document) {
+            root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                const ul = menu.querySelector("ul");
+                if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
+
+                const reportLi = Array.from(ul.children).find(
+                    li => li.textContent.trim().toLowerCase() === "report"
+                );
+
+                const li = document.createElement("li");
+                li.className = MENU_ENTRY_CLASS;
+                li.style.cursor = "pointer";
+
+                const postId = getPostIdFromMenu(menu);
+                const tYous = getTYous();
+                // Convert to number for comparison
+                const isMarked = postId && tYous.includes(Number(postId));
+                li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
+
+                if (reportLi) {
+                    ul.insertBefore(li, reportLi);
+                } else {
+                    ul.insertBefore(li, ul.firstChild);
+                }
+
+                li.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    const postId = getPostIdFromMenu(menu);
+                    if (!postId) return;
+                    let tYous = getTYous();
+                    // Convert to number for comparison
+                    const numericPostId = Number(postId);
+                    const idx = tYous.indexOf(numericPostId);
+                    if (idx === -1) {
+                        tYous.push(numericPostId);
+                        setTYous(tYous);
+                        toggleYouNameClass(postId, true);
+                        li.textContent = "Unmark as Your Post";
+                    } else {
+                        tYous.splice(idx, 1);
+                        setTYous(tYous);
+                        toggleYouNameClass(postId, false);
+                        li.textContent = "Mark as Your Post";
+                    }
+                });
+
+                window.addEventListener("storage", function (event) {
+                    if (event.key === T_YOUS_KEY) {
+                        const tYous = getTYous();
+                        const isMarked = postId && tYous.includes(Number(postId));
+                        li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
+                    }
+                });
+            });
+        }
+
+        // --- Observe for Dynamic Menus ---
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.matches && node.matches(MENU_SELECTOR)) {
+                        addMenuEntries(node.parentNode || node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                            addMenuEntries(menu.parentNode || menu);
+                        });
+                    }
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // Init
+    onReady(featureMarkYourPost);
 
     // --- Feature: Scroll Arrows ---
     function featureScrollArrows() {
