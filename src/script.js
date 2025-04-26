@@ -1600,11 +1600,22 @@ onReady(async function () {
     // Set inline above the message
     function ensureReplyPreviewPlacement(root = document) {
         root.querySelectorAll('.innerPost').forEach(innerPost => {
-            const replyPreview = innerPost.querySelector('.replyPreview');
             const divMessage = innerPost.querySelector('.divMessage');
-            if (replyPreview && divMessage && replyPreview.nextSibling !== divMessage) {
+            if (!divMessage) return;
+
+            // Move .replyPreview before .divMessage if present
+            const replyPreview = innerPost.querySelector('.replyPreview');
+            if (replyPreview && replyPreview.nextSibling !== divMessage) {
                 innerPost.insertBefore(replyPreview, divMessage);
             }
+
+            // Move all .inlineQuote elements before .divMessage if present
+            // (in case there are multiple .inlineQuote elements)
+            innerPost.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
+                if (inlineQuote.nextSibling !== divMessage) {
+                    innerPost.insertBefore(inlineQuote, divMessage);
+                }
+            });
         });
     }
 
