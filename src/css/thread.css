@@ -36,14 +36,14 @@
     bottom: 28px !important;
 }
 
-#quick-reply {
+:root.fade-qr #quick-reply {
     padding: 0;
     opacity: 0.7;
     transition: opacity 0.3s ease;
 }
 
-#quick-reply:hover,
-#quick-reply:focus-within {
+:root.fade-qr #quick-reply:hover,
+:root.fade-qr #quick-reply:focus-within {
     opacity: 1;
 }
 
@@ -116,6 +116,12 @@
 .reply-inlined {
     text-decoration: underline dashed !important;
     text-underline-offset: 2px;
+}
+
+.target-highlight {
+    background: var(--marked-color);
+    border-color: var(--marked-border-color);
+    color: var(--marked-text-color);
 }
 
 /* (You) Replies */
