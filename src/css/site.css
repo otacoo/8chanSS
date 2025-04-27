@@ -13,11 +13,12 @@
 :root.hide-posting-form #postingForm,
 :root.hide-announcement #dynamicAnnouncement,
 :root.hide-panelmessage #panelMessage,
-:root.hide-close-btn .inlineQuote > .innerPost > .postInfo.title > a:nth-child(1),
+:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:nth-child(1),
 #navFadeEnd,
 #navFadeMid {
     display: none;
 }
+
 /* Deal with FchX */
 :root.hide-defaultBL #navTopBoardsSpan {
     display: none !important;
@@ -151,10 +152,39 @@ nav.navHeader {
 .floatingMenu.focused {
     z-index: 305 !important;
 }
+
 /* 8chanSS settings custom class */
 .ss-chevron {
     transition: transform 0.2s;
     margin-left: 6px;
     font-size: 12px;
     display: inline-block;
+}
+
+a.imgLink[data-filemime^='audio/'],
+a.originalNameLink[href$='.mp3'],
+a.originalNameLink[href$='.ogg'],
+a.originalNameLink[href$='.m4a'],
+a.originalNameLink[href$='.wav'] {
+    position: relative;
+}
+
+.audio-preview-indicator {
+    display: none;
+    position: absolute;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 5px;
+    font-size: 12px;
+    border-radius: 3px;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+a[data-filemime^='audio/']:hover .audio-preview-indicator,
+a.originalNameLink:hover .audio-preview-indicator {
+    display: block;
 }
