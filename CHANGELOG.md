@@ -1,3 +1,14 @@
+## v1.34.0
+*2025-04-27*
+
+- New Feature: CTRL + UP/DOWN Arrow to scroll between Your posts, CTRL + SHIFT + UP/DOWN ARROW for posts quoting (You)
+- Add option for 8chanSS inline/nested replies
+    Note: Because 8chSS relies on the native inline option, this option will enable the native inline replies option but will not disable it when you disable 8chSS's, so you have to do disable the native feature manually.
+- Add option for fading Quick Reply
+- Adjusted Image Hover
+- Threads in the Thread Watcher will now have their HTML elements properly decoded, e.g. " &gt; " will turn into " > "
+- Styled Thread Watcher scrollbar
+
 ## v1.33.0
 *2025-04-27*
 
