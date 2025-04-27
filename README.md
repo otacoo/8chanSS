@@ -74,6 +74,18 @@ More incoming...
 
 ![fav](https://github.com/user-attachments/assets/8b97ca2b-8e9e-46e3-bc8b-37e4c7c42712)
 
+#### How to block custom themes:
+
+**Note:** Userscripts CANNOT cannot block network requests directly. I have tried to block the custom theme from loading on page load to avoid flashing of unstyled content (FOUC), it minimizes the issue but doesn't fix it.
+If you use uBlock Origin you can more directly prevent the custom CSS from loading altogether with the following:
+
+Add this to uBlock's *My Filters* page and press Save Changes, then restart your browser.
+
+```
+! Block Custom Theme CSS on https://8chan.moe|se
+||8chan.*/*/custom.css$css
+```
+
 ## Contributing
 Read [Contributing](https://github.com/otacoo/8chanSS/blob/main/CONTRIBUTING.md#development--contribution) first to set up, fork the repo, then do a pull request to here.
 
