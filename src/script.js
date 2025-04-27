@@ -82,8 +82,8 @@ onReady(async function () {
                     openInNewTab: {
                         label: "Always open in new tab",
                         default: false,
-                    },
-                },
+                    }
+                }
             },
             enableBottomHeader: { label: "Bottom Header", default: false },
             enableScrollSave: {
@@ -93,16 +93,17 @@ onReady(async function () {
                     showUnreadLine: {
                         label: "Show Unread Line",
                         default: true,
-                    },
-                },
+                    }
+                }
             },
-            enableScrollArrows: { label: "Show Up/Down Arrows", default: false, },
-            hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100, },
+            enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
+            hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
-            enableThreadImageHover: { label: "Thread Image Hover", default: true, },
-            watchThreadOnReply: { label: "Watch Thread on Reply", default: true, },
-            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true, },
+            enableThreadImageHover: { label: "Thread Image Hover", default: true },
+            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
+            watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
             beepOnYou: { label: "Beep on (You)", default: false },
             notifyOnYou: {
                 label: "Notify when (You) (!)",
@@ -113,28 +114,27 @@ onReady(async function () {
                         default: "",
                         type: "text",
                         maxLength: 8
-                    },
-                },
+                    }
+                }
             },
-            highlightOnYou: { label: "Highlight (You) posts", default: true },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
             blurSpoilers: {
                 label: "Blur Spoilers",
                 default: false,
                 subOptions: {
                     removeSpoilers: {
                         label: "Remove Spoilers",
-                        default: false,
-                    },
-                },
+                        default: false
+                    }
+                }
             },
-            deleteSavedName: { label: "Delete Name Checkbox", default: true },
+            deleteSavedName: { label: "Delete Name Checkbox", default: true }
         },
         catalog: {
-            enableCatalogImageHover: { label: "Catalog Image Hover", default: true, },
+            enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
+            enableThreadHiding: { label: "Enable Thread Hiding", default: false }
         },
         styling: {
-            _siteTitle: { type: "title", label: ":: Site Styling" },
+            _siteTitle: { type: "title", label: ":: Site Styling" }, // Site Styling
             _stylingSection1: { type: "separator" },
             hideAnnouncement: { label: "Hide Announcement", default: false },
             hidePanelMessage: { label: "Hide Panel Message", default: false },
@@ -144,15 +144,15 @@ onReady(async function () {
                 subOptions: {
                     showCatalogForm: {
                         label: "Don't Hide in Catalog",
-                        default: false,
-                    },
-                },
+                        default: false
+                    }
+                }
             },
             hideBanner: { label: "Hide Board Banners", default: false },
             hideDefaultBL: { label: "Hide Default Board List", default: true },
-            _threadTitle: { type: "title", label: ":: Thread Styling" },
+            _threadTitle: { type: "title", label: ":: Thread Styling" }, // Thread Styling
             _stylingSection2: { type: "separator" },
-            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false, },
+            highlightOnYou: { label: "Highlight (You) posts", default: true },
             enableFitReplies: { label: "Fit Replies", default: false },
             enableSidebar: {
                 label: "Enable Sidebar",
@@ -160,11 +160,12 @@ onReady(async function () {
                 subOptions: {
                     leftSidebar: {
                         label: "Sidebar on Left",
-                        default: false,
+                        default: false
                     },
                 },
             },
-
+            threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },            
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, }
         },
     };
 
@@ -227,6 +228,7 @@ onReady(async function () {
             hideAnnouncement: "hide-announcement",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",
+            threadHideCloseBtn: "hide-close-btn",
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
@@ -481,6 +483,9 @@ onReady(async function () {
     }
     if (await getSetting("scrollToBottom")) {
         preventFooterScrollIntoView();
+    }
+    if (await getSetting("enableThreadHiding")) {
+        featureCatalogThreadHideShortcut();
     }
 
     // Check if we should enable image hover based on the current page
@@ -2571,9 +2576,6 @@ onReady(async function () {
 
         hideThreadsOnRefresh();
     }
-
-    // Initialize the feature
-    featureCatalogThreadHideShortcut();
 
     // --- Misc Fixes ---
 

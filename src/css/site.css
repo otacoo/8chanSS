@@ -13,7 +13,7 @@
 :root.hide-posting-form #postingForm,
 :root.hide-announcement #dynamicAnnouncement,
 :root.hide-panelmessage #panelMessage,
-.inlineQuote > .innerPost > .postInfo.title > a:nth-child(1),
+:root.hide-close-btn .inlineQuote > .innerPost > .postInfo.title > a:nth-child(1),
 #navFadeEnd,
 #navFadeMid {
     display: none;
