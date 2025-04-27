@@ -1,16 +1,17 @@
 ## v1.33.0
 *2025-04-27*
 
-Added toggles for certain features:
-    - New (old) Option: Enable Thread Hiding in catalog
-    - New (old) Option: Hide Inline Close Button for inlined posts
-
+- 8chanSS will no longer force native Inline Replies to be enabled
 - Moved settings around in the menu and added capability for separators and titles
 - Use more responsive values for Image Hover and Sidebar
 - Upload files in QR will show horizontally
 - Add a link to the changelog in the version number
 - Fix for OP posts not being marked as yours when using the feature
 - Still better targeting of posts for (You) highlighting
+
+Added toggles for certain features:
+- New (old) Option: Enable Thread Hiding in catalog
+- New (old) Option: Hide Inline Close Button for inlined posts
 
 
 ## v1.32.0
