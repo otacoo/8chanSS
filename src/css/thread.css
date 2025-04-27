@@ -112,6 +112,12 @@
     box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
 }
 
+/* Custom class added through the userscript for backlinks */
+.reply-inlined {
+    text-decoration: underline dashed !important;
+    text-underline-offset: 2px;
+}
+
 /* (You) Replies */
 :root.highlight-you .innerPost:has(> .postInfo.title > .youName) {
     border-left: dashed #68b723 3px;

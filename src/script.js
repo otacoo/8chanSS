@@ -1674,20 +1674,6 @@ onReady(async function () {
     }
 
     // --- Feature: Dashed underline for inlined reply backlinks ---
-    // Add CSS for dashed underline (only once)
-    (function addReplyInlinedStyle() {
-        if (document.getElementById('reply-inlined-style')) return;
-        const style = document.createElement('style');
-        style.id = 'reply-inlined-style';
-        style.textContent = `
-        .reply-inlined {
-            text-decoration: underline dashed !important;
-            text-underline-offset: 2px;
-        }
-    `;
-        document.head.appendChild(style);
-    })();
-
     // Toggle underline on/off for clicked .panelBacklinks > a
     document.addEventListener('click', function (e) {
         const a = e.target.closest('.panelBacklinks > a');
