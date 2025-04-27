@@ -94,6 +94,11 @@ nav.navHeader {
     padding-right: 2px;
 }
 
+#watchedMenu .floatingContainer {
+    scrollbar-width: thin;
+    scrollbar-color: var(--link-color) var(--contrast-color);
+}
+
 /* Up/Down Arrows */
 .scroll-arrow-btn {
     position: fixed;
