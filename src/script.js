@@ -426,18 +426,6 @@ onReady(async function () {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Custom CSS injection
-    function addCustomCSS(css) {
-        if (!css) return;
-        let style = document.getElementById("8chSS");
-        if (!style) {
-            style = document.createElement("style");
-            style.type = "text/css";
-            style.id = "8chSS";
-            document.head.appendChild(style);
-        }
-        style.textContent = css;
-    }
-
     const currentPath = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
 
@@ -453,7 +441,12 @@ onReady(async function () {
         css += "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
     }
 
-    addCustomCSS(css);
+    if (!document.getElementById('8chSS')) {
+        const style = document.createElement('style');
+        style.id = '8chSS';
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -978,7 +971,7 @@ onReady(async function () {
 
             container.appendChild(wrapper);
         });
-        
+
         return container;
     }
 
@@ -1378,41 +1371,6 @@ onReady(async function () {
                 return null;
             }
             return null;
-        }
-
-        // --- Audio indicator CSS (inject once) ---
-        function injectAudioIndicatorStyle() {
-            if (document.getElementById("audio-preview-indicator-style")) return;
-            const style = document.createElement("style");
-            style.id = "audio-preview-indicator-style";
-            style.textContent = `
-            a.imgLink[data-filemime^="audio/"], 
-            a.originalNameLink[href$=".mp3"],
-            a.originalNameLink[href$=".ogg"],
-            a.originalNameLink[href$=".m4a"],
-            a.originalNameLink[href$=".wav"] {
-                position: relative;
-            }
-            .audio-preview-indicator {
-                display: none;
-                position: absolute;
-                background: rgba(0, 0, 0, 0.7);
-                color: #fff;
-                padding: 5px;
-                font-size: 12px;
-                border-radius: 3px;
-                z-index: 1000;
-                left: 0;
-                top: 0;
-                white-space: nowrap;
-                pointer-events: none;
-            }
-            a[data-filemime^="audio/"]:hover .audio-preview-indicator,
-            a.originalNameLink:hover .audio-preview-indicator {
-                display: block;
-            }
-        `;
-            document.head.appendChild(style);
         }
 
         // --- Main hover handler ---
