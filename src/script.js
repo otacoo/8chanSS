@@ -1242,7 +1242,7 @@ onReady(async function () {
         const MEDIA_MAX_WIDTH = "90vw";
         const MEDIA_OPACITY_LOADING = "0.75";
         const MEDIA_OPACITY_LOADED = "1";
-        const MEDIA_OFFSET = 5; // Margin between cursor and image, in vw
+        const MEDIA_OFFSET = 2; // Margin between cursor and image, in vw
         const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
 
