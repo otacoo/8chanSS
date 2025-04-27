@@ -1,11 +1,3 @@
-////////// HELPERS ///////////////////////
-function onReady(fn) {
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", fn, { once: true });
-    } else {
-        fn();
-    }
-}
 ///// JANK THEME FLASH FIX LOAD ASAP /////////
 (function () {
     // Get the user's selected theme from localStorage
@@ -68,7 +60,14 @@ function onReady(fn) {
         // Ignore errors (e.g., storage not available)
     }
 })();
-
+////////// HELPERS ///////////////////////
+function onReady(fn) {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", fn, { once: true });
+    } else {
+        fn();
+    }
+}
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     // --- Default Settings ---
