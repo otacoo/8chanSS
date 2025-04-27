@@ -149,9 +149,9 @@ onReady(async function () {
                 },
             },
             hideBanner: { label: "Hide Board Banners", default: false },
-            hideDefaultBL: { label: "Hide Default Board List", default: true },           
+            hideDefaultBL: { label: "Hide Default Board List", default: true },
             _threadTitle: { type: "title", label: ":: Thread Styling" },
-            _stylingSection2: { type: "separator" }, 
+            _stylingSection2: { type: "separator" },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false, },
             enableFitReplies: { label: "Fit Replies", default: false },
             enableSidebar: {
@@ -1929,7 +1929,7 @@ onReady(async function () {
     function featureMarkYourPost() {
         // --- Board Key Detection ---
         function getBoardName() {
-            const postCell = document.querySelector('.postCell[data-boarduri]');
+            const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
             if (postCell) return postCell.getAttribute('data-boarduri');
             const match = location.pathname.match(/^\/([^\/]+)\//);
             return match ? match[1] : 'unknown';
@@ -1958,7 +1958,8 @@ onReady(async function () {
         // --- Menu/Post Association ---
         document.body.addEventListener('click', function (e) {
             if (e.target.matches('.extraMenuButton')) {
-                const postCell = e.target.closest('.postCell');
+                // Support both .postCell and .opCell
+                const postCell = e.target.closest('.postCell, .opCell');
                 setTimeout(() => {
                     const menu = document.querySelector(MENU_SELECTOR);
                     if (menu && postCell) {
@@ -1973,6 +1974,7 @@ onReady(async function () {
         }
 
         function toggleYouNameClass(postId, add) {
+            // Support both .postCell and .opCell
             const postCell = document.getElementById(postId);
             if (!postCell) return;
             const nameLink = postCell.querySelector(".linkName.noEmailName");
