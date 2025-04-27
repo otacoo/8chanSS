@@ -100,7 +100,9 @@ onReady(async function () {
         },
         threads: {
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
+            enableNestedReplies: { label: "Enabled Nested Replies", default: false },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
+            fadeQuickReply: { label: "Fade Quick Reply", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
             scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
             beepOnYou: { label: "Beep on (You)", default: false },
@@ -163,7 +165,7 @@ onReady(async function () {
                     },
                 },
             },
-            threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },            
+            threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, }
         },
     };
@@ -218,6 +220,7 @@ onReady(async function () {
             // enableSidebar handled below
             enableSidebar_leftSidebar: "ss-leftsidebar",
             enableStickyQR: "sticky-qr",
+            fadeQuickReply: "fade-qr",
             enableBottomHeader: "bottom-header",
             hideHiddenPostStub: "hide-stub",
             hideBanner: "disable-banner",
@@ -227,7 +230,7 @@ onReady(async function () {
             hideAnnouncement: "hide-announcement",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",
-            threadHideCloseBtn: "hide-close-btn",
+            threadHideCloseBtn: "hide-close-btn"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
@@ -478,6 +481,10 @@ onReady(async function () {
     }
     if (await getSetting("enableThreadHiding")) {
         featureCatalogThreadHideShortcut();
+    }
+    if (await getSetting("enableNestedReplies")) {
+        localStorage.setItem("inlineReplies", "true");
+        featureNestedReplies();
     }
 
     // Check if we should enable image hover based on the current page
@@ -1227,11 +1234,10 @@ onReady(async function () {
         }
     }
 
-    // ---- Feature: Image/Video/Audio Hover Preview (Refactored)
+    // ---- Feature: Image/Video/Audio Hover Preview
     function featureImageHover() {
         // --- Config ---
         const MEDIA_MAX_WIDTH = "90vw";
-        const MEDIA_MAX_HEIGHT = "98vh";
         const MEDIA_OPACITY_LOADING = "0.75";
         const MEDIA_OPACITY_LOADED = "1";
         const MEDIA_OFFSET = 5; // Margin between cursor and image, in vw
@@ -1250,6 +1256,7 @@ onReady(async function () {
         let floatingMedia = null;
         let cleanupFns = [];
         let currentAudioIndicator = null;
+        let lastMouseEvent = null; // Store last mouse event for initial placement
 
         // --- Utility: Clamp value between min and max ---
         function clamp(val, min, max) {
@@ -1266,17 +1273,17 @@ onReady(async function () {
 
             const MEDIA_OFFSET_PX = getMediaOffset();
             const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
+            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth; // Calculate scrollbar width
 
-            // Always to the right of the cursor, with margin, but clamp to right edge
+            // Clamp to viewport
+            // Horizontally, always to the right of the cursor, with margin, but clamp to right edge (account for scrollbar)
             let x = event.clientX + MEDIA_OFFSET_PX;
-            x = clamp(x, 0, vw - mw);
+            x = clamp(x, 0, vw - mw - SCROLLBAR_WIDTH);
 
-            // Vertically, align top to cursor, but clamp so it never touches bottom
+            // Vertically, align top to cursor, but clamp so it never touches bottom or top
             let y = event.clientY;
-            if (y + mh > vh - MEDIA_BOTTOM_MARGIN_PX) {
-                y = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
-            }
-            y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
+            const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
+            y = Math.max(0, Math.min(y, maxY));
 
             floatingMedia.style.left = `${x}px`;
             floatingMedia.style.top = `${y}px`;
@@ -1292,22 +1299,22 @@ onReady(async function () {
 
             const MEDIA_OFFSET_PX = getMediaOffset();
             const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
+            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth;
 
             // Use last mouse position if available, else center
             let x = vw / 2, y = vh / 2;
             if (event && typeof event.clientX === "number" && typeof event.clientY === "number") {
                 x = event.clientX + MEDIA_OFFSET_PX;
-                x = clamp(x, 0, vw - mw);
+                x = clamp(x, 0, vw - mw - SCROLLBAR_WIDTH);
 
                 y = event.clientY;
-                if (y + mh > vh - MEDIA_BOTTOM_MARGIN_PX) {
-                    y = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
-                }
-                y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
+                const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
+                y = Math.max(0, Math.min(y, maxY));
             } else {
                 // Fallback: center
-                x = clamp((vw - mw) / 2, 0, vw - mw);
-                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN_PX) / 2, 0, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
+                x = clamp((vw - mw) / 2, 0, vw - mw - SCROLLBAR_WIDTH);
+                const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
+                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN_PX) / 2, 0, maxY);
             }
             floatingMedia.style.left = `${x}px`;
             floatingMedia.style.top = `${y}px`;
@@ -1376,6 +1383,7 @@ onReady(async function () {
         // --- Main hover handler ---
         async function onThumbEnter(e) {
             cleanupFloatingMedia();
+            lastMouseEvent = e; // Store the mouse event for initial placement
             const thumb = e.currentTarget;
             let filemime = null, fullSrc = null, isVideo = false, isAudio = false;
 
@@ -1477,7 +1485,9 @@ onReady(async function () {
             floatingMedia.style.left = "-9999px";
             floatingMedia.style.top = "-9999px";
             floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
-            floatingMedia.style.maxHeight = MEDIA_MAX_HEIGHT;
+            // Dynamically set maxHeight to fit above the bottom margin
+            const availableHeight = window.innerHeight - getMediaBottomMargin();
+            floatingMedia.style.maxHeight = `${availableHeight}px`;
             if (isVideo) {
                 floatingMedia.autoplay = true;
                 floatingMedia.loop = true;
@@ -1489,24 +1499,18 @@ onReady(async function () {
             // --- Initial placement ---
             // Wait for media to load enough to get dimensions, then place
             function initialPlacement() {
-                positionFloatingMediaInitial(e);
-            }
-            if (isVideo) {
-                floatingMedia.onloadeddata = initialPlacement;
-            } else {
-                floatingMedia.onload = initialPlacement;
-            }
-            // If error, cleanup
-            floatingMedia.onerror = cleanupFloatingMedia;
-
-            // --- After first mousemove, follow mouse ---
-            function mouseMoveHandler(ev) {
-                positionFloatingMedia(ev);
+                // Use the last mouse event for accurate placement
+                if (lastMouseEvent) {
+                    positionFloatingMedia(lastMouseEvent);
+                }
             }
             // Only add mousemove after initial placement
             function enableMouseMove() {
                 document.addEventListener("mousemove", mouseMoveHandler);
                 cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
+            }
+            function mouseMoveHandler(ev) {
+                positionFloatingMedia(ev);
             }
             if (isVideo) {
                 floatingMedia.onloadeddata = function () {
@@ -1521,6 +1525,8 @@ onReady(async function () {
                     if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
                 };
             }
+            // If error, cleanup
+            floatingMedia.onerror = cleanupFloatingMedia;
 
             // Cleanup on leave/scroll
             function leaveHandler() { cleanupFloatingMedia(); }
@@ -1552,7 +1558,6 @@ onReady(async function () {
         }
 
         // --- Initialization ---
-        injectAudioIndicatorStyle();
         attachThumbListeners();
 
         // --- Watch for new elements ---
@@ -1568,63 +1573,65 @@ onReady(async function () {
     }
 
     // --- Feature: Inline replies (barebones) ---
-    // Set inline above the message
-    function ensureReplyPreviewPlacement(root = document) {
-        root.querySelectorAll('.innerPost').forEach(innerPost => {
-            const divMessage = innerPost.querySelector('.divMessage');
-            if (!divMessage) return;
+    function featureNestedReplies() {
+        // Set inline above the message
+        function ensureReplyPreviewPlacement(root = document) {
+            root.querySelectorAll('.innerPost').forEach(innerPost => {
+                const divMessage = innerPost.querySelector('.divMessage');
+                if (!divMessage) return;
 
-            // Move .replyPreview before .divMessage if present
-            const replyPreview = innerPost.querySelector('.replyPreview');
-            if (replyPreview && replyPreview.nextSibling !== divMessage) {
-                innerPost.insertBefore(replyPreview, divMessage);
-            }
-
-            // Move all .inlineQuote elements before .divMessage if present
-            // (in case there are multiple .inlineQuote elements)
-            innerPost.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
-                if (inlineQuote.nextSibling !== divMessage) {
-                    innerPost.insertBefore(inlineQuote, divMessage);
+                // Move .replyPreview before .divMessage if present
+                const replyPreview = innerPost.querySelector('.replyPreview');
+                if (replyPreview && replyPreview.nextSibling !== divMessage) {
+                    innerPost.insertBefore(replyPreview, divMessage);
                 }
+
+                // Move all .inlineQuote elements before .divMessage if present
+                // (in case there are multiple .inlineQuote elements)
+                innerPost.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
+                    if (inlineQuote.nextSibling !== divMessage) {
+                        innerPost.insertBefore(inlineQuote, divMessage);
+                    }
+                });
             });
+        }
+
+        // Initial placement for existing posts
+        ensureReplyPreviewPlacement();
+
+        // Set up a MutationObserver to handle dynamically added posts
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue; // Only process element nodes
+                    // If the added node is an .innerPost, or contains any .innerPost
+                    if (node.matches && node.matches('.innerPost')) {
+                        ensureReplyPreviewPlacement(node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll('.innerPost').forEach(innerPost => {
+                            ensureReplyPreviewPlacement(innerPost);
+                        });
+                    }
+                }
+            }
+        });
+
+        // Observe divPosts for new posts
+        const postsContainer = document.querySelector('.divPosts');
+        if (postsContainer) {
+            observer.observe(postsContainer, { childList: true, subtree: true });
+        }
+
+        // --- Feature: Dashed underline for inlined reply backlinks ---
+        // Toggle underline on/off for clicked .panelBacklinks > a
+        document.addEventListener('click', function (e) {
+            const a = e.target.closest('.panelBacklinks > a');
+            if (!a) return;
+            setTimeout(() => {
+                a.classList.toggle('reply-inlined');
+            }, 0);
         });
     }
-
-    // Initial placement for existing posts
-    ensureReplyPreviewPlacement();
-
-    // Set up a MutationObserver to handle dynamically added posts
-    const observer = new MutationObserver(mutations => {
-        for (const mutation of mutations) {
-            for (const node of mutation.addedNodes) {
-                if (node.nodeType !== 1) continue; // Only process element nodes
-                // If the added node is an .innerPost, or contains any .innerPost
-                if (node.matches && node.matches('.innerPost')) {
-                    ensureReplyPreviewPlacement(node);
-                } else if (node.querySelectorAll) {
-                    node.querySelectorAll('.innerPost').forEach(innerPost => {
-                        ensureReplyPreviewPlacement(innerPost);
-                    });
-                }
-            }
-        }
-    });
-
-    // Observe divPosts for new posts
-    const postsContainer = document.querySelector('.divPosts');
-    if (postsContainer) {
-        observer.observe(postsContainer, { childList: true, subtree: true });
-    }
-
-    // --- Feature: Dashed underline for inlined reply backlinks ---
-    // Toggle underline on/off for clicked .panelBacklinks > a
-    document.addEventListener('click', function (e) {
-        const a = e.target.closest('.panelBacklinks > a');
-        if (!a) return;
-        setTimeout(() => {
-            a.classList.toggle('reply-inlined');
-        }, 0);
-    });
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
     function featureBlurSpoilers() {
@@ -1682,12 +1689,30 @@ onReady(async function () {
 
     ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // --- Feature: Highlight (You) and Board Name in TW
+    // Decode HTML entities in <a> to string (e.g., &gt; to >, &apos; to ')
+    function decodeHtmlEntitiesTwice(html) {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = html;
+        const once = txt.value;
+        txt.innerHTML = once;
+        return txt.value;
+    }
+
     function highlightMentions() {
         document.querySelectorAll("#watchedMenu .watchedCell").forEach((cell) => {
             const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
             const labelLink = cell.querySelector(".watchedCellLabel a");
             const watchedCellLabel = cell.querySelector(".watchedCellLabel");
+
+            // --- New: Decode HTML entities in the direct child <a> (double decode) ---
+            if (labelLink) {
+                const originalHtml = labelLink.innerHTML;
+                const decodedText = decodeHtmlEntitiesTwice(originalHtml);
+                if (labelLink.textContent !== decodedText) {
+                    labelLink.textContent = decodedText;
+                }
+            }
+            // --- End new code ---
 
             if (labelLink) {
                 // Only set data-board if it doesn't already exist
@@ -2054,8 +2079,6 @@ onReady(async function () {
         label.title = "Delete Name on refresh";
         const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
         if (!alwaysUseBypassCheckbox) {
-            // Log a warning
-            console.warn("[8chanSS] Could not find #qralwaysUseBypassCheckBox. 'Delete Name' checkbox not added.");
             return;
         }
 
@@ -2251,6 +2274,147 @@ onReady(async function () {
         }
     }
     document.addEventListener("keydown", clearTextarea);
+
+    // SHIFT + Up/Down Arrow (Scroll between posts and replies)
+    function featureScrollBetweenPosts() {
+        let lastHighlighted = null;
+        let lastType = null; // "own" or "reply"
+        let lastIndex = -1;
+
+        function getEligiblePostCells(isOwnReply) {
+            // Find all .postCell and .opCell that contain at least one matching anchor
+            const selector = isOwnReply
+                ? '.postCell:has(a.youName), .opCell:has(a.youName)'
+                : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
+            // Use Array.from to get a static list in DOM order
+            return Array.from(document.querySelectorAll(selector));
+        }
+
+        function scrollToReply(isOwnReply = true, getNextReply = true) {
+            const postCells = getEligiblePostCells(isOwnReply);
+            if (!postCells.length) return;
+
+            // Determine current index
+            let currentIndex = -1;
+
+            // If lastType matches and lastHighlighted is still in the list, use its index
+            if (
+                lastType === (isOwnReply ? "own" : "reply") &&
+                lastHighlighted &&
+                (currentIndex = postCells.indexOf(lastHighlighted.closest('.postCell, .opCell'))) !== -1
+            ) {
+                // Use found index
+            } else {
+                // Otherwise, find the first cell whose top is below the middle of the viewport
+                const viewportMiddle = window.innerHeight / 2;
+                currentIndex = postCells.findIndex(cell => {
+                    const rect = cell.getBoundingClientRect();
+                    return rect.top + rect.height / 2 > viewportMiddle;
+                });
+                if (currentIndex === -1) {
+                    // If none found, default to first or last depending on direction
+                    currentIndex = getNextReply ? -1 : postCells.length;
+                }
+            }
+
+            // Determine target index
+            const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
+            if (targetIndex < 0 || targetIndex >= postCells.length) return;
+
+            const postContainer = postCells[targetIndex];
+            if (postContainer) {
+                postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+
+                // Remove highlight from previous post
+                if (lastHighlighted) {
+                    lastHighlighted.classList.remove('target-highlight');
+                }
+
+                // Find the anchor id for this post (usually something like id="p123456")
+                let anchorId = null;
+                let anchorElem = postContainer.querySelector('[id^="p"]');
+                if (anchorElem && anchorElem.id) {
+                    anchorId = anchorElem.id;
+                } else if (postContainer.id) {
+                    anchorId = postContainer.id;
+                }
+
+                // Update the URL hash to simulate :target
+                if (anchorId) {
+                    if (location.hash !== '#' + anchorId) {
+                        history.replaceState(null, '', '#' + anchorId);
+                    }
+                }
+
+                // Add highlight class to .innerPost
+                const innerPost = postContainer.querySelector('.innerPost');
+                if (innerPost) {
+                    innerPost.classList.add('target-highlight');
+                    lastHighlighted = innerPost;
+                } else {
+                    lastHighlighted = null;
+                }
+
+                // Track type and index for next navigation
+                lastType = isOwnReply ? "own" : "reply";
+                lastIndex = targetIndex;
+            }
+        }
+
+        function onKeyDown(event) {
+            // Ignore if typing in an input or textarea or contenteditable
+            if (
+                event.target &&
+                (
+                    /^(input|textarea)$/i.test(event.target.tagName) ||
+                    event.target.isContentEditable
+                )
+            ) return;
+
+            if (event.ctrlKey && event.shiftKey) {
+                // Scroll to replies to your posts
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    scrollToReply(false, true);
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    scrollToReply(false, false);
+                }
+            } else if (event.ctrlKey) {
+                // Scroll to your own posts
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    scrollToReply(true, true);
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    scrollToReply(true, false);
+                }
+            }
+        }
+
+        // Remove highlight and update on hash change
+        window.addEventListener('hashchange', () => {
+            if (lastHighlighted) {
+                lastHighlighted.classList.remove('target-highlight');
+                lastHighlighted = null;
+            }
+            const hash = location.hash.replace('#', '');
+            if (hash) {
+                const postElem = document.getElementById(hash);
+                if (postElem) {
+                    const innerPost = postElem.querySelector('.innerPost');
+                    if (innerPost) {
+                        innerPost.classList.add('target-highlight');
+                        lastHighlighted = innerPost;
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('keydown', onKeyDown);
+    }
+    // Init
+    featureScrollBetweenPosts();
 
     // BBCODE Combination keys and Tags
     const bbCodeCombinations = new Map([
@@ -2531,5 +2695,5 @@ onReady(async function () {
         }
     }
     moveUploadsBelowOP();
-
+/// END ////
 });
