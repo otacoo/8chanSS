@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.32.0
+// @version      1.33.0
 // @namespace    8chanSS
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -20,13 +20,6 @@
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
 // ==/UserScript==
 
-function onReady(fn) {
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", fn, { once: true });
-    } else {
-        fn();
-    }
-}
 (function () {
     const userTheme = localStorage.selectedTheme;
     if (!userTheme) return;
@@ -72,11 +65,18 @@ function onReady(fn) {
     try {
         updateLocalStorage(
             ["hoveringImage"],           
-            { inlineReplies: "true" }    
+            {}    
         );
     } catch (e) {
     }
 })();
+function onReady(fn) {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", fn, { once: true });
+    } else {
+        fn();
+    }
+}
 onReady(async function () {
     const scriptSettings = {
         site: {
@@ -88,8 +88,8 @@ onReady(async function () {
                     openInNewTab: {
                         label: "Always open in new tab",
                         default: false,
-                    },
-                },
+                    }
+                }
             },
             enableBottomHeader: { label: "Bottom Header", default: false },
             enableScrollSave: {
@@ -99,16 +99,17 @@ onReady(async function () {
                     showUnreadLine: {
                         label: "Show Unread Line",
                         default: true,
-                    },
-                },
+                    }
+                }
             },
-            enableScrollArrows: { label: "Show Up/Down Arrows", default: false, },
-            hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100, },
+            enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
+            hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
-            enableThreadImageHover: { label: "Thread Image Hover", default: true, },
-            watchThreadOnReply: { label: "Watch Thread on Reply", default: true, },
-            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true, },
+            enableThreadImageHover: { label: "Thread Image Hover", default: true },
+            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
+            watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
             beepOnYou: { label: "Beep on (You)", default: false },
             notifyOnYou: {
                 label: "Notify when (You) (!)",
@@ -119,39 +120,28 @@ onReady(async function () {
                         default: "",
                         type: "text",
                         maxLength: 8
-                    },
-                },
+                    }
+                }
             },
-            highlightOnYou: { label: "Highlight (You) posts", default: true },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
             blurSpoilers: {
                 label: "Blur Spoilers",
                 default: false,
                 subOptions: {
                     removeSpoilers: {
                         label: "Remove Spoilers",
-                        default: false,
-                    },
-                },
+                        default: false
+                    }
+                }
             },
-            deleteSavedName: { label: "Delete Name Checkbox", default: true },
+            deleteSavedName: { label: "Delete Name Checkbox", default: true }
         },
         catalog: {
-            enableCatalogImageHover: { label: "Catalog Image Hover", default: true, },
+            enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
+            enableThreadHiding: { label: "Enable Thread Hiding", default: false }
         },
         styling: {
-            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false, },
-            enableFitReplies: { label: "Fit Replies", default: false },
-            enableSidebar: {
-                label: "Enable Sidebar",
-                default: false,
-                subOptions: {
-                    leftSidebar: {
-                        label: "Sidebar on Left",
-                        default: false,
-                    },
-                },
-            },
+            _siteTitle: { type: "title", label: ":: Site Styling" }, 
+            _stylingSection1: { type: "separator" },
             hideAnnouncement: { label: "Hide Announcement", default: false },
             hidePanelMessage: { label: "Hide Panel Message", default: false },
             hidePostingForm: {
@@ -160,12 +150,28 @@ onReady(async function () {
                 subOptions: {
                     showCatalogForm: {
                         label: "Don't Hide in Catalog",
-                        default: false,
-                    },
-                },
+                        default: false
+                    }
+                }
             },
             hideBanner: { label: "Hide Board Banners", default: false },
             hideDefaultBL: { label: "Hide Default Board List", default: true },
+            _threadTitle: { type: "title", label: ":: Thread Styling" }, 
+            _stylingSection2: { type: "separator" },
+            highlightOnYou: { label: "Highlight (You) posts", default: true },
+            enableFitReplies: { label: "Fit Replies", default: false },
+            enableSidebar: {
+                label: "Enable Sidebar",
+                default: false,
+                subOptions: {
+                    leftSidebar: {
+                        label: "Sidebar on Left",
+                        default: false
+                    },
+                },
+            },
+            threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },            
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, }
         },
     };
     const flatSettings = {};
@@ -218,6 +224,7 @@ onReady(async function () {
             hideAnnouncement: "hide-announcement",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",
+            threadHideCloseBtn: "hide-close-btn",
         };
         if (enableSidebar && !enableSidebar_leftSidebar) {
             document.documentElement.classList.add("ss-sidebar");
@@ -254,10 +261,10 @@ onReady(async function () {
         if (!mainPanel) return;
 
         if (enableSidebar && enableSidebar_leftSidebar) {
-            mainPanel.style.marginLeft = "305px";
+            mainPanel.style.marginLeft = "19rem";
             mainPanel.style.marginRight = "0";
         } else if (enableSidebar) {
-            mainPanel.style.marginRight = "305px";
+            mainPanel.style.marginRight = "19rem";
             mainPanel.style.marginLeft = "0";
         } else {
             mainPanel.style.marginRight = "0";
@@ -396,10 +403,10 @@ onReady(async function () {
     let css = "";
 
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-announcement #dynamicAnnouncement,:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}#watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}";
+        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,:root.hide-announcement #dynamicAnnouncement,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}#watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}";
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}#quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}#quick-reply:focus-within,#quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:300px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.disable-banner #bannerImage{display:none}:root.ss-sidebar #bannerImage{width:305px;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:305px;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.inlineQuote .replyPreview{margin-left:20px;border-left:1px solid #ccc;padding-left:10px}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:has(.divMessage:nth-child(3) > .quoteLink.you:first-child){border-left:solid #dd003e 3px}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}.postCell::before{display:inline!important;height:auto!important}";
+        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}#quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}#quick-reply:focus-within,#quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:300px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.disable-banner #bannerImage{display:none}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid #dd003e 3px}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}.postCell::before{display:inline!important;height:auto!important}";
     }
     if (/\/catalog\.html$/.test(currentPath)) {
         css += "#dynamicAnnouncement{display:none}#postingForm{margin:2em auto}";
@@ -431,6 +438,9 @@ onReady(async function () {
     if (await getSetting("scrollToBottom")) {
         preventFooterScrollIntoView();
     }
+    if (await getSetting("enableThreadHiding")) {
+        featureCatalogThreadHideShortcut();
+    }
     async function initImageHover() {
         const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
         let enabled = false;
@@ -450,8 +460,8 @@ onReady(async function () {
         menu = document.createElement("div");
         menu.id = "8chanSS-menu";
         menu.style.position = "fixed";
-        menu.style.top = "80px";
-        menu.style.left = "30px";
+        menu.style.top = "4rem"; 
+        menu.style.left = "20rem"; 
         menu.style.zIndex = "99999";
         menu.style.background = "#222";
         menu.style.color = "#fff";
@@ -666,7 +676,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.textContent = "Press Save to apply changes. Page will reload. - Ver. 1.32.0";
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.33.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -678,6 +688,24 @@ onReady(async function () {
 
         Object.keys(categorySettings).forEach((key) => {
             const setting = categorySettings[key];
+            if (setting.type === "separator") {
+                const hr = document.createElement("hr");
+                hr.style.border = "none";
+                hr.style.borderTop = "1px solid #444";
+                hr.style.margin = "12px 0";
+                container.appendChild(hr);
+                return;
+            }
+            if (setting.type === "title") {
+                const title = document.createElement("div");
+                title.textContent = setting.label;
+                title.style.fontWeight = "bold";
+                title.style.fontSize = "1rem";
+                title.style.margin = "10px 0 6px 0";
+                title.style.opacity = "0.9";
+                container.appendChild(title);
+                return;
+            }
             const parentRow = document.createElement("div");
             parentRow.style.display = "flex";
             parentRow.style.alignItems = "center";
@@ -1047,12 +1075,18 @@ onReady(async function () {
     }
     function featureImageHover() {
         const MEDIA_MAX_WIDTH = "90vw";
-        const MEDIA_MAX_HEIGHT = "99vh";
+        const MEDIA_MAX_HEIGHT = "98vh";
         const MEDIA_OPACITY_LOADING = "0.75";
         const MEDIA_OPACITY_LOADED = "1";
-        const MEDIA_OFFSET = 50; 
-        const MEDIA_BOTTOM_MARGIN = 32; 
+        const MEDIA_OFFSET = 5; 
+        const MEDIA_BOTTOM_MARGIN = 3; 
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
+        function getMediaOffset() {
+            return window.innerWidth * (MEDIA_OFFSET / 100);
+        }
+        function getMediaBottomMargin() {
+            return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
+        }
         let floatingMedia = null;
         let cleanupFns = [];
         let currentAudioIndicator = null;
@@ -1065,20 +1099,16 @@ onReady(async function () {
             const vh = window.innerHeight;
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
-            let x = event.clientX + MEDIA_OFFSET;
-            if (x + mw > vw) {
-                if (event.clientX - MEDIA_OFFSET - mw >= 0) {
-                    x = event.clientX - MEDIA_OFFSET - mw;
-                } else {
-                    x = vw - mw - MEDIA_OFFSET;
-                }
-            }
+
+            const MEDIA_OFFSET_PX = getMediaOffset();
+            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
+            let x = event.clientX + MEDIA_OFFSET_PX;
             x = clamp(x, 0, vw - mw);
             let y = event.clientY;
-            if (y + mh > vh - MEDIA_BOTTOM_MARGIN) {
-                y = vh - mh - MEDIA_BOTTOM_MARGIN;
+            if (y + mh > vh - MEDIA_BOTTOM_MARGIN_PX) {
+                y = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
             }
-            y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN);
+            y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
 
             floatingMedia.style.left = `${x}px`;
             floatingMedia.style.top = `${y}px`;
@@ -1089,26 +1119,22 @@ onReady(async function () {
             const vh = window.innerHeight;
             const mw = floatingMedia.offsetWidth || 320;
             const mh = floatingMedia.offsetHeight || 240;
+
+            const MEDIA_OFFSET_PX = getMediaOffset();
+            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
             let x = vw / 2, y = vh / 2;
             if (event && typeof event.clientX === "number" && typeof event.clientY === "number") {
-                x = event.clientX + MEDIA_OFFSET;
-                if (x + mw > vw) {
-                    if (event.clientX - MEDIA_OFFSET - mw >= 0) {
-                        x = event.clientX - MEDIA_OFFSET - mw;
-                    } else {
-                        x = vw - mw - MEDIA_OFFSET;
-                    }
-                }
+                x = event.clientX + MEDIA_OFFSET_PX;
                 x = clamp(x, 0, vw - mw);
 
                 y = event.clientY;
-                if (y + mh > vh - MEDIA_BOTTOM_MARGIN) {
-                    y = vh - mh - MEDIA_BOTTOM_MARGIN;
+                if (y + mh > vh - MEDIA_BOTTOM_MARGIN_PX) {
+                    y = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
                 }
-                y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN);
+                y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
             } else {
                 x = clamp((vw - mw) / 2, 0, vw - mw);
-                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN) / 2, 0, vh - mh - MEDIA_BOTTOM_MARGIN);
+                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN_PX) / 2, 0, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
             }
             floatingMedia.style.left = `${x}px`;
             floatingMedia.style.top = `${y}px`;
@@ -1594,10 +1620,9 @@ onReady(async function () {
             addCloseListener();
         });
     }
-
     function featureMarkYourPost() {
         function getBoardName() {
-            const postCell = document.querySelector('.postCell[data-boarduri]');
+            const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
             if (postCell) return postCell.getAttribute('data-boarduri');
             const match = location.pathname.match(/^\/([^\/]+)\//);
             return match ? match[1] : 'unknown';
@@ -1621,7 +1646,7 @@ onReady(async function () {
         }
         document.body.addEventListener('click', function (e) {
             if (e.target.matches('.extraMenuButton')) {
-                const postCell = e.target.closest('.postCell');
+                const postCell = e.target.closest('.postCell, .opCell');
                 setTimeout(() => {
                     const menu = document.querySelector(MENU_SELECTOR);
                     if (menu && postCell) {
@@ -2114,7 +2139,6 @@ onReady(async function () {
 
         hideThreadsOnRefresh();
     }
-    featureCatalogThreadHideShortcut();
     const captchaInput = document.getElementById("QRfieldCaptcha");
     if (captchaInput) {
         captchaInput.autocomplete = "off";

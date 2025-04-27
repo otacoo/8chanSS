@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.32.0
+// @version      1.33.0
 // @namespace    8chanSS
 // @description  Userscript to style 8chan
 // @author       otakudude
