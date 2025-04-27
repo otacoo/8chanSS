@@ -62,7 +62,7 @@ function onReady(fn) {
     try {
         updateLocalStorage(
             ["hoveringImage"],           // Keys to remove
-            { inlineReplies: "true" }    // Keys to set
+            {}    // Keys to set
         );
     } catch (e) {
         // Ignore errors (e.g., storage not available)
