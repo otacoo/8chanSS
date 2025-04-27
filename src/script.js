@@ -134,18 +134,8 @@ onReady(async function () {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true, },
         },
         styling: {
-            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false, },
-            enableFitReplies: { label: "Fit Replies", default: false },
-            enableSidebar: {
-                label: "Enable Sidebar",
-                default: false,
-                subOptions: {
-                    leftSidebar: {
-                        label: "Sidebar on Left",
-                        default: false,
-                    },
-                },
-            },
+            _siteTitle: { type: "title", label: ":: Site Styling" },
+            _stylingSection1: { type: "separator" },
             hideAnnouncement: { label: "Hide Announcement", default: false },
             hidePanelMessage: { label: "Hide Panel Message", default: false },
             hidePostingForm: {
@@ -159,7 +149,22 @@ onReady(async function () {
                 },
             },
             hideBanner: { label: "Hide Board Banners", default: false },
-            hideDefaultBL: { label: "Hide Default Board List", default: true },
+            hideDefaultBL: { label: "Hide Default Board List", default: true },           
+            _threadTitle: { type: "title", label: ":: Thread Styling" },
+            _stylingSection2: { type: "separator" }, 
+            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false, },
+            enableFitReplies: { label: "Fit Replies", default: false },
+            enableSidebar: {
+                label: "Enable Sidebar",
+                default: false,
+                subOptions: {
+                    leftSidebar: {
+                        label: "Sidebar on Left",
+                        default: false,
+                    },
+                },
+            },
+
         },
     };
 
@@ -503,8 +508,8 @@ onReady(async function () {
         menu = document.createElement("div");
         menu.id = "8chanSS-menu";
         menu.style.position = "fixed";
-        menu.style.top = "80px";
-        menu.style.left = "30px";
+        menu.style.top = "4rem"; // Position of menu
+        menu.style.left = "20rem"; // Position of menu
         menu.style.zIndex = "99999";
         menu.style.background = "#222";
         menu.style.color = "#fff";
@@ -751,7 +756,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.textContent = "Press Save to apply changes. Page will reload. - Ver. <%= version %>";
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. <%= version %></a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -765,6 +770,28 @@ onReady(async function () {
 
         Object.keys(categorySettings).forEach((key) => {
             const setting = categorySettings[key];
+
+            // --- Separator ---
+            if (setting.type === "separator") {
+                const hr = document.createElement("hr");
+                hr.style.border = "none";
+                hr.style.borderTop = "1px solid #444";
+                hr.style.margin = "12px 0";
+                container.appendChild(hr);
+                return;
+            }
+
+            // --- Section Title ---
+            if (setting.type === "title") {
+                const title = document.createElement("div");
+                title.textContent = setting.label;
+                title.style.fontWeight = "bold";
+                title.style.fontSize = "1rem";
+                title.style.margin = "10px 0 6px 0";
+                title.style.opacity = "0.9";
+                container.appendChild(title);
+                return;
+            }
 
             // Parent row: flex for checkbox, label, chevron
             const parentRow = document.createElement("div");
