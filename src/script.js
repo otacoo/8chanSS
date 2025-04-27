@@ -1222,14 +1222,22 @@ onReady(async function () {
     function featureImageHover() {
         // --- Config ---
         const MEDIA_MAX_WIDTH = "90vw";
-        const MEDIA_MAX_HEIGHT = "99vh";
+        const MEDIA_MAX_HEIGHT = "98vh";
         const MEDIA_OPACITY_LOADING = "0.75";
         const MEDIA_OPACITY_LOADED = "1";
-        const MEDIA_OFFSET = 50; // Margin between cursor and image
-        const MEDIA_BOTTOM_MARGIN = 32; // Margin from bottom of viewport to avoid browser UI
+        const MEDIA_OFFSET = 5; // Margin between cursor and image, in vw
+        const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
 
-        // --- State ---
+        // Calculate and convert vw/vh to numbers in pixels
+        function getMediaOffset() {
+            return window.innerWidth * (MEDIA_OFFSET / 100);
+        }
+        function getMediaBottomMargin() {
+            return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
+        }
+
+        // --- Initial state ---
         let floatingMedia = null;
         let cleanupFns = [];
         let currentAudioIndicator = null;
@@ -1247,26 +1255,19 @@ onReady(async function () {
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
 
-            // Always to the right of the cursor, with margin
-            let x = event.clientX + MEDIA_OFFSET;
-            // If it would overflow right, move to left of cursor if possible
-            if (x + mw > vw) {
-                // Try to fit to the left of the cursor
-                if (event.clientX - MEDIA_OFFSET - mw >= 0) {
-                    x = event.clientX - MEDIA_OFFSET - mw;
-                } else {
-                    // Clamp to right edge
-                    x = vw - mw - MEDIA_OFFSET;
-                }
-            }
+            const MEDIA_OFFSET_PX = getMediaOffset();
+            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
+
+            // Always to the right of the cursor, with margin, but clamp to right edge
+            let x = event.clientX + MEDIA_OFFSET_PX;
             x = clamp(x, 0, vw - mw);
 
             // Vertically, align top to cursor, but clamp so it never touches bottom
             let y = event.clientY;
-            if (y + mh > vh - MEDIA_BOTTOM_MARGIN) {
-                y = vh - mh - MEDIA_BOTTOM_MARGIN;
+            if (y + mh > vh - MEDIA_BOTTOM_MARGIN_PX) {
+                y = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
             }
-            y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN);
+            y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
 
             floatingMedia.style.left = `${x}px`;
             floatingMedia.style.top = `${y}px`;
@@ -1280,28 +1281,24 @@ onReady(async function () {
             const mw = floatingMedia.offsetWidth || 320;
             const mh = floatingMedia.offsetHeight || 240;
 
+            const MEDIA_OFFSET_PX = getMediaOffset();
+            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
+
             // Use last mouse position if available, else center
             let x = vw / 2, y = vh / 2;
             if (event && typeof event.clientX === "number" && typeof event.clientY === "number") {
-                x = event.clientX + MEDIA_OFFSET;
-                if (x + mw > vw) {
-                    if (event.clientX - MEDIA_OFFSET - mw >= 0) {
-                        x = event.clientX - MEDIA_OFFSET - mw;
-                    } else {
-                        x = vw - mw - MEDIA_OFFSET;
-                    }
-                }
+                x = event.clientX + MEDIA_OFFSET_PX;
                 x = clamp(x, 0, vw - mw);
 
                 y = event.clientY;
-                if (y + mh > vh - MEDIA_BOTTOM_MARGIN) {
-                    y = vh - mh - MEDIA_BOTTOM_MARGIN;
+                if (y + mh > vh - MEDIA_BOTTOM_MARGIN_PX) {
+                    y = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
                 }
-                y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN);
+                y = Math.min(y, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
             } else {
                 // Fallback: center
                 x = clamp((vw - mw) / 2, 0, vw - mw);
-                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN) / 2, 0, vh - mh - MEDIA_BOTTOM_MARGIN);
+                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN_PX) / 2, 0, vh - mh - MEDIA_BOTTOM_MARGIN_PX);
             }
             floatingMedia.style.left = `${x}px`;
             floatingMedia.style.top = `${y}px`;
@@ -1901,6 +1898,7 @@ onReady(async function () {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // Feature: Mark Posts as Yours ---
     function featureMarkYourPost() {
         // --- Board Key Detection ---
         function getBoardName() {
