@@ -99,12 +99,6 @@
     z-index: 999;
 }
 
-.inlineQuote .replyPreview {
-    margin-left: 20px;
-    border-left: 1px solid #ccc;
-    padding-left: 10px;
-}
-
 .nestedQuoteLink {
     text-decoration: underline dashed !important;
 }
@@ -123,7 +117,7 @@
     border-left: dashed #68b723 3px;
 }
 
-:root.highlight-you .innerPost:has(.divMessage:nth-child(3) > .quoteLink.you:first-child) {
+:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you) {
     border-left: solid #dd003e 3px;
 }
 
