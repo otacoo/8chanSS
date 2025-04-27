@@ -267,10 +267,10 @@ onReady(async function () {
         if (!mainPanel) return;
 
         if (enableSidebar && enableSidebar_leftSidebar) {
-            mainPanel.style.marginLeft = "305px";
+            mainPanel.style.marginLeft = "19rem";
             mainPanel.style.marginRight = "0";
         } else if (enableSidebar) {
-            mainPanel.style.marginRight = "305px";
+            mainPanel.style.marginRight = "19rem";
             mainPanel.style.marginLeft = "0";
         } else {
             mainPanel.style.marginRight = "0";

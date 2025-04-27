@@ -21,6 +21,13 @@
     height: 130px;
 }
 
+:root.sticky-qr #selectedDiv,
+#selectedDivQr {
+    display: inline-flex;
+    overflow: scroll hidden;
+    max-width: 300px;
+}
+
 #qrbody {
     min-width: 300px;
 }
@@ -62,9 +69,10 @@
 :root.disable-banner #bannerImage {
     display: none;
 }
-/* Right Sidebar */
+
+/* Banner Right Sidebar */
 :root.ss-sidebar #bannerImage {
-    width: 305px;
+    width: 19rem;
     right: 0;
     position: fixed;
     top: 26px;
@@ -73,9 +81,10 @@
 :root.ss-sidebar.bottom-header #bannerImage {
     top: 0 !important;
 }
-/* Left Sidebar */
+
+/* banner Left Sidebar */
 :root.ss-leftsidebar #bannerImage {
-    width: 305px;
+    width: 19rem;
     left: 0;
     position: fixed;
     top: 26px;
@@ -85,11 +94,11 @@
     top: 0 !important;
 }
 
+/* Posts */
 .quoteTooltip {
     z-index: 999;
 }
 
-/* Posts */
 .inlineQuote .replyPreview {
     margin-left: 20px;
     border-left: 1px solid #ccc;
