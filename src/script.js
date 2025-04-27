@@ -978,22 +978,7 @@ onReady(async function () {
 
             container.appendChild(wrapper);
         });
-
-        // Add minimal CSS for chevron (only once)
-        if (!document.getElementById("ss-chevron-style")) {
-            const style = document.createElement("style");
-            style.id = "ss-chevron-style";
-            style.textContent = `
-                      .ss-chevron {
-                          transition: transform 0.2s;
-                          margin-left: 6px;
-                          font-size: 12px;
-                          display: inline-block;
-                      }
-                  `;
-            document.head.appendChild(style);
-        }
-
+        
         return container;
     }
 

@@ -151,3 +151,10 @@ nav.navHeader {
 .floatingMenu.focused {
     z-index: 305 !important;
 }
+/* 8chanSS settings custom class */
+.ss-chevron {
+    transition: transform 0.2s;
+    margin-left: 6px;
+    font-size: 12px;
+    display: inline-block;
+}
