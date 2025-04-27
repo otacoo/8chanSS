@@ -366,9 +366,11 @@ onReady(async function () {
             { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
             { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
+            { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
             { keys: ["ALT", "W"], action: "Watch Thread" },
             { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
-            { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
+            { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
+            { keys: ["CTRL", "SHIFT", "UP/DOWN"], action: "Scroll between Replies to You" },
             { keys: ["Ctrl", "B"], action: "Bold text" },
             { keys: ["Ctrl", "I"], action: "Italic text" },
             { keys: ["Ctrl", "U"], action: "Underline text" },
@@ -523,7 +525,7 @@ onReady(async function () {
         menu.style.display = "none";
         menu.style.minWidth = "220px";
         menu.style.width = "100%";
-        menu.style.maxWidth = "365px";
+        menu.style.maxWidth = "450px";
         menu.style.fontFamily = "sans-serif";
         menu.style.userSelect = "none";
 
@@ -597,7 +599,7 @@ onReady(async function () {
 
         // Tab content container
         const tabContent = document.createElement("div");
-        tabContent.style.padding = "15px 18px";
+        tabContent.style.padding = "15px 16px";
         tabContent.style.maxHeight = "60vh";
         tabContent.style.overflowY = "auto";
 
