@@ -6,7 +6,7 @@ A :warning: WORK IN PROGRESS :warning: userscript to add functionality to 8chan,
 ## [![install](https://github.com/user-attachments/assets/9a9d62fd-0b3e-460b-bb6c-092dd38b2b8d)](https://github.com/otacoo/8chanSS/raw/refs/heads/main/builds/8chanSS.user.js)
 
 
-#### Install instructions
+### Install instructions
 
 First install a userscript manager:
 - **Firefox**: Requires the [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/) addon.
@@ -15,12 +15,12 @@ First install a userscript manager:
 Then press the big install button to install the script.
 
 
-#### Configure
+### Configure
 - Check in the 8chan header for the 8chanSS menu button
 - Alternatively, press `CTRL` + `F1` to open the menu
 
 
-#### What it does:
+### What it does:
 - Catalog links for the header
 - Image hover for catalog and thread images, videos and audio (new)
 - Image Hover for spoilers
@@ -44,7 +44,7 @@ Then press the big install button to install the script.
 
 More incoming...
 
-#### Keyboard Shortcuts:
+### Keyboard Shortcuts:
 
 `CTRL` + `F1` : Open 8chanSS settings menu
 
@@ -70,11 +70,11 @@ More incoming...
 
 `CTRL` + `M` : Add moe tags
 
-#### How to add boards to your header:
+### How to add boards to your header:
 
 ![fav](https://github.com/user-attachments/assets/8b97ca2b-8e9e-46e3-bc8b-37e4c7c42712)
 
-#### How to block custom themes:
+### How to block custom themes:
 
 **Note:** Userscripts CANNOT cannot block network requests directly. I have tried to block the custom theme from loading on page load to avoid flashing of unstyled content (FOUC), it minimizes the issue but doesn't fix it.
 If you use uBlock Origin you can more directly prevent the custom CSS from loading altogether with the following:
