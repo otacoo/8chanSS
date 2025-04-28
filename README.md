@@ -76,7 +76,7 @@ More incoming...
 
 ### How to block custom themes:
 
-**Note:** Userscripts CANNOT cannot block network requests directly. I have tried to block the custom theme from loading on page load to avoid flashing of unstyled content (FOUC), it minimizes the issue but doesn't fix it.
+**Note:** Userscripts CANNOT block network requests directly. I have tried to block the custom theme from loading on page load to avoid flashing of unstyled content (FOUC), it minimizes the issue but doesn't fix it.
 If you use uBlock Origin you can more directly prevent the custom CSS from loading altogether with the following:
 
 Add this to uBlock's *My Filters* page and press Save Changes, then restart your browser.
