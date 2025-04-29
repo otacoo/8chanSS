@@ -1,3 +1,11 @@
+////////// HELPERS ///////////////////////
+function onReady(fn) {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", fn, { once: true });
+    } else {
+        fn();
+    }
+}
 ///// JANK THEME FLASH FIX LOAD ASAP /////////
 (function () {
     // Get the user's selected theme from localStorage
@@ -53,21 +61,13 @@
 
     try {
         updateLocalStorage(
-            ["hoveringImage"],           // Keys to remove
-            {}    // Keys to set
+            ["hoveringImage"],      // Keys to remove
+            {}      // Keys to set
         );
     } catch (e) {
         // Ignore errors (e.g., storage not available)
     }
 })();
-////////// HELPERS ///////////////////////
-function onReady(fn) {
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", fn, { once: true });
-    } else {
-        fn();
-    }
-}
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     // --- Default Settings ---
@@ -100,7 +100,7 @@ onReady(async function () {
         },
         threads: {
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            enableNestedReplies: { label: "Enabled Nested Replies", default: false },
+            enableNestedReplies: { label: "Enabled Inline Replies", default: false },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -132,7 +132,8 @@ onReady(async function () {
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
-            enableThreadHiding: { label: "Enable Thread Hiding", default: false }
+            enableThreadHiding: { label: "Enable Thread Hiding", default: false },
+            openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false }
         },
         styling: {
             _siteTitle: { type: "title", label: ":: Site Styling" }, // Site Styling
@@ -162,12 +163,43 @@ onReady(async function () {
                     leftSidebar: {
                         label: "Sidebar on Left",
                         default: false
-                    },
-                },
+                    }
+                }
             },
             threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, }
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
+            hideCheckboxes: { label: "Hide Checkboxes", default: false }
         },
+        miscel: {
+            switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
+            truncFilenames: {
+                label: "Truncate filenames",
+                default: false,
+                subOptions: {
+                    customTrunc: {
+                        label: "Max filename length (min: 5, max: 50)",
+                        default: 15,
+                        type: "number",
+                        min: 5,
+                        max: 50
+                    }
+                }
+            },
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
+            enableTheSauce: {
+                label: "Sauce Links",
+                default: false,
+                subOptions: {
+                    sauceUrls: {
+                        label: "Sauce URLs (1 per line, # for comment)",
+                        default: "",
+                        type: "textarea",
+                        rows: 3,
+                        placeholder: "https://iqdb.org/?url=%IMG\n#This is a comment"
+                    }
+                }
+            }
+        }
     };
 
     // Flatten settings for backward compatibility with existing functions
@@ -201,6 +233,7 @@ onReady(async function () {
         if (val === null) return flatSettings[key].default;
         if (flatSettings[key].type === "number") return Number(val);
         if (flatSettings[key].type === "text") return String(val).replace(/[<>"']/g, "").slice(0, flatSettings[key].maxLength || 32);
+        if (flatSettings[key].type === "textarea") return String(val);
         return val === "true";
     }
 
@@ -230,7 +263,9 @@ onReady(async function () {
             hideAnnouncement: "hide-announcement",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",
-            threadHideCloseBtn: "hide-close-btn"
+            threadHideCloseBtn: "hide-close-btn",
+            hideCheckboxes: "hide-checkboxes",
+            hideNoCookieLink: "hide-nocookie"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
@@ -290,144 +325,6 @@ onReady(async function () {
     // Call the function on DOM ready
     onReady(featureSidebar);
 
-    // --- Menu Icon ---
-    const themeSelector = document.getElementById("themesBefore");
-    let link = null;
-    let bracketSpan = null;
-    if (themeSelector) {
-        bracketSpan = document.createElement("span");
-        bracketSpan.textContent = "] [ ";
-        link = document.createElement("a");
-        link.id = "8chanSS-icon";
-        link.href = "#";
-        link.textContent = "8chanSS";
-        link.style.fontWeight = "bold";
-
-        themeSelector.parentNode.insertBefore(
-            bracketSpan,
-            themeSelector.nextSibling
-        );
-        themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
-    }
-
-    // --- Shortcuts tab ---
-    function createShortcutsTab() {
-        const container = document.createElement("div");
-        // Title
-        const title = document.createElement("h3");
-        title.textContent = "Keyboard Shortcuts";
-        title.style.margin = "0 0 15px 0";
-        title.style.fontSize = "16px";
-        container.appendChild(title);
-        // Shortcuts table
-        const table = document.createElement("table");
-        table.style.width = "100%";
-        table.style.borderCollapse = "collapse";
-        // Table styles
-        const tableStyles = {
-            th: {
-                textAlign: "left",
-                padding: "8px 5px",
-                borderBottom: "1px solid #444",
-                fontSize: "14px",
-                fontWeight: "bold",
-            },
-            td: {
-                padding: "8px 5px",
-                borderBottom: "1px solid #333",
-                fontSize: "13px",
-            },
-            kbd: {
-                background: "#333",
-                border: "1px solid #555",
-                borderRadius: "3px",
-                padding: "2px 5px",
-                fontSize: "12px",
-                fontFamily: "monospace",
-            },
-        };
-
-        // Create header row
-        const headerRow = document.createElement("tr");
-        const shortcutHeader = document.createElement("th");
-        shortcutHeader.textContent = "Shortcut";
-        Object.assign(shortcutHeader.style, tableStyles.th);
-        headerRow.appendChild(shortcutHeader);
-
-        const actionHeader = document.createElement("th");
-        actionHeader.textContent = "Action";
-        Object.assign(actionHeader.style, tableStyles.th);
-        headerRow.appendChild(actionHeader);
-
-        table.appendChild(headerRow);
-
-        // Shortcut data
-        const shortcuts = [
-            { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
-            { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
-            { keys: ["Ctrl", "Enter"], action: "Submit post" },
-            { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
-            { keys: ["ALT", "W"], action: "Watch Thread" },
-            { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
-            { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
-            { keys: ["CTRL", "SHIFT", "UP/DOWN"], action: "Scroll between Replies to You" },
-            { keys: ["Ctrl", "B"], action: "Bold text" },
-            { keys: ["Ctrl", "I"], action: "Italic text" },
-            { keys: ["Ctrl", "U"], action: "Underline text" },
-            { keys: ["Ctrl", "S"], action: "Spoiler text" },
-            { keys: ["Ctrl", "D"], action: "Doom text" },
-            { keys: ["Ctrl", "M"], action: "Moe text" },
-            { keys: ["Alt", "C"], action: "Code block" },
-        ];
-
-        // Create rows for each shortcut
-        shortcuts.forEach((shortcut) => {
-            const row = document.createElement("tr");
-
-            // Shortcut cell
-            const shortcutCell = document.createElement("td");
-            Object.assign(shortcutCell.style, tableStyles.td);
-
-            // Create kbd elements for each key
-            shortcut.keys.forEach((key, index) => {
-                const kbd = document.createElement("kbd");
-                kbd.textContent = key;
-                Object.assign(kbd.style, tableStyles.kbd);
-                shortcutCell.appendChild(kbd);
-
-                // Add + between keys
-                if (index < shortcut.keys.length - 1) {
-                    const plus = document.createTextNode(" + ");
-                    shortcutCell.appendChild(plus);
-                }
-            });
-
-            row.appendChild(shortcutCell);
-
-            // Action cell
-            const actionCell = document.createElement("td");
-            actionCell.textContent = shortcut.action;
-            Object.assign(actionCell.style, tableStyles.td);
-            row.appendChild(actionCell);
-
-            table.appendChild(row);
-        });
-
-        container.appendChild(table);
-
-        // Add note about BBCode shortcuts
-        const note = document.createElement("p");
-        note.textContent =
-            "Text formatting shortcuts work when text is selected or when inserting at cursor position.";
-        note.style.fontSize = "12px";
-        note.style.marginTop = "15px";
-        note.style.opacity = "0.7";
-        note.style.fontStyle = "italic";
-        container.appendChild(note);
-
-        return container;
-    }
-
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Custom CSS injection
@@ -456,7 +353,7 @@ onReady(async function () {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Feature Initialization based on Settings ---
-
+    // TODO: We could map this later, but I like it for easier reading and adding new items atm
     if (await getSetting("enableScrollSave")) {
         featureSaveScroll();
     }
@@ -468,6 +365,9 @@ onReady(async function () {
     }
     if (await getSetting("enableHeaderCatalogLinks")) {
         featureHeaderCatalogLinks();
+    }
+    if (await getSetting("openCatalogThreadNewTab")) {
+        catalogThreadsInNewTab();
     }
     if (await getSetting("deleteSavedName")) {
         featureDeleteNameCheckbox();
@@ -482,11 +382,18 @@ onReady(async function () {
         preventFooterScrollIntoView();
     }
     if (await getSetting("enableThreadHiding")) {
-        featureCatalogThreadHideShortcut();
+        featureCatalogHiding();
     }
     if (await getSetting("enableNestedReplies")) {
         localStorage.setItem("inlineReplies", "true");
         featureNestedReplies();
+    }
+    if (await getSetting("switchTimeFormat")) {
+        featureLabelCreated12h();
+    }
+    if (await getSetting("truncFilenames")) {
+        const filenameLength = await getSetting("truncFilenames_customTrunc");
+        truncateFilenames(filenameLength);
     }
 
     // Check if we should enable image hover based on the current page
@@ -504,6 +411,1468 @@ onReady(async function () {
     }
     // Init
     initImageHover();
+
+    // --- Feature: Save Scroll Position (anchor-aware, optimized)
+    async function featureSaveScroll() {
+        const MAX_PAGES = 50;
+        // Use URL without hash for storage key
+        const currentPage = window.location.origin + window.location.pathname + window.location.search;
+        const hasAnchor = !!window.location.hash;
+
+        // Only allow saving/restoring for URLs like "/<board>/res/<thread>.html"
+        const threadPagePattern = /^\/[^/]+\/res\/[^/]+\.html$/i;
+        function isThreadPage(urlPath) {
+            return threadPagePattern.test(urlPath);
+        }
+
+        async function getSavedScrollData() {
+            const savedData = await GM.getValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                null
+            );
+            if (!savedData) return null;
+            try {
+                return JSON.parse(savedData);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function saveScrollPosition() {
+            // Only save on thread pages
+            if (!isThreadPage(window.location.pathname)) return;
+            if (!(await getSetting("enableScrollSave"))) return;
+
+            const scrollPosition = window.scrollY;
+            const timestamp = Date.now();
+
+            // Only save if scrolled further down than last saved position
+            const savedData = await getSavedScrollData();
+            if (savedData && typeof savedData.position === "number") {
+                if (scrollPosition <= savedData.position) {
+                    // Do not update if not scrolled further down
+                    return;
+                }
+            }
+
+            // Store both the scroll position and timestamp using GM storage
+            await GM.setValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                JSON.stringify({
+                    position: scrollPosition,
+                    timestamp: timestamp,
+                })
+            );
+
+            await manageScrollStorage();
+        }
+
+        async function manageScrollStorage() {
+            // Get all GM storage keys
+            const allKeys = await GM.listValues();
+
+            // Filter for scroll position keys
+            const scrollKeys = allKeys.filter((key) =>
+                key.startsWith("8chanSS_scrollPosition_")
+            );
+
+            if (scrollKeys.length > MAX_PAGES) {
+                // Create array of objects with key and timestamp
+                const keyData = await Promise.all(
+                    scrollKeys.map(async (key) => {
+                        let data;
+                        try {
+                            const savedValue = await GM.getValue(key, null);
+                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
+                        } catch (e) {
+                            data = { position: 0, timestamp: 0 };
+                        }
+                        return {
+                            key: key,
+                            timestamp: data.timestamp || 0,
+                        };
+                    })
+                );
+
+                // Sort by timestamp (oldest first)
+                keyData.sort((a, b) => a.timestamp - b.timestamp);
+
+                // Remove oldest entries until we're under the limit
+                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
+                for (const item of keysToRemove) {
+                    await GM.deleteValue(item.key);
+                }
+            }
+        }
+
+        // Restore scroll position (always, if enabled)
+        async function restoreScrollPosition() {
+            // Only restore on thread pages
+            if (!isThreadPage(window.location.pathname)) return;
+            if (!(await getSetting("enableScrollSave"))) return;
+
+            const savedData = await getSavedScrollData();
+            if (!savedData || typeof savedData.position !== "number") return;
+            const position = savedData.position;
+
+            // Update the timestamp to "refresh" this entry
+            await GM.setValue(
+                `8chanSS_scrollPosition_${currentPage}`,
+                JSON.stringify({
+                    position: position,
+                    timestamp: Date.now(),
+                })
+            );
+
+            if (hasAnchor) {
+                // Do NOT scroll, let browser handle anchor
+                // But still add unread-line at saved position (not anchor)
+                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
+                return;
+            }
+
+            // Only restore scroll if a saved position exists (i.e., not first visit)
+            if (!isNaN(position)) {
+                window.scrollTo(0, position);
+                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
+            }
+        }
+
+        // Add an unread-line marker after the .postCell <div>
+        async function addUnreadLineAtViewportCenter(scrollPosition) {
+            // Only add unread-line if showUnreadLine is enabled
+            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
+                return;
+            }
+
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return;
+
+            // Find the element at the center of the viewport (after scroll restore)
+            const centerX = window.innerWidth / 2;
+            // Use the restored scroll position if provided, otherwise current
+            const centerY = (typeof scrollPosition === "number")
+                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
+                : window.innerHeight / 2;
+            let el = document.elementFromPoint(centerX, centerY);
+
+            // Traverse up to find the closest .postCell
+            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
+                el = el.parentElement;
+            }
+            if (!el || el === divPosts || !el.id) return;
+
+            // Ensure .postCell is a direct child of .divPosts
+            if (el.parentElement !== divPosts) return;
+
+            // Remove any existing unread-line
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+
+            // Insert the unread-line marker after the .postCell (as a sibling)
+            const marker = document.createElement("hr");
+            marker.id = "unread-line";
+            if (el.nextSibling) {
+                divPosts.insertBefore(marker, el.nextSibling);
+            } else {
+                divPosts.appendChild(marker);
+            }
+        }
+
+        // Use async event handlers
+        window.addEventListener("beforeunload", () => {
+            saveScrollPosition();
+        });
+
+        // For load event, restore scroll and then add unread-line if enabled
+        window.addEventListener("load", async () => {
+            await restoreScrollPosition();
+        });
+
+        // Initial restore attempt (in case the load event already fired)
+        await restoreScrollPosition();
+    }
+
+    // --- Remove unread-line at bottom of page ---
+    async function removeUnreadLineIfAtBottom() {
+        // Check if showUnreadLine is enabled
+        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
+            return;
+        }
+
+        // Check if user is at the bottom (allowing for a small margin)
+        const margin = 20; // px
+        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
+            const oldMarker = document.getElementById("unread-line");
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
+        }
+    }
+
+    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
+
+    // --- Feature: Header Catalog Links ---
+    async function featureHeaderCatalogLinks() {
+        async function appendCatalogToLinks() {
+            const navboardsSpan = document.getElementById("navBoardsSpan");
+            if (navboardsSpan) {
+                const links = navboardsSpan.getElementsByTagName("a");
+                const openInNewTab = await getSetting(
+                    "enableHeaderCatalogLinks_openInNewTab"
+                );
+
+                for (let link of links) {
+                    if (link.href && !link.href.endsWith("/catalog.html")) {
+                        link.href += "/catalog.html";
+
+                        // Set target="_blank" if the option is enabled
+                        if (openInNewTab) {
+                            link.target = "_blank";
+                            link.rel = "noopener noreferrer"; // Security best practice
+                        } else {
+                            link.target = "";
+                            link.rel = "";
+                        }
+                    }
+                }
+            }
+        }
+
+        appendCatalogToLinks();
+        const observer = new MutationObserver(appendCatalogToLinks);
+        const config = { childList: true, subtree: true };
+        const navboardsSpan = document.getElementById("navBoardsSpan");
+        if (navboardsSpan) {
+            observer.observe(navboardsSpan, config);
+        }
+    }
+
+    // Feature: Always Open Catalog Threads in New Tab ---
+    function catalogThreadsInNewTab() {
+        const catalogDiv = document.querySelector('.catalogDiv');
+        if (!catalogDiv) return;
+
+        function setLinksTargetBlank(cell) {
+            const link = cell.querySelector('a.linkThumb');
+            if (link) link.setAttribute('target', '_blank');
+        }
+
+        // Initial run for existing cells
+        catalogDiv.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
+
+        // Observe catalog container for new cells
+        if (catalogDiv) {
+            const observer = new MutationObserver(() => {
+                setLinksTargetBlank(catalogDiv);
+            });
+            observer.observe(catalogDiv, { childList: true, subtree: true });
+        }
+    }
+
+    // ---- Feature: Image/Video/Audio Hover Preview
+    function featureImageHover() {
+        // --- Config ---
+        const MEDIA_MAX_WIDTH = "90vw";
+        const MEDIA_OPACITY_LOADING = "0.75";
+        const MEDIA_OPACITY_LOADED = "1";
+        const MEDIA_OFFSET = 2; // Margin between cursor and image, in vw
+        const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
+        const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
+
+        // Calculate and convert vw/vh to numbers in pixels
+        function getMediaOffset() {
+            return window.innerWidth * (MEDIA_OFFSET / 100);
+        }
+        function getMediaBottomMargin() {
+            return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
+        }
+
+        // --- Initial state ---
+        let floatingMedia = null;
+        let cleanupFns = [];
+        let currentAudioIndicator = null;
+        let lastMouseEvent = null; // Store last mouse event for initial placement
+
+        // --- Utility: Clamp value between min and max ---
+        function clamp(val, min, max) {
+            return Math.max(min, Math.min(max, val));
+        }
+
+        // --- Utility: Position floating media to the right of mouse, never touching bottom ---
+        function positionFloatingMedia(event) {
+            if (!floatingMedia) return;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const mw = floatingMedia.offsetWidth || 0;
+            const mh = floatingMedia.offsetHeight || 0;
+
+            const MEDIA_OFFSET_PX = getMediaOffset();
+            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
+            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth; // Calculate scrollbar width
+
+            // Clamp to viewport
+            // Horizontally, always to the right of the cursor, with margin, but clamp to right edge (account for scrollbar)
+            let x = event.clientX + MEDIA_OFFSET_PX;
+            x = clamp(x, 0, vw - mw - SCROLLBAR_WIDTH);
+
+            // Vertically, align top to cursor, but clamp so it never touches bottom or top
+            let y = event.clientY;
+            const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
+            y = Math.max(0, Math.min(y, maxY));
+
+            floatingMedia.style.left = `${x}px`;
+            floatingMedia.style.top = `${y}px`;
+        }
+
+        // --- Utility: Clean up floating media and event listeners ---
+        function cleanupFloatingMedia() {
+            cleanupFns.forEach(fn => { try { fn(); } catch { } });
+            cleanupFns = [];
+            if (floatingMedia) {
+                if (["VIDEO", "AUDIO"].includes(floatingMedia.tagName)) {
+                    try {
+                        floatingMedia.pause();
+                        floatingMedia.removeAttribute("src");
+                        floatingMedia.load();
+                    } catch { }
+                }
+                floatingMedia.remove();
+                floatingMedia = null;
+            }
+            if (currentAudioIndicator && currentAudioIndicator.parentNode) {
+                currentAudioIndicator.parentNode.removeChild(currentAudioIndicator);
+                currentAudioIndicator = null;
+            }
+        }
+
+        // --- Helper: Get full media URL from thumbnail and MIME type ---
+        function getFullMediaSrc(thumbNode, filemime) {
+            if (!thumbNode || !filemime) return null;
+            const thumbnailSrc = thumbNode.getAttribute("src");
+            if (/\/t_/.test(thumbnailSrc)) {
+                let base = thumbnailSrc.replace(/\/t_/, "/");
+                base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|ogg|mp3|m4a|wav)$/i, "");
+                const mimeToExt = {
+                    "image/jpeg": ".jpg",
+                    "image/jpg": ".jpg",
+                    "image/png": ".png",
+                    "image/gif": ".gif",
+                    "image/webp": ".webp",
+                    "image/bmp": ".bmp",
+                    "video/mp4": ".mp4",
+                    "video/webm": ".webm",
+                    "audio/ogg": ".ogg",
+                    "audio/mpeg": ".mp3",
+                    "audio/x-m4a": ".m4a",
+                    "audio/x-wav": ".wav",
+                };
+                const ext = mimeToExt[filemime.toLowerCase()];
+                if (!ext) return null;
+                return base + ext;
+            }
+            if (
+                /\/spoiler\.png$/i.test(thumbnailSrc) ||
+                /\/custom\.spoiler$/i.test(thumbnailSrc) ||
+                /\/audioGenericThumb\.png$/i.test(thumbnailSrc)
+            ) {
+                const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
+                if (parentA && parentA.getAttribute("href")) {
+                    return parentA.getAttribute("href");
+                }
+                return null;
+            }
+            return null;
+        }
+
+        // --- Main hover handler ---
+        async function onThumbEnter(e) {
+            cleanupFloatingMedia();
+            lastMouseEvent = e; // Store the mouse event for initial placement
+            const thumb = e.currentTarget;
+            let filemime = null, fullSrc = null, isVideo = false, isAudio = false;
+
+            // Determine file type and source
+            if (thumb.tagName === "IMG") {
+                const parentA = thumb.closest("a.linkThumb, a.imgLink");
+                if (!parentA) return;
+                const href = parentA.getAttribute("href");
+                if (!href) return;
+                const ext = href.split(".").pop().toLowerCase();
+                filemime =
+                    parentA.getAttribute("data-filemime") ||
+                    {
+                        jpg: "image/jpeg",
+                        jpeg: "image/jpeg",
+                        png: "image/png",
+                        gif: "image/gif",
+                        webp: "image/webp",
+                        bmp: "image/bmp",
+                        mp4: "video/mp4",
+                        webm: "video/webm",
+                        ogg: "audio/ogg",
+                        mp3: "audio/mpeg",
+                        m4a: "audio/x-m4a",
+                        wav: "audio/wav",
+                    }[ext];
+                fullSrc = getFullMediaSrc(thumb, filemime);
+                isVideo = filemime && filemime.startsWith("video/");
+                isAudio = filemime && filemime.startsWith("audio/");
+            } else if (thumb.classList.contains("originalNameLink")) {
+                const href = thumb.getAttribute("href");
+                if (!href) return;
+                const ext = href.split(".").pop().toLowerCase();
+                if (["mp3", "ogg", "m4a", "wav"].includes(ext)) {
+                    filemime = {
+                        ogg: "audio/ogg",
+                        mp3: "audio/mpeg",
+                        m4a: "audio/x-m4a",
+                        wav: "audio/wav",
+                    }[ext];
+                    fullSrc = href;
+                    isAudio = true;
+                }
+            }
+
+            if (!fullSrc || !filemime) return;
+
+            // --- Setup floating media element ---
+            if (isAudio) {
+                // Audio: show indicator, play audio (hidden)
+                const container = thumb.tagName === "IMG"
+                    ? thumb.closest("a.linkThumb, a.imgLink")
+                    : thumb;
+                if (container && !container.style.position) {
+                    container.style.position = "relative";
+                }
+                floatingMedia = document.createElement("audio");
+                floatingMedia.src = fullSrc;
+                floatingMedia.controls = false;
+                floatingMedia.style.display = "none";
+                let volume = 0.5;
+                try {
+                    if (typeof getSetting === "function") {
+                        const v = await getSetting("hoverVideoVolume");
+                        if (typeof v === "number" && !isNaN(v)) {
+                            volume = v / 100;
+                        }
+                    }
+                } catch { }
+                floatingMedia.volume = clamp(volume, 0, 1);
+                document.body.appendChild(floatingMedia);
+                floatingMedia.play().catch(() => { });
+
+                // Show indicator
+                const indicator = document.createElement("div");
+                indicator.classList.add("audio-preview-indicator");
+                indicator.textContent = AUDIO_INDICATOR_TEXT;
+                container.appendChild(indicator);
+                currentAudioIndicator = indicator;
+
+                // Cleanup on leave/click/scroll
+                const cleanup = () => cleanupFloatingMedia();
+                thumb.addEventListener("mouseleave", cleanup, { once: true });
+                container.addEventListener("click", cleanup, { once: true });
+                window.addEventListener("scroll", cleanup, { once: true });
+                cleanupFns.push(() => thumb.removeEventListener("mouseleave", cleanup));
+                cleanupFns.push(() => container.removeEventListener("click", cleanup));
+                cleanupFns.push(() => window.removeEventListener("scroll", cleanup));
+                return;
+            }
+
+            // --- Image or Video ---
+            floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
+            floatingMedia.src = fullSrc;
+            floatingMedia.style.position = "fixed";
+            floatingMedia.style.zIndex = "9999";
+            floatingMedia.style.pointerEvents = "none";
+            floatingMedia.style.opacity = MEDIA_OPACITY_LOADING;
+            floatingMedia.style.left = "-9999px";
+            floatingMedia.style.top = "-9999px";
+            floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
+            // Dynamically set maxHeight to fit above the bottom margin
+            const availableHeight = window.innerHeight - getMediaBottomMargin();
+            floatingMedia.style.maxHeight = `${availableHeight}px`;
+            if (isVideo) {
+                floatingMedia.autoplay = true;
+                floatingMedia.loop = true;
+                floatingMedia.muted = false;
+                floatingMedia.playsInline = true;
+            }
+            document.body.appendChild(floatingMedia);
+
+            // --- Initial placement ---
+            // Wait for media to load enough to get dimensions, then place
+            function initialPlacement() {
+                // Use the last mouse event for accurate placement
+                if (lastMouseEvent) {
+                    positionFloatingMedia(lastMouseEvent);
+                }
+            }
+            // Only add mousemove after initial placement
+            function enableMouseMove() {
+                document.addEventListener("mousemove", mouseMoveHandler);
+                cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
+            }
+            function mouseMoveHandler(ev) {
+                positionFloatingMedia(ev);
+            }
+            if (isVideo) {
+                floatingMedia.onloadeddata = function () {
+                    initialPlacement();
+                    enableMouseMove();
+                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                };
+            } else {
+                floatingMedia.onload = function () {
+                    initialPlacement();
+                    enableMouseMove();
+                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                };
+            }
+            // If error, cleanup
+            floatingMedia.onerror = cleanupFloatingMedia;
+
+            // Cleanup on leave/scroll
+            function leaveHandler() { cleanupFloatingMedia(); }
+            thumb.addEventListener("mouseleave", leaveHandler, { once: true });
+            window.addEventListener("scroll", leaveHandler, { once: true });
+            cleanupFns.push(() => thumb.removeEventListener("mouseleave", leaveHandler));
+            cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
+        }
+
+        // --- Attach listeners to thumbnails and audio links ---
+        function attachThumbListeners(root = document) {
+            root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
+                if (!thumb._fullImgHoverBound) {
+                    thumb.addEventListener("mouseenter", onThumbEnter);
+                    thumb._fullImgHoverBound = true;
+                }
+            });
+            root.querySelectorAll("a.originalNameLink").forEach(link => {
+                const href = link.getAttribute("href") || "";
+                const ext = href.split(".").pop().toLowerCase();
+                if (
+                    ["mp3", "wav", "ogg", "m4a"].includes(ext) &&
+                    !link._audioHoverBound
+                ) {
+                    link.addEventListener("mouseenter", onThumbEnter);
+                    link._audioHoverBound = true;
+                }
+            });
+        }
+
+        // --- Initialization ---
+        attachThumbListeners();
+
+        // --- Watch for new elements ---
+        new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        attachThumbListeners(node);
+                    }
+                }
+            }
+        }).observe(document.body, { childList: true, subtree: true });
+    }
+
+    // --- Feature: Inline replies (barebones) ---
+    function featureNestedReplies() {
+        // Move .replyPreview after the correct title element in both OP and reply posts
+        function ensureReplyPreviewPlacement(root = document) {
+            // For OP post
+            root.querySelectorAll('.innerOP').forEach(innerOP => {
+                const opHeadTitle = innerOP.querySelector('.opHead.title');
+                const replyPreview = innerOP.querySelector('.replyPreview');
+                if (opHeadTitle && replyPreview && opHeadTitle.nextSibling !== replyPreview) {
+                    innerOP.insertBefore(replyPreview, opHeadTitle.nextSibling);
+                }
+            });
+            // For reply posts
+            root.querySelectorAll('.innerPost').forEach(innerPost => {
+                const postInfoTitle = innerPost.querySelector('.postInfo.title');
+                const replyPreview = innerPost.querySelector('.replyPreview');
+                if (postInfoTitle && replyPreview && postInfoTitle.nextSibling !== replyPreview) {
+                    innerPost.insertBefore(replyPreview, postInfoTitle.nextSibling);
+                }
+            });
+        }
+
+        // New .inlineQuote is always first in .replyPreview
+        function ensureInlineQuotePlacement(node) {
+            // If node is an .inlineQuote inside a .replyPreview
+            if (
+                node.nodeType === 1 &&
+                node.classList.contains('inlineQuote') &&
+                node.parentElement &&
+                node.parentElement.classList.contains('replyPreview')
+            ) {
+                const replyPreview = node.parentElement;
+                if (replyPreview.firstChild !== node) {
+                    replyPreview.insertBefore(node, replyPreview.firstChild);
+                }
+            }
+            // Or if node contains any .inlineQuote inside .replyPreview
+            else if (node.nodeType === 1) {
+                node.querySelectorAll('.replyPreview .inlineQuote').forEach(inlineQuote => {
+                    const replyPreview = inlineQuote.parentElement;
+                    if (replyPreview.firstChild !== inlineQuote) {
+                        replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
+                    }
+                });
+            }
+        }
+
+        // Initial placement for existing posts
+        ensureReplyPreviewPlacement();
+
+        // Set up a MutationObserver to handle dynamically added posts and inlineQuotes
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue; // Only process element nodes
+                    // If the added node is an .innerPost or .innerOP, or contains any
+                    if (node.matches && (node.matches('.innerPost') || node.matches('.innerOP'))) {
+                        ensureReplyPreviewPlacement(node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll('.innerPost, .innerOP').forEach(post => {
+                            ensureReplyPreviewPlacement(post);
+                        });
+                    }
+                    // Handle .inlineQuote placement in .replyPreview
+                    ensureInlineQuotePlacement(node);
+                }
+            }
+        });
+
+        // Observe opCell for new posts
+        const postsContainer = document.querySelector('.opCell');
+        if (postsContainer) {
+            observer.observe(postsContainer, { childList: true, subtree: true });
+        }
+
+        // --- Feature: Dashed underline for inlined reply backlinks ---
+        // Toggle underline on/off for clicked .panelBacklinks > a
+        document.addEventListener('click', function (e) {
+            const a = e.target.closest('.panelBacklinks > a');
+            if (!a) return;
+            setTimeout(() => {
+                a.classList.toggle('reply-inlined');
+            }, 0);
+        });
+    }
+
+    // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
+    function featureBlurSpoilers() {
+        function revealSpoilers() {
+            const spoilerLinks = document.querySelectorAll("a.imgLink");
+            spoilerLinks.forEach(async (link) => {
+                const img = link.querySelector("img");
+                if (!img) return;
+
+                // Check if this is a custom spoiler image
+                const isCustomSpoiler = img.src.includes("/custom.spoiler");
+                // Check if this is NOT already a thumbnail
+                const isNotThumbnail = !img.src.includes("/.media/t_");
+
+                if (isNotThumbnail || isCustomSpoiler) {
+                    let href = link.getAttribute("href");
+                    if (!href) return;
+
+                    // Extract filename without extension
+                    const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
+                    if (!match) return;
+
+                    // Use the thumbnail path (t_filename)
+                    const transformedSrc = `/.media/t_${match[1]}`;
+                    img.src = transformedSrc;
+
+                    // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
+                    if (await getSetting("blurSpoilers_removeSpoilers")) {
+                        img.style.filter = "";
+                        img.style.transition = "";
+                        img.onmouseover = null;
+                        img.onmouseout = null;
+                        return;
+                    } else {
+                        img.style.filter = "blur(5px)";
+                        img.style.transition = "filter 0.3s ease";
+                        img.addEventListener("mouseover", () => {
+                            img.style.filter = "none";
+                        });
+                        img.addEventListener("mouseout", () => {
+                            img.style.filter = "blur(5px)";
+                        });
+                    }
+                }
+            });
+        }
+
+        // Initial run
+        revealSpoilers();
+
+        // Observe for dynamically added spoilers
+        const observer = new MutationObserver(revealSpoilers);
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // --- Feature: Sauce Links, appended to .uploadDetails
+    async function appendTheSauceLinks() {
+        const enabled = await getSetting("enableTheSauce");
+        if (!enabled) return;
+
+        const sauceUrlsRaw = await getSetting("enableTheSauce_sauceUrls");
+        if (!sauceUrlsRaw) return;
+
+        // Parse URLs, ignore lines starting with #
+        const urls = sauceUrlsRaw
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line && !line.startsWith('#'));
+
+        document.querySelectorAll('.uploadDetails').forEach(detailDiv => {
+            // Find the file URL for this upload (assume there's an <a> inside)
+            const fileLink = detailDiv.querySelector('a');
+            if (!fileLink) return;
+            const fileUrl = fileLink.href;
+
+            // Find the thumbnail image and its parent .imgLink
+            const imgLink = detailDiv.closest('.postCell')?.querySelector('.imgLink');
+            const img = imgLink ? imgLink.querySelector('img') : null;
+            let imgSrcFull = "";
+            if (img) {
+                // Always append .png to the thumbnail src
+                let imgSrc = img.getAttribute('src').replace(/\.[a-zA-Z0-9]+$/, "");
+                let origin = window.location.origin;
+                if (imgSrc.startsWith("//")) {
+                    imgSrcFull = window.location.protocol + imgSrc + ".png";
+                } else if (imgSrc.startsWith("/")) {
+                    imgSrcFull = origin + imgSrc + ".png";
+                } else if (/^https?:\/\//.test(imgSrc)) {
+                    imgSrcFull = imgSrc + ".png";
+                } else {
+                    imgSrcFull = origin + "/" + imgSrc + ".png";
+                }
+            }
+
+            // Remove previous sauce links to avoid duplicates
+            detailDiv.querySelectorAll('.thesauce-link').forEach(el => el.remove());
+
+            urls.forEach(urlTemplate => {
+                // If the URL contains %IMG_UPLOAD%, we POST the image as a file
+                if (urlTemplate.includes('%IMG_UPLOAD%') && imgSrcFull) {
+                    // Example: https://iqdb.org/?%IMG_UPLOAD%
+                    // Replace %IMG_UPLOAD% with nothing for the base URL
+                    const postUrl = urlTemplate.replace('%IMG', '');
+
+                    // Create the link
+                    const a = document.createElement('a');
+                    a.href = "#";
+                    a.textContent = "upload";
+                    a.className = 'thesauce-link';
+                    a.target = '_blank';
+                    a.style.marginLeft = '6px';
+                    a.style.fontSize = '90%';
+                    a.title = "Upload thumbnail directly to search engine";
+
+                    a.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        try {
+                            // Fetch the image as a Blob
+                            const response = await fetch(imgSrcFull);
+                            const blob = await response.blob();
+
+                            // Prepare form data (IQDB expects 'file')
+                            const formData = new FormData();
+                            formData.append('file', blob, 'thumbnail.png');
+
+                            // POST the form data and get the response
+                            const result = await fetch(postUrl, {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'omit', // Don't send cookies
+                            });
+
+                            // Get the response as text (IQDB returns HTML)
+                            const html = await result.text();
+
+                            // Open the result in a new tab
+                            const win = window.open();
+                            win.document.open();
+                            win.document.write(html);
+                            win.document.close();
+                        } catch (err) {
+                            alert("Failed to upload thumbnail: " + err);
+                        }
+                    });
+
+                    detailDiv.appendChild(a);
+                } else {
+                    // Replace {url} with the file URL (encodeURIComponent for safety)
+                    let sauceUrl = urlTemplate.replace(/\{url\}/g, encodeURIComponent(fileUrl));
+                    // Replace %IMG with the full image URL (encodeURIComponent for safety)
+                    if (imgSrcFull) {
+                        sauceUrl = sauceUrl.replace(/%IMG/g, encodeURIComponent(imgSrcFull));
+                    }
+
+                    // Extract top domain for display
+                    let domain = "";
+                    try {
+                        const urlObj = new URL(sauceUrl);
+                        const hostParts = urlObj.hostname.replace(/^www\./, '').split('.');
+                        if (hostParts.length >= 2) {
+                            domain = hostParts[hostParts.length - 2];
+                        } else {
+                            domain = hostParts[0];
+                        }
+                    } catch {
+                        domain = sauceUrl;
+                    }
+                    const a = document.createElement('a');
+                    a.href = sauceUrl;
+                    a.textContent = domain;
+                    a.className = 'thesauce-link';
+                    a.target = '_blank';
+                    a.style.marginLeft = '6px';
+                    a.style.fontSize = '90%';
+                    detailDiv.appendChild(a);
+                }
+            });
+        });
+    }
+
+    // Init
+    onReady(appendTheSauceLinks);
+
+
+    ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // Decode HTML entities in <a> to string (e.g., &gt; to >, &apos; to ')
+    function decodeHtmlEntitiesTwice(html) {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = html;
+        const once = txt.value;
+        txt.innerHTML = once;
+        return txt.value;
+    }
+    // --- Feature: Highlight TW mentions and new posts ---
+    function highlightMentions() {
+        const watchedCells = document.querySelectorAll("#watchedMenu .watchedCell");
+        if (!watchedCells.length) return; // Early exit if no watched cells
+
+        // Process all cells in a single pass
+        watchedCells.forEach((cell) => {
+            const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
+            if (!notification) return; // Skip if no notification
+
+            const labelLink = cell.querySelector(".watchedCellLabel a");
+            if (!labelLink) return; // Skip if no link
+
+            // Process board data only once per link
+            if (!labelLink.dataset.board) {
+                const href = labelLink.getAttribute("href");
+                const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
+                if (match) {
+                    labelLink.dataset.board = `/${match[1]}/ -`;
+                }
+
+                // Highlight watch button if this thread is open
+                if (document.location.href.includes(href)) {
+                    const watchButton = document.querySelector(".opHead .watchButton");
+                    if (watchButton) {
+                        watchButton.style.color = "var(--board-title-color)";
+                        watchButton.title = "Watched";
+                    }
+                }
+
+                // Decode HTML entities (only if needed)
+                const originalHtml = labelLink.innerHTML;
+                const decodedText = decodeHtmlEntitiesTwice(originalHtml);
+                if (labelLink.textContent !== decodedText) {
+                    labelLink.textContent = decodedText;
+                }
+            }
+
+            // Process notification text
+            const notificationText = notification.textContent.trim();
+
+            // Skip if already processed (starts with parenthesis)
+            if (notificationText.startsWith("(")) {
+                return;
+            }
+
+            // Case 1: Has "(you)" - format "2, 1 (you)"
+            if (notificationText.includes("(you)")) {
+                const parts = notificationText.split(", ");
+                const totalReplies = parts[0];
+
+                // Apply styling
+                labelLink.style.color = "var(--board-title-color)";
+                notification.style.color = "var(--board-title-color)";
+                notification.textContent = ` (${totalReplies}) (You)`;
+                notification.style.fontWeight = "bold";
+            }
+            // Case 2: Just a number - format "2"
+            else if (/^\d+$/.test(notificationText)) {
+                notification.textContent = ` (${notificationText})`;
+                notification.style.color = "var(--link-color)";
+                notification.style.fontWeight = "bold";
+            }
+
+            // Mark as processed
+            notification.dataset.processed = "true";
+        });
+    }
+
+    // Initial highlight on page load
+    highlightMentions();
+
+    // Observe #watchedMenu for changes to update highlights dynamically
+    const watchedMenu = document.getElementById("watchedMenu");
+    if (watchedMenu) {
+        const observer = new MutationObserver(() => {
+            highlightMentions();
+        });
+        observer.observe(watchedMenu, { childList: true, subtree: true });
+    }
+
+    // --- Feature: Watch Thread on Reply ---
+    async function featureWatchThreadOnReply() {
+        // --- Helpers ---
+        const getWatchButton = () => document.querySelector(".watchButton");
+
+        // Watch the thread if not already watched
+        function watchThreadIfNotWatched() {
+            const btn = getWatchButton();
+            if (btn && !btn.classList.contains("watched-active")) {
+                btn.click(); // Triggers site's watcher logic
+                // Fallback: ensure class is set after watcher logic
+                setTimeout(() => {
+                    btn.classList.add("watched-active");
+                }, 100);
+            }
+        }
+
+        // Update the watch button's class to reflect watched state
+        function updateWatchButtonClass() {
+            const btn = getWatchButton();
+            if (!btn) return;
+            if (btn.classList.contains("watched-active")) {
+                btn.classList.add("watched-active");
+            } else {
+                btn.classList.remove("watched-active");
+            }
+        }
+
+        // Handle reply submit: watch thread if setting enabled
+        const submitButton = document.getElementById("qrbutton");
+        if (submitButton) {
+            // Remove any previous handler to avoid duplicates
+            submitButton.removeEventListener("click", submitButton._watchThreadHandler || (() => { }));
+            submitButton._watchThreadHandler = async function () {
+                if (await getSetting("watchThreadOnReply")) {
+                    setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
+                }
+            };
+            submitButton.addEventListener("click", submitButton._watchThreadHandler);
+        }
+
+        // On page load, sync the watch button UI
+        updateWatchButtonClass();
+
+        // Keep UI in sync when user manually clicks the watch button
+        const btn = getWatchButton();
+        if (btn) {
+            // Remove any previous handler to avoid duplicates
+            btn.removeEventListener("click", btn._updateWatchHandler || (() => { }));
+            btn._updateWatchHandler = () => setTimeout(updateWatchButtonClass, 100);
+            btn.addEventListener("click", btn._updateWatchHandler);
+        }
+    }
+
+
+    // --- Watch Thread on ALT+W Keyboard Shortcut ---
+    document.addEventListener("keydown", async function (event) {
+        // Only trigger if ALT+W is pressed and no input/textarea is focused
+        if (
+            event.altKey &&
+            !event.ctrlKey &&
+            !event.shiftKey &&
+            !event.metaKey &&
+            (event.key === "w" || event.key === "W")
+        ) {
+            // Prevent default browser behavior (e.g., closing tab in some browsers)
+            event.preventDefault();
+            // Only run if the setting is enabled
+            if (
+                typeof getSetting === "function" &&
+                (await getSetting("watchThreadOnReply"))
+            ) {
+                const btn = document.querySelector(".watchButton");
+                if (btn && !btn.classList.contains("watched-active")) {
+                    btn.click();
+                    setTimeout(() => {
+                        btn.classList.add("watched-active");
+                    }, 100);
+                }
+            }
+        }
+    });
+
+    // --- Feature: Pin Thread Watcher ---
+    async function featureAlwaysShowTW() {
+        if (!(await getSetting("alwaysShowTW"))) return;
+
+        function showThreadWatcher() {
+            const watchedMenu = document.getElementById("watchedMenu");
+            if (watchedMenu) {
+                watchedMenu.style.display = "flex";
+            }
+        }
+
+        function addCloseListener() {
+            const watchedMenu = document.getElementById("watchedMenu");
+            if (!watchedMenu) return;
+            const closeBtn = watchedMenu.querySelector(".close-btn");
+            if (closeBtn) {
+                closeBtn.addEventListener("click", () => {
+                    watchedMenu.style.display = "none";
+                });
+            }
+        }
+
+        // Run on DOM ready
+        onReady(() => {
+            showThreadWatcher();
+            addCloseListener();
+        });
+    }
+
+    ///////// THREAD WATCHER END ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // --- Feature: Mark Posts as Yours ---
+    function featureMarkYourPost() {
+        // --- Board Key Detection ---
+        function getBoardName() {
+            const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
+            if (postCell) return postCell.getAttribute('data-boarduri');
+            const match = location.pathname.match(/^\/([^\/]+)\//);
+            return match ? match[1] : 'unknown';
+        }
+
+        const BOARD_NAME = getBoardName();
+        const T_YOUS_KEY = `${BOARD_NAME}-yous`;
+        const MENU_ENTRY_CLASS = "markYourPostMenuEntry";
+        const MENU_SELECTOR = ".floatingList.extraMenu";
+
+        // --- Storage Helpers (always use numeric IDs) ---
+        function getTYous() {
+            try {
+                const val = localStorage.getItem(T_YOUS_KEY);
+                return val ? JSON.parse(val) : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function setTYous(arr) {
+            // Convert all IDs to numbers before storing
+            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
+        }
+
+        // --- Menu/Post Association ---
+        document.body.addEventListener('click', function (e) {
+            if (e.target.matches('.extraMenuButton')) {
+                // Support both .postCell and .opCell
+                const postCell = e.target.closest('.postCell, .opCell');
+                if (postCell) {
+                    const menu = document.querySelector(MENU_SELECTOR);
+                    if (menu) {
+                        menu.setAttribute('data-post-id', postCell.id);
+                    }
+                }
+            }
+        });
+
+        function getPostIdFromMenu(menu) {
+            return menu.getAttribute('data-post-id') || null;
+        }
+
+        function toggleYouNameClass(postId, add) {
+            // Support both .postCell and .opCell
+            const postCell = document.getElementById(postId);
+            if (!postCell) return;
+            const nameLink = postCell.querySelector(".linkName.noEmailName");
+            if (nameLink) {
+                nameLink.classList.toggle("youName", add);
+            }
+        }
+
+        // --- Menu Entry Logic ---
+        function addMenuEntries(root = document) {
+            root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                const ul = menu.querySelector("ul");
+                if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
+
+                const reportLi = Array.from(ul.children).find(
+                    li => li.textContent.trim().toLowerCase() === "report"
+                );
+
+                const li = document.createElement("li");
+                li.className = MENU_ENTRY_CLASS;
+                li.style.cursor = "pointer";
+
+                const postId = getPostIdFromMenu(menu);
+                const tYous = getTYous();
+                // Convert to number for comparison
+                const isMarked = postId && tYous.includes(Number(postId));
+                li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
+
+                if (reportLi) {
+                    ul.insertBefore(li, reportLi);
+                } else {
+                    ul.insertBefore(li, ul.firstChild);
+                }
+
+                li.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    const postId = getPostIdFromMenu(menu);
+                    if (!postId) return;
+                    let tYous = getTYous();
+                    // Convert to number for comparison
+                    const numericPostId = Number(postId);
+                    const idx = tYous.indexOf(numericPostId);
+                    if (idx === -1) {
+                        tYous.push(numericPostId);
+                        setTYous(tYous);
+                        toggleYouNameClass(postId, true);
+                        li.textContent = "Unmark as Your Post";
+                    } else {
+                        tYous.splice(idx, 1);
+                        setTYous(tYous);
+                        toggleYouNameClass(postId, false);
+                        li.textContent = "Mark as Your Post";
+                    }
+                });
+
+                window.addEventListener("storage", function (event) {
+                    if (event.key === T_YOUS_KEY) {
+                        const tYous = getTYous();
+                        const isMarked = postId && tYous.includes(Number(postId));
+                        li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
+                    }
+                });
+            });
+        }
+
+        // --- Observe for Dynamic Menus ---
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.matches && node.matches(MENU_SELECTOR)) {
+                        addMenuEntries(node.parentNode || node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                            addMenuEntries(menu.parentNode || menu);
+                        });
+                    }
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // Init
+    onReady(featureMarkYourPost);
+
+    // --- Feature: Scroll Arrows ---
+    function featureScrollArrows() {
+        // Only add once
+        if (document.getElementById("scroll-arrow-up") || document.getElementById("scroll-arrow-down")) {
+            return;
+        }
+
+        // Up arrow
+        const upBtn = document.createElement("button");
+        upBtn.id = "scroll-arrow-up";
+        upBtn.className = "scroll-arrow-btn";
+        upBtn.title = "Scroll to top";
+        upBtn.innerHTML = "▲";
+        upBtn.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        // Down arrow
+        const downBtn = document.createElement("button");
+        downBtn.id = "scroll-arrow-down";
+        downBtn.className = "scroll-arrow-btn";
+        downBtn.title = "Scroll to bottom";
+        downBtn.innerHTML = "▼";
+        downBtn.addEventListener("click", () => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+        });
+
+        document.body.appendChild(upBtn);
+        document.body.appendChild(downBtn);
+    }
+
+    // --- Feature: Delete (Save) Name Checkbox ---
+    // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
+    function featureDeleteNameCheckbox() {
+        // Check if the #qr-name-row exists and has the 'hidden' class
+        const nameExists = document.getElementById("qr-name-row");
+        if (nameExists && nameExists.classList.contains("hidden")) {
+            return;
+        }
+
+        const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
+        if (!alwaysUseBypassCheckbox) {
+            return;
+        }
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = "saveNameCheckbox";
+        checkbox.classList.add("postingCheckbox");
+
+        const label = document.createElement("label");
+        label.htmlFor = "saveNameCheckbox";
+        label.textContent = "Delete Name";
+        label.title = "Delete Name on refresh";
+
+        alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
+        alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
+
+        // Restore checkbox state
+        const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
+        checkbox.checked = savedCheckboxState;
+
+        const nameInput = document.getElementById("qrname");
+        if (nameInput) {
+            // If the checkbox is checked on load, clear the input and remove the name from storage
+            if (checkbox.checked) {
+                nameInput.value = "";
+                localStorage.removeItem("name");
+            }
+
+            // Save checkbox state
+            checkbox.addEventListener("change", function () {
+                localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
+            });
+        }
+    }
+
+    // --- Feature: Beep and/or notify on (You) ---
+    function featureBeepOnYou() {
+        // Beep sound (base64)
+        const beep = new Audio(
+            "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
+        );
+
+        // Store the original title globally so all functions can access it
+        window.originalTitle = document.title;
+        window.isNotifying = false;
+
+        // Cache settings to avoid repeated async calls
+        let beepOnYouSetting = false;
+        let notifyOnYouSetting = false;
+        let customMsgSetting = "(!) ";
+
+        // Initialize settings
+        async function initSettings() {
+            beepOnYouSetting = await getSetting("beepOnYou");
+            notifyOnYouSetting = await getSetting("notifyOnYou");
+            const customMsg = await getSetting("notifyOnYou_customMessage");
+            if (customMsg) customMsgSetting = customMsg;
+        }
+
+        // Call initialization
+        initSettings();
+
+        // Function to play the beep sound
+        function playBeep() {
+            if (beep.paused) {
+                beep.play().catch((e) => console.warn("Beep failed:", e));
+            } else {
+                beep.currentTime = 0; // Reset to start if already playing
+            }
+        }
+
+        // Function to notify on (You)
+        function notifyOnYou() {
+            if (!window.isNotifying && !document.hasFocus()) {
+                window.isNotifying = true;
+                document.title = customMsgSetting + " " + window.originalTitle;
+            }
+        }
+
+        // Remove notification when tab regains focus
+        window.addEventListener("focus", () => {
+            if (window.isNotifying) {
+                document.title = window.originalTitle;
+                window.isNotifying = false;
+            }
+        });
+
+        // Create MutationObserver to detect when you are quoted
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (
+                        node.nodeType === 1 &&
+                        node.querySelector &&
+                        node.querySelector("a.quoteLink.you")
+                    ) {
+                        // If the quote is inside .innerPost, do not beep or notify
+                        if (node.closest('.innerPost')) {
+                            continue;
+                        }
+
+                        // Only play beep if the setting is enabled
+                        if (beepOnYouSetting) {
+                            playBeep();
+                        }
+
+                        // Trigger notification if enabled
+                        if (notifyOnYouSetting) {
+                            notifyOnYou();
+                        }
+                    }
+                }
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Listen for settings changes
+        window.addEventListener("8chanSS_settingChanged", async (e) => {
+            if (e.detail && e.detail.key) {
+                const key = e.detail.key;
+                if (key === "beepOnYou") {
+                    beepOnYouSetting = await getSetting("beepOnYou");
+                } else if (key === "notifyOnYou") {
+                    notifyOnYouSetting = await getSetting("notifyOnYou");
+                } else if (key === "notifyOnYou_customMessage") {
+                    const customMsg = await getSetting("notifyOnYou_customMessage");
+                    if (customMsg) customMsgSetting = customMsg;
+                }
+            }
+        });
+    }
+
+    // Init
+    featureBeepOnYou();
+
+    // --- Feature: Convert to 12-hour format (AM/PM) ---
+    function featureLabelCreated12h() {
+        function convertLabelCreatedTimes(root = document) {
+            (root.querySelectorAll
+                ? root.querySelectorAll('.labelCreated')
+                : []).forEach(span => {
+                    if (span.dataset.timeConverted === "1") return;
+
+                    const text = span.textContent;
+                    const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
+                    if (!match) return;
+
+                    const [_, datePart, hourStr, minStr, secStr] = match;
+                    let hour = parseInt(hourStr, 10);
+                    const min = minStr;
+                    const sec = secStr;
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    let hour12 = hour % 12;
+                    if (hour12 === 0) hour12 = 12;
+
+                    const newText = `${datePart} ${hour12}:${min}:${sec} ${ampm}`;
+                    span.textContent = newText;
+                    span.dataset.timeConverted = "1";
+                });
+        }
+
+        // Initial conversion on page load
+        convertLabelCreatedTimes();
+
+        // Observe only .divThreads for added posts
+        const threadsContainer = document.querySelector('.divPosts');
+        if (threadsContainer) {
+            new MutationObserver(() => {
+                convertLabelCreatedTimes(threadsContainer);
+            }).observe(threadsContainer, { childList: true, subtree: true });
+        }
+    }
+
+    // --- Feature: File Renamer ---
+    function renameFileAtIndex(index) {
+        const currentFile = postCommon.selectedFiles[index];
+        if (!currentFile) return;
+        const currentName = currentFile.name;
+        const newName = prompt("Enter new file name:", currentName);
+
+        if (!newName || newName === currentName) return;
+
+        const extension = currentName.includes('.') ? currentName.substring(currentName.lastIndexOf('.')) : '';
+        const hasExtension = newName.includes('.');
+        const finalName = hasExtension ? newName : newName + extension;
+
+        if (hasExtension && newName.substring(newName.lastIndexOf('.')) !== extension) {
+            alert(`You cannot change the file extension. The extension must remain "${extension}".`);
+            return;
+        }
+        const renamedFile = new File([currentFile], finalName, {
+            type: currentFile.type,
+            lastModified: currentFile.lastModified,
+        });
+
+        postCommon.selectedFiles[index] = renamedFile;
+
+        // Update the label
+        const labels = document.querySelectorAll('#qrFilesBody .selectedCell .nameLabel');
+        const label = labels[index];
+        if (label) {
+            label.textContent = finalName;
+            label.title = finalName;
+        }
+    }
+
+    // Event delegation for .nameLabel clicks within #qrFilesBody
+    function handleQrFilesBodyClick(event) {
+        const label = event.target.closest('.nameLabel');
+        if (!label || !label.closest('#qrFilesBody')) return;
+
+        // Find the index of the clicked label among all visible .nameLabel elements
+        const labels = Array.from(document.querySelectorAll('#qrFilesBody .selectedCell .nameLabel'));
+        const index = labels.indexOf(label);
+        if (index !== -1) {
+            renameFileAtIndex(index);
+        }
+    }
+
+    // Observe changes in #qrFilesBody and ensure event delegation is attached
+    function observeQrFilesBody() {
+        const qrFilesBody = document.querySelector('#qrFilesBody');
+        if (!qrFilesBody) return;
+
+        // Attach the event listener once
+        if (!qrFilesBody.dataset.renameDelegationAttached) {
+            qrFilesBody.addEventListener('click', handleQrFilesBodyClick);
+            qrFilesBody.dataset.renameDelegationAttached = 'true';
+        }
+    }
+
+    // Watch #qrFilesBody for changes
+    function startQrFilesBodyObserver() {
+        const qrFilesBody = document.querySelector('#qrFilesBody');
+        if (!qrFilesBody) return;
+        // Attach event delegation once
+        observeQrFilesBody();
+    }
+
+    // Init
+    startQrFilesBodyObserver();
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -600,8 +1969,9 @@ onReady(async function () {
         // Tab content container
         const tabContent = document.createElement("div");
         tabContent.style.padding = "15px 16px";
-        tabContent.style.maxHeight = "60vh";
+        tabContent.style.maxHeight = "65vh";
         tabContent.style.overflowY = "auto";
+        tabContent.style.scrollbarWidth = "thin";
 
         // Store current (unsaved) values
         const tempSettings = {};
@@ -628,6 +1998,10 @@ onReady(async function () {
             styling: {
                 label: "Style",
                 content: createTabContent("styling", tempSettings),
+            },
+            miscel: {
+                label: "Misc.",
+                content: createTabContent("miscel", tempSettings),
             },
             shortcuts: {
                 label: "⌨️",
@@ -953,6 +2327,52 @@ onReady(async function () {
 
                         subWrapper.appendChild(subLabel);
                         subWrapper.appendChild(subInput);
+                    } else if (subSetting.type === "textarea") {
+                        // Textarea for multi-line input
+                        const subLabel = document.createElement("label");
+                        subLabel.htmlFor = "setting_" + fullKey;
+                        subLabel.textContent = subSetting.label + ": ";
+
+                        const subTextarea = document.createElement("textarea");
+                        subTextarea.id = "setting_" + fullKey;
+                        subTextarea.value = tempSettings[fullKey] || "";
+                        subTextarea.rows = subSetting.rows || 4;
+                        subTextarea.style.width = "90%";
+                        subTextarea.style.margin = "2px 0 3px 0";
+                        subTextarea.placeholder = subSetting.placeholder || "";
+
+                        subTextarea.addEventListener("input", function () {
+                            tempSettings[fullKey] = subTextarea.value;
+                        });
+
+                        subWrapper.appendChild(subLabel);
+                        subWrapper.appendChild(document.createElement("br"));
+                        subWrapper.appendChild(subTextarea);
+                    } else if (subSetting.type === "number") {
+                        const subLabel = document.createElement("label");
+                        subLabel.htmlFor = "setting_" + fullKey;
+                        subLabel.textContent = subSetting.label + ": ";
+
+                        const subInput = document.createElement("input");
+                        subInput.type = "number";
+                        subInput.id = "setting_" + fullKey;
+                        subInput.value = tempSettings[fullKey] || subSetting.default;
+                        if (subSetting.min !== undefined) subInput.min = subSetting.min;
+                        if (subSetting.max !== undefined) subInput.max = subSetting.max;
+                        subInput.style.width = "60px";
+                        subInput.style.marginLeft = "2px";
+
+                        subInput.addEventListener("input", function () {
+                            let val = Number(subInput.value);
+                            if (isNaN(val)) val = subSetting.default;
+                            if (subSetting.min !== undefined) val = Math.max(subSetting.min, val);
+                            if (subSetting.max !== undefined) val = Math.min(subSetting.max, val);
+                            subInput.value = val;
+                            tempSettings[fullKey] = val;
+                        });
+
+                        subWrapper.appendChild(subLabel);
+                        subWrapper.appendChild(subInput);
                     } else {
                         // Checkbox for boolean suboptions (existing code)
                         const subCheckbox = document.createElement("input");
@@ -984,6 +2404,145 @@ onReady(async function () {
         return container;
     }
 
+    // --- Menu Icon ---
+    const themeSelector = document.getElementById("themesBefore");
+    let link = null;
+    let bracketSpan = null;
+    if (themeSelector) {
+        bracketSpan = document.createElement("span");
+        bracketSpan.textContent = "] [ ";
+        link = document.createElement("a");
+        link.id = "8chanSS-icon";
+        link.href = "#";
+        link.textContent = "8chanSS";
+        link.style.fontWeight = "bold";
+
+        themeSelector.parentNode.insertBefore(
+            bracketSpan,
+            themeSelector.nextSibling
+        );
+        themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
+    }
+
+    // --- Shortcuts tab ---
+    function createShortcutsTab() {
+        const container = document.createElement("div");
+        // Title
+        const title = document.createElement("h3");
+        title.textContent = "Keyboard Shortcuts";
+        title.style.margin = "0 0 15px 0";
+        title.style.fontSize = "16px";
+        container.appendChild(title);
+        // Shortcuts table
+        const table = document.createElement("table");
+        table.style.width = "100%";
+        table.style.borderCollapse = "collapse";
+        // Table styles
+        const tableStyles = {
+            th: {
+                textAlign: "left",
+                padding: "8px 5px",
+                borderBottom: "1px solid #444",
+                fontSize: "14px",
+                fontWeight: "bold",
+            },
+            td: {
+                padding: "8px 5px",
+                borderBottom: "1px solid #333",
+                fontSize: "13px",
+            },
+            kbd: {
+                background: "#333",
+                border: "1px solid #555",
+                borderRadius: "3px",
+                padding: "2px 5px",
+                fontSize: "12px",
+                fontFamily: "monospace",
+            },
+        };
+
+        // Create header row
+        const headerRow = document.createElement("tr");
+        const shortcutHeader = document.createElement("th");
+        shortcutHeader.textContent = "Shortcut";
+        Object.assign(shortcutHeader.style, tableStyles.th);
+        headerRow.appendChild(shortcutHeader);
+
+        const actionHeader = document.createElement("th");
+        actionHeader.textContent = "Action";
+        Object.assign(actionHeader.style, tableStyles.th);
+        headerRow.appendChild(actionHeader);
+
+        table.appendChild(headerRow);
+
+        // Shortcut data
+        const shortcuts = [
+            { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
+            { keys: ["Tab"], action: "Target Quick Reply text area" },
+            { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
+            { keys: ["Ctrl", "Enter"], action: "Submit post" },
+            { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
+            { keys: ["ALT", "W"], action: "Watch Thread" },
+            { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
+            { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
+            { keys: ["CTRL", "SHIFT", "UP/DOWN"], action: "Scroll between Replies to You" },
+            { keys: ["Ctrl", "B"], action: "Bold text" },
+            { keys: ["Ctrl", "I"], action: "Italic text" },
+            { keys: ["Ctrl", "U"], action: "Underline text" },
+            { keys: ["Ctrl", "S"], action: "Spoiler text" },
+            { keys: ["Ctrl", "D"], action: "Doom text" },
+            { keys: ["Ctrl", "M"], action: "Moe text" },
+            { keys: ["Alt", "C"], action: "Code block" },
+        ];
+
+        // Create rows for each shortcut
+        shortcuts.forEach((shortcut) => {
+            const row = document.createElement("tr");
+
+            // Shortcut cell
+            const shortcutCell = document.createElement("td");
+            Object.assign(shortcutCell.style, tableStyles.td);
+
+            // Create kbd elements for each key
+            shortcut.keys.forEach((key, index) => {
+                const kbd = document.createElement("kbd");
+                kbd.textContent = key;
+                Object.assign(kbd.style, tableStyles.kbd);
+                shortcutCell.appendChild(kbd);
+
+                // Add + between keys
+                if (index < shortcut.keys.length - 1) {
+                    const plus = document.createTextNode(" + ");
+                    shortcutCell.appendChild(plus);
+                }
+            });
+
+            row.appendChild(shortcutCell);
+
+            // Action cell
+            const actionCell = document.createElement("td");
+            actionCell.textContent = shortcut.action;
+            Object.assign(actionCell.style, tableStyles.td);
+            row.appendChild(actionCell);
+
+            table.appendChild(row);
+        });
+
+        container.appendChild(table);
+
+        // Add note about BBCode shortcuts
+        const note = document.createElement("p");
+        note.textContent =
+            "Text formatting shortcuts work when text is selected or when inserting at cursor position.";
+        note.style.fontSize = "12px";
+        note.style.marginTop = "15px";
+        note.style.opacity = "0.7";
+        note.style.fontStyle = "italic";
+        container.appendChild(note);
+
+        return container;
+    }
+
     // Hook up the icon to open/close the menu
     if (link) {
         let menu = await createSettingsMenu();
@@ -995,1428 +2554,105 @@ onReady(async function () {
             menu.style.display = menu.style.display === "none" ? "block" : "none";
         });
     }
-
     //////// MENU END ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Feature: Save Scroll Position (anchor-aware, optimized)
-    async function featureSaveScroll() {
-        const MAX_PAGES = 50;
-        // Use URL without hash for storage key
-        const currentPage = window.location.origin + window.location.pathname + window.location.search;
-        const hasAnchor = !!window.location.hash;
-
-        // Only allow saving/restoring for URLs like "/<board>/res/<thread>.html"
-        const threadPagePattern = /^\/[^/]+\/res\/[^/]+\.html$/i;
-        function isThreadPage(urlPath) {
-            return threadPagePattern.test(urlPath);
-        }
-
-        async function getSavedScrollData() {
-            const savedData = await GM.getValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                null
-            );
-            if (!savedData) return null;
-            try {
-                return JSON.parse(savedData);
-            } catch (e) {
-                return null;
-            }
-        }
-
-        async function saveScrollPosition() {
-            // Only save on thread pages
-            if (!isThreadPage(window.location.pathname)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
-
-            const scrollPosition = window.scrollY;
-            const timestamp = Date.now();
-
-            // Only save if scrolled further down than last saved position
-            const savedData = await getSavedScrollData();
-            if (savedData && typeof savedData.position === "number") {
-                if (scrollPosition <= savedData.position) {
-                    // Do not update if not scrolled further down
-                    return;
-                }
-            }
-
-            // Store both the scroll position and timestamp using GM storage
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: scrollPosition,
-                    timestamp: timestamp,
-                })
-            );
-
-            await manageScrollStorage();
-        }
-
-        async function manageScrollStorage() {
-            // Get all GM storage keys
-            const allKeys = await GM.listValues();
-
-            // Filter for scroll position keys
-            const scrollKeys = allKeys.filter((key) =>
-                key.startsWith("8chanSS_scrollPosition_")
-            );
-
-            if (scrollKeys.length > MAX_PAGES) {
-                // Create array of objects with key and timestamp
-                const keyData = await Promise.all(
-                    scrollKeys.map(async (key) => {
-                        let data;
-                        try {
-                            const savedValue = await GM.getValue(key, null);
-                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
-                        } catch (e) {
-                            data = { position: 0, timestamp: 0 };
-                        }
-                        return {
-                            key: key,
-                            timestamp: data.timestamp || 0,
-                        };
-                    })
-                );
-
-                // Sort by timestamp (oldest first)
-                keyData.sort((a, b) => a.timestamp - b.timestamp);
-
-                // Remove oldest entries until we're under the limit
-                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
-                for (const item of keysToRemove) {
-                    await GM.deleteValue(item.key);
-                }
-            }
-        }
-
-        // Restore scroll position (always, if enabled)
-        async function restoreScrollPosition() {
-            // Only restore on thread pages
-            if (!isThreadPage(window.location.pathname)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
-
-            const savedData = await getSavedScrollData();
-            if (!savedData || typeof savedData.position !== "number") return;
-            const position = savedData.position;
-
-            // Update the timestamp to "refresh" this entry
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: position,
-                    timestamp: Date.now(),
-                })
-            );
-
-            if (hasAnchor) {
-                // Do NOT scroll, let browser handle anchor
-                // But still add unread-line at saved position (not anchor)
-                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
-                return;
-            }
-
-            // Only restore scroll if a saved position exists (i.e., not first visit)
-            if (!isNaN(position)) {
-                window.scrollTo(0, position);
-                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
-            }
-        }
-
-        // Add an unread-line marker after the .postCell <div>
-        async function addUnreadLineAtViewportCenter(scrollPosition) {
-            // Only add unread-line if showUnreadLine is enabled
-            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-                return;
-            }
-
-            const divPosts = document.querySelector(".divPosts");
-            if (!divPosts) return;
-
-            // Find the element at the center of the viewport (after scroll restore)
-            const centerX = window.innerWidth / 2;
-            // Use the restored scroll position if provided, otherwise current
-            const centerY = (typeof scrollPosition === "number")
-                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
-                : window.innerHeight / 2;
-            let el = document.elementFromPoint(centerX, centerY);
-
-            // Traverse up to find the closest .postCell
-            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
-                el = el.parentElement;
-            }
-            if (!el || el === divPosts || !el.id) return;
-
-            // Ensure .postCell is a direct child of .divPosts
-            if (el.parentElement !== divPosts) return;
-
-            // Remove any existing unread-line
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-
-            // Insert the unread-line marker after the .postCell (as a sibling)
-            const marker = document.createElement("hr");
-            marker.id = "unread-line";
-            if (el.nextSibling) {
-                divPosts.insertBefore(marker, el.nextSibling);
-            } else {
-                divPosts.appendChild(marker);
-            }
-        }
-
-        // Use async event handlers
-        window.addEventListener("beforeunload", () => {
-            saveScrollPosition();
-        });
-
-        // For load event, restore scroll and then add unread-line if enabled
-        window.addEventListener("load", async () => {
-            await restoreScrollPosition();
-        });
-
-        // Initial restore attempt (in case the load event already fired)
-        await restoreScrollPosition();
-    }
-
-    // --- Remove unread-line at bottom of page ---
-    async function removeUnreadLineIfAtBottom() {
-        // Check if showUnreadLine is enabled
-        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-            return;
-        }
-
-        // Check if user is at the bottom (allowing for a small margin)
-        const margin = 20; // px
-        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-        }
-    }
-
-    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
-
-    // --- Feature: Header Catalog Links ---
-    async function featureHeaderCatalogLinks() {
-        async function appendCatalogToLinks() {
-            const navboardsSpan = document.getElementById("navBoardsSpan");
-            if (navboardsSpan) {
-                const links = navboardsSpan.getElementsByTagName("a");
-                const openInNewTab = await getSetting(
-                    "enableHeaderCatalogLinks_openInNewTab"
-                );
-
-                for (let link of links) {
-                    if (link.href && !link.href.endsWith("/catalog.html")) {
-                        link.href += "/catalog.html";
-
-                        // Set target="_blank" if the option is enabled
-                        if (openInNewTab) {
-                            link.target = "_blank";
-                            link.rel = "noopener noreferrer"; // Security best practice
-                        } else {
-                            link.target = "";
-                            link.rel = "";
-                        }
-                    }
-                }
-            }
-        }
-
-        appendCatalogToLinks();
-        const observer = new MutationObserver(appendCatalogToLinks);
-        const config = { childList: true, subtree: true };
-        const navboardsSpan = document.getElementById("navBoardsSpan");
-        if (navboardsSpan) {
-            observer.observe(navboardsSpan, config);
-        }
-    }
-
-    // ---- Feature: Image/Video/Audio Hover Preview
-    function featureImageHover() {
-        // --- Config ---
-        const MEDIA_MAX_WIDTH = "90vw";
-        const MEDIA_OPACITY_LOADING = "0.75";
-        const MEDIA_OPACITY_LOADED = "1";
-        const MEDIA_OFFSET = 2; // Margin between cursor and image, in vw
-        const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
-        const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
-
-        // Calculate and convert vw/vh to numbers in pixels
-        function getMediaOffset() {
-            return window.innerWidth * (MEDIA_OFFSET / 100);
-        }
-        function getMediaBottomMargin() {
-            return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
-        }
-
-        // --- Initial state ---
-        let floatingMedia = null;
-        let cleanupFns = [];
-        let currentAudioIndicator = null;
-        let lastMouseEvent = null; // Store last mouse event for initial placement
-
-        // --- Utility: Clamp value between min and max ---
-        function clamp(val, min, max) {
-            return Math.max(min, Math.min(max, val));
-        }
-
-        // --- Utility: Position floating media to the right of mouse, never touching bottom ---
-        function positionFloatingMedia(event) {
-            if (!floatingMedia) return;
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
-            const mw = floatingMedia.offsetWidth || 0;
-            const mh = floatingMedia.offsetHeight || 0;
-
-            const MEDIA_OFFSET_PX = getMediaOffset();
-            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
-            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth; // Calculate scrollbar width
-
-            // Clamp to viewport
-            // Horizontally, always to the right of the cursor, with margin, but clamp to right edge (account for scrollbar)
-            let x = event.clientX + MEDIA_OFFSET_PX;
-            x = clamp(x, 0, vw - mw - SCROLLBAR_WIDTH);
-
-            // Vertically, align top to cursor, but clamp so it never touches bottom or top
-            let y = event.clientY;
-            const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
-            y = Math.max(0, Math.min(y, maxY));
-
-            floatingMedia.style.left = `${x}px`;
-            floatingMedia.style.top = `${y}px`;
-        }
-
-        // --- Utility: Position floating media initially to the right of mouse, never touching bottom ---
-        function positionFloatingMediaInitial(event) {
-            if (!floatingMedia) return;
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
-            const mw = floatingMedia.offsetWidth || 320;
-            const mh = floatingMedia.offsetHeight || 240;
-
-            const MEDIA_OFFSET_PX = getMediaOffset();
-            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
-            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth;
-
-            // Use last mouse position if available, else center
-            let x = vw / 2, y = vh / 2;
-            if (event && typeof event.clientX === "number" && typeof event.clientY === "number") {
-                x = event.clientX + MEDIA_OFFSET_PX;
-                x = clamp(x, 0, vw - mw - SCROLLBAR_WIDTH);
-
-                y = event.clientY;
-                const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
-                y = Math.max(0, Math.min(y, maxY));
-            } else {
-                // Fallback: center
-                x = clamp((vw - mw) / 2, 0, vw - mw - SCROLLBAR_WIDTH);
-                const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
-                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN_PX) / 2, 0, maxY);
-            }
-            floatingMedia.style.left = `${x}px`;
-            floatingMedia.style.top = `${y}px`;
-        }
-
-        // --- Utility: Clean up floating media and event listeners ---
-        function cleanupFloatingMedia() {
-            cleanupFns.forEach(fn => { try { fn(); } catch { } });
-            cleanupFns = [];
-            if (floatingMedia) {
-                if (["VIDEO", "AUDIO"].includes(floatingMedia.tagName)) {
-                    try {
-                        floatingMedia.pause();
-                        floatingMedia.removeAttribute("src");
-                        floatingMedia.load();
-                    } catch { }
-                }
-                floatingMedia.remove();
-                floatingMedia = null;
-            }
-            if (currentAudioIndicator && currentAudioIndicator.parentNode) {
-                currentAudioIndicator.parentNode.removeChild(currentAudioIndicator);
-                currentAudioIndicator = null;
-            }
-        }
-
-        // --- Helper: Get full media URL from thumbnail and MIME type ---
-        function getFullMediaSrc(thumbNode, filemime) {
-            if (!thumbNode || !filemime) return null;
-            const thumbnailSrc = thumbNode.getAttribute("src");
-            if (/\/t_/.test(thumbnailSrc)) {
-                let base = thumbnailSrc.replace(/\/t_/, "/");
-                base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|ogg|mp3|m4a|wav)$/i, "");
-                const mimeToExt = {
-                    "image/jpeg": ".jpg",
-                    "image/jpg": ".jpg",
-                    "image/png": ".png",
-                    "image/gif": ".gif",
-                    "image/webp": ".webp",
-                    "image/bmp": ".bmp",
-                    "video/mp4": ".mp4",
-                    "video/webm": ".webm",
-                    "audio/ogg": ".ogg",
-                    "audio/mpeg": ".mp3",
-                    "audio/x-m4a": ".m4a",
-                    "audio/x-wav": ".wav",
-                };
-                const ext = mimeToExt[filemime.toLowerCase()];
-                if (!ext) return null;
-                return base + ext;
-            }
-            if (
-                /\/spoiler\.png$/i.test(thumbnailSrc) ||
-                /\/custom\.spoiler$/i.test(thumbnailSrc) ||
-                /\/audioGenericThumb\.png$/i.test(thumbnailSrc)
-            ) {
-                const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
-                if (parentA && parentA.getAttribute("href")) {
-                    return parentA.getAttribute("href");
-                }
-                return null;
-            }
-            return null;
-        }
-
-        // --- Main hover handler ---
-        async function onThumbEnter(e) {
-            cleanupFloatingMedia();
-            lastMouseEvent = e; // Store the mouse event for initial placement
-            const thumb = e.currentTarget;
-            let filemime = null, fullSrc = null, isVideo = false, isAudio = false;
-
-            // Determine file type and source
-            if (thumb.tagName === "IMG") {
-                const parentA = thumb.closest("a.linkThumb, a.imgLink");
-                if (!parentA) return;
-                const href = parentA.getAttribute("href");
-                if (!href) return;
-                const ext = href.split(".").pop().toLowerCase();
-                filemime =
-                    parentA.getAttribute("data-filemime") ||
-                    {
-                        jpg: "image/jpeg",
-                        jpeg: "image/jpeg",
-                        png: "image/png",
-                        gif: "image/gif",
-                        webp: "image/webp",
-                        bmp: "image/bmp",
-                        mp4: "video/mp4",
-                        webm: "video/webm",
-                        ogg: "audio/ogg",
-                        mp3: "audio/mpeg",
-                        m4a: "audio/x-m4a",
-                        wav: "audio/wav",
-                    }[ext];
-                fullSrc = getFullMediaSrc(thumb, filemime);
-                isVideo = filemime && filemime.startsWith("video/");
-                isAudio = filemime && filemime.startsWith("audio/");
-            } else if (thumb.classList.contains("originalNameLink")) {
-                const href = thumb.getAttribute("href");
-                if (!href) return;
-                const ext = href.split(".").pop().toLowerCase();
-                if (["mp3", "ogg", "m4a", "wav"].includes(ext)) {
-                    filemime = {
-                        ogg: "audio/ogg",
-                        mp3: "audio/mpeg",
-                        m4a: "audio/x-m4a",
-                        wav: "audio/wav",
-                    }[ext];
-                    fullSrc = href;
-                    isAudio = true;
-                }
-            }
-
-            if (!fullSrc || !filemime) return;
-
-            // --- Setup floating media element ---
-            if (isAudio) {
-                // Audio: show indicator, play audio (hidden)
-                const container = thumb.tagName === "IMG"
-                    ? thumb.closest("a.linkThumb, a.imgLink")
-                    : thumb;
-                if (container && !container.style.position) {
-                    container.style.position = "relative";
-                }
-                floatingMedia = document.createElement("audio");
-                floatingMedia.src = fullSrc;
-                floatingMedia.controls = false;
-                floatingMedia.style.display = "none";
-                let volume = 0.5;
-                try {
-                    if (typeof getSetting === "function") {
-                        const v = await getSetting("hoverVideoVolume");
-                        if (typeof v === "number" && !isNaN(v)) {
-                            volume = v / 100;
-                        }
-                    }
-                } catch { }
-                floatingMedia.volume = clamp(volume, 0, 1);
-                document.body.appendChild(floatingMedia);
-                floatingMedia.play().catch(() => { });
-
-                // Show indicator
-                const indicator = document.createElement("div");
-                indicator.classList.add("audio-preview-indicator");
-                indicator.textContent = AUDIO_INDICATOR_TEXT;
-                container.appendChild(indicator);
-                currentAudioIndicator = indicator;
-
-                // Cleanup on leave/click/scroll
-                const cleanup = () => cleanupFloatingMedia();
-                thumb.addEventListener("mouseleave", cleanup, { once: true });
-                container.addEventListener("click", cleanup, { once: true });
-                window.addEventListener("scroll", cleanup, { once: true });
-                cleanupFns.push(() => thumb.removeEventListener("mouseleave", cleanup));
-                cleanupFns.push(() => container.removeEventListener("click", cleanup));
-                cleanupFns.push(() => window.removeEventListener("scroll", cleanup));
-                return;
-            }
-
-            // --- Image or Video ---
-            floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
-            floatingMedia.src = fullSrc;
-            floatingMedia.style.position = "fixed";
-            floatingMedia.style.zIndex = "9999";
-            floatingMedia.style.pointerEvents = "none";
-            floatingMedia.style.opacity = MEDIA_OPACITY_LOADING;
-            floatingMedia.style.left = "-9999px";
-            floatingMedia.style.top = "-9999px";
-            floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
-            // Dynamically set maxHeight to fit above the bottom margin
-            const availableHeight = window.innerHeight - getMediaBottomMargin();
-            floatingMedia.style.maxHeight = `${availableHeight}px`;
-            if (isVideo) {
-                floatingMedia.autoplay = true;
-                floatingMedia.loop = true;
-                floatingMedia.muted = false;
-                floatingMedia.playsInline = true;
-            }
-            document.body.appendChild(floatingMedia);
-
-            // --- Initial placement ---
-            // Wait for media to load enough to get dimensions, then place
-            function initialPlacement() {
-                // Use the last mouse event for accurate placement
-                if (lastMouseEvent) {
-                    positionFloatingMedia(lastMouseEvent);
-                }
-            }
-            // Only add mousemove after initial placement
-            function enableMouseMove() {
-                document.addEventListener("mousemove", mouseMoveHandler);
-                cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
-            }
-            function mouseMoveHandler(ev) {
-                positionFloatingMedia(ev);
-            }
-            if (isVideo) {
-                floatingMedia.onloadeddata = function () {
-                    initialPlacement();
-                    enableMouseMove();
-                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
-                };
-            } else {
-                floatingMedia.onload = function () {
-                    initialPlacement();
-                    enableMouseMove();
-                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
-                };
-            }
-            // If error, cleanup
-            floatingMedia.onerror = cleanupFloatingMedia;
-
-            // Cleanup on leave/scroll
-            function leaveHandler() { cleanupFloatingMedia(); }
-            thumb.addEventListener("mouseleave", leaveHandler, { once: true });
-            window.addEventListener("scroll", leaveHandler, { once: true });
-            cleanupFns.push(() => thumb.removeEventListener("mouseleave", leaveHandler));
-            cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
-        }
-
-        // --- Attach listeners to thumbnails and audio links ---
-        function attachThumbListeners(root = document) {
-            root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
-                if (!thumb._fullImgHoverBound) {
-                    thumb.addEventListener("mouseenter", onThumbEnter);
-                    thumb._fullImgHoverBound = true;
-                }
-            });
-            root.querySelectorAll("a.originalNameLink").forEach(link => {
-                const href = link.getAttribute("href") || "";
-                const ext = href.split(".").pop().toLowerCase();
-                if (
-                    ["mp3", "wav", "ogg", "m4a"].includes(ext) &&
-                    !link._audioHoverBound
-                ) {
-                    link.addEventListener("mouseenter", onThumbEnter);
-                    link._audioHoverBound = true;
-                }
-            });
-        }
-
-        // --- Initialization ---
-        attachThumbListeners();
-
-        // --- Watch for new elements ---
-        new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        attachThumbListeners(node);
-                    }
-                }
-            }
-        }).observe(document.body, { childList: true, subtree: true });
-    }
-
-    // --- Feature: Inline replies (barebones) ---
-    function featureNestedReplies() {
-        // Set inline above the message
-        function ensureReplyPreviewPlacement(root = document) {
-            root.querySelectorAll('.innerPost').forEach(innerPost => {
-                const divMessage = innerPost.querySelector('.divMessage');
-                if (!divMessage) return;
-
-                // Move .replyPreview before .divMessage if present
-                const replyPreview = innerPost.querySelector('.replyPreview');
-                if (replyPreview && replyPreview.nextSibling !== divMessage) {
-                    innerPost.insertBefore(replyPreview, divMessage);
-                }
-
-                // Move all .inlineQuote elements before .divMessage if present
-                // (in case there are multiple .inlineQuote elements)
-                innerPost.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
-                    if (inlineQuote.nextSibling !== divMessage) {
-                        innerPost.insertBefore(inlineQuote, divMessage);
-                    }
-                });
-            });
-        }
-
-        // Initial placement for existing posts
-        ensureReplyPreviewPlacement();
-
-        // Set up a MutationObserver to handle dynamically added posts
-        const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue; // Only process element nodes
-                    // If the added node is an .innerPost, or contains any .innerPost
-                    if (node.matches && node.matches('.innerPost')) {
-                        ensureReplyPreviewPlacement(node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll('.innerPost').forEach(innerPost => {
-                            ensureReplyPreviewPlacement(innerPost);
-                        });
-                    }
-                }
-            }
-        });
-
-        // Observe divPosts for new posts
-        const postsContainer = document.querySelector('.divPosts');
-        if (postsContainer) {
-            observer.observe(postsContainer, { childList: true, subtree: true });
-        }
-
-        // --- Feature: Dashed underline for inlined reply backlinks ---
-        // Toggle underline on/off for clicked .panelBacklinks > a
-        document.addEventListener('click', function (e) {
-            const a = e.target.closest('.panelBacklinks > a');
-            if (!a) return;
-            setTimeout(() => {
-                a.classList.toggle('reply-inlined');
-            }, 0);
-        });
-    }
-
-    // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
-    function featureBlurSpoilers() {
-        function revealSpoilers() {
-            const spoilerLinks = document.querySelectorAll("a.imgLink");
-            spoilerLinks.forEach(async (link) => {
-                const img = link.querySelector("img");
-                if (!img) return;
-
-                // Check if this is a custom spoiler image
-                const isCustomSpoiler = img.src.includes("/custom.spoiler");
-                // Check if this is NOT already a thumbnail
-                const isNotThumbnail = !img.src.includes("/.media/t_");
-
-                if (isNotThumbnail || isCustomSpoiler) {
-                    let href = link.getAttribute("href");
-                    if (!href) return;
-
-                    // Extract filename without extension
-                    const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
-                    if (!match) return;
-
-                    // Use the thumbnail path (t_filename)
-                    const transformedSrc = `/.media/t_${match[1]}`;
-                    img.src = transformedSrc;
-
-                    // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                    if (await getSetting("blurSpoilers_removeSpoilers")) {
-                        img.style.filter = "";
-                        img.style.transition = "";
-                        img.onmouseover = null;
-                        img.onmouseout = null;
-                        return;
-                    } else {
-                        img.style.filter = "blur(5px)";
-                        img.style.transition = "filter 0.3s ease";
-                        img.addEventListener("mouseover", () => {
-                            img.style.filter = "none";
-                        });
-                        img.addEventListener("mouseout", () => {
-                            img.style.filter = "blur(5px)";
-                        });
-                    }
-                }
-            });
-        }
-
-        // Initial run
-        revealSpoilers();
-
-        // Observe for dynamically added spoilers
-        const observer = new MutationObserver(revealSpoilers);
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // Decode HTML entities in <a> to string (e.g., &gt; to >, &apos; to ')
-    function decodeHtmlEntitiesTwice(html) {
-        const txt = document.createElement('textarea');
-        txt.innerHTML = html;
-        const once = txt.value;
-        txt.innerHTML = once;
-        return txt.value;
-    }
-
-    function highlightMentions() {
-        document.querySelectorAll("#watchedMenu .watchedCell").forEach((cell) => {
-            const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
-            const labelLink = cell.querySelector(".watchedCellLabel a");
-            const watchedCellLabel = cell.querySelector(".watchedCellLabel");
-
-            // --- New: Decode HTML entities in the direct child <a> (double decode) ---
-            if (labelLink) {
-                const originalHtml = labelLink.innerHTML;
-                const decodedText = decodeHtmlEntitiesTwice(originalHtml);
-                if (labelLink.textContent !== decodedText) {
-                    labelLink.textContent = decodedText;
-                }
-            }
-            // --- End new code ---
-
-            if (labelLink) {
-                // Only set data-board if it doesn't already exist
-                if (!labelLink.dataset.board) {
-                    const href = labelLink.getAttribute("href");
-                    const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
-                    if (match) {
-                        labelLink.dataset.board = `/${match[1]}/ -`;
-                    }
-                    // Highlight the watch button if this thread is open
-                    if (document.location.href.includes(href)) {
-                        const watchButton = document.querySelector(".opHead .watchButton");
-                        if (watchButton) {
-                            watchButton.style.color = "var(--board-title-color)";
-                            watchButton.title = "Watched";
-                        }
-                    }
-                }
-
-                // Highlight if contains (you), else remove color
-                if (notification && notification.textContent.includes("(you)")) {
-                    labelLink.style.color = "var(--board-title-color)";
-
-                    // Add the "(You)" text if it doesn't already exist
-                    if (watchedCellLabel && !watchedCellLabel.querySelector(".you-mention-label")) {
-                        const youLabel = document.createElement("span");
-                        youLabel.className = "you-mention-label";
-                        youLabel.textContent = " - (You)";
-                        youLabel.style.color = "var(--board-title-color)";
-                        watchedCellLabel.appendChild(youLabel);
-                    }
-                } else {
-                    labelLink.style.color = "";
-
-                    // Remove the "(You)" text if it exists
-                    const youLabel = watchedCellLabel?.querySelector(".you-mention-label");
-                    if (youLabel) {
-                        youLabel.remove();
-                    }
-                }
-            }
-        });
-    }
-
-    // Initial highlight on page load
-    highlightMentions();
-
-    // Observe #watchedMenu for changes to update highlights dynamically
-    const watchedMenu = document.getElementById("watchedMenu");
-    if (watchedMenu) {
-        const observer = new MutationObserver(() => {
-            highlightMentions();
-        });
-        observer.observe(watchedMenu, { childList: true, subtree: true });
-    }
-
-    // --- Feature: Watch Thread on Reply ---
-    async function featureWatchThreadOnReply() {
-        // --- Helpers ---
-        const getWatchButton = () => document.querySelector(".watchButton");
-
-        // Watch the thread if not already watched
-        function watchThreadIfNotWatched() {
-            const btn = getWatchButton();
-            if (btn && !btn.classList.contains("watched-active")) {
-                btn.click(); // Triggers site's watcher logic
-                // Fallback: ensure class is set after watcher logic
-                setTimeout(() => {
-                    btn.classList.add("watched-active");
-                }, 100);
-            }
-        }
-
-        // Update the watch button's class to reflect watched state
-        function updateWatchButtonClass() {
-            const btn = getWatchButton();
-            if (!btn) return;
-            if (btn.classList.contains("watched-active")) {
-                btn.classList.add("watched-active");
-            } else {
-                btn.classList.remove("watched-active");
-            }
-        }
-
-        // Handle reply submit: watch thread if setting enabled
-        const submitButton = document.getElementById("qrbutton");
-        if (submitButton) {
-            // Remove any previous handler to avoid duplicates
-            submitButton.removeEventListener("click", submitButton._watchThreadHandler || (() => { }));
-            submitButton._watchThreadHandler = async function () {
-                if (await getSetting("watchThreadOnReply")) {
-                    setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
-                }
-            };
-            submitButton.addEventListener("click", submitButton._watchThreadHandler);
-        }
-
-        // On page load, sync the watch button UI
-        updateWatchButtonClass();
-
-        // Keep UI in sync when user manually clicks the watch button
-        const btn = getWatchButton();
-        if (btn) {
-            // Remove any previous handler to avoid duplicates
-            btn.removeEventListener("click", btn._updateWatchHandler || (() => { }));
-            btn._updateWatchHandler = () => setTimeout(updateWatchButtonClass, 100);
-            btn.addEventListener("click", btn._updateWatchHandler);
-        }
-    }
-
-
-    // --- Watch Thread on ALT+W Keyboard Shortcut ---
-    document.addEventListener("keydown", async function (event) {
-        // Only trigger if ALT+W is pressed and no input/textarea is focused
-        if (
-            event.altKey &&
-            !event.ctrlKey &&
-            !event.shiftKey &&
-            !event.metaKey &&
-            (event.key === "w" || event.key === "W")
-        ) {
-            // Prevent default browser behavior (e.g., closing tab in some browsers)
-            event.preventDefault();
-            // Only run if the setting is enabled
-            if (
-                typeof getSetting === "function" &&
-                (await getSetting("watchThreadOnReply"))
-            ) {
-                const btn = document.querySelector(".watchButton");
-                if (btn && !btn.classList.contains("watched-active")) {
-                    btn.click();
-                    setTimeout(() => {
-                        btn.classList.add("watched-active");
-                    }, 100);
-                }
-            }
-        }
-    });
-
-    // --- Feature: Pin Thread Watcher ---
-    async function featureAlwaysShowTW() {
-        if (!(await getSetting("alwaysShowTW"))) return;
-
-        function showThreadWatcher() {
-            const watchedMenu = document.getElementById("watchedMenu");
-            if (watchedMenu) {
-                watchedMenu.style.display = "flex";
-            }
-        }
-
-        function addCloseListener() {
-            const watchedMenu = document.getElementById("watchedMenu");
-            if (!watchedMenu) return;
-            const closeBtn = watchedMenu.querySelector(".close-btn");
-            if (closeBtn) {
-                closeBtn.addEventListener("click", () => {
-                    watchedMenu.style.display = "none";
-                });
-            }
-        }
-
-        // Run on DOM ready
-        onReady(() => {
-            showThreadWatcher();
-            addCloseListener();
-        });
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // Feature: Mark Posts as Yours ---
-    function featureMarkYourPost() {
-        // --- Board Key Detection ---
-        function getBoardName() {
-            const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
-            if (postCell) return postCell.getAttribute('data-boarduri');
-            const match = location.pathname.match(/^\/([^\/]+)\//);
-            return match ? match[1] : 'unknown';
-        }
-
-        const BOARD_NAME = getBoardName();
-        const T_YOUS_KEY = `${BOARD_NAME}-yous`;
-        const MENU_ENTRY_CLASS = "markYourPostMenuEntry";
-        const MENU_SELECTOR = ".floatingList.extraMenu";
-
-        // --- Storage Helpers (always use numeric IDs) ---
-        function getTYous() {
-            try {
-                const val = localStorage.getItem(T_YOUS_KEY);
-                if (!val) return [];
-                return JSON.parse(val);
-            } catch {
-                return [];
-            }
-        }
-        function setTYous(arr) {
-            // Convert all IDs to numbers before storing
-            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
-        }
-
-        // --- Menu/Post Association ---
-        document.body.addEventListener('click', function (e) {
-            if (e.target.matches('.extraMenuButton')) {
-                // Support both .postCell and .opCell
-                const postCell = e.target.closest('.postCell, .opCell');
-                setTimeout(() => {
-                    const menu = document.querySelector(MENU_SELECTOR);
-                    if (menu && postCell) {
-                        menu.setAttribute('data-post-id', postCell.id);
-                    }
-                }, 0);
-            }
-        });
-
-        function getPostIdFromMenu(menu) {
-            return menu.getAttribute('data-post-id') || null;
-        }
-
-        function toggleYouNameClass(postId, add) {
-            // Support both .postCell and .opCell
-            const postCell = document.getElementById(postId);
-            if (!postCell) return;
-            const nameLink = postCell.querySelector(".linkName.noEmailName");
-            if (nameLink) {
-                nameLink.classList.toggle("youName", add);
-            }
-        }
-
-        // --- Menu Entry Logic ---
-        function addMenuEntries(root = document) {
-            root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
-                const ul = menu.querySelector("ul");
-                if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
-
-                const reportLi = Array.from(ul.children).find(
-                    li => li.textContent.trim().toLowerCase() === "report"
-                );
-
-                const li = document.createElement("li");
-                li.className = MENU_ENTRY_CLASS;
-                li.style.cursor = "pointer";
-
-                const postId = getPostIdFromMenu(menu);
-                const tYous = getTYous();
-                // Convert to number for comparison
-                const isMarked = postId && tYous.includes(Number(postId));
-                li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
-
-                if (reportLi) {
-                    ul.insertBefore(li, reportLi);
-                } else {
-                    ul.insertBefore(li, ul.firstChild);
-                }
-
-                li.addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    const postId = getPostIdFromMenu(menu);
-                    if (!postId) return;
-                    let tYous = getTYous();
-                    // Convert to number for comparison
-                    const numericPostId = Number(postId);
-                    const idx = tYous.indexOf(numericPostId);
-                    if (idx === -1) {
-                        tYous.push(numericPostId);
-                        setTYous(tYous);
-                        toggleYouNameClass(postId, true);
-                        li.textContent = "Unmark as Your Post";
-                    } else {
-                        tYous.splice(idx, 1);
-                        setTYous(tYous);
-                        toggleYouNameClass(postId, false);
-                        li.textContent = "Mark as Your Post";
-                    }
-                });
-
-                window.addEventListener("storage", function (event) {
-                    if (event.key === T_YOUS_KEY) {
-                        const tYous = getTYous();
-                        const isMarked = postId && tYous.includes(Number(postId));
-                        li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
-                    }
-                });
-            });
-        }
-
-        // --- Observe for Dynamic Menus ---
-        const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue;
-                    if (node.matches && node.matches(MENU_SELECTOR)) {
-                        addMenuEntries(node.parentNode || node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
-                            addMenuEntries(menu.parentNode || menu);
-                        });
-                    }
-                }
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // Init
-    onReady(featureMarkYourPost);
-
-    // --- Feature: Scroll Arrows ---
-    function featureScrollArrows() {
-        // Only add once
-        if (
-            document.getElementById("scroll-arrow-up") ||
-            document.getElementById("scroll-arrow-down")
-        )
-            return;
-
-        // Up arrow
-        const upBtn = document.createElement("button");
-        upBtn.id = "scroll-arrow-up";
-        upBtn.className = "scroll-arrow-btn";
-        upBtn.title = "Scroll to top";
-        upBtn.innerHTML = "▲";
-        upBtn.addEventListener("click", () => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-
-        // Down arrow
-        const downBtn = document.createElement("button");
-        downBtn.id = "scroll-arrow-down";
-        downBtn.className = "scroll-arrow-btn";
-        downBtn.title = "Scroll to bottom";
-        downBtn.innerHTML = "▼";
-        downBtn.addEventListener("click", () => {
-            const footer = document.getElementById("footer");
-            if (footer) {
-                footer.scrollIntoView({ behavior: "smooth", block: "end" });
-            } else {
-                window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: "smooth",
-                });
-            }
-        });
-
-        document.body.appendChild(upBtn);
-        document.body.appendChild(downBtn);
-    }
-
-    // --- Feature: Delete (Save) Name Checkbox ---
-    // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
-    function featureDeleteNameCheckbox() {
-        // Check if the #qr-name-row exists and has the 'hidden' class
-        const nameExists = document.getElementById("qr-name-row");
-        if (nameExists && nameExists.classList.contains("hidden")) {
-            return;
-        }
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = "saveNameCheckbox";
-        checkbox.classList.add("postingCheckbox");
-        const label = document.createElement("label");
-        label.htmlFor = "saveNameCheckbox";
-        label.textContent = "Delete Name";
-        label.title = "Delete Name on refresh";
-        const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
-        if (!alwaysUseBypassCheckbox) {
-            return;
-        }
-
-        alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
-        alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
-
-        // Restore checkbox state
-        const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
-        checkbox.checked = savedCheckboxState;
-
-        const nameInput = document.getElementById("qrname");
-        if (nameInput) {
-            // If the checkbox is checked on load, clear the input and remove the name from storage
-            if (checkbox.checked) {
-                nameInput.value = "";
-                localStorage.removeItem("name");
-            }
-
-            // Save checkbox state
-            checkbox.addEventListener("change", function () {
-                localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
-            });
-        }
-    }
-
-
-    // --- Feature: Beep and/or notify on (You) ---
-    function featureBeepOnYou() {
-        // Beep sound (base64)
-        const beep = new Audio(
-            "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
-        );
-
-        // Store the original title globally so all functions can access it
-        window.originalTitle = document.title;
-        let isNotifying = false;
-
-        // Function to play the beep sound
-        function playBeep() {
-            if (beep.paused) {
-                beep.play().catch((e) => console.warn("Beep failed:", e));
-            } else {
-                beep.addEventListener("ended", () => beep.play(), { once: true });
-            }
-        }
-
-        // Create MutationObserver to detect when you are quoted
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach(async (node) => {
-                    if (
-                        node.nodeType === 1 &&
-                        node.querySelector &&
-                        node.querySelector("a.quoteLink.you")
-                    ) {
-                        // If the quote is inside .innerPost, do not beep or notify
-                        if (node.closest('.innerPost')) {
-                            return;
-                        }
-                        // Only play beep if the setting is enabled
-                        if (await getSetting("beepOnYou")) {
-                            playBeep();
-                        }
-
-                        // Trigger notification in separate function if enabled
-                        if (await getSetting("notifyOnYou")) {
-                            featureNotifyOnYou();
-                        }
-                    }
-                });
-            });
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        // Function to notify on (You)
-        async function featureNotifyOnYou() {
-            if (!window.isNotifying && !document.hasFocus()) {
-                window.isNotifying = true;
-                // Get custom message, fallback to default
-                let customMsg = await getSetting("notifyOnYou_customMessage");
-                if (!customMsg) customMsg = "(!) ";
-                document.title = customMsg + " " + window.originalTitle;
-
-                // Set up focus event listener if not already set
-                if (!window.notifyFocusListenerAdded) {
-                    window.addEventListener("focus", () => {
-                        if (window.isNotifying) {
-                            document.title = window.originalTitle;
-                            window.isNotifying = false;
-                        }
-                    });
-                    window.notifyFocusListenerAdded = true;
-                }
-            }
-        }
-
-        // Remove notification when tab regains focus
-        window.addEventListener("focus", () => {
-            if (isNotifying) {
-                document.title = window.originalTitle;
-                isNotifying = false;
-            }
-        });
-    }
-    // Init
-    featureBeepOnYou();
 
     ///////// KEYBOARD SHORTCUTS ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // --- Keyboard Shortcuts ---
-    // Open 8chanSS menu (CTRL + F1)
+    // --- Consolidated Keyboard Shortcuts ---
     document.addEventListener("keydown", async function (event) {
+        // Open 8chanSS menu (CTRL + F1)
         if (event.ctrlKey && event.key === "F1") {
             event.preventDefault();
-            let menu =
-                document.getElementById("8chanSS-menu") ||
-                (await createSettingsMenu());
-            menu.style.display =
-                menu.style.display === "none" || menu.style.display === ""
-                    ? "block"
-                    : "none";
+            let menu = document.getElementById("8chanSS-menu") || (await createSettingsMenu());
+            menu.style.display = menu.style.display === "none" || menu.style.display === "" ? "block" : "none";
+            return;
         }
-    });
 
-    // Submit post (CTRL + Enter)
-    async function submitWithCtrlEnter(event) {
-        if (event.ctrlKey && event.key === "Enter") {
-            event.preventDefault();
-            const submitButton = document.getElementById("qrbutton");
-            if (submitButton) {
-                submitButton.click();
-                if (await getSetting("watchThreadOnReply")) {
-                    setTimeout(() => {
-                        const btn = document.querySelector(".watchButton");
-                        if (btn && !btn.classList.contains("watched-active")) {
-                            btn.click();
-                            setTimeout(() => {
-                                btn.classList.add("watched-active");
-                            }, 100);
-                        }
-                    }, 500);
-                }
-            }
-        }
-    }
-    const replyTextarea = document.getElementById("qrbody");
-    if (replyTextarea) {
-        replyTextarea.addEventListener("keydown", submitWithCtrlEnter);
-    }
-
-    // QR (CTRL + Q)
-    function toggleQR(event) {
-        // Check if Ctrl + Q is pressed
+        // QR (CTRL + Q)
         if (event.ctrlKey && (event.key === "q" || event.key === "Q")) {
+            event.preventDefault();
             const hiddenDiv = document.getElementById("quick-reply");
-            // Toggle QR
-            if (
-                hiddenDiv.style.display === "none" ||
-                hiddenDiv.style.display === ""
-            ) {
-                hiddenDiv.style.display = "block"; // Show the div
+            if (!hiddenDiv) return;
 
-                // Focus the textarea after a small delay to ensure it's visible
+            // Toggle QR
+            const isHidden = hiddenDiv.style.display === "none" || hiddenDiv.style.display === "";
+            hiddenDiv.style.display = isHidden ? "block" : "none";
+
+            // Focus the textarea after a small delay to ensure it's visible
+            if (isHidden) {
                 setTimeout(() => {
                     const textarea = document.getElementById("qrbody");
-                    if (textarea) {
-                        textarea.focus();
-                    }
+                    if (textarea) textarea.focus();
                 }, 50);
-            } else {
-                hiddenDiv.style.display = "none"; // Hide the div
             }
+            return;
         }
-    }
-    document.addEventListener("keydown", toggleQR);
 
-    // (ESC) Clear textarea and hide QR
-    function clearTextarea(event) {
-        // Check if Escape key is pressed
+        // (ESC) Clear textarea and hide QR
         if (event.key === "Escape") {
             // Clear the textarea
             const textarea = document.getElementById("qrbody");
-            if (textarea) {
-                textarea.value = ""; // Clear the textarea
-            }
+            if (textarea) textarea.value = "";
 
             // Hide the quick-reply div
             const quickReply = document.getElementById("quick-reply");
-            if (quickReply) {
-                quickReply.style.display = "none"; // Hide the quick-reply
-            }
-        }
-    }
-    document.addEventListener("keydown", clearTextarea);
-
-    // SHIFT + Up/Down Arrow (Scroll between posts and replies)
-    function featureScrollBetweenPosts() {
-        let lastHighlighted = null;
-        let lastType = null; // "own" or "reply"
-        let lastIndex = -1;
-
-        function getEligiblePostCells(isOwnReply) {
-            // Find all .postCell and .opCell that contain at least one matching anchor
-            const selector = isOwnReply
-                ? '.postCell:has(a.youName), .opCell:has(a.youName)'
-                : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
-            // Use Array.from to get a static list in DOM order
-            return Array.from(document.querySelectorAll(selector));
+            if (quickReply) quickReply.style.display = "none";
+            return;
         }
 
-        function scrollToReply(isOwnReply = true, getNextReply = true) {
-            const postCells = getEligiblePostCells(isOwnReply);
-            if (!postCells.length) return;
-
-            // Determine current index
-            let currentIndex = -1;
-
-            // If lastType matches and lastHighlighted is still in the list, use its index
-            if (
-                lastType === (isOwnReply ? "own" : "reply") &&
-                lastHighlighted &&
-                (currentIndex = postCells.indexOf(lastHighlighted.closest('.postCell, .opCell'))) !== -1
-            ) {
-                // Use found index
-            } else {
-                // Otherwise, find the first cell whose top is below the middle of the viewport
-                const viewportMiddle = window.innerHeight / 2;
-                currentIndex = postCells.findIndex(cell => {
-                    const rect = cell.getBoundingClientRect();
-                    return rect.top + rect.height / 2 > viewportMiddle;
-                });
-                if (currentIndex === -1) {
-                    // If none found, default to first or last depending on direction
-                    currentIndex = getNextReply ? -1 : postCells.length;
-                }
-            }
-
-            // Determine target index
-            const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
-            if (targetIndex < 0 || targetIndex >= postCells.length) return;
-
-            const postContainer = postCells[targetIndex];
-            if (postContainer) {
-                postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
-
-                // Remove highlight from previous post
-                if (lastHighlighted) {
-                    lastHighlighted.classList.remove('target-highlight');
-                }
-
-                // Find the anchor id for this post (usually something like id="p123456")
-                let anchorId = null;
-                let anchorElem = postContainer.querySelector('[id^="p"]');
-                if (anchorElem && anchorElem.id) {
-                    anchorId = anchorElem.id;
-                } else if (postContainer.id) {
-                    anchorId = postContainer.id;
-                }
-
-                // Update the URL hash to simulate :target
-                if (anchorId) {
-                    if (location.hash !== '#' + anchorId) {
-                        history.replaceState(null, '', '#' + anchorId);
-                    }
-                }
-
-                // Add highlight class to .innerPost
-                const innerPost = postContainer.querySelector('.innerPost');
-                if (innerPost) {
-                    innerPost.classList.add('target-highlight');
-                    lastHighlighted = innerPost;
-                } else {
-                    lastHighlighted = null;
-                }
-
-                // Track type and index for next navigation
-                lastType = isOwnReply ? "own" : "reply";
-                lastIndex = targetIndex;
-            }
+        // Scroll between posts with CTRL+Arrow keys
+        if (event.ctrlKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault();
+            const isOwnReply = !event.shiftKey;
+            const isNext = event.key === 'ArrowDown';
+            scrollToReply(isOwnReply, isNext);
+            return;
         }
+    });
 
-        function onKeyDown(event) {
-            // Ignore if typing in an input or textarea or contenteditable
-            if (
-                event.target &&
-                (
-                    /^(input|textarea)$/i.test(event.target.tagName) ||
-                    event.target.isContentEditable
-                )
-            ) return;
-
-            if (event.ctrlKey && event.shiftKey) {
-                // Scroll to replies to your posts
-                if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    scrollToReply(false, true);
-                } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    scrollToReply(false, false);
-                }
-            } else if (event.ctrlKey) {
-                // Scroll to your own posts
-                if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    scrollToReply(true, true);
-                } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    scrollToReply(true, false);
-                }
-            }
-        }
-
-        // Remove highlight and update on hash change
-        window.addEventListener('hashchange', () => {
-            if (lastHighlighted) {
-                lastHighlighted.classList.remove('target-highlight');
-                lastHighlighted = null;
-            }
-            const hash = location.hash.replace('#', '');
-            if (hash) {
-                const postElem = document.getElementById(hash);
-                if (postElem) {
-                    const innerPost = postElem.querySelector('.innerPost');
-                    if (innerPost) {
-                        innerPost.classList.add('target-highlight');
-                        lastHighlighted = innerPost;
+    // (CTRL + Enter) and BBCodes - Keep separate as it's specific to the textarea
+    const replyTextarea = document.getElementById("qrbody");
+    if (replyTextarea) {
+        replyTextarea.addEventListener("keydown", async function (event) {
+            if (event.ctrlKey && event.key === "Enter") {
+                event.preventDefault();
+                const submitButton = document.getElementById("qrbutton");
+                if (submitButton) {
+                    submitButton.click();
+                    if (await getSetting("watchThreadOnReply")) {
+                        setTimeout(() => {
+                            const btn = document.querySelector(".watchButton");
+                            if (btn && !btn.classList.contains("watched-active")) {
+                                btn.click();
+                                setTimeout(() => {
+                                    btn.classList.add("watched-active");
+                                }, 100);
+                            }
+                        }, 500);
                     }
                 }
             }
         });
 
-        document.addEventListener('keydown', onKeyDown);
+        // BBCODE Combination keys and Tags - Keep with the textarea
+        replyTextarea.addEventListener("keydown", function (event) {
+            const key = event.key.toLowerCase();
+
+            // Special case: alt+c for [code] tag
+            if (key === "c" && event.altKey && !event.ctrlKey && bbCodeCombinations.has(key)) {
+                event.preventDefault();
+                applyBBCode(event.target, key);
+                return;
+            }
+
+            // All other tags: ctrl+key
+            if (event.ctrlKey && !event.altKey && bbCodeCombinations.has(key) && key !== "c") {
+                event.preventDefault();
+                applyBBCode(event.target, key);
+                return;
+            }
+        });
     }
-    // Init
-    featureScrollBetweenPosts();
 
     // BBCODE Combination keys and Tags
     const bbCodeCombinations = new Map([
@@ -2429,79 +2665,140 @@ onReady(async function () {
         ["c", ["[code]", "[/code]"]],
     ]);
 
-    function replyKeyboardShortcuts(ev) {
-        const key = ev.key.toLowerCase();
-        // Special case: alt+c for [code] tag
-        if (
-            key === "c" &&
-            ev.altKey &&
-            !ev.ctrlKey &&
-            bbCodeCombinations.has(key)
-        ) {
-            ev.preventDefault();
-            const textBox = ev.target;
-            const [openTag, closeTag] = bbCodeCombinations.get(key);
-            const { selectionStart, selectionEnd, value } = textBox;
-            if (selectionStart === selectionEnd) {
-                // No selection: insert empty tags and place cursor between them
-                const before = value.slice(0, selectionStart);
-                const after = value.slice(selectionEnd);
-                const newCursor = selectionStart + openTag.length;
-                textBox.value = before + openTag + closeTag + after;
-                textBox.selectionStart = textBox.selectionEnd = newCursor;
-            } else {
-                // Replace selected text with tags around it
-                const before = value.slice(0, selectionStart);
-                const selected = value.slice(selectionStart, selectionEnd);
-                const after = value.slice(selectionEnd);
-                textBox.value = before + openTag + selected + closeTag + after;
-                // Keep selection around the newly wrapped text
-                textBox.selectionStart = selectionStart + openTag.length;
-                textBox.selectionEnd = selectionEnd + openTag.length;
-            }
-            return;
-        }
-        // All other tags: ctrl+key
-        if (
-            ev.ctrlKey &&
-            !ev.altKey &&
-            bbCodeCombinations.has(key) &&
-            key !== "c"
-        ) {
-            ev.preventDefault();
-            const textBox = ev.target;
-            const [openTag, closeTag] = bbCodeCombinations.get(key);
-            const { selectionStart, selectionEnd, value } = textBox;
-            if (selectionStart === selectionEnd) {
-                // No selection: insert empty tags and place cursor between them
-                const before = value.slice(0, selectionStart);
-                const after = value.slice(selectionEnd);
-                const newCursor = selectionStart + openTag.length;
-                textBox.value = before + openTag + closeTag + after;
-                textBox.selectionStart = textBox.selectionEnd = newCursor;
-            } else {
-                // Replace selected text with tags around it
-                const before = value.slice(0, selectionStart);
-                const selected = value.slice(selectionStart, selectionEnd);
-                const after = value.slice(selectionEnd);
-                textBox.value = before + openTag + selected + closeTag + after;
-                // Keep selection around the newly wrapped text
-                textBox.selectionStart = selectionStart + openTag.length;
-                textBox.selectionEnd = selectionEnd + openTag.length;
-            }
-            return;
+    // Helper function for applying BBCode
+    function applyBBCode(textBox, key) {
+        const [openTag, closeTag] = bbCodeCombinations.get(key);
+        const { selectionStart, selectionEnd, value } = textBox;
+
+        if (selectionStart === selectionEnd) {
+            // No selection: insert empty tags and place cursor between them
+            const before = value.slice(0, selectionStart);
+            const after = value.slice(selectionEnd);
+            const newCursor = selectionStart + openTag.length;
+            textBox.value = before + openTag + closeTag + after;
+            textBox.selectionStart = textBox.selectionEnd = newCursor;
+        } else {
+            // Replace selected text with tags around it
+            const before = value.slice(0, selectionStart);
+            const selected = value.slice(selectionStart, selectionEnd);
+            const after = value.slice(selectionEnd);
+            textBox.value = before + openTag + selected + closeTag + after;
+            // Keep selection around the newly wrapped text
+            textBox.selectionStart = selectionStart + openTag.length;
+            textBox.selectionEnd = selectionEnd + openTag.length;
         }
     }
-    document
-        .getElementById("qrbody")
-        ?.addEventListener("keydown", replyKeyboardShortcuts);
+
+    // Scroll between posts functionality
+    let lastHighlighted = null;
+    let lastType = null; // "own" or "reply"
+    let lastIndex = -1;
+
+    function getEligiblePostCells(isOwnReply) {
+        // Find all .postCell and .opCell that contain at least one matching anchor
+        const selector = isOwnReply
+            ? '.postCell:has(a.youName), .opCell:has(a.youName)'
+            : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
+        // Use Array.from to get a static list in DOM order
+        return Array.from(document.querySelectorAll(selector));
+    }
+
+    function scrollToReply(isOwnReply = true, getNextReply = true) {
+        const postCells = getEligiblePostCells(isOwnReply);
+        if (!postCells.length) return;
+
+        // Determine current index
+        let currentIndex = -1;
+
+        // If lastType matches and lastHighlighted is still in the list, use its index
+        if (
+            lastType === (isOwnReply ? "own" : "reply") &&
+            lastHighlighted &&
+            (currentIndex = postCells.indexOf(lastHighlighted.closest('.postCell, .opCell'))) !== -1
+        ) {
+            // Use found index
+        } else {
+            // Otherwise, find the first cell whose top is below the middle of the viewport
+            const viewportMiddle = window.innerHeight / 2;
+            currentIndex = postCells.findIndex(cell => {
+                const rect = cell.getBoundingClientRect();
+                return rect.top + rect.height / 2 > viewportMiddle;
+            });
+            if (currentIndex === -1) {
+                // If none found, default to first or last depending on direction
+                currentIndex = getNextReply ? -1 : postCells.length;
+            }
+        }
+
+        // Determine target index
+        const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
+        if (targetIndex < 0 || targetIndex >= postCells.length) return;
+
+        const postContainer = postCells[targetIndex];
+        if (postContainer) {
+            postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            // Remove highlight from previous post
+            if (lastHighlighted) {
+                lastHighlighted.classList.remove('target-highlight');
+            }
+
+            // Find the anchor id for this post (usually something like id="p123456")
+            let anchorId = null;
+            let anchorElem = postContainer.querySelector('[id^="p"]');
+            if (anchorElem && anchorElem.id) {
+                anchorId = anchorElem.id;
+            } else if (postContainer.id) {
+                anchorId = postContainer.id;
+            }
+
+            // Update the URL hash to simulate :target
+            if (anchorId) {
+                if (location.hash !== '#' + anchorId) {
+                    history.replaceState(null, '', '#' + anchorId);
+                }
+            }
+
+            // Add highlight class to .innerPost
+            const innerPost = postContainer.querySelector('.innerPost');
+            if (innerPost) {
+                innerPost.classList.add('target-highlight');
+                lastHighlighted = innerPost;
+            } else {
+                lastHighlighted = null;
+            }
+
+            // Track type and index for next navigation
+            lastType = isOwnReply ? "own" : "reply";
+            lastIndex = targetIndex;
+        }
+    }
+
+    // Remove highlight and update on hash change
+    window.addEventListener('hashchange', () => {
+        if (lastHighlighted) {
+            lastHighlighted.classList.remove('target-highlight');
+            lastHighlighted = null;
+        }
+        const hash = location.hash.replace('#', '');
+        if (hash) {
+            const postElem = document.getElementById(hash);
+            if (postElem) {
+                const innerPost = postElem.querySelector('.innerPost');
+                if (innerPost) {
+                    innerPost.classList.add('target-highlight');
+                    lastHighlighted = innerPost;
+                }
+            }
+        }
+    });
 
     // ---- Feature: Hide catalog threads with SHIFT+click, per-board storage.
-    function featureCatalogThreadHideShortcut() {
+    function featureCatalogHiding() {
         const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
         let showHiddenMode = false;
 
-        // Utility: Extract board name and thread number from a .catalogCell
+        // Extract board name and thread number from a .catalogCell
         function getBoardAndThreadNumFromCell(cell) {
             const link = cell.querySelector("a.linkThumb[href*='/res/']");
             if (!link) return { board: null, threadNum: null };
@@ -2510,7 +2807,7 @@ onReady(async function () {
             return { board: match[1], threadNum: match[2] };
         }
 
-        // Utility: Load hidden threads object from storage
+        // Load hidden threads object from storage
         async function loadHiddenThreadsObj() {
             const raw = await GM.getValue(STORAGE_KEY, "{}");
             try {
@@ -2521,7 +2818,7 @@ onReady(async function () {
             }
         }
 
-        // Utility: Save hidden threads object to storage
+        // Save hidden threads object to storage
         async function saveHiddenThreadsObj(obj) {
             await GM.setValue(STORAGE_KEY, JSON.stringify(obj));
         }
@@ -2671,6 +2968,8 @@ onReady(async function () {
         hideThreadsOnRefresh();
     }
 
+    ////// KEYBOARD END /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     // --- Misc Fixes ---
 
     // Captcha input no history
@@ -2689,13 +2988,93 @@ onReady(async function () {
     }
 
     // Move file uploads below OP title
-    function moveUploadsBelowOP() {
-        const panelUploads = document.querySelector('.panelUploads');
-        const opHeadTitle = document.querySelector('.opHead.title');
-        if (panelUploads && opHeadTitle) {
-            opHeadTitle.appendChild(panelUploads);
-        }
+    const opHeadTitle = document.querySelector('.opHead.title');
+    const innerOP = document.querySelector('.innerOp');
+    const innerQuote = document.querySelector('.innerQuote');
+    if (opHeadTitle && innerOP) {
+        innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
     }
-    moveUploadsBelowOP();
-/// END ////
+
+    // Add Tab key focus for #qrbody
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+            const qrbody = document.getElementById("qrbody");
+            if (qrbody && document.activeElement !== qrbody) {
+                e.preventDefault();
+                qrbody.focus();
+            }
+        }
+    });
+
+    // Show all posts by ID
+    function enableIdFiltering() {
+        const postCellSelector = ".postCell";
+        const labelIdSelector = ".labelId";
+        const hiddenClassName = "is-hidden-by-filter";
+        let activeFilterColor = null;
+        // Filter posts    
+        function applyFilter(targetRgbColor) {
+            activeFilterColor = targetRgbColor;
+            document.querySelectorAll(postCellSelector).forEach(cell => {
+                const label = cell.querySelector(labelIdSelector);
+                const matches = label && window.getComputedStyle(label).backgroundColor === targetRgbColor;
+                cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
+            });
+        }
+        // Click
+        function handleClick(event) {
+            const clickedLabel = event.target.closest(labelIdSelector);
+            // Only trigger if inside a .postCell and not inside a preview
+            if (clickedLabel && clickedLabel.closest(".postCell") && !clickedLabel.closest(".de-pview")) {
+                const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
+                const rect = clickedLabel.getBoundingClientRect();
+                const cursorOffsetY = event.clientY - rect.top;
+
+                if (activeFilterColor === clickedColor) {
+                    applyFilter(null);
+                } else {
+                    applyFilter(clickedColor);
+                }
+                // Scroll to keep the clicked label in view
+                clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
+                window.scrollBy(0, cursorOffsetY - rect.height / 2);
+            }
+        }
+
+        document.body.addEventListener("click", handleClick);
+    }
+    // Init
+    enableIdFiltering();
+
+    // Truncate Filenames and Show Only Extension
+    function truncateFilenames(filenameLength) {
+        document.querySelectorAll('a.originalNameLink').forEach(link => {
+            const fullFilename = link.getAttribute('download');
+            if (!fullFilename) return;
+
+            const lastDot = fullFilename.lastIndexOf('.');
+            if (lastDot === -1) return; // No extension found
+
+            const name = fullFilename.slice(0, lastDot);
+            const ext = fullFilename.slice(lastDot);
+
+            // Only truncate if needed
+            let truncated = fullFilename;
+            if (name.length > filenameLength) {
+                truncated = name.slice(0, filenameLength) + '(...)' + ext;
+            }
+
+            // Set initial truncated text
+            link.textContent = truncated;
+            // Show full filename on hover, revert on mouseout
+            link.addEventListener('mouseenter', function () {
+                link.textContent = fullFilename;
+            });
+            link.addEventListener('mouseleave', function () {
+                link.textContent = truncated;
+            });
+            // Optional: set title attribute for accessibility
+            link.title = fullFilename;
+        });
+    }
 });
