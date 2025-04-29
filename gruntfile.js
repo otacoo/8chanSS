@@ -63,7 +63,7 @@
       return grunt.registerTask('updcl', 'Update the changelog', function(i) {
         var version;
         version = [];
-        version.length = +i + 2;
+        version.length = +i + 1;
         version = version.join('#') + ' v' + pkg.version + '\n*' + grunt.template.today('yyyy-mm-dd') + '*\n';
         grunt.file.write('CHANGELOG.md', version + '\n' + grunt.file.read('CHANGELOG.md'));
         return grunt.log.ok('Changelog updated for v' + pkg.version + '.');
