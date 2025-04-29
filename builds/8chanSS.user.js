@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.34.0
-// @namespace    8chanSS
+// @version      1.36.0
+// @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
 // @minGMVer     4.3
@@ -20,6 +20,13 @@
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
 // ==/UserScript==
 
+function onReady(fn) {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", fn, { once: true });
+    } else {
+        fn();
+    }
+}
 (function () {
     const userTheme = localStorage.selectedTheme;
     if (!userTheme) return;
@@ -64,19 +71,12 @@
 
     try {
         updateLocalStorage(
-            ["hoveringImage"],           
-            {}    
+            ["hoveringImage"],      
+            {}      
         );
     } catch (e) {
     }
 })();
-function onReady(fn) {
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", fn, { once: true });
-    } else {
-        fn();
-    }
-}
 onReady(async function () {
     const scriptSettings = {
         site: {
@@ -107,7 +107,7 @@ onReady(async function () {
         },
         threads: {
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            enableNestedReplies: { label: "Enabled Nested Replies", default: false },
+            enableNestedReplies: { label: "Enabled Inline Replies", default: false },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -139,7 +139,8 @@ onReady(async function () {
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
-            enableThreadHiding: { label: "Enable Thread Hiding", default: false }
+            enableThreadHiding: { label: "Enable Thread Hiding", default: false },
+            openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false }
         },
         styling: {
             _siteTitle: { type: "title", label: ":: Site Styling" }, 
@@ -169,12 +170,30 @@ onReady(async function () {
                     leftSidebar: {
                         label: "Sidebar on Left",
                         default: false
-                    },
-                },
+                    }
+                }
             },
             threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, }
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
+            hideCheckboxes: { label: "Hide Checkboxes", default: false }
         },
+        miscel: {
+            switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
+            truncFilenames: {
+                label: "Truncate filenames",
+                default: false,
+                subOptions: {
+                    customTrunc: {
+                        label: "Max filename length (min: 5, max: 50)",
+                        default: 15,
+                        type: "number",
+                        min: 5,
+                        max: 50
+                    }
+                }
+            },
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false }
+        }
     };
     const flatSettings = {};
     function flattenSettings() {
@@ -202,6 +221,7 @@ onReady(async function () {
         if (val === null) return flatSettings[key].default;
         if (flatSettings[key].type === "number") return Number(val);
         if (flatSettings[key].type === "text") return String(val).replace(/[<>"']/g, "").slice(0, flatSettings[key].maxLength || 32);
+        if (flatSettings[key].type === "textarea") return String(val);
         return val === "true";
     }
 
@@ -227,7 +247,9 @@ onReady(async function () {
             hideAnnouncement: "hide-announcement",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",
-            threadHideCloseBtn: "hide-close-btn"
+            threadHideCloseBtn: "hide-close-btn",
+            hideCheckboxes: "hide-checkboxes",
+            hideNoCookieLink: "hide-nocookie"
         };
         if (enableSidebar && !enableSidebar_leftSidebar) {
             document.documentElement.classList.add("ss-sidebar");
@@ -275,131 +297,16 @@ onReady(async function () {
         }
     }
     onReady(featureSidebar);
-    const themeSelector = document.getElementById("themesBefore");
-    let link = null;
-    let bracketSpan = null;
-    if (themeSelector) {
-        bracketSpan = document.createElement("span");
-        bracketSpan.textContent = "] [ ";
-        link = document.createElement("a");
-        link.id = "8chanSS-icon";
-        link.href = "#";
-        link.textContent = "8chanSS";
-        link.style.fontWeight = "bold";
-
-        themeSelector.parentNode.insertBefore(
-            bracketSpan,
-            themeSelector.nextSibling
-        );
-        themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
-    }
-    function createShortcutsTab() {
-        const container = document.createElement("div");
-        const title = document.createElement("h3");
-        title.textContent = "Keyboard Shortcuts";
-        title.style.margin = "0 0 15px 0";
-        title.style.fontSize = "16px";
-        container.appendChild(title);
-        const table = document.createElement("table");
-        table.style.width = "100%";
-        table.style.borderCollapse = "collapse";
-        const tableStyles = {
-            th: {
-                textAlign: "left",
-                padding: "8px 5px",
-                borderBottom: "1px solid #444",
-                fontSize: "14px",
-                fontWeight: "bold",
-            },
-            td: {
-                padding: "8px 5px",
-                borderBottom: "1px solid #333",
-                fontSize: "13px",
-            },
-            kbd: {
-                background: "#333",
-                border: "1px solid #555",
-                borderRadius: "3px",
-                padding: "2px 5px",
-                fontSize: "12px",
-                fontFamily: "monospace",
-            },
-        };
-        const headerRow = document.createElement("tr");
-        const shortcutHeader = document.createElement("th");
-        shortcutHeader.textContent = "Shortcut";
-        Object.assign(shortcutHeader.style, tableStyles.th);
-        headerRow.appendChild(shortcutHeader);
-
-        const actionHeader = document.createElement("th");
-        actionHeader.textContent = "Action";
-        Object.assign(actionHeader.style, tableStyles.th);
-        headerRow.appendChild(actionHeader);
-
-        table.appendChild(headerRow);
-        const shortcuts = [
-            { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
-            { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
-            { keys: ["Ctrl", "Enter"], action: "Submit post" },
-            { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
-            { keys: ["ALT", "W"], action: "Watch Thread" },
-            { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
-            { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
-            { keys: ["CTRL", "SHIFT", "UP/DOWN"], action: "Scroll between Replies to You" },
-            { keys: ["Ctrl", "B"], action: "Bold text" },
-            { keys: ["Ctrl", "I"], action: "Italic text" },
-            { keys: ["Ctrl", "U"], action: "Underline text" },
-            { keys: ["Ctrl", "S"], action: "Spoiler text" },
-            { keys: ["Ctrl", "D"], action: "Doom text" },
-            { keys: ["Ctrl", "M"], action: "Moe text" },
-            { keys: ["Alt", "C"], action: "Code block" },
-        ];
-        shortcuts.forEach((shortcut) => {
-            const row = document.createElement("tr");
-            const shortcutCell = document.createElement("td");
-            Object.assign(shortcutCell.style, tableStyles.td);
-            shortcut.keys.forEach((key, index) => {
-                const kbd = document.createElement("kbd");
-                kbd.textContent = key;
-                Object.assign(kbd.style, tableStyles.kbd);
-                shortcutCell.appendChild(kbd);
-                if (index < shortcut.keys.length - 1) {
-                    const plus = document.createTextNode(" + ");
-                    shortcutCell.appendChild(plus);
-                }
-            });
-
-            row.appendChild(shortcutCell);
-            const actionCell = document.createElement("td");
-            actionCell.textContent = shortcut.action;
-            Object.assign(actionCell.style, tableStyles.td);
-            row.appendChild(actionCell);
-
-            table.appendChild(row);
-        });
-
-        container.appendChild(table);
-        const note = document.createElement("p");
-        note.textContent =
-            "Text formatting shortcuts work when text is selected or when inserting at cursor position.";
-        note.style.fontSize = "12px";
-        note.style.marginTop = "15px";
-        note.style.opacity = "0.7";
-        note.style.fontStyle = "italic";
-        container.appendChild(note);
-
-        return container;
-    }
     const currentPath = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
 
     let css = "";
 
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,:root.hide-announcement #dynamicAnnouncement,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}#watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}";
+        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}#watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}";
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:300px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.disable-banner #bannerImage{display:none}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}.reply-inlined{text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid #dd003e 3px}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}.postCell::before{display:inline!important;height:auto!important}";
+        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid #dd003e 3px}.postCell::before{display:inline!important;height:auto!important}";
     }
     if (/\/catalog\.html$/.test(currentPath)) {
         css += "#dynamicAnnouncement{display:none}#postingForm{margin:2em auto}";
@@ -411,7 +318,6 @@ onReady(async function () {
         style.textContent = css;
         document.head.appendChild(style);
     }
-
     if (await getSetting("enableScrollSave")) {
         featureSaveScroll();
     }
@@ -423,6 +329,9 @@ onReady(async function () {
     }
     if (await getSetting("enableHeaderCatalogLinks")) {
         featureHeaderCatalogLinks();
+    }
+    if (await getSetting("openCatalogThreadNewTab")) {
+        catalogThreadsInNewTab();
     }
     if (await getSetting("deleteSavedName")) {
         featureDeleteNameCheckbox();
@@ -437,11 +346,18 @@ onReady(async function () {
         preventFooterScrollIntoView();
     }
     if (await getSetting("enableThreadHiding")) {
-        featureCatalogThreadHideShortcut();
+        featureCatalogHiding();
     }
     if (await getSetting("enableNestedReplies")) {
         localStorage.setItem("inlineReplies", "true");
         featureNestedReplies();
+    }
+    if (await getSetting("switchTimeFormat")) {
+        featureLabelCreated12h();
+    }
+    if (await getSetting("truncFilenames")) {
+        const filenameLength = await getSetting("truncFilenames_customTrunc");
+        truncateFilenames(filenameLength);
     }
     async function initImageHover() {
         const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
@@ -456,431 +372,6 @@ onReady(async function () {
         }
     }
     initImageHover();
-    async function createSettingsMenu() {
-        let menu = document.getElementById("8chanSS-menu");
-        if (menu) return menu;
-        menu = document.createElement("div");
-        menu.id = "8chanSS-menu";
-        menu.style.position = "fixed";
-        menu.style.top = "4rem"; 
-        menu.style.left = "20rem"; 
-        menu.style.zIndex = "99999";
-        menu.style.background = "#222";
-        menu.style.color = "#fff";
-        menu.style.padding = "0";
-        menu.style.borderRadius = "8px";
-        menu.style.boxShadow = "0 4px 16px rgba(0,0,0,0.25)";
-        menu.style.display = "none";
-        menu.style.minWidth = "220px";
-        menu.style.width = "100%";
-        menu.style.maxWidth = "450px";
-        menu.style.fontFamily = "sans-serif";
-        menu.style.userSelect = "none";
-        let isDragging = false,
-            dragOffsetX = 0,
-            dragOffsetY = 0;
-        const header = document.createElement("div");
-        header.style.display = "flex";
-        header.style.justifyContent = "space-between";
-        header.style.alignItems = "center";
-        header.style.marginBottom = "0";
-        header.style.cursor = "move";
-        header.style.background = "#333";
-        header.style.padding = "5px 18px 5px";
-        header.style.borderTopLeftRadius = "8px";
-        header.style.borderTopRightRadius = "8px";
-        header.addEventListener("mousedown", function (e) {
-            isDragging = true;
-            const rect = menu.getBoundingClientRect();
-            dragOffsetX = e.clientX - rect.left;
-            dragOffsetY = e.clientY - rect.top;
-            document.body.style.userSelect = "none";
-        });
-        document.addEventListener("mousemove", function (e) {
-            if (!isDragging) return;
-            let newLeft = e.clientX - dragOffsetX;
-            let newTop = e.clientY - dragOffsetY;
-            const menuRect = menu.getBoundingClientRect();
-            const menuWidth = menuRect.width;
-            const menuHeight = menuRect.height;
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            newLeft = Math.max(0, Math.min(newLeft, viewportWidth - menuWidth));
-            newTop = Math.max(0, Math.min(newTop, viewportHeight - menuHeight));
-            menu.style.left = newLeft + "px";
-            menu.style.top = newTop + "px";
-            menu.style.right = "auto";
-        });
-        document.addEventListener("mouseup", function () {
-            isDragging = false;
-            document.body.style.userSelect = "";
-        });
-        const title = document.createElement("span");
-        title.textContent = "8chanSS Settings";
-        title.style.fontWeight = "bold";
-        header.appendChild(title);
-
-        const closeBtn = document.createElement("button");
-        closeBtn.textContent = "✕";
-        closeBtn.style.background = "none";
-        closeBtn.style.border = "none";
-        closeBtn.style.color = "#fff";
-        closeBtn.style.fontSize = "18px";
-        closeBtn.style.cursor = "pointer";
-        closeBtn.style.marginLeft = "10px";
-        closeBtn.addEventListener("click", () => {
-            menu.style.display = "none";
-        });
-        header.appendChild(closeBtn);
-
-        menu.appendChild(header);
-        const tabNav = document.createElement("div");
-        tabNav.style.display = "flex";
-        tabNav.style.borderBottom = "1px solid #444";
-        tabNav.style.background = "#2a2a2a";
-        const tabContent = document.createElement("div");
-        tabContent.style.padding = "15px 16px";
-        tabContent.style.maxHeight = "60vh";
-        tabContent.style.overflowY = "auto";
-        const tempSettings = {};
-        await Promise.all(
-            Object.keys(flatSettings).map(async (key) => {
-                tempSettings[key] = await getSetting(key);
-            })
-        );
-        const tabs = {
-            site: {
-                label: "Site",
-                content: createTabContent("site", tempSettings),
-            },
-            threads: {
-                label: "Threads",
-                content: createTabContent("threads", tempSettings),
-            },
-            catalog: {
-                label: "Catalog",
-                content: createTabContent("catalog", tempSettings),
-            },
-            styling: {
-                label: "Style",
-                content: createTabContent("styling", tempSettings),
-            },
-            shortcuts: {
-                label: "⌨️",
-                content: createShortcutsTab(),
-            },
-        };
-        Object.keys(tabs).forEach((tabId, index, arr) => {
-            const tab = tabs[tabId];
-            const tabButton = document.createElement("button");
-            tabButton.textContent = tab.label;
-            tabButton.dataset.tab = tabId;
-            tabButton.style.background = index === 0 ? "#333" : "transparent";
-            tabButton.style.border = "none";
-            tabButton.style.borderRight = "1px solid #444";
-            tabButton.style.color = "#fff";
-            tabButton.style.padding = "8px 15px";
-            tabButton.style.margin = "5px 0 0 0";
-            tabButton.style.cursor = "pointer";
-            tabButton.style.flex = "1";
-            tabButton.style.fontSize = "14px";
-            tabButton.style.transition = "background 0.2s";
-            if (index === 0) {
-                tabButton.style.borderTopLeftRadius = "8px";
-                tabButton.style.margin = "5px 0 0 5px";
-            }
-            if (index === arr.length - 1) {
-                tabButton.style.borderTopRightRadius = "8px";
-                tabButton.style.margin = "5px 5px 0 0";
-                tabButton.style.borderRight = "none"; 
-            }
-
-            tabButton.addEventListener("click", () => {
-                Object.values(tabs).forEach((t) => {
-                    t.content.style.display = "none";
-                });
-                tab.content.style.display = "block";
-                tabNav.querySelectorAll("button").forEach((btn) => {
-                    btn.style.background = "transparent";
-                });
-                tabButton.style.background = "#333";
-            });
-
-            tabNav.appendChild(tabButton);
-        });
-
-        menu.appendChild(tabNav);
-        Object.values(tabs).forEach((tab, index) => {
-            tab.content.style.display = index === 0 ? "block" : "none";
-            tabContent.appendChild(tab.content);
-        });
-
-        menu.appendChild(tabContent);
-        const buttonContainer = document.createElement("div");
-        buttonContainer.style.display = "flex";
-        buttonContainer.style.gap = "10px";
-        buttonContainer.style.padding = "0 18px 15px";
-        const saveBtn = document.createElement("button");
-        saveBtn.textContent = "Save";
-        saveBtn.style.background = "#4caf50";
-        saveBtn.style.color = "#fff";
-        saveBtn.style.border = "none";
-        saveBtn.style.borderRadius = "4px";
-        saveBtn.style.padding = "8px 18px";
-        saveBtn.style.fontSize = "15px";
-        saveBtn.style.cursor = "pointer";
-        saveBtn.style.flex = "1";
-        saveBtn.addEventListener("click", async function () {
-            for (const key of Object.keys(tempSettings)) {
-                await setSetting(key, tempSettings[key]);
-            }
-            saveBtn.textContent = "Saved!";
-            setTimeout(() => {
-                saveBtn.textContent = "Save";
-            }, 900);
-            setTimeout(() => {
-                window.location.reload();
-            }, 400);
-        });
-        buttonContainer.appendChild(saveBtn);
-        const resetBtn = document.createElement("button");
-        resetBtn.textContent = "Reset";
-        resetBtn.style.background = "#dd3333";
-        resetBtn.style.color = "#fff";
-        resetBtn.style.border = "none";
-        resetBtn.style.borderRadius = "4px";
-        resetBtn.style.padding = "8px 18px";
-        resetBtn.style.fontSize = "15px";
-        resetBtn.style.cursor = "pointer";
-        resetBtn.style.flex = "1";
-        resetBtn.addEventListener("click", async function () {
-            if (confirm("Reset all 8chanSS settings to defaults?")) {
-                const keys = await GM.listValues();
-                for (const key of keys) {
-                    if (key.startsWith("8chanSS_")) {
-                        await GM.deleteValue(key);
-                    }
-                }
-                resetBtn.textContent = "Reset!";
-                setTimeout(() => {
-                    resetBtn.textContent = "Reset";
-                }, 900);
-                setTimeout(() => {
-                    window.location.reload();
-                }, 400);
-            }
-        });
-        buttonContainer.appendChild(resetBtn);
-
-        menu.appendChild(buttonContainer);
-        const info = document.createElement("div");
-        info.style.fontSize = "11px";
-        info.style.padding = "0 18px 12px";
-        info.style.opacity = "0.7";
-        info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.34.0</a>';
-        menu.appendChild(info);
-
-        document.body.appendChild(menu);
-        return menu;
-    }
-    function createTabContent(category, tempSettings) {
-        const container = document.createElement("div");
-        const categorySettings = scriptSettings[category];
-
-        Object.keys(categorySettings).forEach((key) => {
-            const setting = categorySettings[key];
-            if (setting.type === "separator") {
-                const hr = document.createElement("hr");
-                hr.style.border = "none";
-                hr.style.borderTop = "1px solid #444";
-                hr.style.margin = "12px 0";
-                container.appendChild(hr);
-                return;
-            }
-            if (setting.type === "title") {
-                const title = document.createElement("div");
-                title.textContent = setting.label;
-                title.style.fontWeight = "bold";
-                title.style.fontSize = "1rem";
-                title.style.margin = "10px 0 6px 0";
-                title.style.opacity = "0.9";
-                container.appendChild(title);
-                return;
-            }
-            const parentRow = document.createElement("div");
-            parentRow.style.display = "flex";
-            parentRow.style.alignItems = "center";
-            parentRow.style.marginBottom = "0px";
-            if (key === "hoverVideoVolume" && setting.type === "number") {
-                const label = document.createElement("label");
-                label.htmlFor = "setting_" + key;
-                label.textContent = setting.label + ": ";
-                label.style.flex = "1";
-
-                const sliderContainer = document.createElement("div");
-                sliderContainer.style.display = "flex";
-                sliderContainer.style.alignItems = "center";
-                sliderContainer.style.flex = "1";
-
-                const slider = document.createElement("input");
-                slider.type = "range";
-                slider.id = "setting_" + key;
-                slider.min = setting.min;
-                slider.max = setting.max;
-                slider.value = Number(tempSettings[key]).toString();
-                slider.style.flex = "unset";
-                slider.style.width = "100px";
-                slider.style.marginRight = "10px";
-
-                const valueLabel = document.createElement("span");
-                valueLabel.textContent = slider.value + "%";
-                valueLabel.style.minWidth = "40px";
-                valueLabel.style.textAlign = "right";
-
-                slider.addEventListener("input", function () {
-                    let val = Number(slider.value);
-                    if (isNaN(val)) val = setting.default;
-                    val = Math.max(setting.min, Math.min(setting.max, val));
-                    slider.value = val.toString();
-                    tempSettings[key] = val;
-                    valueLabel.textContent = val + "%";
-                });
-
-                sliderContainer.appendChild(slider);
-                sliderContainer.appendChild(valueLabel);
-
-                parentRow.appendChild(label);
-                parentRow.appendChild(sliderContainer);
-                const wrapper = document.createElement("div");
-                wrapper.style.marginBottom = "10px";
-                wrapper.appendChild(parentRow);
-                container.appendChild(wrapper);
-                return; 
-            }
-            const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
-            checkbox.id = "setting_" + key;
-            checkbox.checked =
-                tempSettings[key] === true || tempSettings[key] === "true";
-            checkbox.style.marginRight = "8px";
-            const label = document.createElement("label");
-            label.htmlFor = checkbox.id;
-            label.textContent = setting.label;
-            label.style.flex = "1";
-            let chevron = null;
-            let subOptionsContainer = null;
-            if (setting?.subOptions) {
-                chevron = document.createElement("span");
-                chevron.className = "ss-chevron";
-                chevron.innerHTML = "&#9654;"; 
-                chevron.style.display = "inline-block";
-                chevron.style.transition = "transform 0.2s";
-                chevron.style.marginLeft = "6px";
-                chevron.style.fontSize = "12px";
-                chevron.style.userSelect = "none";
-                chevron.style.transform = checkbox.checked
-                    ? "rotate(90deg)"
-                    : "rotate(0deg)";
-            }
-            checkbox.addEventListener("change", function () {
-                tempSettings[key] = checkbox.checked;
-                if (!setting?.subOptions) return;
-                if (!subOptionsContainer) return;
-
-                subOptionsContainer.style.display = checkbox.checked
-                    ? "block"
-                    : "none";
-
-                if (!chevron) return;
-                chevron.style.transform = checkbox.checked
-                    ? "rotate(90deg)"
-                    : "rotate(0deg)";
-            });
-
-            parentRow.appendChild(checkbox);
-            parentRow.appendChild(label);
-            if (chevron) parentRow.appendChild(chevron);
-            const wrapper = document.createElement("div");
-            wrapper.style.marginBottom = "10px";
-
-            wrapper.appendChild(parentRow);
-            if (setting?.subOptions) {
-                subOptionsContainer = document.createElement("div");
-                subOptionsContainer.style.marginLeft = "25px";
-                subOptionsContainer.style.marginTop = "5px";
-                subOptionsContainer.style.display = checkbox.checked ? "block" : "none";
-
-                Object.keys(setting.subOptions).forEach((subKey) => {
-                    const subSetting = setting.subOptions[subKey];
-                    const fullKey = `${key}_${subKey}`;
-
-                    const subWrapper = document.createElement("div");
-                    subWrapper.style.marginBottom = "5px";
-
-                    if (subSetting.type === "text") {
-                        const subLabel = document.createElement("label");
-                        subLabel.htmlFor = "setting_" + fullKey;
-                        subLabel.textContent = subSetting.label + ": ";
-
-                        const subInput = document.createElement("input");
-                        subInput.type = "text";
-                        subInput.id = "setting_" + fullKey;
-                        subInput.value = tempSettings[fullKey] || "";
-                        subInput.maxLength = subSetting.maxLength;
-                        subInput.style.width = "60px";
-                        subInput.style.marginLeft = "2px";
-                        subInput.placeholder = "(!) ";
-                        subInput.addEventListener("input", function () {
-                            let val = subInput.value.replace(/[<>"']/g, "");
-                            if (val.length > subInput.maxLength) {
-                                val = val.slice(0, subInput.maxLength);
-                            }
-                            subInput.value = val;
-                            tempSettings[fullKey] = val;
-                        });
-
-                        subWrapper.appendChild(subLabel);
-                        subWrapper.appendChild(subInput);
-                    } else {
-                        const subCheckbox = document.createElement("input");
-                        subCheckbox.type = "checkbox";
-                        subCheckbox.id = "setting_" + fullKey;
-                        subCheckbox.checked = tempSettings[fullKey];
-                        subCheckbox.style.marginRight = "8px";
-
-                        subCheckbox.addEventListener("change", function () {
-                            tempSettings[fullKey] = subCheckbox.checked;
-                        });
-
-                        const subLabel = document.createElement("label");
-                        subLabel.htmlFor = subCheckbox.id;
-                        subLabel.textContent = subSetting.label;
-
-                        subWrapper.appendChild(subCheckbox);
-                        subWrapper.appendChild(subLabel);
-                    }
-                    subOptionsContainer.appendChild(subWrapper);
-                });
-
-                wrapper.appendChild(subOptionsContainer);
-            }
-
-            container.appendChild(wrapper);
-        });
-
-        return container;
-    }
-    if (link) {
-        let menu = await createSettingsMenu();
-        link.style.cursor = "pointer";
-        link.title = "Open 8chanSS settings";
-        link.addEventListener("click", async function (e) {
-            e.preventDefault();
-            let menu = await createSettingsMenu();
-            menu.style.display = menu.style.display === "none" ? "block" : "none";
-        });
-    }
     async function featureSaveScroll() {
         const MAX_PAGES = 50;
         const currentPage = window.location.origin + window.location.pathname + window.location.search;
@@ -1062,6 +553,22 @@ onReady(async function () {
             observer.observe(navboardsSpan, config);
         }
     }
+    function catalogThreadsInNewTab() {
+        const catalogDiv = document.querySelector('.catalogDiv');
+        if (!catalogDiv) return;
+
+        function setLinksTargetBlank(cell) {
+            const link = cell.querySelector('a.linkThumb');
+            if (link) link.setAttribute('target', '_blank');
+        }
+        catalogDiv.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
+        if (catalogDiv) {
+            const observer = new MutationObserver(() => {
+                setLinksTargetBlank(catalogDiv);
+            });
+            observer.observe(catalogDiv, { childList: true, subtree: true });
+        }
+    }
     function featureImageHover() {
         const MEDIA_MAX_WIDTH = "90vw";
         const MEDIA_OPACITY_LOADING = "0.75";
@@ -1098,32 +605,6 @@ onReady(async function () {
             const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
             y = Math.max(0, Math.min(y, maxY));
 
-            floatingMedia.style.left = `${x}px`;
-            floatingMedia.style.top = `${y}px`;
-        }
-        function positionFloatingMediaInitial(event) {
-            if (!floatingMedia) return;
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
-            const mw = floatingMedia.offsetWidth || 320;
-            const mh = floatingMedia.offsetHeight || 240;
-
-            const MEDIA_OFFSET_PX = getMediaOffset();
-            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
-            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth;
-            let x = vw / 2, y = vh / 2;
-            if (event && typeof event.clientX === "number" && typeof event.clientY === "number") {
-                x = event.clientX + MEDIA_OFFSET_PX;
-                x = clamp(x, 0, vw - mw - SCROLLBAR_WIDTH);
-
-                y = event.clientY;
-                const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
-                y = Math.max(0, Math.min(y, maxY));
-            } else {
-                x = clamp((vw - mw) / 2, 0, vw - mw - SCROLLBAR_WIDTH);
-                const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
-                y = clamp((vh - mh - MEDIA_BOTTOM_MARGIN_PX) / 2, 0, maxY);
-            }
             floatingMedia.style.left = `${x}px`;
             floatingMedia.style.top = `${y}px`;
         }
@@ -1349,36 +830,59 @@ onReady(async function () {
     }
     function featureNestedReplies() {
         function ensureReplyPreviewPlacement(root = document) {
-            root.querySelectorAll('.innerPost').forEach(innerPost => {
-                const divMessage = innerPost.querySelector('.divMessage');
-                if (!divMessage) return;
-                const replyPreview = innerPost.querySelector('.replyPreview');
-                if (replyPreview && replyPreview.nextSibling !== divMessage) {
-                    innerPost.insertBefore(replyPreview, divMessage);
+            root.querySelectorAll('.innerOP').forEach(innerOP => {
+                const opHeadTitle = innerOP.querySelector('.opHead.title');
+                const replyPreview = innerOP.querySelector('.replyPreview');
+                if (opHeadTitle && replyPreview && opHeadTitle.nextSibling !== replyPreview) {
+                    innerOP.insertBefore(replyPreview, opHeadTitle.nextSibling);
                 }
-                innerPost.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
-                    if (inlineQuote.nextSibling !== divMessage) {
-                        innerPost.insertBefore(inlineQuote, divMessage);
+            });
+            root.querySelectorAll('.innerPost').forEach(innerPost => {
+                const postInfoTitle = innerPost.querySelector('.postInfo.title');
+                const replyPreview = innerPost.querySelector('.replyPreview');
+                if (postInfoTitle && replyPreview && postInfoTitle.nextSibling !== replyPreview) {
+                    innerPost.insertBefore(replyPreview, postInfoTitle.nextSibling);
+                }
+            });
+        }
+        function ensureInlineQuotePlacement(node) {
+            if (
+                node.nodeType === 1 &&
+                node.classList.contains('inlineQuote') &&
+                node.parentElement &&
+                node.parentElement.classList.contains('replyPreview')
+            ) {
+                const replyPreview = node.parentElement;
+                if (replyPreview.firstChild !== node) {
+                    replyPreview.insertBefore(node, replyPreview.firstChild);
+                }
+            }
+            else if (node.nodeType === 1) {
+                node.querySelectorAll('.replyPreview .inlineQuote').forEach(inlineQuote => {
+                    const replyPreview = inlineQuote.parentElement;
+                    if (replyPreview.firstChild !== inlineQuote) {
+                        replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
                     }
                 });
-            });
+            }
         }
         ensureReplyPreviewPlacement();
         const observer = new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType !== 1) continue; 
-                    if (node.matches && node.matches('.innerPost')) {
+                    if (node.matches && (node.matches('.innerPost') || node.matches('.innerOP'))) {
                         ensureReplyPreviewPlacement(node);
                     } else if (node.querySelectorAll) {
-                        node.querySelectorAll('.innerPost').forEach(innerPost => {
-                            ensureReplyPreviewPlacement(innerPost);
+                        node.querySelectorAll('.innerPost, .innerOP').forEach(post => {
+                            ensureReplyPreviewPlacement(post);
                         });
                     }
+                    ensureInlineQuotePlacement(node);
                 }
             }
         });
-        const postsContainer = document.querySelector('.divPosts');
+        const postsContainer = document.querySelector('.opCell');
         if (postsContainer) {
             observer.observe(postsContainer, { childList: true, subtree: true });
         }
@@ -1436,52 +940,52 @@ onReady(async function () {
         txt.innerHTML = once;
         return txt.value;
     }
-
     function highlightMentions() {
-        document.querySelectorAll("#watchedMenu .watchedCell").forEach((cell) => {
+        const watchedCells = document.querySelectorAll("#watchedMenu .watchedCell");
+        if (!watchedCells.length) return; 
+        watchedCells.forEach((cell) => {
             const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
+            if (!notification) return; 
+
             const labelLink = cell.querySelector(".watchedCellLabel a");
-            const watchedCellLabel = cell.querySelector(".watchedCellLabel");
-            if (labelLink) {
+            if (!labelLink) return; 
+            if (!labelLink.dataset.board) {
+                const href = labelLink.getAttribute("href");
+                const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
+                if (match) {
+                    labelLink.dataset.board = `/${match[1]}/ -`;
+                }
+                if (document.location.href.includes(href)) {
+                    const watchButton = document.querySelector(".opHead .watchButton");
+                    if (watchButton) {
+                        watchButton.style.color = "var(--board-title-color)";
+                        watchButton.title = "Watched";
+                    }
+                }
                 const originalHtml = labelLink.innerHTML;
                 const decodedText = decodeHtmlEntitiesTwice(originalHtml);
                 if (labelLink.textContent !== decodedText) {
                     labelLink.textContent = decodedText;
                 }
             }
-
-            if (labelLink) {
-                if (!labelLink.dataset.board) {
-                    const href = labelLink.getAttribute("href");
-                    const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
-                    if (match) {
-                        labelLink.dataset.board = `/${match[1]}/ -`;
-                    }
-                    if (document.location.href.includes(href)) {
-                        const watchButton = document.querySelector(".opHead .watchButton");
-                        if (watchButton) {
-                            watchButton.style.color = "var(--board-title-color)";
-                            watchButton.title = "Watched";
-                        }
-                    }
-                }
-                if (notification && notification.textContent.includes("(you)")) {
-                    labelLink.style.color = "var(--board-title-color)";
-                    if (watchedCellLabel && !watchedCellLabel.querySelector(".you-mention-label")) {
-                        const youLabel = document.createElement("span");
-                        youLabel.className = "you-mention-label";
-                        youLabel.textContent = " - (You)";
-                        youLabel.style.color = "var(--board-title-color)";
-                        watchedCellLabel.appendChild(youLabel);
-                    }
-                } else {
-                    labelLink.style.color = "";
-                    const youLabel = watchedCellLabel?.querySelector(".you-mention-label");
-                    if (youLabel) {
-                        youLabel.remove();
-                    }
-                }
+            const notificationText = notification.textContent.trim();
+            if (notificationText.startsWith("(")) {
+                return;
             }
+            if (notificationText.includes("(you)")) {
+                const parts = notificationText.split(", ");
+                const totalReplies = parts[0];
+                labelLink.style.color = "var(--board-title-color)";
+                notification.style.color = "var(--board-title-color)";
+                notification.textContent = ` (${totalReplies}) (You)`;
+                notification.style.fontWeight = "bold";
+            }
+            else if (/^\d+$/.test(notificationText)) {
+                notification.textContent = ` (${notificationText})`;
+                notification.style.color = "var(--link-color)";
+                notification.style.fontWeight = "bold";
+            }
+            notification.dataset.processed = "true";
         });
     }
     highlightMentions();
@@ -1593,24 +1097,24 @@ onReady(async function () {
         function getTYous() {
             try {
                 const val = localStorage.getItem(T_YOUS_KEY);
-                if (!val) return [];
-                return JSON.parse(val);
+                return val ? JSON.parse(val) : [];
             } catch {
                 return [];
             }
         }
+
         function setTYous(arr) {
             localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
         }
         document.body.addEventListener('click', function (e) {
             if (e.target.matches('.extraMenuButton')) {
                 const postCell = e.target.closest('.postCell, .opCell');
-                setTimeout(() => {
+                if (postCell) {
                     const menu = document.querySelector(MENU_SELECTOR);
-                    if (menu && postCell) {
+                    if (menu) {
                         menu.setAttribute('data-post-id', postCell.id);
                     }
-                }, 0);
+                }
             }
         });
 
@@ -1697,11 +1201,9 @@ onReady(async function () {
     }
     onReady(featureMarkYourPost);
     function featureScrollArrows() {
-        if (
-            document.getElementById("scroll-arrow-up") ||
-            document.getElementById("scroll-arrow-down")
-        )
+        if (document.getElementById("scroll-arrow-up") || document.getElementById("scroll-arrow-down")) {
             return;
+        }
         const upBtn = document.createElement("button");
         upBtn.id = "scroll-arrow-up";
         upBtn.className = "scroll-arrow-btn";
@@ -1716,15 +1218,7 @@ onReady(async function () {
         downBtn.title = "Scroll to bottom";
         downBtn.innerHTML = "▼";
         downBtn.addEventListener("click", () => {
-            const footer = document.getElementById("footer");
-            if (footer) {
-                footer.scrollIntoView({ behavior: "smooth", block: "end" });
-            } else {
-                window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: "smooth",
-                });
-            }
+            window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
         });
 
         document.body.appendChild(upBtn);
@@ -1736,18 +1230,20 @@ onReady(async function () {
             return;
         }
 
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = "saveNameCheckbox";
-        checkbox.classList.add("postingCheckbox");
-        const label = document.createElement("label");
-        label.htmlFor = "saveNameCheckbox";
-        label.textContent = "Delete Name";
-        label.title = "Delete Name on refresh";
         const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
         if (!alwaysUseBypassCheckbox) {
             return;
         }
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = "saveNameCheckbox";
+        checkbox.classList.add("postingCheckbox");
+
+        const label = document.createElement("label");
+        label.htmlFor = "saveNameCheckbox";
+        label.textContent = "Delete Name";
+        label.title = "Delete Name on refresh";
 
         alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
         alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
@@ -1770,243 +1266,821 @@ onReady(async function () {
             "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
         );
         window.originalTitle = document.title;
-        let isNotifying = false;
+        window.isNotifying = false;
+        let beepOnYouSetting = false;
+        let notifyOnYouSetting = false;
+        let customMsgSetting = "(!) ";
+        async function initSettings() {
+            beepOnYouSetting = await getSetting("beepOnYou");
+            notifyOnYouSetting = await getSetting("notifyOnYou");
+            const customMsg = await getSetting("notifyOnYou_customMessage");
+            if (customMsg) customMsgSetting = customMsg;
+        }
+        initSettings();
         function playBeep() {
             if (beep.paused) {
                 beep.play().catch((e) => console.warn("Beep failed:", e));
             } else {
-                beep.addEventListener("ended", () => beep.play(), { once: true });
+                beep.currentTime = 0; 
             }
         }
+        function notifyOnYou() {
+            if (!window.isNotifying && !document.hasFocus()) {
+                window.isNotifying = true;
+                document.title = customMsgSetting + " " + window.originalTitle;
+            }
+        }
+        window.addEventListener("focus", () => {
+            if (window.isNotifying) {
+                document.title = window.originalTitle;
+                window.isNotifying = false;
+            }
+        });
         const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach(async (node) => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
                     if (
                         node.nodeType === 1 &&
                         node.querySelector &&
                         node.querySelector("a.quoteLink.you")
                     ) {
                         if (node.closest('.innerPost')) {
-                            return;
+                            continue;
                         }
-                        if (await getSetting("beepOnYou")) {
+                        if (beepOnYouSetting) {
                             playBeep();
                         }
-                        if (await getSetting("notifyOnYou")) {
-                            featureNotifyOnYou();
+                        if (notifyOnYouSetting) {
+                            notifyOnYou();
                         }
                     }
-                });
-            });
+                }
+            }
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
-        async function featureNotifyOnYou() {
-            if (!window.isNotifying && !document.hasFocus()) {
-                window.isNotifying = true;
-                let customMsg = await getSetting("notifyOnYou_customMessage");
-                if (!customMsg) customMsg = "(!) ";
-                document.title = customMsg + " " + window.originalTitle;
-                if (!window.notifyFocusListenerAdded) {
-                    window.addEventListener("focus", () => {
-                        if (window.isNotifying) {
-                            document.title = window.originalTitle;
-                            window.isNotifying = false;
-                        }
-                    });
-                    window.notifyFocusListenerAdded = true;
+        window.addEventListener("8chanSS_settingChanged", async (e) => {
+            if (e.detail && e.detail.key) {
+                const key = e.detail.key;
+                if (key === "beepOnYou") {
+                    beepOnYouSetting = await getSetting("beepOnYou");
+                } else if (key === "notifyOnYou") {
+                    notifyOnYouSetting = await getSetting("notifyOnYou");
+                } else if (key === "notifyOnYou_customMessage") {
+                    const customMsg = await getSetting("notifyOnYou_customMessage");
+                    if (customMsg) customMsgSetting = customMsg;
                 }
-            }
-        }
-        window.addEventListener("focus", () => {
-            if (isNotifying) {
-                document.title = window.originalTitle;
-                isNotifying = false;
             }
         });
     }
     featureBeepOnYou();
+    function featureLabelCreated12h() {
+        function convertLabelCreatedTimes(root = document) {
+            (root.querySelectorAll
+                ? root.querySelectorAll('.labelCreated')
+                : []).forEach(span => {
+                    if (span.dataset.timeConverted === "1") return;
+
+                    const text = span.textContent;
+                    const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
+                    if (!match) return;
+
+                    const [_, datePart, hourStr, minStr, secStr] = match;
+                    let hour = parseInt(hourStr, 10);
+                    const min = minStr;
+                    const sec = secStr;
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    let hour12 = hour % 12;
+                    if (hour12 === 0) hour12 = 12;
+
+                    const newText = `${datePart} ${hour12}:${min}:${sec} ${ampm}`;
+                    span.textContent = newText;
+                    span.dataset.timeConverted = "1";
+                });
+        }
+        convertLabelCreatedTimes();
+        const threadsContainer = document.querySelector('.divPosts');
+        if (threadsContainer) {
+            new MutationObserver(() => {
+                convertLabelCreatedTimes(threadsContainer);
+            }).observe(threadsContainer, { childList: true, subtree: true });
+        }
+    }
+    function renameFileAtIndex(index) {
+        const currentFile = postCommon.selectedFiles[index];
+        if (!currentFile) return;
+        const currentName = currentFile.name;
+        const newName = prompt("Enter new file name:", currentName);
+
+        if (!newName || newName === currentName) return;
+
+        const extension = currentName.includes('.') ? currentName.substring(currentName.lastIndexOf('.')) : '';
+        const hasExtension = newName.includes('.');
+        const finalName = hasExtension ? newName : newName + extension;
+
+        if (hasExtension && newName.substring(newName.lastIndexOf('.')) !== extension) {
+            alert(`You cannot change the file extension. The extension must remain "${extension}".`);
+            return;
+        }
+        const renamedFile = new File([currentFile], finalName, {
+            type: currentFile.type,
+            lastModified: currentFile.lastModified,
+        });
+
+        postCommon.selectedFiles[index] = renamedFile;
+        const labels = document.querySelectorAll('#qrFilesBody .selectedCell .nameLabel');
+        const label = labels[index];
+        if (label) {
+            label.textContent = finalName;
+            label.title = finalName;
+        }
+    }
+    function handleQrFilesBodyClick(event) {
+        const label = event.target.closest('.nameLabel');
+        if (!label || !label.closest('#qrFilesBody')) return;
+        const labels = Array.from(document.querySelectorAll('#qrFilesBody .selectedCell .nameLabel'));
+        const index = labels.indexOf(label);
+        if (index !== -1) {
+            renameFileAtIndex(index);
+        }
+    }
+    function observeQrFilesBody() {
+        const qrFilesBody = document.querySelector('#qrFilesBody');
+        if (!qrFilesBody) return;
+        if (!qrFilesBody.dataset.renameDelegationAttached) {
+            qrFilesBody.addEventListener('click', handleQrFilesBodyClick);
+            qrFilesBody.dataset.renameDelegationAttached = 'true';
+        }
+    }
+    function startQrFilesBodyObserver() {
+        const qrFilesBody = document.querySelector('#qrFilesBody');
+        if (!qrFilesBody) return;
+        observeQrFilesBody();
+    }
+    startQrFilesBodyObserver();
+    async function createSettingsMenu() {
+        let menu = document.getElementById("8chanSS-menu");
+        if (menu) return menu;
+        menu = document.createElement("div");
+        menu.id = "8chanSS-menu";
+        menu.style.position = "fixed";
+        menu.style.top = "4rem"; 
+        menu.style.left = "20rem"; 
+        menu.style.zIndex = "99999";
+        menu.style.background = "#222";
+        menu.style.color = "#fff";
+        menu.style.padding = "0";
+        menu.style.borderRadius = "8px";
+        menu.style.boxShadow = "0 4px 16px rgba(0,0,0,0.25)";
+        menu.style.display = "none";
+        menu.style.minWidth = "220px";
+        menu.style.width = "100%";
+        menu.style.maxWidth = "450px";
+        menu.style.fontFamily = "sans-serif";
+        menu.style.userSelect = "none";
+        let isDragging = false,
+            dragOffsetX = 0,
+            dragOffsetY = 0;
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.justifyContent = "space-between";
+        header.style.alignItems = "center";
+        header.style.marginBottom = "0";
+        header.style.cursor = "move";
+        header.style.background = "#333";
+        header.style.padding = "5px 18px 5px";
+        header.style.borderTopLeftRadius = "8px";
+        header.style.borderTopRightRadius = "8px";
+        header.addEventListener("mousedown", function (e) {
+            isDragging = true;
+            const rect = menu.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            document.body.style.userSelect = "none";
+        });
+        document.addEventListener("mousemove", function (e) {
+            if (!isDragging) return;
+            let newLeft = e.clientX - dragOffsetX;
+            let newTop = e.clientY - dragOffsetY;
+            const menuRect = menu.getBoundingClientRect();
+            const menuWidth = menuRect.width;
+            const menuHeight = menuRect.height;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            newLeft = Math.max(0, Math.min(newLeft, viewportWidth - menuWidth));
+            newTop = Math.max(0, Math.min(newTop, viewportHeight - menuHeight));
+            menu.style.left = newLeft + "px";
+            menu.style.top = newTop + "px";
+            menu.style.right = "auto";
+        });
+        document.addEventListener("mouseup", function () {
+            isDragging = false;
+            document.body.style.userSelect = "";
+        });
+        const title = document.createElement("span");
+        title.textContent = "8chanSS Settings";
+        title.style.fontWeight = "bold";
+        header.appendChild(title);
+
+        const closeBtn = document.createElement("button");
+        closeBtn.textContent = "✕";
+        closeBtn.style.background = "none";
+        closeBtn.style.border = "none";
+        closeBtn.style.color = "#fff";
+        closeBtn.style.fontSize = "18px";
+        closeBtn.style.cursor = "pointer";
+        closeBtn.style.marginLeft = "10px";
+        closeBtn.addEventListener("click", () => {
+            menu.style.display = "none";
+        });
+        header.appendChild(closeBtn);
+
+        menu.appendChild(header);
+        const tabNav = document.createElement("div");
+        tabNav.style.display = "flex";
+        tabNav.style.borderBottom = "1px solid #444";
+        tabNav.style.background = "#2a2a2a";
+        const tabContent = document.createElement("div");
+        tabContent.style.padding = "15px 16px";
+        tabContent.style.maxHeight = "65vh";
+        tabContent.style.overflowY = "auto";
+        tabContent.style.scrollbarWidth = "thin";
+        const tempSettings = {};
+        await Promise.all(
+            Object.keys(flatSettings).map(async (key) => {
+                tempSettings[key] = await getSetting(key);
+            })
+        );
+        const tabs = {
+            site: {
+                label: "Site",
+                content: createTabContent("site", tempSettings),
+            },
+            threads: {
+                label: "Threads",
+                content: createTabContent("threads", tempSettings),
+            },
+            catalog: {
+                label: "Catalog",
+                content: createTabContent("catalog", tempSettings),
+            },
+            styling: {
+                label: "Style",
+                content: createTabContent("styling", tempSettings),
+            },
+            miscel: {
+                label: "Misc.",
+                content: createTabContent("miscel", tempSettings),
+            },
+            shortcuts: {
+                label: "⌨️",
+                content: createShortcutsTab(),
+            },
+        };
+        Object.keys(tabs).forEach((tabId, index, arr) => {
+            const tab = tabs[tabId];
+            const tabButton = document.createElement("button");
+            tabButton.textContent = tab.label;
+            tabButton.dataset.tab = tabId;
+            tabButton.style.background = index === 0 ? "#333" : "transparent";
+            tabButton.style.border = "none";
+            tabButton.style.borderRight = "1px solid #444";
+            tabButton.style.color = "#fff";
+            tabButton.style.padding = "8px 15px";
+            tabButton.style.margin = "5px 0 0 0";
+            tabButton.style.cursor = "pointer";
+            tabButton.style.flex = "1";
+            tabButton.style.fontSize = "14px";
+            tabButton.style.transition = "background 0.2s";
+            if (index === 0) {
+                tabButton.style.borderTopLeftRadius = "8px";
+                tabButton.style.margin = "5px 0 0 5px";
+            }
+            if (index === arr.length - 1) {
+                tabButton.style.borderTopRightRadius = "8px";
+                tabButton.style.margin = "5px 5px 0 0";
+                tabButton.style.borderRight = "none"; 
+            }
+
+            tabButton.addEventListener("click", () => {
+                Object.values(tabs).forEach((t) => {
+                    t.content.style.display = "none";
+                });
+                tab.content.style.display = "block";
+                tabNav.querySelectorAll("button").forEach((btn) => {
+                    btn.style.background = "transparent";
+                });
+                tabButton.style.background = "#333";
+            });
+
+            tabNav.appendChild(tabButton);
+        });
+
+        menu.appendChild(tabNav);
+        Object.values(tabs).forEach((tab, index) => {
+            tab.content.style.display = index === 0 ? "block" : "none";
+            tabContent.appendChild(tab.content);
+        });
+
+        menu.appendChild(tabContent);
+        const buttonContainer = document.createElement("div");
+        buttonContainer.style.display = "flex";
+        buttonContainer.style.gap = "10px";
+        buttonContainer.style.padding = "0 18px 15px";
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "Save";
+        saveBtn.style.background = "#4caf50";
+        saveBtn.style.color = "#fff";
+        saveBtn.style.border = "none";
+        saveBtn.style.borderRadius = "4px";
+        saveBtn.style.padding = "8px 18px";
+        saveBtn.style.fontSize = "15px";
+        saveBtn.style.cursor = "pointer";
+        saveBtn.style.flex = "1";
+        saveBtn.addEventListener("click", async function () {
+            for (const key of Object.keys(tempSettings)) {
+                await setSetting(key, tempSettings[key]);
+            }
+            saveBtn.textContent = "Saved!";
+            setTimeout(() => {
+                saveBtn.textContent = "Save";
+            }, 900);
+            setTimeout(() => {
+                window.location.reload();
+            }, 400);
+        });
+        buttonContainer.appendChild(saveBtn);
+        const resetBtn = document.createElement("button");
+        resetBtn.textContent = "Reset";
+        resetBtn.style.background = "#dd3333";
+        resetBtn.style.color = "#fff";
+        resetBtn.style.border = "none";
+        resetBtn.style.borderRadius = "4px";
+        resetBtn.style.padding = "8px 18px";
+        resetBtn.style.fontSize = "15px";
+        resetBtn.style.cursor = "pointer";
+        resetBtn.style.flex = "1";
+        resetBtn.addEventListener("click", async function () {
+            if (confirm("Reset all 8chanSS settings to defaults?")) {
+                const keys = await GM.listValues();
+                for (const key of keys) {
+                    if (key.startsWith("8chanSS_")) {
+                        await GM.deleteValue(key);
+                    }
+                }
+                resetBtn.textContent = "Reset!";
+                setTimeout(() => {
+                    resetBtn.textContent = "Reset";
+                }, 900);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 400);
+            }
+        });
+        buttonContainer.appendChild(resetBtn);
+
+        menu.appendChild(buttonContainer);
+        const info = document.createElement("div");
+        info.style.fontSize = "11px";
+        info.style.padding = "0 18px 12px";
+        info.style.opacity = "0.7";
+        info.style.textAlign = "center";
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.36.0</a>';
+        menu.appendChild(info);
+
+        document.body.appendChild(menu);
+        return menu;
+    }
+    function createTabContent(category, tempSettings) {
+        const container = document.createElement("div");
+        const categorySettings = scriptSettings[category];
+
+        Object.keys(categorySettings).forEach((key) => {
+            const setting = categorySettings[key];
+            if (setting.type === "separator") {
+                const hr = document.createElement("hr");
+                hr.style.border = "none";
+                hr.style.borderTop = "1px solid #444";
+                hr.style.margin = "12px 0";
+                container.appendChild(hr);
+                return;
+            }
+            if (setting.type === "title") {
+                const title = document.createElement("div");
+                title.textContent = setting.label;
+                title.style.fontWeight = "bold";
+                title.style.fontSize = "1rem";
+                title.style.margin = "10px 0 6px 0";
+                title.style.opacity = "0.9";
+                container.appendChild(title);
+                return;
+            }
+            const parentRow = document.createElement("div");
+            parentRow.style.display = "flex";
+            parentRow.style.alignItems = "center";
+            parentRow.style.marginBottom = "0px";
+            if (key === "hoverVideoVolume" && setting.type === "number") {
+                const label = document.createElement("label");
+                label.htmlFor = "setting_" + key;
+                label.textContent = setting.label + ": ";
+                label.style.flex = "1";
+
+                const sliderContainer = document.createElement("div");
+                sliderContainer.style.display = "flex";
+                sliderContainer.style.alignItems = "center";
+                sliderContainer.style.flex = "1";
+
+                const slider = document.createElement("input");
+                slider.type = "range";
+                slider.id = "setting_" + key;
+                slider.min = setting.min;
+                slider.max = setting.max;
+                slider.value = Number(tempSettings[key]).toString();
+                slider.style.flex = "unset";
+                slider.style.width = "100px";
+                slider.style.marginRight = "10px";
+
+                const valueLabel = document.createElement("span");
+                valueLabel.textContent = slider.value + "%";
+                valueLabel.style.minWidth = "40px";
+                valueLabel.style.textAlign = "right";
+
+                slider.addEventListener("input", function () {
+                    let val = Number(slider.value);
+                    if (isNaN(val)) val = setting.default;
+                    val = Math.max(setting.min, Math.min(setting.max, val));
+                    slider.value = val.toString();
+                    tempSettings[key] = val;
+                    valueLabel.textContent = val + "%";
+                });
+
+                sliderContainer.appendChild(slider);
+                sliderContainer.appendChild(valueLabel);
+
+                parentRow.appendChild(label);
+                parentRow.appendChild(sliderContainer);
+                const wrapper = document.createElement("div");
+                wrapper.style.marginBottom = "10px";
+                wrapper.appendChild(parentRow);
+                container.appendChild(wrapper);
+                return; 
+            }
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.id = "setting_" + key;
+            checkbox.checked =
+                tempSettings[key] === true || tempSettings[key] === "true";
+            checkbox.style.marginRight = "8px";
+            const label = document.createElement("label");
+            label.htmlFor = checkbox.id;
+            label.textContent = setting.label;
+            label.style.flex = "1";
+            let chevron = null;
+            let subOptionsContainer = null;
+            if (setting?.subOptions) {
+                chevron = document.createElement("span");
+                chevron.className = "ss-chevron";
+                chevron.innerHTML = "&#9654;"; 
+                chevron.style.display = "inline-block";
+                chevron.style.transition = "transform 0.2s";
+                chevron.style.marginLeft = "6px";
+                chevron.style.fontSize = "12px";
+                chevron.style.userSelect = "none";
+                chevron.style.transform = checkbox.checked
+                    ? "rotate(90deg)"
+                    : "rotate(0deg)";
+            }
+            checkbox.addEventListener("change", function () {
+                tempSettings[key] = checkbox.checked;
+                if (!setting?.subOptions) return;
+                if (!subOptionsContainer) return;
+
+                subOptionsContainer.style.display = checkbox.checked
+                    ? "block"
+                    : "none";
+
+                if (!chevron) return;
+                chevron.style.transform = checkbox.checked
+                    ? "rotate(90deg)"
+                    : "rotate(0deg)";
+            });
+
+            parentRow.appendChild(checkbox);
+            parentRow.appendChild(label);
+            if (chevron) parentRow.appendChild(chevron);
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "10px";
+
+            wrapper.appendChild(parentRow);
+            if (setting?.subOptions) {
+                subOptionsContainer = document.createElement("div");
+                subOptionsContainer.style.marginLeft = "25px";
+                subOptionsContainer.style.marginTop = "5px";
+                subOptionsContainer.style.display = checkbox.checked ? "block" : "none";
+
+                Object.keys(setting.subOptions).forEach((subKey) => {
+                    const subSetting = setting.subOptions[subKey];
+                    const fullKey = `${key}_${subKey}`;
+
+                    const subWrapper = document.createElement("div");
+                    subWrapper.style.marginBottom = "5px";
+
+                    if (subSetting.type === "text") {
+                        const subLabel = document.createElement("label");
+                        subLabel.htmlFor = "setting_" + fullKey;
+                        subLabel.textContent = subSetting.label + ": ";
+
+                        const subInput = document.createElement("input");
+                        subInput.type = "text";
+                        subInput.id = "setting_" + fullKey;
+                        subInput.value = tempSettings[fullKey] || "";
+                        subInput.maxLength = subSetting.maxLength;
+                        subInput.style.width = "60px";
+                        subInput.style.marginLeft = "2px";
+                        subInput.placeholder = "(!) ";
+                        subInput.addEventListener("input", function () {
+                            let val = subInput.value.replace(/[<>"']/g, "");
+                            if (val.length > subInput.maxLength) {
+                                val = val.slice(0, subInput.maxLength);
+                            }
+                            subInput.value = val;
+                            tempSettings[fullKey] = val;
+                        });
+
+                        subWrapper.appendChild(subLabel);
+                        subWrapper.appendChild(subInput);
+                    } else if (subSetting.type === "textarea") {
+                        const subLabel = document.createElement("label");
+                        subLabel.htmlFor = "setting_" + fullKey;
+                        subLabel.textContent = subSetting.label + ": ";
+
+                        const subTextarea = document.createElement("textarea");
+                        subTextarea.id = "setting_" + fullKey;
+                        subTextarea.value = tempSettings[fullKey] || "";
+                        subTextarea.rows = subSetting.rows || 4;
+                        subTextarea.style.width = "90%";
+                        subTextarea.style.margin = "2px 0 3px 0";
+                        subTextarea.placeholder = subSetting.placeholder || "";
+
+                        subTextarea.addEventListener("input", function () {
+                            tempSettings[fullKey] = subTextarea.value;
+                        });
+
+                        subWrapper.appendChild(subLabel);
+                        subWrapper.appendChild(document.createElement("br"));
+                        subWrapper.appendChild(subTextarea);
+                    } else if (subSetting.type === "number") {
+                        const subLabel = document.createElement("label");
+                        subLabel.htmlFor = "setting_" + fullKey;
+                        subLabel.textContent = subSetting.label + ": ";
+
+                        const subInput = document.createElement("input");
+                        subInput.type = "number";
+                        subInput.id = "setting_" + fullKey;
+                        subInput.value = tempSettings[fullKey] || subSetting.default;
+                        if (subSetting.min !== undefined) subInput.min = subSetting.min;
+                        if (subSetting.max !== undefined) subInput.max = subSetting.max;
+                        subInput.style.width = "60px";
+                        subInput.style.marginLeft = "2px";
+
+                        subInput.addEventListener("input", function () {
+                            let val = Number(subInput.value);
+                            if (isNaN(val)) val = subSetting.default;
+                            if (subSetting.min !== undefined) val = Math.max(subSetting.min, val);
+                            if (subSetting.max !== undefined) val = Math.min(subSetting.max, val);
+                            subInput.value = val;
+                            tempSettings[fullKey] = val;
+                        });
+
+                        subWrapper.appendChild(subLabel);
+                        subWrapper.appendChild(subInput);
+                    } else {
+                        const subCheckbox = document.createElement("input");
+                        subCheckbox.type = "checkbox";
+                        subCheckbox.id = "setting_" + fullKey;
+                        subCheckbox.checked = tempSettings[fullKey];
+                        subCheckbox.style.marginRight = "8px";
+
+                        subCheckbox.addEventListener("change", function () {
+                            tempSettings[fullKey] = subCheckbox.checked;
+                        });
+
+                        const subLabel = document.createElement("label");
+                        subLabel.htmlFor = subCheckbox.id;
+                        subLabel.textContent = subSetting.label;
+
+                        subWrapper.appendChild(subCheckbox);
+                        subWrapper.appendChild(subLabel);
+                    }
+                    subOptionsContainer.appendChild(subWrapper);
+                });
+
+                wrapper.appendChild(subOptionsContainer);
+            }
+
+            container.appendChild(wrapper);
+        });
+
+        return container;
+    }
+    const themeSelector = document.getElementById("themesBefore");
+    let link = null;
+    let bracketSpan = null;
+    if (themeSelector) {
+        bracketSpan = document.createElement("span");
+        bracketSpan.textContent = "] [ ";
+        link = document.createElement("a");
+        link.id = "8chanSS-icon";
+        link.href = "#";
+        link.textContent = "8chanSS";
+        link.style.fontWeight = "bold";
+
+        themeSelector.parentNode.insertBefore(
+            bracketSpan,
+            themeSelector.nextSibling
+        );
+        themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
+    }
+    function createShortcutsTab() {
+        const container = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = "Keyboard Shortcuts";
+        title.style.margin = "0 0 15px 0";
+        title.style.fontSize = "16px";
+        container.appendChild(title);
+        const table = document.createElement("table");
+        table.style.width = "100%";
+        table.style.borderCollapse = "collapse";
+        const tableStyles = {
+            th: {
+                textAlign: "left",
+                padding: "8px 5px",
+                borderBottom: "1px solid #444",
+                fontSize: "14px",
+                fontWeight: "bold",
+            },
+            td: {
+                padding: "8px 5px",
+                borderBottom: "1px solid #333",
+                fontSize: "13px",
+            },
+            kbd: {
+                background: "#333",
+                border: "1px solid #555",
+                borderRadius: "3px",
+                padding: "2px 5px",
+                fontSize: "12px",
+                fontFamily: "monospace",
+            },
+        };
+        const headerRow = document.createElement("tr");
+        const shortcutHeader = document.createElement("th");
+        shortcutHeader.textContent = "Shortcut";
+        Object.assign(shortcutHeader.style, tableStyles.th);
+        headerRow.appendChild(shortcutHeader);
+
+        const actionHeader = document.createElement("th");
+        actionHeader.textContent = "Action";
+        Object.assign(actionHeader.style, tableStyles.th);
+        headerRow.appendChild(actionHeader);
+
+        table.appendChild(headerRow);
+        const shortcuts = [
+            { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
+            { keys: ["Tab"], action: "Target Quick Reply text area" },
+            { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
+            { keys: ["Ctrl", "Enter"], action: "Submit post" },
+            { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
+            { keys: ["ALT", "W"], action: "Watch Thread" },
+            { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
+            { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
+            { keys: ["CTRL", "SHIFT", "UP/DOWN"], action: "Scroll between Replies to You" },
+            { keys: ["Ctrl", "B"], action: "Bold text" },
+            { keys: ["Ctrl", "I"], action: "Italic text" },
+            { keys: ["Ctrl", "U"], action: "Underline text" },
+            { keys: ["Ctrl", "S"], action: "Spoiler text" },
+            { keys: ["Ctrl", "D"], action: "Doom text" },
+            { keys: ["Ctrl", "M"], action: "Moe text" },
+            { keys: ["Alt", "C"], action: "Code block" },
+        ];
+        shortcuts.forEach((shortcut) => {
+            const row = document.createElement("tr");
+            const shortcutCell = document.createElement("td");
+            Object.assign(shortcutCell.style, tableStyles.td);
+            shortcut.keys.forEach((key, index) => {
+                const kbd = document.createElement("kbd");
+                kbd.textContent = key;
+                Object.assign(kbd.style, tableStyles.kbd);
+                shortcutCell.appendChild(kbd);
+                if (index < shortcut.keys.length - 1) {
+                    const plus = document.createTextNode(" + ");
+                    shortcutCell.appendChild(plus);
+                }
+            });
+
+            row.appendChild(shortcutCell);
+            const actionCell = document.createElement("td");
+            actionCell.textContent = shortcut.action;
+            Object.assign(actionCell.style, tableStyles.td);
+            row.appendChild(actionCell);
+
+            table.appendChild(row);
+        });
+
+        container.appendChild(table);
+        const note = document.createElement("p");
+        note.textContent =
+            "Text formatting shortcuts work when text is selected or when inserting at cursor position.";
+        note.style.fontSize = "12px";
+        note.style.marginTop = "15px";
+        note.style.opacity = "0.7";
+        note.style.fontStyle = "italic";
+        container.appendChild(note);
+
+        return container;
+    }
+    if (link) {
+        let menu = await createSettingsMenu();
+        link.style.cursor = "pointer";
+        link.title = "Open 8chanSS settings";
+        link.addEventListener("click", async function (e) {
+            e.preventDefault();
+            let menu = await createSettingsMenu();
+            menu.style.display = menu.style.display === "none" ? "block" : "none";
+        });
+    }
     document.addEventListener("keydown", async function (event) {
         if (event.ctrlKey && event.key === "F1") {
             event.preventDefault();
-            let menu =
-                document.getElementById("8chanSS-menu") ||
-                (await createSettingsMenu());
-            menu.style.display =
-                menu.style.display === "none" || menu.style.display === ""
-                    ? "block"
-                    : "none";
+            let menu = document.getElementById("8chanSS-menu") || (await createSettingsMenu());
+            menu.style.display = menu.style.display === "none" || menu.style.display === "" ? "block" : "none";
+            return;
         }
-    });
-    async function submitWithCtrlEnter(event) {
-        if (event.ctrlKey && event.key === "Enter") {
-            event.preventDefault();
-            const submitButton = document.getElementById("qrbutton");
-            if (submitButton) {
-                submitButton.click();
-                if (await getSetting("watchThreadOnReply")) {
-                    setTimeout(() => {
-                        const btn = document.querySelector(".watchButton");
-                        if (btn && !btn.classList.contains("watched-active")) {
-                            btn.click();
-                            setTimeout(() => {
-                                btn.classList.add("watched-active");
-                            }, 100);
-                        }
-                    }, 500);
-                }
-            }
-        }
-    }
-    const replyTextarea = document.getElementById("qrbody");
-    if (replyTextarea) {
-        replyTextarea.addEventListener("keydown", submitWithCtrlEnter);
-    }
-    function toggleQR(event) {
         if (event.ctrlKey && (event.key === "q" || event.key === "Q")) {
+            event.preventDefault();
             const hiddenDiv = document.getElementById("quick-reply");
-            if (
-                hiddenDiv.style.display === "none" ||
-                hiddenDiv.style.display === ""
-            ) {
-                hiddenDiv.style.display = "block"; 
+            if (!hiddenDiv) return;
+            const isHidden = hiddenDiv.style.display === "none" || hiddenDiv.style.display === "";
+            hiddenDiv.style.display = isHidden ? "block" : "none";
+            if (isHidden) {
                 setTimeout(() => {
                     const textarea = document.getElementById("qrbody");
-                    if (textarea) {
-                        textarea.focus();
-                    }
+                    if (textarea) textarea.focus();
                 }, 50);
-            } else {
-                hiddenDiv.style.display = "none"; 
             }
+            return;
         }
-    }
-    document.addEventListener("keydown", toggleQR);
-    function clearTextarea(event) {
         if (event.key === "Escape") {
             const textarea = document.getElementById("qrbody");
-            if (textarea) {
-                textarea.value = ""; 
-            }
+            if (textarea) textarea.value = "";
             const quickReply = document.getElementById("quick-reply");
-            if (quickReply) {
-                quickReply.style.display = "none"; 
-            }
+            if (quickReply) quickReply.style.display = "none";
+            return;
         }
-    }
-    document.addEventListener("keydown", clearTextarea);
-    function featureScrollBetweenPosts() {
-        let lastHighlighted = null;
-        let lastType = null; 
-        let lastIndex = -1;
-
-        function getEligiblePostCells(isOwnReply) {
-            const selector = isOwnReply
-                ? '.postCell:has(a.youName), .opCell:has(a.youName)'
-                : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
-            return Array.from(document.querySelectorAll(selector));
+        if (event.ctrlKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault();
+            const isOwnReply = !event.shiftKey;
+            const isNext = event.key === 'ArrowDown';
+            scrollToReply(isOwnReply, isNext);
+            return;
         }
-
-        function scrollToReply(isOwnReply = true, getNextReply = true) {
-            const postCells = getEligiblePostCells(isOwnReply);
-            if (!postCells.length) return;
-            let currentIndex = -1;
-            if (
-                lastType === (isOwnReply ? "own" : "reply") &&
-                lastHighlighted &&
-                (currentIndex = postCells.indexOf(lastHighlighted.closest('.postCell, .opCell'))) !== -1
-            ) {
-            } else {
-                const viewportMiddle = window.innerHeight / 2;
-                currentIndex = postCells.findIndex(cell => {
-                    const rect = cell.getBoundingClientRect();
-                    return rect.top + rect.height / 2 > viewportMiddle;
-                });
-                if (currentIndex === -1) {
-                    currentIndex = getNextReply ? -1 : postCells.length;
-                }
-            }
-            const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
-            if (targetIndex < 0 || targetIndex >= postCells.length) return;
-
-            const postContainer = postCells[targetIndex];
-            if (postContainer) {
-                postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
-                if (lastHighlighted) {
-                    lastHighlighted.classList.remove('target-highlight');
-                }
-                let anchorId = null;
-                let anchorElem = postContainer.querySelector('[id^="p"]');
-                if (anchorElem && anchorElem.id) {
-                    anchorId = anchorElem.id;
-                } else if (postContainer.id) {
-                    anchorId = postContainer.id;
-                }
-                if (anchorId) {
-                    if (location.hash !== '#' + anchorId) {
-                        history.replaceState(null, '', '#' + anchorId);
-                    }
-                }
-                const innerPost = postContainer.querySelector('.innerPost');
-                if (innerPost) {
-                    innerPost.classList.add('target-highlight');
-                    lastHighlighted = innerPost;
-                } else {
-                    lastHighlighted = null;
-                }
-                lastType = isOwnReply ? "own" : "reply";
-                lastIndex = targetIndex;
-            }
-        }
-
-        function onKeyDown(event) {
-            if (
-                event.target &&
-                (
-                    /^(input|textarea)$/i.test(event.target.tagName) ||
-                    event.target.isContentEditable
-                )
-            ) return;
-
-            if (event.ctrlKey && event.shiftKey) {
-                if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    scrollToReply(false, true);
-                } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    scrollToReply(false, false);
-                }
-            } else if (event.ctrlKey) {
-                if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    scrollToReply(true, true);
-                } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    scrollToReply(true, false);
-                }
-            }
-        }
-        window.addEventListener('hashchange', () => {
-            if (lastHighlighted) {
-                lastHighlighted.classList.remove('target-highlight');
-                lastHighlighted = null;
-            }
-            const hash = location.hash.replace('#', '');
-            if (hash) {
-                const postElem = document.getElementById(hash);
-                if (postElem) {
-                    const innerPost = postElem.querySelector('.innerPost');
-                    if (innerPost) {
-                        innerPost.classList.add('target-highlight');
-                        lastHighlighted = innerPost;
+    });
+    const replyTextarea = document.getElementById("qrbody");
+    if (replyTextarea) {
+        replyTextarea.addEventListener("keydown", async function (event) {
+            if (event.ctrlKey && event.key === "Enter") {
+                event.preventDefault();
+                const submitButton = document.getElementById("qrbutton");
+                if (submitButton) {
+                    submitButton.click();
+                    if (await getSetting("watchThreadOnReply")) {
+                        setTimeout(() => {
+                            const btn = document.querySelector(".watchButton");
+                            if (btn && !btn.classList.contains("watched-active")) {
+                                btn.click();
+                                setTimeout(() => {
+                                    btn.classList.add("watched-active");
+                                }, 100);
+                            }
+                        }, 500);
                     }
                 }
             }
         });
-
-        document.addEventListener('keydown', onKeyDown);
+        replyTextarea.addEventListener("keydown", function (event) {
+            const key = event.key.toLowerCase();
+            if (key === "c" && event.altKey && !event.ctrlKey && bbCodeCombinations.has(key)) {
+                event.preventDefault();
+                applyBBCode(event.target, key);
+                return;
+            }
+            if (event.ctrlKey && !event.altKey && bbCodeCombinations.has(key) && key !== "c") {
+                event.preventDefault();
+                applyBBCode(event.target, key);
+                return;
+            }
+        });
     }
-    featureScrollBetweenPosts();
     const bbCodeCombinations = new Map([
         ["s", ["[spoiler]", "[/spoiler]"]],
         ["b", ["'''", "'''"]],
@@ -2016,66 +2090,105 @@ onReady(async function () {
         ["m", ["[moe]", "[/moe]"]],
         ["c", ["[code]", "[/code]"]],
     ]);
+    function applyBBCode(textBox, key) {
+        const [openTag, closeTag] = bbCodeCombinations.get(key);
+        const { selectionStart, selectionEnd, value } = textBox;
 
-    function replyKeyboardShortcuts(ev) {
-        const key = ev.key.toLowerCase();
-        if (
-            key === "c" &&
-            ev.altKey &&
-            !ev.ctrlKey &&
-            bbCodeCombinations.has(key)
-        ) {
-            ev.preventDefault();
-            const textBox = ev.target;
-            const [openTag, closeTag] = bbCodeCombinations.get(key);
-            const { selectionStart, selectionEnd, value } = textBox;
-            if (selectionStart === selectionEnd) {
-                const before = value.slice(0, selectionStart);
-                const after = value.slice(selectionEnd);
-                const newCursor = selectionStart + openTag.length;
-                textBox.value = before + openTag + closeTag + after;
-                textBox.selectionStart = textBox.selectionEnd = newCursor;
-            } else {
-                const before = value.slice(0, selectionStart);
-                const selected = value.slice(selectionStart, selectionEnd);
-                const after = value.slice(selectionEnd);
-                textBox.value = before + openTag + selected + closeTag + after;
-                textBox.selectionStart = selectionStart + openTag.length;
-                textBox.selectionEnd = selectionEnd + openTag.length;
-            }
-            return;
-        }
-        if (
-            ev.ctrlKey &&
-            !ev.altKey &&
-            bbCodeCombinations.has(key) &&
-            key !== "c"
-        ) {
-            ev.preventDefault();
-            const textBox = ev.target;
-            const [openTag, closeTag] = bbCodeCombinations.get(key);
-            const { selectionStart, selectionEnd, value } = textBox;
-            if (selectionStart === selectionEnd) {
-                const before = value.slice(0, selectionStart);
-                const after = value.slice(selectionEnd);
-                const newCursor = selectionStart + openTag.length;
-                textBox.value = before + openTag + closeTag + after;
-                textBox.selectionStart = textBox.selectionEnd = newCursor;
-            } else {
-                const before = value.slice(0, selectionStart);
-                const selected = value.slice(selectionStart, selectionEnd);
-                const after = value.slice(selectionEnd);
-                textBox.value = before + openTag + selected + closeTag + after;
-                textBox.selectionStart = selectionStart + openTag.length;
-                textBox.selectionEnd = selectionEnd + openTag.length;
-            }
-            return;
+        if (selectionStart === selectionEnd) {
+            const before = value.slice(0, selectionStart);
+            const after = value.slice(selectionEnd);
+            const newCursor = selectionStart + openTag.length;
+            textBox.value = before + openTag + closeTag + after;
+            textBox.selectionStart = textBox.selectionEnd = newCursor;
+        } else {
+            const before = value.slice(0, selectionStart);
+            const selected = value.slice(selectionStart, selectionEnd);
+            const after = value.slice(selectionEnd);
+            textBox.value = before + openTag + selected + closeTag + after;
+            textBox.selectionStart = selectionStart + openTag.length;
+            textBox.selectionEnd = selectionEnd + openTag.length;
         }
     }
-    document
-        .getElementById("qrbody")
-        ?.addEventListener("keydown", replyKeyboardShortcuts);
-    function featureCatalogThreadHideShortcut() {
+    let lastHighlighted = null;
+    let lastType = null; 
+    let lastIndex = -1;
+
+    function getEligiblePostCells(isOwnReply) {
+        const selector = isOwnReply
+            ? '.postCell:has(a.youName), .opCell:has(a.youName)'
+            : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
+        return Array.from(document.querySelectorAll(selector));
+    }
+
+    function scrollToReply(isOwnReply = true, getNextReply = true) {
+        const postCells = getEligiblePostCells(isOwnReply);
+        if (!postCells.length) return;
+        let currentIndex = -1;
+        if (
+            lastType === (isOwnReply ? "own" : "reply") &&
+            lastHighlighted &&
+            (currentIndex = postCells.indexOf(lastHighlighted.closest('.postCell, .opCell'))) !== -1
+        ) {
+        } else {
+            const viewportMiddle = window.innerHeight / 2;
+            currentIndex = postCells.findIndex(cell => {
+                const rect = cell.getBoundingClientRect();
+                return rect.top + rect.height / 2 > viewportMiddle;
+            });
+            if (currentIndex === -1) {
+                currentIndex = getNextReply ? -1 : postCells.length;
+            }
+        }
+        const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
+        if (targetIndex < 0 || targetIndex >= postCells.length) return;
+
+        const postContainer = postCells[targetIndex];
+        if (postContainer) {
+            postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+            if (lastHighlighted) {
+                lastHighlighted.classList.remove('target-highlight');
+            }
+            let anchorId = null;
+            let anchorElem = postContainer.querySelector('[id^="p"]');
+            if (anchorElem && anchorElem.id) {
+                anchorId = anchorElem.id;
+            } else if (postContainer.id) {
+                anchorId = postContainer.id;
+            }
+            if (anchorId) {
+                if (location.hash !== '#' + anchorId) {
+                    history.replaceState(null, '', '#' + anchorId);
+                }
+            }
+            const innerPost = postContainer.querySelector('.innerPost');
+            if (innerPost) {
+                innerPost.classList.add('target-highlight');
+                lastHighlighted = innerPost;
+            } else {
+                lastHighlighted = null;
+            }
+            lastType = isOwnReply ? "own" : "reply";
+            lastIndex = targetIndex;
+        }
+    }
+    window.addEventListener('hashchange', () => {
+        if (lastHighlighted) {
+            lastHighlighted.classList.remove('target-highlight');
+            lastHighlighted = null;
+        }
+        const hash = location.hash.replace('#', '');
+        if (hash) {
+            const postElem = document.getElementById(hash);
+            if (postElem) {
+                const innerPost = postElem.querySelector('.innerPost');
+                if (innerPost) {
+                    innerPost.classList.add('target-highlight');
+                    lastHighlighted = innerPost;
+                }
+            }
+        }
+    });
+    function featureCatalogHiding() {
         const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
         let showHiddenMode = false;
         function getBoardAndThreadNumFromCell(cell) {
@@ -2219,12 +2332,76 @@ onReady(async function () {
             footer.scrollIntoView = function () { };
         }
     }
-    function moveUploadsBelowOP() {
-        const panelUploads = document.querySelector('.panelUploads');
-        const opHeadTitle = document.querySelector('.opHead.title');
-        if (panelUploads && opHeadTitle) {
-            opHeadTitle.appendChild(panelUploads);
-        }
+    const opHeadTitle = document.querySelector('.opHead.title');
+    const innerOP = document.querySelector('.innerOp');
+    const innerQuote = document.querySelector('.innerQuote');
+    if (opHeadTitle && innerOP) {
+        innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
     }
-    moveUploadsBelowOP();
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+            const qrbody = document.getElementById("qrbody");
+            if (qrbody && document.activeElement !== qrbody) {
+                e.preventDefault();
+                qrbody.focus();
+            }
+        }
+    });
+    function enableIdFiltering() {
+        const postCellSelector = ".postCell";
+        const labelIdSelector = ".labelId";
+        const hiddenClassName = "is-hidden-by-filter";
+        let activeFilterColor = null;
+        function applyFilter(targetRgbColor) {
+            activeFilterColor = targetRgbColor;
+            document.querySelectorAll(postCellSelector).forEach(cell => {
+                const label = cell.querySelector(labelIdSelector);
+                const matches = label && window.getComputedStyle(label).backgroundColor === targetRgbColor;
+                cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
+            });
+        }
+        function handleClick(event) {
+            const clickedLabel = event.target.closest(labelIdSelector);
+            if (clickedLabel && clickedLabel.closest(".postCell") && !clickedLabel.closest(".de-pview")) {
+                const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
+                const rect = clickedLabel.getBoundingClientRect();
+                const cursorOffsetY = event.clientY - rect.top;
+
+                if (activeFilterColor === clickedColor) {
+                    applyFilter(null);
+                } else {
+                    applyFilter(clickedColor);
+                }
+                clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
+                window.scrollBy(0, cursorOffsetY - rect.height / 2);
+            }
+        }
+
+        document.body.addEventListener("click", handleClick);
+    }
+    enableIdFiltering();
+    function truncateFilenames(filenameLength) {
+        document.querySelectorAll('a.originalNameLink').forEach(link => {
+            const fullFilename = link.getAttribute('download');
+            if (!fullFilename) return;
+
+            const lastDot = fullFilename.lastIndexOf('.');
+            if (lastDot === -1) return; 
+
+            const name = fullFilename.slice(0, lastDot);
+            const ext = fullFilename.slice(lastDot);
+            let truncated = fullFilename;
+            if (name.length > filenameLength) {
+                truncated = name.slice(0, filenameLength) + '(...)' + ext;
+            }
+            link.textContent = truncated;
+            link.addEventListener('mouseenter', function () {
+                link.textContent = fullFilename;
+            });
+            link.addEventListener('mouseleave', function () {
+                link.textContent = truncated;
+            });
+            link.title = fullFilename;
+        });
+    }
 });

@@ -1,3 +1,19 @@
+### v1.35.0
+*2025-04-29*
+
+- New tab with Miscellaneous options
+- New Option: Hide Checkboxes
+- New Option: Always Open Threads in New Tab (for Catalog)
+- New Option: Enable 12-Hour Clock
+- New Option: Truncate Filenames
+- New Option: Hide No Cookie? Link
+- New Shortcut: `Tab` will target quick reply text area
+- New Feature: Click ID to show all post by that ID
+- New Feature: Rename filenames in quick reply (click the filename)
+- Adjusted the styling of Thread Watcher notifications, threads will now get the number of replies between parenthesis and (You) threads will be colored, e.g. `/b/ - Thread name (12) (you)`
+- Adjusted inline backlinks to show above the post message and make newly opened backlinks show above old inline backlinks
+- Various optimizations
+
 ## v1.34.0
 *2025-04-27*
 
