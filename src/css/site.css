@@ -15,6 +15,8 @@
 :root.hide-panelmessage #panelMessage,
 :root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:nth-child(1),
 :root.disable-banner #bannerImage,
+:root.hide-checkboxes .deletionCheckBox,
+:root.hide-nocookie #captchaBody > table:nth-child(2) > tbody:nth-child(1) > tr:nth-child(2),
 .watchedNotification::before,
 #navFadeEnd,
 #navFadeMid {
