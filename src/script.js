@@ -185,20 +185,7 @@ onReady(async function () {
                     }
                 }
             },
-            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
-            enableTheSauce: {
-                label: "Sauce Links",
-                default: false,
-                subOptions: {
-                    sauceUrls: {
-                        label: "Sauce URLs (1 per line, # for comment)",
-                        default: "",
-                        type: "textarea",
-                        rows: 3,
-                        placeholder: "https://iqdb.org/?url=%IMG\n#This is a comment"
-                    }
-                }
-            }
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false }
         }
     };
 
@@ -1118,136 +1105,7 @@ onReady(async function () {
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
     }
-
-    // --- Feature: Sauce Links, appended to .uploadDetails
-    async function appendTheSauceLinks() {
-        const enabled = await getSetting("enableTheSauce");
-        if (!enabled) return;
-
-        const sauceUrlsRaw = await getSetting("enableTheSauce_sauceUrls");
-        if (!sauceUrlsRaw) return;
-
-        // Parse URLs, ignore lines starting with #
-        const urls = sauceUrlsRaw
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => line && !line.startsWith('#'));
-
-        document.querySelectorAll('.uploadDetails').forEach(detailDiv => {
-            // Find the file URL for this upload (assume there's an <a> inside)
-            const fileLink = detailDiv.querySelector('a');
-            if (!fileLink) return;
-            const fileUrl = fileLink.href;
-
-            // Find the thumbnail image and its parent .imgLink
-            const imgLink = detailDiv.closest('.postCell')?.querySelector('.imgLink');
-            const img = imgLink ? imgLink.querySelector('img') : null;
-            let imgSrcFull = "";
-            if (img) {
-                // Always append .png to the thumbnail src
-                let imgSrc = img.getAttribute('src').replace(/\.[a-zA-Z0-9]+$/, "");
-                let origin = window.location.origin;
-                if (imgSrc.startsWith("//")) {
-                    imgSrcFull = window.location.protocol + imgSrc + ".png";
-                } else if (imgSrc.startsWith("/")) {
-                    imgSrcFull = origin + imgSrc + ".png";
-                } else if (/^https?:\/\//.test(imgSrc)) {
-                    imgSrcFull = imgSrc + ".png";
-                } else {
-                    imgSrcFull = origin + "/" + imgSrc + ".png";
-                }
-            }
-
-            // Remove previous sauce links to avoid duplicates
-            detailDiv.querySelectorAll('.thesauce-link').forEach(el => el.remove());
-
-            urls.forEach(urlTemplate => {
-                // If the URL contains %IMG_UPLOAD%, we POST the image as a file
-                if (urlTemplate.includes('%IMG_UPLOAD%') && imgSrcFull) {
-                    // Example: https://iqdb.org/?%IMG_UPLOAD%
-                    // Replace %IMG_UPLOAD% with nothing for the base URL
-                    const postUrl = urlTemplate.replace('%IMG', '');
-
-                    // Create the link
-                    const a = document.createElement('a');
-                    a.href = "#";
-                    a.textContent = "upload";
-                    a.className = 'thesauce-link';
-                    a.target = '_blank';
-                    a.style.marginLeft = '6px';
-                    a.style.fontSize = '90%';
-                    a.title = "Upload thumbnail directly to search engine";
-
-                    a.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        try {
-                            // Fetch the image as a Blob
-                            const response = await fetch(imgSrcFull);
-                            const blob = await response.blob();
-
-                            // Prepare form data (IQDB expects 'file')
-                            const formData = new FormData();
-                            formData.append('file', blob, 'thumbnail.png');
-
-                            // POST the form data and get the response
-                            const result = await fetch(postUrl, {
-                                method: 'POST',
-                                body: formData,
-                                credentials: 'omit', // Don't send cookies
-                            });
-
-                            // Get the response as text (IQDB returns HTML)
-                            const html = await result.text();
-
-                            // Open the result in a new tab
-                            const win = window.open();
-                            win.document.open();
-                            win.document.write(html);
-                            win.document.close();
-                        } catch (err) {
-                            alert("Failed to upload thumbnail: " + err);
-                        }
-                    });
-
-                    detailDiv.appendChild(a);
-                } else {
-                    // Replace {url} with the file URL (encodeURIComponent for safety)
-                    let sauceUrl = urlTemplate.replace(/\{url\}/g, encodeURIComponent(fileUrl));
-                    // Replace %IMG with the full image URL (encodeURIComponent for safety)
-                    if (imgSrcFull) {
-                        sauceUrl = sauceUrl.replace(/%IMG/g, encodeURIComponent(imgSrcFull));
-                    }
-
-                    // Extract top domain for display
-                    let domain = "";
-                    try {
-                        const urlObj = new URL(sauceUrl);
-                        const hostParts = urlObj.hostname.replace(/^www\./, '').split('.');
-                        if (hostParts.length >= 2) {
-                            domain = hostParts[hostParts.length - 2];
-                        } else {
-                            domain = hostParts[0];
-                        }
-                    } catch {
-                        domain = sauceUrl;
-                    }
-                    const a = document.createElement('a');
-                    a.href = sauceUrl;
-                    a.textContent = domain;
-                    a.className = 'thesauce-link';
-                    a.target = '_blank';
-                    a.style.marginLeft = '6px';
-                    a.style.fontSize = '90%';
-                    detailDiv.appendChild(a);
-                }
-            });
-        });
-    }
-
-    // Init
-    onReady(appendTheSauceLinks);
-
-
+    
     ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Decode HTML entities in <a> to string (e.g., &gt; to >, &apos; to ')
