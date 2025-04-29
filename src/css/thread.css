@@ -65,11 +65,6 @@
     width: 60%;
 }
 
-/* Banner */
-:root.disable-banner #bannerImage {
-    display: none;
-}
-
 /* Banner Right Sidebar */
 :root.ss-sidebar #bannerImage {
     width: 19rem;
@@ -131,24 +126,6 @@
 
 :root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you) {
     border-left: solid #dd003e 3px;
-}
-
-/* Filename & Thumbs */
-.originalNameLink {
-    display: inline;
-    overflow-wrap: anywhere;
-    white-space: normal;
-}
-
-.multipleUploads .uploadCell:not(.expandedCell) {
-    max-width: 215px;
-}
-
-.imgExpanded,
-video {
-    max-height: 90vh !important;
-    object-fit: contain;
-    width: auto !important;
 }
 
 /* Not sure what this is about, guess we'll find out */
