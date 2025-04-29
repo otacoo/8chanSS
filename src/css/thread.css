@@ -111,6 +111,10 @@
     margin: 2px 0;
 }
 
+.postCell.is-hidden-by-filter {
+    display: none;
+}
+
 /* Custom class added through the userscript for backlinks */
 .reply-inlined {
     text-decoration: underline dashed !important;
