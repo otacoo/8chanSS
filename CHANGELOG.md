@@ -1,4 +1,4 @@
-### v1.35.0
+### v1.36.0 (skipped one version)
 *2025-04-29*
 
 - New tab with Miscellaneous options
