@@ -981,19 +981,26 @@ onReady(async function () {
     // --- Feature: Inline replies (barebones) ---
     function featureNestedReplies() {
         let observer;
-        // Move .replyPreview after the title element in both OP and reply posts
+        // Move .replyPreview after the correct title element as a direct child of .innerOP or .innerPost
         function ensureReplyPreviewPlacement(root = document) {
             root.querySelectorAll('.replyPreview').forEach(replyPreview => {
-                const innerPost = replyPreview.closest('.innerPost');
-                if (!innerPost) return;
-                const postInfoTitle = innerPost.querySelector('.postInfo.title');
-                if (!postInfoTitle) return;
-                if (replyPreview.parentElement !== innerPost || postInfoTitle.nextSibling !== replyPreview) {
-                    innerPost.insertBefore(replyPreview, postInfoTitle.nextSibling);
+                // Find the closest .innerOP or .innerPost ancestor
+                let container = replyPreview.closest('.innerOP, .innerPost');
+                if (!container) return;
+
+                // Determine which title to use
+                let titleSelector = container.classList.contains('innerOP') ? '.opHead.title' : '.postInfo.title';
+                let titleElem = Array.from(container.children).find(child => child.matches && child.matches(titleSelector));
+                if (!titleElem) return;
+
+                // Only move if not already in the correct position
+                if (replyPreview.parentElement !== container || titleElem.nextSibling !== replyPreview) {
+                    container.insertBefore(replyPreview, titleElem.nextSibling);
                 }
             });
         }
-        // Always add new .inlineQuote divs as first child
+
+        // Always add new .inlineQuote divs as first child of their closest .replyPreview parent
         function ensureInlineQuotePlacement(root = document) {
             root.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
                 const replyPreview = inlineQuote.closest('.replyPreview');
@@ -1001,34 +1008,21 @@ onReady(async function () {
                 replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
             });
         }
-        // Here be dragons, asked chatGPT to fix this one
-        observer = new MutationObserver(mutations => {
+        // Observer to reconnect after each mutation
+        observer = new MutationObserver(() => {
             observer.disconnect();
 
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue;
-                    if (node.classList && node.classList.contains('innerPost')) {
-                        ensureReplyPreviewPlacement(node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll('.innerPost').forEach(innerPost => {
-                            ensureReplyPreviewPlacement(innerPost);
-                        });
-                    } else {
-                        const ancestor = node.closest && node.closest('.innerPost');
-                        if (ancestor) ensureReplyPreviewPlacement(ancestor);
-                    }
-                }
-            }
+            ensureReplyPreviewPlacement(document);
             ensureInlineQuotePlacement(document);
 
+            // Reconnect observer
             const postsContainer = document.querySelector('.opCell');
             if (postsContainer) {
                 observer.observe(postsContainer, { childList: true, subtree: true });
             }
         });
 
-        // Observe opCell for new posts
+        // Observer for the initial setup
         const postsContainer = document.querySelector('.opCell');
         if (postsContainer) {
             observer.observe(postsContainer, { childList: true, subtree: true });
@@ -1051,6 +1045,10 @@ onReady(async function () {
                 quoteLink.classList.toggle('quote-inlined');
             }, 0);
         });
+
+        // Initial normalization for existing posts
+        ensureReplyPreviewPlacement(document);
+        ensureInlineQuotePlacement(document);
     }
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
@@ -2916,33 +2914,44 @@ onReady(async function () {
 
     // Truncate Filenames and Show Only Extension
     function truncateFilenames(filenameLength) {
-        document.querySelectorAll('a.originalNameLink').forEach(link => {
-            const fullFilename = link.getAttribute('download');
-            if (!fullFilename) return;
-
-            const lastDot = fullFilename.lastIndexOf('.');
-            if (lastDot === -1) return; // No extension found
-
-            const name = fullFilename.slice(0, lastDot);
-            const ext = fullFilename.slice(lastDot);
-
-            // Only truncate if needed
-            let truncated = fullFilename;
-            if (name.length > filenameLength) {
-                truncated = name.slice(0, filenameLength) + '(...)' + ext;
-            }
-
-            // Set initial truncated text
-            link.textContent = truncated;
-            // Show full filename on hover, revert on mouseout
-            link.addEventListener('mouseenter', function () {
-                link.textContent = fullFilename;
-            });
-            link.addEventListener('mouseleave', function () {
+        function processLinks(root = document) {
+            root.querySelectorAll('a.originalNameLink').forEach(link => {
+                // Skip if already processed
+                if (link.dataset.truncated === "1") return;
+                const fullFilename = link.getAttribute('download');
+                if (!fullFilename) return;
+                const lastDot = fullFilename.lastIndexOf('.');
+                if (lastDot === -1) return; // No extension found
+                const name = fullFilename.slice(0, lastDot);
+                const ext = fullFilename.slice(lastDot);
+                // Only truncate if needed
+                let truncated = fullFilename;
+                if (name.length > filenameLength) {
+                    truncated = name.slice(0, filenameLength) + '(...)' + ext;
+                }
+                // Set initial truncated text
                 link.textContent = truncated;
+                // Mark as processed to avoid reprocessing
+                link.dataset.truncated = "1";
+                // Show full filename on hover, revert on mouseout
+                link.addEventListener('mouseenter', function () {
+                    link.textContent = fullFilename;
+                });
+                link.addEventListener('mouseleave', function () {
+                    link.textContent = truncated;
+                });
+                // Optional: set title attribute for accessibility
+                link.title = fullFilename;
             });
-            // Optional: set title attribute for accessibility
-            link.title = fullFilename;
-        });
+        }
+        // Initial processing
+        processLinks(document);    
+        // Set up observer for dynamically added links in #divThreads
+        const divThreads = document.querySelector('#divThreads');
+        if (divThreads) {
+            new MutationObserver(() => {
+                processLinks(divThreads);
+            }).observe(divThreads, { childList: true, subtree: true });
+        }
     }
 });
