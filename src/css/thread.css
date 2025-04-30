@@ -104,6 +104,10 @@
 
 .quoteTooltip .innerPost {
     overflow: hidden;
+}
+
+.inlineQuote .innerPost,
+.quoteTooltip .innerPost {
     box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
 }
 
@@ -119,6 +123,10 @@
 .reply-inlined {
     text-decoration: underline dashed !important;
     text-underline-offset: 2px;
+}
+
+.quote-inlined {
+    opacity: 0.5;
 }
 
 .target-highlight {
