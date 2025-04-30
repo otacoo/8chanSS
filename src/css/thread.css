@@ -141,7 +141,7 @@
 }
 
 :root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you) {
-    border-left: solid #dd003e 3px;
+    border-left: solid var(--subject-color) 3px;
 }
 
 /* Not sure what this is about, guess we'll find out */
