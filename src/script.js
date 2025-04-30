@@ -70,10 +70,16 @@ function onReady(fn) {
 })();
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
+    "use strict";
     // --- Default Settings ---
     const scriptSettings = {
         site: {
+            _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
+            _siteSection1: { type: "separator" },
             alwaysShowTW: { label: "Pin Thread Watcher", default: false },
+            autoExpandTW: { label: "Auto Expand Thread Watcher", default: false },
+            _siteSiteTitle: { type: "title", label: ":: Site" },
+            _siteSection2: { type: "separator" },
             enableHeaderCatalogLinks: {
                 label: "Header Catalog Links",
                 default: true,
@@ -136,7 +142,7 @@ onReady(async function () {
             openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false }
         },
         styling: {
-            _siteTitle: { type: "title", label: ":: Site Styling" }, // Site Styling
+            _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
             _stylingSection1: { type: "separator" },
             hideAnnouncement: { label: "Hide Announcement", default: false },
             hidePanelMessage: { label: "Hide Panel Message", default: false },
@@ -152,7 +158,7 @@ onReady(async function () {
             },
             hideBanner: { label: "Hide Board Banners", default: false },
             hideDefaultBL: { label: "Hide Default Board List", default: true },
-            _threadTitle: { type: "title", label: ":: Thread Styling" }, // Thread Styling
+            _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
             highlightOnYou: { label: "Highlight (You) posts", default: true },
             enableFitReplies: { label: "Fit Replies", default: false },
@@ -171,6 +177,7 @@ onReady(async function () {
             hideCheckboxes: { label: "Hide Checkboxes", default: false }
         },
         miscel: {
+            enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
                 label: "Truncate filenames",
@@ -252,7 +259,8 @@ onReady(async function () {
             highlightOnYou: "highlight-you",
             threadHideCloseBtn: "hide-close-btn",
             hideCheckboxes: "hide-checkboxes",
-            hideNoCookieLink: "hide-nocookie"
+            hideNoCookieLink: "hide-nocookie",
+            autoExpandTW: "auto-expand-tw"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
@@ -1105,7 +1113,7 @@ onReady(async function () {
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
     }
-    
+
     ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Decode HTML entities in <a> to string (e.g., &gt; to >, &apos; to ')
@@ -1346,15 +1354,24 @@ onReady(async function () {
             if (e.target.matches('.extraMenuButton')) {
                 // Support both .postCell and .opCell
                 const postCell = e.target.closest('.postCell, .opCell');
-                if (postCell) {
-                    const menu = document.querySelector(MENU_SELECTOR);
+                if (!postCell) return;
+
+                // Wait a tick for the menu to be inserted into the DOM
+                setTimeout(() => {
+                    // Find the menu that is closest to the button (e.g., next sibling or floating nearby)
+                    // You may need to adjust this selector depending on your menu's insertion logic
+                    let menu = e.target.parentNode.querySelector('.floatingList.extraMenu');
+                    if (!menu) {
+                        // Fallback: search globally for the most recently added menu
+                        const menus = Array.from(document.querySelectorAll('.floatingList.extraMenu'));
+                        menu = menus[menus.length - 1];
+                    }
                     if (menu) {
                         menu.setAttribute('data-post-id', postCell.id);
                     }
-                }
+                }, 0);
             }
         });
-
         function getPostIdFromMenu(menu) {
             return menu.getAttribute('data-post-id') || null;
         }
@@ -1372,6 +1389,9 @@ onReady(async function () {
         // --- Menu Entry Logic ---
         function addMenuEntries(root = document) {
             root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                // Only proceed if the menu is a descendant of an .extraMenuButton
+                if (!menu.closest('.extraMenuButton')) return;
+
                 const ul = menu.querySelector("ul");
                 if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
 
@@ -2348,7 +2368,7 @@ onReady(async function () {
             { keys: ["Ctrl", "I"], action: "Italic text" },
             { keys: ["Ctrl", "U"], action: "Underline text" },
             { keys: ["Ctrl", "S"], action: "Spoiler text" },
-            { keys: ["Ctrl", "D"], action: "Doom text" },
+            { keys: ["Ctrl", "D"], action: "Srz Bizniz text" },
             { keys: ["Ctrl", "M"], action: "Moe text" },
             { keys: ["Alt", "C"], action: "Code block" },
         ];
@@ -2415,9 +2435,16 @@ onReady(async function () {
     //////// MENU END ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     ///////// KEYBOARD SHORTCUTS ////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Global toggle for all shortcuts
+    async function shortcutsGloballyEnabled() {
+        return await getSetting("enableShortcuts");
+    }
 
     // --- Consolidated Keyboard Shortcuts ---
     document.addEventListener("keydown", async function (event) {
+        // Check if global toggle is enabled first
+        if (!(await shortcutsGloballyEnabled())) return;
+
         // Open 8chanSS menu (CTRL + F1)
         if (event.ctrlKey && event.key === "F1") {
             event.preventDefault();
@@ -2442,6 +2469,16 @@ onReady(async function () {
                     const textarea = document.getElementById("qrbody");
                     if (textarea) textarea.focus();
                 }, 50);
+            }
+            return;
+        }
+
+        // Tab key: focus #qrbody if not already focused
+        if (event.key === "Tab") {
+            const qrbody = document.getElementById("qrbody");
+            if (qrbody && document.activeElement !== qrbody) {
+                event.preventDefault();
+                qrbody.focus();
             }
             return;
         }
@@ -2518,7 +2555,7 @@ onReady(async function () {
         ["b", ["'''", "'''"]],
         ["u", ["__", "__"]],
         ["i", ["''", "''"]],
-        ["d", ["[doom]", "[/doom]"]],
+        ["d", ["==", "=="]],
         ["m", ["[moe]", "[/moe]"]],
         ["c", ["[code]", "[/code]"]],
     ]);
@@ -2547,7 +2584,7 @@ onReady(async function () {
         }
     }
 
-    // Scroll between posts functionality
+    // --- Feature: Scroll between posts functionality ---
     let lastHighlighted = null;
     let lastType = null; // "own" or "reply"
     let lastIndex = -1;
@@ -2852,17 +2889,6 @@ onReady(async function () {
     if (opHeadTitle && innerOP) {
         innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
     }
-
-    // Add Tab key focus for #qrbody
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Tab") {
-            const qrbody = document.getElementById("qrbody");
-            if (qrbody && document.activeElement !== qrbody) {
-                e.preventDefault();
-                qrbody.focus();
-            }
-        }
-    });
 
     // Show all posts by ID
     function enableIdFiltering() {
