@@ -1,3 +1,17 @@
+## v1.37.0
+*2025-04-30*
+
+- New Option: Enable Keyboard Shortcuts
+- New Option: Auto Expand Thread Watcher (TW will expand/shrink vertically as threads are added)
+- New Option: Show only Posts by ID when ID is clicked (toggle for previously implemented feature)
+- Replaced Doom text with Srz Bizniz text (shortcut still same)
+- Fix Mark As Your Post being added to the Hide menu
+- Inlined backlink posts should now always show up below the post title no matter how deeply nested (similar to 4chanX)
+- Clicked quotelinks will have their opacity reduced (similar to 4chanX)
+- Gave native 8chan settings and Multiboard menus a bit of styling similar to the thread watcher
+- `Esc` keyboard shortcut will now  also close the thread watcher
+- Add icon to 8chanSS userscript
+
 ### v1.36.0 (skipped one version)
 *2025-04-29*
 

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.36.0
+// @version      1.37.0
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -18,6 +18,7 @@
 // @run-at       document-start
 // @updateURL    https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.meta.js
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
+// @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAZlBMVEUAAABdlloAhl758AH58AH58AcAhl758ADj4CYAh14AhV4AhV0Ahl748AcChl4Chl0Ab2H58AIAhl758AD58AAAhl757wL48AD47wL78QL47wcAh1748AF3oFfs5yEAh1/68QDz7BM5qSu8AAAAH3RSTlMA/lg/OYtM8g/onXtoXzAaCdzBsIFzczMeaCXXyrmp9ddA3QAAANpJREFUSMft0tkOgjAQheFjtVCQVVxwnfr+L+kWM5FOC73TxP/6fBedFJwpyx5CtSpqSHXWpns4qYxo1cDtkNp7GoOW9KgSwM4+09KeEhmw4H0IuGJDAbCw79a8nwJYFDQCuO1gT8oLWCiKAXavKA5cZ78I5n/wBx7wfb+1TwOggpD2gxxSpvWBrIbY3AcUPK1lkMNbJ4FV4wd964KsQqBF6oAEwcoh2GAk/QlyjNYx4AeHMicGxxoTOrRvIB5IPtULJJhY+QIFJrd9gCUi0tdZjqgu5yYOGAO5G/kyc3TkciPeAAAAAElFTkSuQmCC
 // ==/UserScript==
 
 function onReady(fn) {
@@ -78,9 +79,15 @@ function onReady(fn) {
     }
 })();
 onReady(async function () {
+    "use strict";
     const scriptSettings = {
         site: {
+            _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
+            _siteSection1: { type: "separator" },
             alwaysShowTW: { label: "Pin Thread Watcher", default: false },
+            autoExpandTW: { label: "Auto Expand Thread Watcher", default: false },
+            _siteSiteTitle: { type: "title", label: ":: Site" },
+            _siteSection2: { type: "separator" },
             enableHeaderCatalogLinks: {
                 label: "Header Catalog Links",
                 default: true,
@@ -143,7 +150,7 @@ onReady(async function () {
             openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false }
         },
         styling: {
-            _siteTitle: { type: "title", label: ":: Site Styling" }, 
+            _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
             _stylingSection1: { type: "separator" },
             hideAnnouncement: { label: "Hide Announcement", default: false },
             hidePanelMessage: { label: "Hide Panel Message", default: false },
@@ -159,7 +166,7 @@ onReady(async function () {
             },
             hideBanner: { label: "Hide Board Banners", default: false },
             hideDefaultBL: { label: "Hide Default Board List", default: true },
-            _threadTitle: { type: "title", label: ":: Thread Styling" }, 
+            _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
             highlightOnYou: { label: "Highlight (You) posts", default: true },
             enableFitReplies: { label: "Fit Replies", default: false },
@@ -178,6 +185,8 @@ onReady(async function () {
             hideCheckboxes: { label: "Hide Checkboxes", default: false }
         },
         miscel: {
+            enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
+            enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
                 label: "Truncate filenames",
@@ -249,7 +258,8 @@ onReady(async function () {
             highlightOnYou: "highlight-you",
             threadHideCloseBtn: "hide-close-btn",
             hideCheckboxes: "hide-checkboxes",
-            hideNoCookieLink: "hide-nocookie"
+            hideNoCookieLink: "hide-nocookie",
+            autoExpandTW: "auto-expand-tw"
         };
         if (enableSidebar && !enableSidebar_leftSidebar) {
             document.documentElement.classList.add("ss-sidebar");
@@ -303,13 +313,13 @@ onReady(async function () {
     let css = "";
 
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}#watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}";
+        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}";
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid #dd003e 3px}.postCell::before{display:inline!important;height:auto!important}";
+        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid #dd003e 3px}.postCell::before{display:inline!important;height:auto!important}";
     }
     if (/\/catalog\.html$/.test(currentPath)) {
-        css += "#dynamicAnnouncement{display:none}#postingForm{margin:2em auto}";
+        css += "#postingForm{margin:2em auto}";
     }
 
     if (!document.getElementById('8chSS')) {
@@ -358,6 +368,9 @@ onReady(async function () {
     if (await getSetting("truncFilenames")) {
         const filenameLength = await getSetting("truncFilenames_customTrunc");
         truncateFilenames(filenameLength);
+    }
+    if (await getSetting("enableIdFilters")) {
+        enableIdFiltering();
     }
     async function initImageHover() {
         const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
@@ -829,57 +842,48 @@ onReady(async function () {
         }).observe(document.body, { childList: true, subtree: true });
     }
     function featureNestedReplies() {
+        let observer;
         function ensureReplyPreviewPlacement(root = document) {
-            root.querySelectorAll('.innerOP').forEach(innerOP => {
-                const opHeadTitle = innerOP.querySelector('.opHead.title');
-                const replyPreview = innerOP.querySelector('.replyPreview');
-                if (opHeadTitle && replyPreview && opHeadTitle.nextSibling !== replyPreview) {
-                    innerOP.insertBefore(replyPreview, opHeadTitle.nextSibling);
-                }
-            });
-            root.querySelectorAll('.innerPost').forEach(innerPost => {
+            root.querySelectorAll('.replyPreview').forEach(replyPreview => {
+                const innerPost = replyPreview.closest('.innerPost');
+                if (!innerPost) return;
                 const postInfoTitle = innerPost.querySelector('.postInfo.title');
-                const replyPreview = innerPost.querySelector('.replyPreview');
-                if (postInfoTitle && replyPreview && postInfoTitle.nextSibling !== replyPreview) {
+                if (!postInfoTitle) return;
+                if (replyPreview.parentElement !== innerPost || postInfoTitle.nextSibling !== replyPreview) {
                     innerPost.insertBefore(replyPreview, postInfoTitle.nextSibling);
                 }
             });
         }
-        function ensureInlineQuotePlacement(node) {
-            if (
-                node.nodeType === 1 &&
-                node.classList.contains('inlineQuote') &&
-                node.parentElement &&
-                node.parentElement.classList.contains('replyPreview')
-            ) {
-                const replyPreview = node.parentElement;
-                if (replyPreview.firstChild !== node) {
-                    replyPreview.insertBefore(node, replyPreview.firstChild);
-                }
-            }
-            else if (node.nodeType === 1) {
-                node.querySelectorAll('.replyPreview .inlineQuote').forEach(inlineQuote => {
-                    const replyPreview = inlineQuote.parentElement;
-                    if (replyPreview.firstChild !== inlineQuote) {
-                        replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
-                    }
-                });
-            }
+        function ensureInlineQuotePlacement(root = document) {
+            root.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
+                const replyPreview = inlineQuote.closest('.replyPreview');
+                if (!replyPreview) return;
+                replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
+            });
         }
-        ensureReplyPreviewPlacement();
-        const observer = new MutationObserver(mutations => {
+        observer = new MutationObserver(mutations => {
+            observer.disconnect();
+        
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue; 
-                    if (node.matches && (node.matches('.innerPost') || node.matches('.innerOP'))) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.classList && node.classList.contains('innerPost')) {
                         ensureReplyPreviewPlacement(node);
                     } else if (node.querySelectorAll) {
-                        node.querySelectorAll('.innerPost, .innerOP').forEach(post => {
-                            ensureReplyPreviewPlacement(post);
+                        node.querySelectorAll('.innerPost').forEach(innerPost => {
+                            ensureReplyPreviewPlacement(innerPost);
                         });
+                    } else {
+                        const ancestor = node.closest && node.closest('.innerPost');
+                        if (ancestor) ensureReplyPreviewPlacement(ancestor);
                     }
-                    ensureInlineQuotePlacement(node);
                 }
+            }
+            ensureInlineQuotePlacement(document);
+        
+            const postsContainer = document.querySelector('.opCell');
+            if (postsContainer) {
+                observer.observe(postsContainer, { childList: true, subtree: true });
             }
         });
         const postsContainer = document.querySelector('.opCell');
@@ -891,6 +895,13 @@ onReady(async function () {
             if (!a) return;
             setTimeout(() => {
                 a.classList.toggle('reply-inlined');
+            }, 0);
+        });
+        document.addEventListener('click', function (e) {
+            const quoteLink = e.target.closest('a.quoteLink');
+            if (!quoteLink) return;
+            setTimeout(() => {
+                quoteLink.classList.toggle('quote-inlined');
             }, 0);
         });
     }
@@ -1109,15 +1120,19 @@ onReady(async function () {
         document.body.addEventListener('click', function (e) {
             if (e.target.matches('.extraMenuButton')) {
                 const postCell = e.target.closest('.postCell, .opCell');
-                if (postCell) {
-                    const menu = document.querySelector(MENU_SELECTOR);
+                if (!postCell) return;
+                setTimeout(() => {
+                    let menu = e.target.parentNode.querySelector('.floatingList.extraMenu');
+                    if (!menu) {
+                        const menus = Array.from(document.querySelectorAll('.floatingList.extraMenu'));
+                        menu = menus[menus.length - 1];
+                    }
                     if (menu) {
                         menu.setAttribute('data-post-id', postCell.id);
                     }
-                }
+                }, 0);
             }
         });
-
         function getPostIdFromMenu(menu) {
             return menu.getAttribute('data-post-id') || null;
         }
@@ -1132,6 +1147,8 @@ onReady(async function () {
         }
         function addMenuEntries(root = document) {
             root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                if (!menu.closest('.extraMenuButton')) return;
+
                 const ul = menu.querySelector("ul");
                 if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
 
@@ -1424,7 +1441,7 @@ onReady(async function () {
         menu = document.createElement("div");
         menu.id = "8chanSS-menu";
         menu.style.position = "fixed";
-        menu.style.top = "4rem"; 
+        menu.style.top = "3rem"; 
         menu.style.left = "20rem"; 
         menu.style.zIndex = "99999";
         menu.style.background = "#222";
@@ -1435,7 +1452,7 @@ onReady(async function () {
         menu.style.display = "none";
         menu.style.minWidth = "220px";
         menu.style.width = "100%";
-        menu.style.maxWidth = "450px";
+        menu.style.maxWidth = "470px";
         menu.style.fontFamily = "sans-serif";
         menu.style.userSelect = "none";
         let isDragging = false,
@@ -1645,7 +1662,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.36.0</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.37.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -1950,7 +1967,7 @@ onReady(async function () {
             { keys: ["Tab"], action: "Target Quick Reply text area" },
             { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
-            { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
+            { keys: ["Escape"], action: "Clear QR textarea and hide all dialogs" },
             { keys: ["ALT", "W"], action: "Watch Thread" },
             { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
             { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
@@ -1959,7 +1976,7 @@ onReady(async function () {
             { keys: ["Ctrl", "I"], action: "Italic text" },
             { keys: ["Ctrl", "U"], action: "Underline text" },
             { keys: ["Ctrl", "S"], action: "Spoiler text" },
-            { keys: ["Ctrl", "D"], action: "Doom text" },
+            { keys: ["Ctrl", "D"], action: "Srz Bizniz text" },
             { keys: ["Ctrl", "M"], action: "Moe text" },
             { keys: ["Alt", "C"], action: "Code block" },
         ];
@@ -2009,7 +2026,11 @@ onReady(async function () {
             menu.style.display = menu.style.display === "none" ? "block" : "none";
         });
     }
+    async function shortcutsGloballyEnabled() {
+        return await getSetting("enableShortcuts");
+    }
     document.addEventListener("keydown", async function (event) {
+        if (!(await shortcutsGloballyEnabled())) return;
         if (event.ctrlKey && event.key === "F1") {
             event.preventDefault();
             let menu = document.getElementById("8chanSS-menu") || (await createSettingsMenu());
@@ -2030,12 +2051,23 @@ onReady(async function () {
             }
             return;
         }
+        if (event.key === "Tab") {
+            const qrbody = document.getElementById("qrbody");
+            if (qrbody && document.activeElement !== qrbody) {
+                event.preventDefault();
+                qrbody.focus();
+            }
+            return;
+        }
         if (event.key === "Escape") {
             const textarea = document.getElementById("qrbody");
             if (textarea) textarea.value = "";
             const quickReply = document.getElementById("quick-reply");
             if (quickReply) quickReply.style.display = "none";
+            const threadWatcher = document.getElementById("watchedMenu");
+            if (threadWatcher) threadWatcher.style.display = "none";
             return;
+
         }
         if (event.ctrlKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault();
@@ -2086,7 +2118,7 @@ onReady(async function () {
         ["b", ["'''", "'''"]],
         ["u", ["__", "__"]],
         ["i", ["''", "''"]],
-        ["d", ["[doom]", "[/doom]"]],
+        ["d", ["==", "=="]],
         ["m", ["[moe]", "[/moe]"]],
         ["c", ["[code]", "[/code]"]],
     ]);
@@ -2338,15 +2370,6 @@ onReady(async function () {
     if (opHeadTitle && innerOP) {
         innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
     }
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Tab") {
-            const qrbody = document.getElementById("qrbody");
-            if (qrbody && document.activeElement !== qrbody) {
-                e.preventDefault();
-                qrbody.focus();
-            }
-        }
-    });
     function enableIdFiltering() {
         const postCellSelector = ".postCell";
         const labelIdSelector = ".labelId";
@@ -2379,7 +2402,6 @@ onReady(async function () {
 
         document.body.addEventListener("click", handleClick);
     }
-    enableIdFiltering();
     function truncateFilenames(filenameLength) {
         document.querySelectorAll('a.originalNameLink').forEach(link => {
             const fullFilename = link.getAttribute('download');
