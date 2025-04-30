@@ -105,7 +105,9 @@ video {
     color: #dd003e !important;
 }
 
-#watchedMenu {
+#watchedMenu,
+#settingsMenu,
+#multiboardMenu {
     font-size: smaller;
     padding: 5px !important;
     box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
