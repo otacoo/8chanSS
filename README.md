@@ -41,6 +41,7 @@ Then press the big install button to install the script.
 - Pin Thread Watcher
 - Hide/unhide threads in the catalog
 - Mark/unmark posts as yours
+- Show all posts by ID
 
 More incoming...
 
@@ -66,7 +67,7 @@ More incoming...
 
 `CTRL` + `I` : Add *italics* tags
 
-`CTRL` + `D` : Add Doom tags
+`CTRL` + `D` : Add Srz Bizniz tags
 
 `CTRL` + `M` : Add moe tags
 
