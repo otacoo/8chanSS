@@ -178,7 +178,7 @@ onReady(async function () {
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
-            enableIdFilters: { label: "Show all posts by ID (click ID)", type: "checkbox", default: true },
+            enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
                 label: "Truncate filenames",
@@ -980,70 +980,51 @@ onReady(async function () {
 
     // --- Feature: Inline replies (barebones) ---
     function featureNestedReplies() {
-        // Move .replyPreview after the correct title element in both OP and reply posts
+        let observer;
+        // Move .replyPreview after the title element in both OP and reply posts
         function ensureReplyPreviewPlacement(root = document) {
-            // For OP post
-            root.querySelectorAll('.innerOP').forEach(innerOP => {
-                const opHeadTitle = innerOP.querySelector('.opHead.title');
-                const replyPreview = innerOP.querySelector('.replyPreview');
-                if (opHeadTitle && replyPreview && opHeadTitle.nextSibling !== replyPreview) {
-                    innerOP.insertBefore(replyPreview, opHeadTitle.nextSibling);
-                }
-            });
-            // For reply posts
-            root.querySelectorAll('.innerPost').forEach(innerPost => {
+            root.querySelectorAll('.replyPreview').forEach(replyPreview => {
+                const innerPost = replyPreview.closest('.innerPost');
+                if (!innerPost) return;
                 const postInfoTitle = innerPost.querySelector('.postInfo.title');
-                const replyPreview = innerPost.querySelector('.replyPreview');
-                if (postInfoTitle && replyPreview && postInfoTitle.nextSibling !== replyPreview) {
+                if (!postInfoTitle) return;
+                if (replyPreview.parentElement !== innerPost || postInfoTitle.nextSibling !== replyPreview) {
                     innerPost.insertBefore(replyPreview, postInfoTitle.nextSibling);
                 }
             });
         }
-
-        // New .inlineQuote is always first in .replyPreview
-        function ensureInlineQuotePlacement(node) {
-            // If node is an .inlineQuote inside a .replyPreview
-            if (
-                node.nodeType === 1 &&
-                node.classList.contains('inlineQuote') &&
-                node.parentElement &&
-                node.parentElement.classList.contains('replyPreview')
-            ) {
-                const replyPreview = node.parentElement;
-                if (replyPreview.firstChild !== node) {
-                    replyPreview.insertBefore(node, replyPreview.firstChild);
-                }
-            }
-            // Or if node contains any .inlineQuote inside .replyPreview
-            else if (node.nodeType === 1) {
-                node.querySelectorAll('.replyPreview .inlineQuote').forEach(inlineQuote => {
-                    const replyPreview = inlineQuote.parentElement;
-                    if (replyPreview.firstChild !== inlineQuote) {
-                        replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
-                    }
-                });
-            }
+        // Always add new .inlineQuote divs as first child
+        function ensureInlineQuotePlacement(root = document) {
+            root.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
+                const replyPreview = inlineQuote.closest('.replyPreview');
+                if (!replyPreview) return;
+                replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
+            });
         }
-
-        // Initial placement for existing posts
-        ensureReplyPreviewPlacement();
-
-        // Set up a MutationObserver to handle dynamically added posts and inlineQuotes
-        const observer = new MutationObserver(mutations => {
+        // Here be dragons, asked chatGPT to fix this one
+        observer = new MutationObserver(mutations => {
+            observer.disconnect();
+        
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue; // Only process element nodes
-                    // If the added node is an .innerPost or .innerOP, or contains any
-                    if (node.matches && (node.matches('.innerPost') || node.matches('.innerOP'))) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.classList && node.classList.contains('innerPost')) {
                         ensureReplyPreviewPlacement(node);
                     } else if (node.querySelectorAll) {
-                        node.querySelectorAll('.innerPost, .innerOP').forEach(post => {
-                            ensureReplyPreviewPlacement(post);
+                        node.querySelectorAll('.innerPost').forEach(innerPost => {
+                            ensureReplyPreviewPlacement(innerPost);
                         });
+                    } else {
+                        const ancestor = node.closest && node.closest('.innerPost');
+                        if (ancestor) ensureReplyPreviewPlacement(ancestor);
                     }
-                    // Handle .inlineQuote placement in .replyPreview
-                    ensureInlineQuotePlacement(node);
                 }
+            }
+            ensureInlineQuotePlacement(document);
+        
+            const postsContainer = document.querySelector('.opCell');
+            if (postsContainer) {
+                observer.observe(postsContainer, { childList: true, subtree: true });
             }
         });
 
@@ -1054,12 +1035,20 @@ onReady(async function () {
         }
 
         // --- Feature: Dashed underline for inlined reply backlinks ---
-        // Toggle underline on/off for clicked .panelBacklinks > a
         document.addEventListener('click', function (e) {
             const a = e.target.closest('.panelBacklinks > a');
             if (!a) return;
             setTimeout(() => {
                 a.classList.toggle('reply-inlined');
+            }, 0);
+        });
+
+        // --- Feature: Add 'quote-inlined' class to clicked .quoteLink <a> ---
+        document.addEventListener('click', function (e) {
+            const quoteLink = e.target.closest('a.quoteLink');
+            if (!quoteLink) return;
+            setTimeout(() => {
+                quoteLink.classList.toggle('quote-inlined');
             }, 0);
         });
     }
