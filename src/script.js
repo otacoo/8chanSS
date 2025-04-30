@@ -178,6 +178,7 @@ onReady(async function () {
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
+            enableIdFilters: { label: "Show all posts by ID (click ID)", type: "checkbox", default: true },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
                 label: "Truncate filenames",
@@ -389,6 +390,9 @@ onReady(async function () {
     if (await getSetting("truncFilenames")) {
         const filenameLength = await getSetting("truncFilenames_customTrunc");
         truncateFilenames(filenameLength);
+    }
+    if (await getSetting("enableIdFilters")) {
+        enableIdFiltering();
     }
 
     // Check if we should enable image hover based on the current page
@@ -1761,7 +1765,7 @@ onReady(async function () {
         menu = document.createElement("div");
         menu.id = "8chanSS-menu";
         menu.style.position = "fixed";
-        menu.style.top = "4rem"; // Position of menu
+        menu.style.top = "3rem"; // Position of menu
         menu.style.left = "20rem"; // Position of menu
         menu.style.zIndex = "99999";
         menu.style.background = "#222";
@@ -1772,7 +1776,7 @@ onReady(async function () {
         menu.style.display = "none";
         menu.style.minWidth = "220px";
         menu.style.width = "100%";
-        menu.style.maxWidth = "450px";
+        menu.style.maxWidth = "470px";
         menu.style.fontFamily = "sans-serif";
         menu.style.userSelect = "none";
 
@@ -2359,7 +2363,7 @@ onReady(async function () {
             { keys: ["Tab"], action: "Target Quick Reply text area" },
             { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
-            { keys: ["Escape"], action: "Clear textarea and hide Quick Reply" },
+            { keys: ["Escape"], action: "Clear QR textarea and hide all dialogs" },
             { keys: ["ALT", "W"], action: "Watch Thread" },
             { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
             { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
@@ -2483,16 +2487,20 @@ onReady(async function () {
             return;
         }
 
-        // (ESC) Clear textarea and hide QR
+        // (ESC) Clear textarea and hide all dialogs
         if (event.key === "Escape") {
             // Clear the textarea
             const textarea = document.getElementById("qrbody");
             if (textarea) textarea.value = "";
 
-            // Hide the quick-reply div
+            // Hide QR
             const quickReply = document.getElementById("quick-reply");
             if (quickReply) quickReply.style.display = "none";
+            // Hide TW            
+            const threadWatcher = document.getElementById("watchedMenu");
+            if (threadWatcher) threadWatcher.style.display = "none";
             return;
+
         }
 
         // Scroll between posts with CTRL+Arrow keys
@@ -2927,8 +2935,6 @@ onReady(async function () {
 
         document.body.addEventListener("click", handleClick);
     }
-    // Init
-    enableIdFiltering();
 
     // Truncate Filenames and Show Only Extension
     function truncateFilenames(filenameLength) {
