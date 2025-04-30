@@ -982,7 +982,12 @@ onReady(async function () {
     function featureNestedReplies() {
         let observer;
         // Move .replyPreview after the correct title element as a direct child of .innerOP or .innerPost
+        // Check if bottom backlinks are enabled
+        const bottomBacklinksEnabled = localStorage.getItem("bottomBacklinks") === "true";
         function ensureReplyPreviewPlacement(root = document) {
+            // Skip if bottom backlinks are enabled
+            if (bottomBacklinksEnabled) return;
+
             root.querySelectorAll('.replyPreview').forEach(replyPreview => {
                 // Find the closest .innerOP or .innerPost ancestor
                 let container = replyPreview.closest('.innerOP, .innerPost');
@@ -1011,17 +1016,17 @@ onReady(async function () {
         // Observer to reconnect after each mutation
         observer = new MutationObserver(() => {
             observer.disconnect();
-
-            ensureReplyPreviewPlacement(document);
+            // Only run ensureReplyPreviewPlacement if bottom backlinks are not enabled
+            if (!bottomBacklinksEnabled) {
+                ensureReplyPreviewPlacement(document);
+            }
             ensureInlineQuotePlacement(document);
-
             // Reconnect observer
             const postsContainer = document.querySelector('.opCell');
             if (postsContainer) {
                 observer.observe(postsContainer, { childList: true, subtree: true });
             }
         });
-
         // Observer for the initial setup
         const postsContainer = document.querySelector('.opCell');
         if (postsContainer) {
@@ -1046,8 +1051,11 @@ onReady(async function () {
             }, 0);
         });
 
-        // Initial normalization for existing posts
-        ensureReplyPreviewPlacement(document);
+        // Only run initial ensureReplyPreviewPlacement if bottom backlinks are not enabled
+        if (!bottomBacklinksEnabled) {
+            ensureReplyPreviewPlacement(document);
+        }
+
         ensureInlineQuotePlacement(document);
     }
 
@@ -2945,7 +2953,7 @@ onReady(async function () {
             });
         }
         // Initial processing
-        processLinks(document);    
+        processLinks(document);
         // Set up observer for dynamically added links in #divThreads
         const divThreads = document.querySelector('#divThreads');
         if (divThreads) {
