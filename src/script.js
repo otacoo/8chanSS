@@ -1004,7 +1004,7 @@ onReady(async function () {
         // Here be dragons, asked chatGPT to fix this one
         observer = new MutationObserver(mutations => {
             observer.disconnect();
-        
+
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType !== 1) continue;
@@ -1021,7 +1021,7 @@ onReady(async function () {
                 }
             }
             ensureInlineQuotePlacement(document);
-        
+
             const postsContainer = document.querySelector('.opCell');
             if (postsContainer) {
                 observer.observe(postsContainer, { childList: true, subtree: true });
@@ -1251,35 +1251,6 @@ onReady(async function () {
             btn.addEventListener("click", btn._updateWatchHandler);
         }
     }
-
-
-    // --- Watch Thread on ALT+W Keyboard Shortcut ---
-    document.addEventListener("keydown", async function (event) {
-        // Only trigger if ALT+W is pressed and no input/textarea is focused
-        if (
-            event.altKey &&
-            !event.ctrlKey &&
-            !event.shiftKey &&
-            !event.metaKey &&
-            (event.key === "w" || event.key === "W")
-        ) {
-            // Prevent default browser behavior (e.g., closing tab in some browsers)
-            event.preventDefault();
-            // Only run if the setting is enabled
-            if (
-                typeof getSetting === "function" &&
-                (await getSetting("watchThreadOnReply"))
-            ) {
-                const btn = document.querySelector(".watchButton");
-                if (btn && !btn.classList.contains("watched-active")) {
-                    btn.click();
-                    setTimeout(() => {
-                        btn.classList.add("watched-active");
-                    }, 100);
-                }
-            }
-        }
-    });
 
     // --- Feature: Pin Thread Watcher ---
     async function featureAlwaysShowTW() {
@@ -2498,6 +2469,24 @@ onReady(async function () {
             const isOwnReply = !event.shiftKey;
             const isNext = event.key === 'ArrowDown';
             scrollToReply(isOwnReply, isNext);
+            return;
+        }
+
+        // --- Watch Thread on ALT+W Keyboard Shortcut ---
+        // Only trigger if ALT+W is pressed and no input/textarea is focused
+        if (
+            event.altKey &&
+            (event.key === "w" || event.key === "W")
+        ) {
+            // Prevent default browser behavior (e.g., closing tab in some browsers)
+            event.preventDefault();
+            const btn = document.querySelector(".watchButton");
+            if (btn && !btn.classList.contains("watched-active")) {
+                btn.click();
+                setTimeout(() => {
+                    btn.classList.add("watched-active");
+                }, 100);
+            }
             return;
         }
     });
