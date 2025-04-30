@@ -1,3 +1,13 @@
+## v1.38.0
+*2025-04-30*
+
+Small bugfixing update
+
+- Newly added posts will now correcly have their filenames truncated
+- `ALT` + `W` will now correctly be disabled when shortcuts are disabled
+- Bug fix for inline replies not working correctly for OP
+- (You) quotes will now use the theme's subject color instead of just "red"
+
 ## v1.37.0
 *2025-04-30*
 

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.37.0
+// @version      1.38.0
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -316,7 +316,7 @@ onReady(async function () {
         css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}";
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid #dd003e 3px}.postCell::before{display:inline!important;height:auto!important}";
+        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid var(--subject-color) 3px}.postCell::before{display:inline!important;height:auto!important}";
     }
     if (/\/catalog\.html$/.test(currentPath)) {
         css += "#postingForm{margin:2em auto}";
@@ -845,12 +845,13 @@ onReady(async function () {
         let observer;
         function ensureReplyPreviewPlacement(root = document) {
             root.querySelectorAll('.replyPreview').forEach(replyPreview => {
-                const innerPost = replyPreview.closest('.innerPost');
-                if (!innerPost) return;
-                const postInfoTitle = innerPost.querySelector('.postInfo.title');
-                if (!postInfoTitle) return;
-                if (replyPreview.parentElement !== innerPost || postInfoTitle.nextSibling !== replyPreview) {
-                    innerPost.insertBefore(replyPreview, postInfoTitle.nextSibling);
+                let container = replyPreview.closest('.innerOP, .innerPost');
+                if (!container) return;
+                let titleSelector = container.classList.contains('innerOP') ? '.opHead.title' : '.postInfo.title';
+                let titleElem = Array.from(container.children).find(child => child.matches && child.matches(titleSelector));
+                if (!titleElem) return;
+                if (replyPreview.parentElement !== container || titleElem.nextSibling !== replyPreview) {
+                    container.insertBefore(replyPreview, titleElem.nextSibling);
                 }
             });
         }
@@ -861,26 +862,11 @@ onReady(async function () {
                 replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
             });
         }
-        observer = new MutationObserver(mutations => {
+        observer = new MutationObserver(() => {
             observer.disconnect();
-        
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue;
-                    if (node.classList && node.classList.contains('innerPost')) {
-                        ensureReplyPreviewPlacement(node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll('.innerPost').forEach(innerPost => {
-                            ensureReplyPreviewPlacement(innerPost);
-                        });
-                    } else {
-                        const ancestor = node.closest && node.closest('.innerPost');
-                        if (ancestor) ensureReplyPreviewPlacement(ancestor);
-                    }
-                }
-            }
+
+            ensureReplyPreviewPlacement(document);
             ensureInlineQuotePlacement(document);
-        
             const postsContainer = document.querySelector('.opCell');
             if (postsContainer) {
                 observer.observe(postsContainer, { childList: true, subtree: true });
@@ -904,6 +890,8 @@ onReady(async function () {
                 quoteLink.classList.toggle('quote-inlined');
             }, 0);
         });
+        ensureReplyPreviewPlacement(document);
+        ensureInlineQuotePlacement(document);
     }
     function featureBlurSpoilers() {
         function revealSpoilers() {
@@ -1045,29 +1033,6 @@ onReady(async function () {
             btn.addEventListener("click", btn._updateWatchHandler);
         }
     }
-    document.addEventListener("keydown", async function (event) {
-        if (
-            event.altKey &&
-            !event.ctrlKey &&
-            !event.shiftKey &&
-            !event.metaKey &&
-            (event.key === "w" || event.key === "W")
-        ) {
-            event.preventDefault();
-            if (
-                typeof getSetting === "function" &&
-                (await getSetting("watchThreadOnReply"))
-            ) {
-                const btn = document.querySelector(".watchButton");
-                if (btn && !btn.classList.contains("watched-active")) {
-                    btn.click();
-                    setTimeout(() => {
-                        btn.classList.add("watched-active");
-                    }, 100);
-                }
-            }
-        }
-    });
     async function featureAlwaysShowTW() {
         if (!(await getSetting("alwaysShowTW"))) return;
 
@@ -1662,7 +1627,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.37.0</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.38.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -2076,6 +2041,20 @@ onReady(async function () {
             scrollToReply(isOwnReply, isNext);
             return;
         }
+        if (
+            event.altKey &&
+            (event.key === "w" || event.key === "W")
+        ) {
+            event.preventDefault();
+            const btn = document.querySelector(".watchButton");
+            if (btn && !btn.classList.contains("watched-active")) {
+                btn.click();
+                setTimeout(() => {
+                    btn.classList.add("watched-active");
+                }, 100);
+            }
+            return;
+        }
     });
     const replyTextarea = document.getElementById("qrbody");
     if (replyTextarea) {
@@ -2403,27 +2382,36 @@ onReady(async function () {
         document.body.addEventListener("click", handleClick);
     }
     function truncateFilenames(filenameLength) {
-        document.querySelectorAll('a.originalNameLink').forEach(link => {
-            const fullFilename = link.getAttribute('download');
-            if (!fullFilename) return;
-
-            const lastDot = fullFilename.lastIndexOf('.');
-            if (lastDot === -1) return; 
-
-            const name = fullFilename.slice(0, lastDot);
-            const ext = fullFilename.slice(lastDot);
-            let truncated = fullFilename;
-            if (name.length > filenameLength) {
-                truncated = name.slice(0, filenameLength) + '(...)' + ext;
-            }
-            link.textContent = truncated;
-            link.addEventListener('mouseenter', function () {
-                link.textContent = fullFilename;
-            });
-            link.addEventListener('mouseleave', function () {
+        function processLinks(root = document) {
+            root.querySelectorAll('a.originalNameLink').forEach(link => {
+                if (link.dataset.truncated === "1") return;
+                const fullFilename = link.getAttribute('download');
+                if (!fullFilename) return;
+                const lastDot = fullFilename.lastIndexOf('.');
+                if (lastDot === -1) return; 
+                const name = fullFilename.slice(0, lastDot);
+                const ext = fullFilename.slice(lastDot);
+                let truncated = fullFilename;
+                if (name.length > filenameLength) {
+                    truncated = name.slice(0, filenameLength) + '(...)' + ext;
+                }
                 link.textContent = truncated;
+                link.dataset.truncated = "1";
+                link.addEventListener('mouseenter', function () {
+                    link.textContent = fullFilename;
+                });
+                link.addEventListener('mouseleave', function () {
+                    link.textContent = truncated;
+                });
+                link.title = fullFilename;
             });
-            link.title = fullFilename;
-        });
+        }
+        processLinks(document);    
+        const divThreads = document.querySelector('#divThreads');
+        if (divThreads) {
+            new MutationObserver(() => {
+                processLinks(divThreads);
+            }).observe(divThreads, { childList: true, subtree: true });
+        }
     }
 });
