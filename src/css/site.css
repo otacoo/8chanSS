@@ -85,9 +85,13 @@ video {
 }
 
 /* Thread Watcher */
-#watchedMenu .floatingContainer {
+:not(:root.auto-expand-tw) #watchedMenu .floatingContainer {
     overflow-x: hidden;
     overflow-wrap: break-word;
+}
+
+:root.auto-expand-tw #watchedMenu .floatingContainer {
+    height: fit-content !important;
 }
 
 .watchedCellLabel a::before {
