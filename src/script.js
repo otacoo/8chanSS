@@ -1034,9 +1034,9 @@ onReady(async function () {
     // --- Feature: Inline replies (barebones) ---
     function featureNestedReplies() {
         let observer;
-        // Move .replyPreview after the correct title element as a direct child of .innerOP or .innerPost
-        // Check if bottom backlinks are enabled
+        // Store if bottom backlinks are enabled first
         const bottomBacklinksEnabled = localStorage.getItem("bottomBacklinks") === "true";
+        // Move .replyPreview after the correct title element as a direct child of .innerOP or .innerPost
         function ensureReplyPreviewPlacement(root = document) {
             // Skip if bottom backlinks are enabled
             if (bottomBacklinksEnabled) return;
@@ -1060,6 +1060,8 @@ onReady(async function () {
 
         // Always add new .inlineQuote divs as first child of their closest .replyPreview parent
         function ensureInlineQuotePlacement(root = document) {
+            if (bottomBacklinksEnabled) return;
+            
             root.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
                 const replyPreview = inlineQuote.closest('.replyPreview');
                 if (!replyPreview) return;
