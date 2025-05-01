@@ -2365,6 +2365,7 @@ onReady(async function () {
         const shortcuts = [
             { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
             { keys: ["Tab"], action: "Target Quick Reply text area" },
+            { keys: ["R"], action: "Refresh Thread (5 sec. cooldown)" },
             { keys: ["Ctrl", "Q"], action: "Toggle Quick Reply" },
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
             { keys: ["Escape"], action: "Clear QR textarea and hide all dialogs" },
