@@ -2662,7 +2662,7 @@ onReady(async function () {
                 document.getElementById("refreshButton")
             ) {
                 const now = Date.now();
-                if (now - lastRefreshTime >= 4000) {
+                if (now - lastRefreshTime >= 5000) {
                     event.preventDefault();
                     document.getElementById("refreshButton").click();
                     lastRefreshTime = now;
