@@ -51,6 +51,10 @@ More incoming...
 
 `CTRL` + `Enter` : Submit post
 
+`Tab` : Target Quick Reply text area
+
+`R` : Refresh Thread (5 sec. cooldown)
+
 `Esc` : Clear and close the Quick Reply
 
 `CTRL` + `Q` : Toggle Quick Reply on/off
