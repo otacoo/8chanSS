@@ -2443,12 +2443,18 @@ onReady(async function () {
             return;
         }
 
-        // Tab key: focus #qrbody if not already focused
+        // Tab key: focus #qrbody if not already focused, else focus #QRfieldCaptcha
         if (event.key === "Tab") {
             const qrbody = document.getElementById("qrbody");
-            if (qrbody && document.activeElement !== qrbody) {
-                event.preventDefault();
-                qrbody.focus();
+            const captcha = document.getElementById("QRfieldCaptcha");
+            if (qrbody) {
+                if (document.activeElement !== qrbody) {
+                    event.preventDefault();
+                    qrbody.focus();
+                } else if (captcha) {
+                    event.preventDefault();
+                    captcha.focus();
+                }
             }
             return;
         }
