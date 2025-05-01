@@ -823,20 +823,6 @@ onReady(async function () {
                 fullSrc = getFullMediaSrc(thumb, filemime);
                 isVideo = filemime && filemime.startsWith("video/");
                 isAudio = filemime && filemime.startsWith("audio/");
-            } else if (thumb.classList.contains("originalNameLink")) {
-                const href = thumb.getAttribute("href");
-                if (!href) return;
-                const ext = href.split(".").pop().toLowerCase();
-                if (["mp3", "ogg", "m4a", "wav"].includes(ext)) {
-                    filemime = {
-                        ogg: "audio/ogg",
-                        mp3: "audio/mpeg",
-                        m4a: "audio/x-m4a",
-                        wav: "audio/wav",
-                    }[ext];
-                    fullSrc = href;
-                    isAudio = true;
-                }
             }
 
             if (!fullSrc || !filemime) return;
@@ -855,9 +841,8 @@ onReady(async function () {
 
             if (isAudio) {
                 // Audio: show indicator, play audio (hidden)
-                const container = thumb.tagName === "IMG"
-                    ? thumb.closest("a.linkThumb, a.imgLink")
-                    : thumb;
+                // Always append indicator to the nearest .imgLink or .linkThumb
+                let container = thumb.closest("a.linkThumb, a.imgLink");
                 if (container && !container.style.position) {
                     container.style.position = "relative";
                 }
@@ -873,16 +858,18 @@ onReady(async function () {
                 const indicator = document.createElement("div");
                 indicator.classList.add("audio-preview-indicator");
                 indicator.textContent = AUDIO_INDICATOR_TEXT;
-                container.appendChild(indicator);
+                if (container) {
+                    container.appendChild(indicator);
+                }
                 currentAudioIndicator = indicator;
 
                 // Cleanup on leave/click/scroll
                 const cleanup = () => cleanupFloatingMedia();
                 thumb.addEventListener("mouseleave", cleanup, { once: true });
-                container.addEventListener("click", cleanup, { once: true });
+                if (container) container.addEventListener("click", cleanup, { once: true });
                 window.addEventListener("scroll", cleanup, { once: true });
                 cleanupFns.push(() => thumb.removeEventListener("mouseleave", cleanup));
-                cleanupFns.push(() => container.removeEventListener("click", cleanup));
+                if (container) cleanupFns.push(() => container.removeEventListener("click", cleanup));
                 cleanupFns.push(() => window.removeEventListener("scroll", cleanup));
                 return;
             }
@@ -955,17 +942,6 @@ onReady(async function () {
                 if (!thumb._fullImgHoverBound) {
                     thumb.addEventListener("mouseenter", onThumbEnter);
                     thumb._fullImgHoverBound = true;
-                }
-            });
-            root.querySelectorAll("a.originalNameLink").forEach(link => {
-                const href = link.getAttribute("href") || "";
-                const ext = href.split(".").pop().toLowerCase();
-                if (
-                    ["mp3", "wav", "ogg", "m4a"].includes(ext) &&
-                    !link._audioHoverBound
-                ) {
-                    link.addEventListener("mouseenter", onThumbEnter);
-                    link._audioHoverBound = true;
                 }
             });
         }
