@@ -16,7 +16,7 @@
 :root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:nth-child(1),
 :root.disable-banner #bannerImage,
 :root.hide-checkboxes .deletionCheckBox,
-:root.hide-nocookie #captchaBody > table:nth-child(2) > tbody:nth-child(1) > tr:nth-child(2),
+:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:nth-child(1)>tr:nth-child(2),
 .watchedNotification::before,
 #navFadeEnd,
 #navFadeMid {
@@ -76,6 +76,7 @@ nav.navHeader {
 .multipleUploads .uploadCell:not(.expandedCell) {
     max-width: 215px;
 }
+
 /* Inline Expanded, not Hover */
 .imgExpanded,
 video {
@@ -220,4 +221,11 @@ a.originalNameLink[href$='.wav'] {
 a[data-filemime^='audio/']:hover .audio-preview-indicator,
 a.originalNameLink:hover .audio-preview-indicator {
     display: block;
+}
+
+.yt-icon {
+    width: 16px;
+    height: 13px;
+    vertical-align: middle;
+    margin-right: 1px;
 }
