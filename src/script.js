@@ -6,48 +6,6 @@ function onReady(fn) {
         fn();
     }
 }
-///// JANK THEME FLASH FIX LOAD ASAP /////////
-(function () {
-    // Get the user's selected theme from localStorage
-    const userTheme = localStorage.selectedTheme;
-    if (!userTheme) return;
-
-    // Try to swap the theme <link> as early as possible
-    const swapTheme = () => {
-        // Find the <link rel="stylesheet"> for the board's theme
-        const themeLink = Array.from(
-            document.getElementsByTagName("link")
-        ).find(
-            (link) =>
-                link.rel === "stylesheet" &&
-                /\/\.static\/css\/themes\//.test(link.href)
-        );
-        if (themeLink) {
-            // Replace the href with the user's theme
-            const themeBase = themeLink.href.replace(/\/[^\/]+\.css$/, "/");
-            themeLink.href = themeBase + userTheme + ".css";
-        }
-    };
-
-    // Try immediately, and also on DOMContentLoaded in case elements aren't ready yet
-    onReady(swapTheme);
-
-    // Also, if the theme selector exists, set its value to the user's theme
-    onReady(function () {
-        const themeSelector = document.getElementById("themeSelector");
-        if (themeSelector) {
-            for (let i = 0; i < themeSelector.options.length; i++) {
-                if (
-                    themeSelector.options[i].value === userTheme ||
-                    themeSelector.options[i].text === userTheme
-                ) {
-                    themeSelector.selectedIndex = i;
-                    break;
-                }
-            }
-        }
-    });
-})();
 ////////// Disable/Enable native extension settings //////
 (function () {
     function updateLocalStorage(removeKeys = [], setMap = {}) {
@@ -66,28 +24,6 @@ function onReady(fn) {
         );
     } catch (e) {
         // Ignore errors (e.g., storage not available)
-    }
-})();
-// Temporary to clean up storage
-(async function removeOldKeys() {
-    if (typeof GM === "undefined" || typeof GM.listValues !== "function" || typeof GM.deleteValue !== "function") {
-        console.warn("[SaveScroll] GM storage API not available, skipping old key cleanup.");
-        return;
-    }
-    try {
-        const allKeys = await GM.listValues();
-        const oldKeys = allKeys.filter(key => key.startsWith("8chanSS_scrollPosition_https"));
-        if (oldKeys.length) {
-            console.log(`[SaveScroll] Removing ${oldKeys.length} old scroll position keys from GM storage...`);
-            for (const key of oldKeys) {
-                await GM.deleteValue(key);
-                console.log(`[SaveScroll] Removed old key: ${key}`);
-            }
-        } else {
-            console.log("[SaveScroll] Temporary Info - No old scroll position keys found in GM storage.");
-        }
-    } catch (e) {
-        console.error("[SaveScroll] Error removing old scroll position keys from GM storage:", e);
     }
 })();
 //////// START OF THE SCRIPT ////////////////////
@@ -216,7 +152,8 @@ onReady(async function () {
                     }
                 }
             },
-            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false }
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
+            hideJannyTools: { label: "Hide Janitor Forms", default: false }
         }
     };
 
@@ -284,7 +221,8 @@ onReady(async function () {
             threadHideCloseBtn: "hide-close-btn",
             hideCheckboxes: "hide-checkboxes",
             hideNoCookieLink: "hide-nocookie",
-            autoExpandTW: "auto-expand-tw"
+            autoExpandTW: "auto-expand-tw",
+            hideJannyTools: "hide-jannytools"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
@@ -1061,7 +999,7 @@ onReady(async function () {
         // Always add new .inlineQuote divs as first child of their closest .replyPreview parent
         function ensureInlineQuotePlacement(root = document) {
             if (bottomBacklinksEnabled) return;
-            
+
             root.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
                 const replyPreview = inlineQuote.closest('.replyPreview');
                 if (!replyPreview) return;
@@ -2702,6 +2640,28 @@ onReady(async function () {
                 }
             }
             return;
+        }
+
+        // (R key): refresh index page with 4 sec cooldown
+        let lastRefreshTime = 0;
+
+        if (
+            event.key === "r" || event.key === "R"
+        ) {
+            if (
+                document.documentElement.classList.contains("is-index") &&
+                document.getElementById("refreshButton")
+            ) {
+                const now = Date.now();
+                if (now - lastRefreshTime >= 4000) {
+                    event.preventDefault();
+                    document.getElementById("refreshButton").click();
+                    lastRefreshTime = now;
+                } else {
+                    event.preventDefault();
+                }
+                return;
+            }
         }
 
         // (ESC) Clear textarea and hide all dialogs
