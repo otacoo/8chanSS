@@ -68,6 +68,28 @@ function onReady(fn) {
         // Ignore errors (e.g., storage not available)
     }
 })();
+// Temporary to clean up storage
+(async function removeOldKeys() {
+    if (typeof GM === "undefined" || typeof GM.listValues !== "function" || typeof GM.deleteValue !== "function") {
+        console.warn("[SaveScroll] GM storage API not available, skipping old key cleanup.");
+        return;
+    }
+    try {
+        const allKeys = await GM.listValues();
+        const oldKeys = allKeys.filter(key => key.startsWith("8chanSS_scrollPosition_https"));
+        if (oldKeys.length) {
+            console.log(`[SaveScroll] Removing ${oldKeys.length} old scroll position keys from GM storage...`);
+            for (const key of oldKeys) {
+                await GM.deleteValue(key);
+                console.log(`[SaveScroll] Removed old key: ${key}`);
+            }
+        } else {
+            console.log("[SaveScroll] Temporary Info - No old scroll position keys found in GM storage.");
+        }
+    } catch (e) {
+        console.error("[SaveScroll] Error removing old scroll position keys from GM storage:", e);
+    }
+})();
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     "use strict";
@@ -415,207 +437,255 @@ onReady(async function () {
     // Init
     initImageHover();
 
-    // --- Feature: Save Scroll Position (anchor-aware, optimized)
+    // --- Feature: Save Scroll Position ---
     async function featureSaveScroll() {
-        const MAX_PAGES = 50;
-        // Use URL without hash for storage key
-        const currentPage = window.location.origin + window.location.pathname + window.location.search;
-        const hasAnchor = !!window.location.hash;
-
-        // Only allow saving/restoring for URLs like "/<board>/res/<thread>.html"
+        const STORAGE_KEY = "8chanSS_scrollPositions";
+        const UNREAD_LINE_ID = "unread-line";
+        const MAX_THREADS = 100;
         const threadPagePattern = /^\/[^/]+\/res\/[^/]+\.html$/i;
-        function isThreadPage(urlPath) {
-            return threadPagePattern.test(urlPath);
+        // Early return if page not a thread
+        if (!threadPagePattern.test(window.location.pathname)) return;
+        // Helper functions
+        // Get board name and thread number
+        function getBoardAndThread() {
+            const match = window.location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i);
+            if (!match) return null;
+            return { board: match[1], thread: match[2] };
+        }
+        // Get saved positions
+        async function getAllSavedScrollData() {
+            const saved = await GM.getValue(STORAGE_KEY, null);
+            if (!saved) return {};
+            try { return JSON.parse(saved); } catch { return {}; }
+        }
+        async function setAllSavedScrollData(data) {
+            await GM.setValue(STORAGE_KEY, JSON.stringify(data));
+        }
+        // Get current post count
+        function getCurrentPostCount() {
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return 0;
+            return divPosts.querySelectorAll(":scope > .postCell[id]").length;
         }
 
-        async function getSavedScrollData() {
-            const savedData = await GM.getValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                null
-            );
-            if (!savedData) return null;
-            try {
-                return JSON.parse(savedData);
-            } catch (e) {
-                return null;
+        // --- Unseen post count logic ---
+        let lastSeenPostCount = 0;
+        let unseenCount = 0;
+        let tabTitleBase = null;
+
+        function updateTabTitle() {
+            if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
+            document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
+        }
+
+        async function updateUnseenCountFromSaved() {
+            const info = getBoardAndThread();
+            if (!info) return;
+            const allData = await getAllSavedScrollData();
+            const key = `${info.board}/${info.thread}`;
+            const saved = allData[key];
+            const currentCount = getCurrentPostCount();
+            lastSeenPostCount = (saved && typeof saved.lastSeenPostCount === "number") ? saved.lastSeenPostCount : 0;
+            unseenCount = Math.max(0, currentCount - lastSeenPostCount);
+            updateTabTitle();
+        }
+
+        // Only update lastSeenPostCount if user scrolls down
+        let lastScrollY = window.scrollY;
+        async function onScrollUpdateSeen() {
+            const info = getBoardAndThread();
+            if (!info || !(await getSetting("enableScrollSave"))) return;
+
+            const posts = Array.from(document.querySelectorAll(".divPosts > .postCell[id]"));
+            let maxIndex = -1;
+            for (let i = 0; i < posts.length; ++i) {
+                const rect = posts[i].getBoundingClientRect();
+                if (rect.bottom > 0 && rect.top < window.innerHeight) maxIndex = i;
             }
+            const currentCount = getCurrentPostCount();
+            let newLastSeen = lastSeenPostCount;
+
+            if (window.scrollY > lastScrollY) {
+                if (maxIndex >= 0 && currentCount > 0) {
+                    if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 20)) {
+                        newLastSeen = currentCount;
+                    } else {
+                        newLastSeen = Math.max(lastSeenPostCount, maxIndex + 1);
+                    }
+                }
+                if (newLastSeen !== lastSeenPostCount) {
+                    lastSeenPostCount = newLastSeen;
+                    let allData = await getAllSavedScrollData();
+                    const key = `${info.board}/${info.thread}`;
+                    if (!allData[key]) allData[key] = {};
+                    allData[key].lastSeenPostCount = lastSeenPostCount;
+                    allData[key].timestamp = Date.now();
+                    if (
+                        typeof allData[key].position !== "number" ||
+                        window.scrollY > allData[key].position
+                    ) {
+                        allData[key].position = window.scrollY;
+                    }
+                    await setAllSavedScrollData(allData);
+                }
+                unseenCount = Math.max(0, currentCount - lastSeenPostCount);
+                updateTabTitle();
+            }
+            lastScrollY = window.scrollY;
         }
 
+        // Save scroll position for current thread (does not update lastSeenPostCount)
         async function saveScrollPosition() {
-            // Only save on thread pages
-            if (!isThreadPage(window.location.pathname)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
+            const info = getBoardAndThread();
+            if (!info || !(await getSetting("enableScrollSave"))) return;
 
             const scrollPosition = window.scrollY;
             const timestamp = Date.now();
 
-            // Only save if scrolled further down than last saved position
-            const savedData = await getSavedScrollData();
-            if (savedData && typeof savedData.position === "number") {
-                if (scrollPosition <= savedData.position) {
-                    // Do not update if not scrolled further down
-                    return;
-                }
+            let allData = await getAllSavedScrollData();
+            const keys = Object.keys(allData);
+            if (keys.length >= MAX_THREADS) {
+                keys.sort((a, b) => (allData[a].timestamp || 0) - (allData[b].timestamp || 0));
+                for (let i = 0; i < keys.length - MAX_THREADS + 1; ++i) delete allData[keys[i]];
             }
 
-            // Store both the scroll position and timestamp using GM storage
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: scrollPosition,
-                    timestamp: timestamp,
-                })
-            );
-
-            await manageScrollStorage();
-        }
-
-        async function manageScrollStorage() {
-            // Get all GM storage keys
-            const allKeys = await GM.listValues();
-
-            // Filter for scroll position keys
-            const scrollKeys = allKeys.filter((key) =>
-                key.startsWith("8chanSS_scrollPosition_")
-            );
-
-            if (scrollKeys.length > MAX_PAGES) {
-                // Create array of objects with key and timestamp
-                const keyData = await Promise.all(
-                    scrollKeys.map(async (key) => {
-                        let data;
-                        try {
-                            const savedValue = await GM.getValue(key, null);
-                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
-                        } catch (e) {
-                            data = { position: 0, timestamp: 0 };
-                        }
-                        return {
-                            key: key,
-                            timestamp: data.timestamp || 0,
-                        };
-                    })
-                );
-
-                // Sort by timestamp (oldest first)
-                keyData.sort((a, b) => a.timestamp - b.timestamp);
-
-                // Remove oldest entries until we're under the limit
-                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
-                for (const item of keysToRemove) {
-                    await GM.deleteValue(item.key);
-                }
+            const key = `${info.board}/${info.thread}`;
+            if (!allData[key]) allData[key] = {};
+            if (
+                typeof allData[key].position !== "number" ||
+                scrollPosition > allData[key].position
+            ) {
+                allData[key].position = scrollPosition;
+                allData[key].timestamp = timestamp;
+                await setAllSavedScrollData(allData);
             }
         }
 
-        // Restore scroll position (always, if enabled)
+        // Restore scroll position for current thread or scroll to anchor postCell
         async function restoreScrollPosition() {
-            // Only restore on thread pages
-            if (!isThreadPage(window.location.pathname)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
+            const info = getBoardAndThread();
+            if (!info || !(await getSetting("enableScrollSave"))) return;
 
-            const savedData = await getSavedScrollData();
-            if (!savedData || typeof savedData.position !== "number") return;
-            const position = savedData.position;
+            const allData = await getAllSavedScrollData();
+            const key = `${info.board}/${info.thread}`;
+            const saved = allData[key];
+            if (!saved || typeof saved.position !== "number") return;
 
-            // Update the timestamp to "refresh" this entry
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: position,
-                    timestamp: Date.now(),
-                })
-            );
+            const anchor = window.location.hash ? window.location.hash.replace(/^#/, "") : null;
 
-            if (hasAnchor) {
-                // Do NOT scroll, let browser handle anchor
-                // But still add unread-line at saved position (not anchor)
-                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
+            // If anchor, scroll to the postCell with that id
+            if (anchor) {
+                setTimeout(() => {
+                    const post = document.getElementById(anchor);
+                    if (post && post.classList.contains("postCell")) {
+                        post.scrollIntoView({ behavior: "auto", block: "start" });
+                    }
+                    addUnreadLineAtSavedScrollPosition(saved.position, false);
+                }, 100);
                 return;
             }
 
-            // Only restore scroll if a saved position exists (i.e., not first visit)
-            if (!isNaN(position)) {
-                window.scrollTo(0, position);
-                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
-            }
+            // No anchor: restore scroll and add unread-line, then center unread-line
+            saved.timestamp = Date.now();
+            await setAllSavedScrollData(allData);
+
+            setTimeout(() => addUnreadLineAtSavedScrollPosition(saved.position, true), 100);
         }
 
-        // Add an unread-line marker after the .postCell <div>
-        async function addUnreadLineAtViewportCenter(scrollPosition) {
-            // Only add unread-line if showUnreadLine is enabled
-            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-                return;
-            }
+        // Add an unread-line marker after the .postCell <div> at a specific scroll position
+        async function addUnreadLineAtSavedScrollPosition(scrollPosition, centerAfter = false) {
+            if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
 
             const divPosts = document.querySelector(".divPosts");
             if (!divPosts) return;
 
-            // Find the element at the center of the viewport (after scroll restore)
-            const centerX = window.innerWidth / 2;
-            // Use the restored scroll position if provided, otherwise current
-            const centerY = (typeof scrollPosition === "number")
-                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
-                : window.innerHeight / 2;
-            let el = document.elementFromPoint(centerX, centerY);
-
-            // Traverse up to find the closest .postCell
-            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
-                el = el.parentElement;
+            // Find the postCell whose top is just below or equal to the scrollPosition
+            const posts = Array.from(divPosts.querySelectorAll(":scope > .postCell[id]"));
+            let targetPost = null;
+            for (let i = 0; i < posts.length; ++i) {
+                const postTop = posts[i].offsetTop;
+                if (postTop > scrollPosition) break;
+                targetPost = posts[i];
             }
-            if (!el || el === divPosts || !el.id) return;
+            if (!targetPost) return;
 
-            // Ensure .postCell is a direct child of .divPosts
-            if (el.parentElement !== divPosts) return;
-
-            // Remove any existing unread-line
-            const oldMarker = document.getElementById("unread-line");
+            // Remove old marker if exists
+            const oldMarker = document.getElementById(UNREAD_LINE_ID);
             if (oldMarker && oldMarker.parentNode) {
                 oldMarker.parentNode.removeChild(oldMarker);
             }
 
-            // Insert the unread-line marker after the .postCell (as a sibling)
+            // Insert marker after the target post
             const marker = document.createElement("hr");
-            marker.id = "unread-line";
-            if (el.nextSibling) {
-                divPosts.insertBefore(marker, el.nextSibling);
+            marker.id = UNREAD_LINE_ID;
+            if (targetPost.nextSibling) {
+                divPosts.insertBefore(marker, targetPost.nextSibling);
             } else {
                 divPosts.appendChild(marker);
             }
+
+            // If requested, scroll so unread-line is slightly above center
+            if (centerAfter) {
+                setTimeout(() => {
+                    const markerElem = document.getElementById(UNREAD_LINE_ID);
+                    if (markerElem) {
+                        const rect = markerElem.getBoundingClientRect();
+                        // Calculate the offset so the unread-line is about 1/3 from the top
+                        const desiredY = window.innerHeight / 3;
+                        const scrollY = window.scrollY + rect.top - desiredY;
+                        window.scrollTo({ top: scrollY, behavior: "auto" });
+                    }
+                }, 0);
+            }
         }
 
-        // Use async event handlers
+        // Watch for changes in .divPosts (new posts)
+        function observePostCount() {
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return;
+            const observer = new MutationObserver(() => {
+                updateUnseenCountFromSaved();
+            });
+            observer.observe(divPosts, { childList: true, subtree: false });
+        }
+
+        async function removeUnreadLineIfAtBottom() {
+            if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
+            const margin = 20; // px
+            if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
+                const oldMarker = document.getElementById(UNREAD_LINE_ID);
+                if (oldMarker && oldMarker.parentNode) {
+                    oldMarker.parentNode.removeChild(oldMarker);
+                }
+            }
+        }
+
+        // --- Event listeners and initialization ---
         window.addEventListener("beforeunload", () => {
             saveScrollPosition();
         });
 
-        // For load event, restore scroll and then add unread-line if enabled
-        window.addEventListener("load", async () => {
-            await restoreScrollPosition();
+        document.addEventListener("DOMContentLoaded", () => {
+            tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
+            updateTabTitle();
         });
 
-        // Initial restore attempt (in case the load event already fired)
+        window.addEventListener("load", async () => {
+            await restoreScrollPosition();
+            await updateUnseenCountFromSaved();
+            observePostCount();
+        });
+
+        window.addEventListener("scroll", async () => {
+            await onScrollUpdateSeen();
+            await removeUnreadLineIfAtBottom();
+        });
+
+        // Initial restore and unseen count update (in case load event already fired)
         await restoreScrollPosition();
+        await updateUnseenCountFromSaved();
+        observePostCount();
     }
-
-    // --- Remove unread-line at bottom of page ---
-    async function removeUnreadLineIfAtBottom() {
-        // Check if showUnreadLine is enabled
-        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-            return;
-        }
-
-        // Check if user is at the bottom (allowing for a small margin)
-        const margin = 20; // px
-        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-        }
-    }
-
-    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
 
     // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
@@ -2909,8 +2979,7 @@ onReady(async function () {
 
     // Move file uploads below OP title
     const opHeadTitle = document.querySelector('.opHead.title');
-    const innerOP = document.querySelector('.innerOp');
-    const innerQuote = document.querySelector('.innerQuote');
+    const innerOP = document.querySelector('.innerOP');
     if (opHeadTitle && innerOP) {
         innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
     }
