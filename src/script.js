@@ -178,6 +178,7 @@ onReady(async function () {
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
+            enhanceYoutube: { label: "Enhanced Youtube Links", type: "checkbox", default: true },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
@@ -393,6 +394,9 @@ onReady(async function () {
     }
     if (await getSetting("enableIdFilters")) {
         enableIdFiltering();
+    }
+    if (await getSetting("enhanceYoutube")) {
+        enhanceYouTubeLinks();
     }
 
     // Check if we should enable image hover based on the current page
@@ -1614,6 +1618,50 @@ onReady(async function () {
 
     // Init
     featureBeepOnYou();
+
+    // --- Feature: Enhanced Youtube links ---
+    function enhanceYouTubeLinks() {
+        // Helper to extract YouTube video ID from URL
+        function getYouTubeId(url) {
+            try {
+                const u = new URL(url);
+                if (u.hostname.endsWith('youtube.com')) {
+                    return u.searchParams.get('v');
+                }
+                if (u.hostname === 'youtu.be') {
+                    return u.pathname.slice(1);
+                }
+            } catch (e) { }
+            return null;
+        }
+        // Fetch video title using YouTube oEmbed (no API key needed)
+        function fetchYouTubeTitle(videoId) {
+            return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+                .then(r => r.ok ? r.json() : null)
+                .then(data => data ? data.title : null)
+                .catch(() => null);
+        }
+        // Process all YouTube links
+        function processLinks(root = document) {
+            root.querySelectorAll('a[href*="youtu"]').forEach(link => {
+                if (link.dataset.ytEnhanced) return;
+                const videoId = getYouTubeId(link.href);
+                if (!videoId) return;
+                link.dataset.ytEnhanced = "1";
+                // Replace link text with favicon, [Youtube], and video title
+                fetchYouTubeTitle(videoId).then(title => {
+                    if (title) {
+                        link.innerHTML = `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAABIklEQVQoz53LvUrDUBjG8bOoOammSf1IoBSvoCB4JeIqOHgBLt6AIMRBBQelWurQ2kERnMRBsBUcIp5FJSBI5oQsJVkkUHh8W0o5nhaFHvjBgef/Mq+Q46RJBMkI/vE+aOus956tnEswIZe1LV0QyJ5sE2GzgZfVMtRNIdiDpccEssdlB1mW4bvTwdvWJtRdErM7U+8S/FJykCRJX5qm+KpVce8UMNLRLbulz4iSjTAMh6Iowsd5BeNadp3nUF0VlxAEwZBotXC0Usa4ll3meZdA1iguwvf9vpvDA2wvmKgYGtSud8suDB4TyGr2PF49D/vra9jRZ1BVdknMzgwuCGSnZEObwu6sBnVTCHZiaC7BhFx2PKdxUidiAH/4lLo9Mv0DELVs9qsOHXwAAAAASUVORK5CYII=" style="width:16px;height:13px;vertical-align:middle;margin-right:1px;"> <span>[Youtube]</span> ${title}`;
+                    }
+                });
+            });
+        }
+        // Initial run
+        processLinks(document);
+        // Observe for dynamically added links
+        const threads = document.querySelector('#divThreads') || document.body;
+        new MutationObserver(() => processLinks(threads)).observe(threads, { childList: true, subtree: true });
+    }
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
     function featureLabelCreated12h() {
