@@ -128,7 +128,7 @@ onReady(async function () {
         },
         threads: {
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            enableNestedReplies: { label: "Enabled Inline Replies", default: false },
+            enableNestedReplies: { label: "Enable Inline Replies", default: false },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -2283,7 +2283,7 @@ onReady(async function () {
                         subTextarea.value = tempSettings[fullKey] || "";
                         subTextarea.rows = subSetting.rows || 4;
                         subTextarea.style.width = "90%";
-                        subTextarea.style.margin = "2px 0 3px 0";
+                        subTextarea.style.margin = "5px 0 0";
                         subTextarea.placeholder = subSetting.placeholder || "";
 
                         subTextarea.addEventListener("input", function () {
