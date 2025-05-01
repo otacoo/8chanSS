@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.38.0
+// @version      1.39.0
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -28,38 +28,6 @@ function onReady(fn) {
         fn();
     }
 }
-(function () {
-    const userTheme = localStorage.selectedTheme;
-    if (!userTheme) return;
-    const swapTheme = () => {
-        const themeLink = Array.from(
-            document.getElementsByTagName("link")
-        ).find(
-            (link) =>
-                link.rel === "stylesheet" &&
-                /\/\.static\/css\/themes\//.test(link.href)
-        );
-        if (themeLink) {
-            const themeBase = themeLink.href.replace(/\/[^\/]+\.css$/, "/");
-            themeLink.href = themeBase + userTheme + ".css";
-        }
-    };
-    onReady(swapTheme);
-    onReady(function () {
-        const themeSelector = document.getElementById("themeSelector");
-        if (themeSelector) {
-            for (let i = 0; i < themeSelector.options.length; i++) {
-                if (
-                    themeSelector.options[i].value === userTheme ||
-                    themeSelector.options[i].text === userTheme
-                ) {
-                    themeSelector.selectedIndex = i;
-                    break;
-                }
-            }
-        }
-    });
-})();
 (function () {
     function updateLocalStorage(removeKeys = [], setMap = {}) {
         for (const key of removeKeys) {
@@ -114,7 +82,7 @@ onReady(async function () {
         },
         threads: {
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            enableNestedReplies: { label: "Enabled Inline Replies", default: false },
+            enableNestedReplies: { label: "Enable Inline Replies", default: false },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -186,6 +154,7 @@ onReady(async function () {
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
+            enhanceYoutube: { label: "Enhanced Youtube Links", type: "checkbox", default: true },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
@@ -201,7 +170,8 @@ onReady(async function () {
                     }
                 }
             },
-            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false }
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
+            hideJannyTools: { label: "Hide Janitor Forms", default: false }
         }
     };
     const flatSettings = {};
@@ -259,7 +229,8 @@ onReady(async function () {
             threadHideCloseBtn: "hide-close-btn",
             hideCheckboxes: "hide-checkboxes",
             hideNoCookieLink: "hide-nocookie",
-            autoExpandTW: "auto-expand-tw"
+            autoExpandTW: "auto-expand-tw",
+            hideJannyTools: "hide-jannytools"
         };
         if (enableSidebar && !enableSidebar_leftSidebar) {
             document.documentElement.classList.add("ss-sidebar");
@@ -273,14 +244,15 @@ onReady(async function () {
                 document.documentElement.classList.remove(className);
             }
         }
+        const path = window.location.pathname.toLowerCase();
         const urlClassMap = [
             { pattern: /\/catalog\.html$/i, className: "is-catalog" },
             { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
-            { pattern: /\/[^/]+\/(#)?$/i, className: "is-index" },
+            { pattern: /\/[^/]+\/$/i, className: "is-index" },
         ];
-        const currentPath = window.location.pathname.toLowerCase() + window.location.hash;
+
         urlClassMap.forEach(({ pattern, className }) => {
-            if (pattern.test(currentPath)) {
+            if (pattern.test(path)) {
                 document.documentElement.classList.add(className);
             } else {
                 document.documentElement.classList.remove(className);
@@ -313,13 +285,13 @@ onReady(async function () {
     let css = "";
 
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}";
+        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}";
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid var(--subject-color) 3px}.postCell::before{display:inline!important;height:auto!important}";
+        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:not(:has(> .postInfo.title > .youName)):has(.divMessage > .quoteLink.you){border-left:solid var(--subject-color) 3px}.postCell::before{display:inline!important;height:auto!important}";
     }
     if (/\/catalog\.html$/.test(currentPath)) {
-        css += "#postingForm{margin:2em auto}";
+        css += "#postingForm{margin:2em auto}#divTools>div:nth-child(5){float:left!important;margin-top:9px!important;margin-right:8px}";
     }
 
     if (!document.getElementById('8chSS')) {
@@ -372,6 +344,9 @@ onReady(async function () {
     if (await getSetting("enableIdFilters")) {
         enableIdFiltering();
     }
+    if (await getSetting("enhanceYoutube")) {
+        enhanceYouTubeLinks();
+    }
     async function initImageHover() {
         const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
         let enabled = false;
@@ -386,154 +361,219 @@ onReady(async function () {
     }
     initImageHover();
     async function featureSaveScroll() {
-        const MAX_PAGES = 50;
-        const currentPage = window.location.origin + window.location.pathname + window.location.search;
-        const hasAnchor = !!window.location.hash;
+        const STORAGE_KEY = "8chanSS_scrollPositions";
+        const UNREAD_LINE_ID = "unread-line";
+        const MAX_THREADS = 100;
         const threadPagePattern = /^\/[^/]+\/res\/[^/]+\.html$/i;
-        function isThreadPage(urlPath) {
-            return threadPagePattern.test(urlPath);
+        if (!threadPagePattern.test(window.location.pathname)) return;
+        function getBoardAndThread() {
+            const match = window.location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i);
+            if (!match) return null;
+            return { board: match[1], thread: match[2] };
+        }
+        async function getAllSavedScrollData() {
+            const saved = await GM.getValue(STORAGE_KEY, null);
+            if (!saved) return {};
+            try { return JSON.parse(saved); } catch { return {}; }
+        }
+        async function setAllSavedScrollData(data) {
+            await GM.setValue(STORAGE_KEY, JSON.stringify(data));
+        }
+        function getCurrentPostCount() {
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return 0;
+            return divPosts.querySelectorAll(":scope > .postCell[id]").length;
+        }
+        let lastSeenPostCount = 0;
+        let unseenCount = 0;
+        let tabTitleBase = null;
+
+        function updateTabTitle() {
+            if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
+            document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
         }
 
-        async function getSavedScrollData() {
-            const savedData = await GM.getValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                null
-            );
-            if (!savedData) return null;
-            try {
-                return JSON.parse(savedData);
-            } catch (e) {
-                return null;
+        async function updateUnseenCountFromSaved() {
+            const info = getBoardAndThread();
+            if (!info) return;
+            const allData = await getAllSavedScrollData();
+            const key = `${info.board}/${info.thread}`;
+            const saved = allData[key];
+            const currentCount = getCurrentPostCount();
+            lastSeenPostCount = (saved && typeof saved.lastSeenPostCount === "number") ? saved.lastSeenPostCount : 0;
+            unseenCount = Math.max(0, currentCount - lastSeenPostCount);
+            updateTabTitle();
+        }
+        let lastScrollY = window.scrollY;
+        async function onScrollUpdateSeen() {
+            const info = getBoardAndThread();
+            if (!info || !(await getSetting("enableScrollSave"))) return;
+
+            const posts = Array.from(document.querySelectorAll(".divPosts > .postCell[id]"));
+            let maxIndex = -1;
+            for (let i = 0; i < posts.length; ++i) {
+                const rect = posts[i].getBoundingClientRect();
+                if (rect.bottom > 0 && rect.top < window.innerHeight) maxIndex = i;
             }
-        }
+            const currentCount = getCurrentPostCount();
+            let newLastSeen = lastSeenPostCount;
 
+            if (window.scrollY > lastScrollY) {
+                if (maxIndex >= 0 && currentCount > 0) {
+                    if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 20)) {
+                        newLastSeen = currentCount;
+                    } else {
+                        newLastSeen = Math.max(lastSeenPostCount, maxIndex + 1);
+                    }
+                }
+                if (newLastSeen !== lastSeenPostCount) {
+                    lastSeenPostCount = newLastSeen;
+                    let allData = await getAllSavedScrollData();
+                    const key = `${info.board}/${info.thread}`;
+                    if (!allData[key]) allData[key] = {};
+                    allData[key].lastSeenPostCount = lastSeenPostCount;
+                    allData[key].timestamp = Date.now();
+                    if (
+                        typeof allData[key].position !== "number" ||
+                        window.scrollY > allData[key].position
+                    ) {
+                        allData[key].position = window.scrollY;
+                    }
+                    await setAllSavedScrollData(allData);
+                }
+                unseenCount = Math.max(0, currentCount - lastSeenPostCount);
+                updateTabTitle();
+            }
+            lastScrollY = window.scrollY;
+        }
         async function saveScrollPosition() {
-            if (!isThreadPage(window.location.pathname)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
+            const info = getBoardAndThread();
+            if (!info || !(await getSetting("enableScrollSave"))) return;
 
             const scrollPosition = window.scrollY;
             const timestamp = Date.now();
-            const savedData = await getSavedScrollData();
-            if (savedData && typeof savedData.position === "number") {
-                if (scrollPosition <= savedData.position) {
-                    return;
-                }
+
+            let allData = await getAllSavedScrollData();
+            const keys = Object.keys(allData);
+            if (keys.length >= MAX_THREADS) {
+                keys.sort((a, b) => (allData[a].timestamp || 0) - (allData[b].timestamp || 0));
+                for (let i = 0; i < keys.length - MAX_THREADS + 1; ++i) delete allData[keys[i]];
             }
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: scrollPosition,
-                    timestamp: timestamp,
-                })
-            );
 
-            await manageScrollStorage();
-        }
-
-        async function manageScrollStorage() {
-            const allKeys = await GM.listValues();
-            const scrollKeys = allKeys.filter((key) =>
-                key.startsWith("8chanSS_scrollPosition_")
-            );
-
-            if (scrollKeys.length > MAX_PAGES) {
-                const keyData = await Promise.all(
-                    scrollKeys.map(async (key) => {
-                        let data;
-                        try {
-                            const savedValue = await GM.getValue(key, null);
-                            data = savedValue ? JSON.parse(savedValue) : { position: 0, timestamp: 0 };
-                        } catch (e) {
-                            data = { position: 0, timestamp: 0 };
-                        }
-                        return {
-                            key: key,
-                            timestamp: data.timestamp || 0,
-                        };
-                    })
-                );
-                keyData.sort((a, b) => a.timestamp - b.timestamp);
-                const keysToRemove = keyData.slice(0, keyData.length - MAX_PAGES);
-                for (const item of keysToRemove) {
-                    await GM.deleteValue(item.key);
-                }
+            const key = `${info.board}/${info.thread}`;
+            if (!allData[key]) allData[key] = {};
+            if (
+                typeof allData[key].position !== "number" ||
+                scrollPosition > allData[key].position
+            ) {
+                allData[key].position = scrollPosition;
+                allData[key].timestamp = timestamp;
+                await setAllSavedScrollData(allData);
             }
         }
         async function restoreScrollPosition() {
-            if (!isThreadPage(window.location.pathname)) return;
-            if (!(await getSetting("enableScrollSave"))) return;
+            const info = getBoardAndThread();
+            if (!info || !(await getSetting("enableScrollSave"))) return;
 
-            const savedData = await getSavedScrollData();
-            if (!savedData || typeof savedData.position !== "number") return;
-            const position = savedData.position;
-            await GM.setValue(
-                `8chanSS_scrollPosition_${currentPage}`,
-                JSON.stringify({
-                    position: position,
-                    timestamp: Date.now(),
-                })
-            );
+            const allData = await getAllSavedScrollData();
+            const key = `${info.board}/${info.thread}`;
+            const saved = allData[key];
+            if (!saved || typeof saved.position !== "number") return;
 
-            if (hasAnchor) {
-                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
+            const anchor = window.location.hash ? window.location.hash.replace(/^#/, "") : null;
+            if (anchor) {
+                setTimeout(() => {
+                    const post = document.getElementById(anchor);
+                    if (post && post.classList.contains("postCell")) {
+                        post.scrollIntoView({ behavior: "auto", block: "start" });
+                    }
+                    addUnreadLineAtSavedScrollPosition(saved.position, false);
+                }, 100);
                 return;
             }
-            if (!isNaN(position)) {
-                window.scrollTo(0, position);
-                setTimeout(() => addUnreadLineAtViewportCenter(position), 100);
-            }
+            saved.timestamp = Date.now();
+            await setAllSavedScrollData(allData);
+
+            setTimeout(() => addUnreadLineAtSavedScrollPosition(saved.position, true), 100);
         }
-        async function addUnreadLineAtViewportCenter(scrollPosition) {
-            if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-                return;
-            }
+        async function addUnreadLineAtSavedScrollPosition(scrollPosition, centerAfter = false) {
+            if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
 
             const divPosts = document.querySelector(".divPosts");
             if (!divPosts) return;
-            const centerX = window.innerWidth / 2;
-            const centerY = (typeof scrollPosition === "number")
-                ? (window.innerHeight / 2) + (scrollPosition - window.scrollY)
-                : window.innerHeight / 2;
-            let el = document.elementFromPoint(centerX, centerY);
-            while (el && el !== divPosts && (!el.classList || !el.classList.contains("postCell"))) {
-                el = el.parentElement;
+            const posts = Array.from(divPosts.querySelectorAll(":scope > .postCell[id]"));
+            let targetPost = null;
+            for (let i = 0; i < posts.length; ++i) {
+                const postTop = posts[i].offsetTop;
+                if (postTop > scrollPosition) break;
+                targetPost = posts[i];
             }
-            if (!el || el === divPosts || !el.id) return;
-            if (el.parentElement !== divPosts) return;
-            const oldMarker = document.getElementById("unread-line");
+            if (!targetPost) return;
+            const oldMarker = document.getElementById(UNREAD_LINE_ID);
             if (oldMarker && oldMarker.parentNode) {
                 oldMarker.parentNode.removeChild(oldMarker);
             }
             const marker = document.createElement("hr");
-            marker.id = "unread-line";
-            if (el.nextSibling) {
-                divPosts.insertBefore(marker, el.nextSibling);
+            marker.id = UNREAD_LINE_ID;
+            if (targetPost.nextSibling) {
+                divPosts.insertBefore(marker, targetPost.nextSibling);
             } else {
                 divPosts.appendChild(marker);
+            }
+            if (centerAfter) {
+                setTimeout(() => {
+                    const markerElem = document.getElementById(UNREAD_LINE_ID);
+                    if (markerElem) {
+                        const rect = markerElem.getBoundingClientRect();
+                        const desiredY = window.innerHeight / 3;
+                        const scrollY = window.scrollY + rect.top - desiredY;
+                        window.scrollTo({ top: scrollY, behavior: "auto" });
+                    }
+                }, 0);
+            }
+        }
+        function observePostCount() {
+            const divPosts = document.querySelector(".divPosts");
+            if (!divPosts) return;
+            const observer = new MutationObserver(() => {
+                updateUnseenCountFromSaved();
+            });
+            observer.observe(divPosts, { childList: true, subtree: false });
+        }
+
+        async function removeUnreadLineIfAtBottom() {
+            if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
+            const margin = 20; 
+            if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
+                const oldMarker = document.getElementById(UNREAD_LINE_ID);
+                if (oldMarker && oldMarker.parentNode) {
+                    oldMarker.parentNode.removeChild(oldMarker);
+                }
             }
         }
         window.addEventListener("beforeunload", () => {
             saveScrollPosition();
         });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
+            updateTabTitle();
+        });
+
         window.addEventListener("load", async () => {
             await restoreScrollPosition();
+            await updateUnseenCountFromSaved();
+            observePostCount();
+        });
+
+        window.addEventListener("scroll", async () => {
+            await onScrollUpdateSeen();
+            await removeUnreadLineIfAtBottom();
         });
         await restoreScrollPosition();
+        await updateUnseenCountFromSaved();
+        observePostCount();
     }
-    async function removeUnreadLineIfAtBottom() {
-        if (!(await getSetting("enableScrollSave_showUnreadLine"))) {
-            return;
-        }
-        const margin = 20; 
-        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
-            const oldMarker = document.getElementById("unread-line");
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
-        }
-    }
-
-    window.addEventListener("scroll", removeUnreadLineIfAtBottom);
     async function featureHeaderCatalogLinks() {
         async function appendCatalogToLinks() {
             const navboardsSpan = document.getElementById("navBoardsSpan");
@@ -707,27 +747,21 @@ onReady(async function () {
                 fullSrc = getFullMediaSrc(thumb, filemime);
                 isVideo = filemime && filemime.startsWith("video/");
                 isAudio = filemime && filemime.startsWith("audio/");
-            } else if (thumb.classList.contains("originalNameLink")) {
-                const href = thumb.getAttribute("href");
-                if (!href) return;
-                const ext = href.split(".").pop().toLowerCase();
-                if (["mp3", "ogg", "m4a", "wav"].includes(ext)) {
-                    filemime = {
-                        ogg: "audio/ogg",
-                        mp3: "audio/mpeg",
-                        m4a: "audio/x-m4a",
-                        wav: "audio/wav",
-                    }[ext];
-                    fullSrc = href;
-                    isAudio = true;
-                }
             }
 
             if (!fullSrc || !filemime) return;
+            let volume = 0.5;
+            try {
+                if (typeof getSetting === "function") {
+                    const v = await getSetting("hoverVideoVolume");
+                    if (typeof v === "number" && !isNaN(v)) {
+                        volume = Math.max(0, Math.min(1, v / 100));
+                    }
+                }
+            } catch { }
+
             if (isAudio) {
-                const container = thumb.tagName === "IMG"
-                    ? thumb.closest("a.linkThumb, a.imgLink")
-                    : thumb;
+                let container = thumb.closest("a.linkThumb, a.imgLink");
                 if (container && !container.style.position) {
                     container.style.position = "relative";
                 }
@@ -735,29 +769,22 @@ onReady(async function () {
                 floatingMedia.src = fullSrc;
                 floatingMedia.controls = false;
                 floatingMedia.style.display = "none";
-                let volume = 0.5;
-                try {
-                    if (typeof getSetting === "function") {
-                        const v = await getSetting("hoverVideoVolume");
-                        if (typeof v === "number" && !isNaN(v)) {
-                            volume = v / 100;
-                        }
-                    }
-                } catch { }
-                floatingMedia.volume = clamp(volume, 0, 1);
+                floatingMedia.volume = volume;
                 document.body.appendChild(floatingMedia);
                 floatingMedia.play().catch(() => { });
                 const indicator = document.createElement("div");
                 indicator.classList.add("audio-preview-indicator");
                 indicator.textContent = AUDIO_INDICATOR_TEXT;
-                container.appendChild(indicator);
+                if (container) {
+                    container.appendChild(indicator);
+                }
                 currentAudioIndicator = indicator;
                 const cleanup = () => cleanupFloatingMedia();
                 thumb.addEventListener("mouseleave", cleanup, { once: true });
-                container.addEventListener("click", cleanup, { once: true });
+                if (container) container.addEventListener("click", cleanup, { once: true });
                 window.addEventListener("scroll", cleanup, { once: true });
                 cleanupFns.push(() => thumb.removeEventListener("mouseleave", cleanup));
-                cleanupFns.push(() => container.removeEventListener("click", cleanup));
+                if (container) cleanupFns.push(() => container.removeEventListener("click", cleanup));
                 cleanupFns.push(() => window.removeEventListener("scroll", cleanup));
                 return;
             }
@@ -777,6 +804,7 @@ onReady(async function () {
                 floatingMedia.loop = true;
                 floatingMedia.muted = false;
                 floatingMedia.playsInline = true;
+                floatingMedia.volume = volume;
             }
             document.body.appendChild(floatingMedia);
             function initialPlacement() {
@@ -818,17 +846,6 @@ onReady(async function () {
                     thumb._fullImgHoverBound = true;
                 }
             });
-            root.querySelectorAll("a.originalNameLink").forEach(link => {
-                const href = link.getAttribute("href") || "";
-                const ext = href.split(".").pop().toLowerCase();
-                if (
-                    ["mp3", "wav", "ogg", "m4a"].includes(ext) &&
-                    !link._audioHoverBound
-                ) {
-                    link.addEventListener("mouseenter", onThumbEnter);
-                    link._audioHoverBound = true;
-                }
-            });
         }
         attachThumbListeners();
         new MutationObserver(mutations => {
@@ -843,7 +860,10 @@ onReady(async function () {
     }
     function featureNestedReplies() {
         let observer;
+        const bottomBacklinksEnabled = localStorage.getItem("bottomBacklinks") === "true";
         function ensureReplyPreviewPlacement(root = document) {
+            if (bottomBacklinksEnabled) return;
+
             root.querySelectorAll('.replyPreview').forEach(replyPreview => {
                 let container = replyPreview.closest('.innerOP, .innerPost');
                 if (!container) return;
@@ -856,6 +876,8 @@ onReady(async function () {
             });
         }
         function ensureInlineQuotePlacement(root = document) {
+            if (bottomBacklinksEnabled) return;
+
             root.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
                 const replyPreview = inlineQuote.closest('.replyPreview');
                 if (!replyPreview) return;
@@ -864,8 +886,9 @@ onReady(async function () {
         }
         observer = new MutationObserver(() => {
             observer.disconnect();
-
-            ensureReplyPreviewPlacement(document);
+            if (!bottomBacklinksEnabled) {
+                ensureReplyPreviewPlacement(document);
+            }
             ensureInlineQuotePlacement(document);
             const postsContainer = document.querySelector('.opCell');
             if (postsContainer) {
@@ -890,7 +913,10 @@ onReady(async function () {
                 quoteLink.classList.toggle('quote-inlined');
             }, 0);
         });
-        ensureReplyPreviewPlacement(document);
+        if (!bottomBacklinksEnabled) {
+            ensureReplyPreviewPlacement(document);
+        }
+
         ensureInlineQuotePlacement(document);
     }
     function featureBlurSpoilers() {
@@ -1316,6 +1342,42 @@ onReady(async function () {
         });
     }
     featureBeepOnYou();
+    function enhanceYouTubeLinks() {
+        function getYouTubeId(url) {
+            try {
+                const u = new URL(url);
+                if (u.hostname.endsWith('youtube.com')) {
+                    return u.searchParams.get('v');
+                }
+                if (u.hostname === 'youtu.be') {
+                    return u.pathname.slice(1);
+                }
+            } catch (e) { }
+            return null;
+        }
+        function fetchYouTubeTitle(videoId) {
+            return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+                .then(r => r.ok ? r.json() : null)
+                .then(data => data ? data.title : null)
+                .catch(() => null);
+        }
+        function processLinks(root = document) {
+            root.querySelectorAll('a[href*="youtu"]').forEach(link => {
+                if (link.dataset.ytEnhanced) return;
+                const videoId = getYouTubeId(link.href);
+                if (!videoId) return;
+                link.dataset.ytEnhanced = "1";
+                fetchYouTubeTitle(videoId).then(title => {
+                    if (title) {
+                        link.innerHTML = `<img class="yt-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAABIklEQVQoz53LvUrDUBjG8bOoOammSf1IoBSvoCB4JeIqOHgBLt6AIMRBBQelWurQ2kERnMRBsBUcIp5FJSBI5oQsJVkkUHh8W0o5nhaFHvjBgef/Mq+Q46RJBMkI/vE+aOus956tnEswIZe1LV0QyJ5sE2GzgZfVMtRNIdiDpccEssdlB1mW4bvTwdvWJtRdErM7U+8S/FJykCRJX5qm+KpVce8UMNLRLbulz4iSjTAMh6Iowsd5BeNadp3nUF0VlxAEwZBotXC0Usa4ll3meZdA1iguwvf9vpvDA2wvmKgYGtSud8suDB4TyGr2PF49D/vra9jRZ1BVdknMzgwuCGSnZEObwu6sBnVTCHZiaC7BhFx2PKdxUidiAH/4lLo9Mv0DELVs9qsOHXwAAAAASUVORK5CYII="><span>[Youtube]</span> ${title}`;
+                    }
+                });
+            });
+        }
+        processLinks(document);
+        const threads = document.querySelector('#divThreads') || document.body;
+        new MutationObserver(() => processLinks(threads)).observe(threads, { childList: true, subtree: true });
+    }
     function featureLabelCreated12h() {
         function convertLabelCreatedTimes(root = document) {
             (root.querySelectorAll
@@ -1627,7 +1689,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.38.0</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.39.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -1801,7 +1863,7 @@ onReady(async function () {
                         subTextarea.value = tempSettings[fullKey] || "";
                         subTextarea.rows = subSetting.rows || 4;
                         subTextarea.style.width = "90%";
-                        subTextarea.style.margin = "2px 0 3px 0";
+                        subTextarea.style.margin = "5px 0 0";
                         subTextarea.placeholder = subSetting.placeholder || "";
 
                         subTextarea.addEventListener("input", function () {
@@ -1994,8 +2056,125 @@ onReady(async function () {
     async function shortcutsGloballyEnabled() {
         return await getSetting("enableShortcuts");
     }
+    const bbCodeCombinations = new Map([
+        ["s", ["[spoiler]", "[/spoiler]"]],
+        ["b", ["'''", "'''"]],
+        ["u", ["__", "__"]],
+        ["i", ["''", "''"]],
+        ["d", ["==", "=="]],
+        ["m", ["[moe]", "[/moe]"]],
+        ["c", ["[code]", "[/code]"]],
+    ]);
+    function applyBBCode(textBox, key) {
+        const [openTag, closeTag] = bbCodeCombinations.get(key);
+        const { selectionStart, selectionEnd, value } = textBox;
+
+        if (selectionStart === selectionEnd) {
+            const before = value.slice(0, selectionStart);
+            const after = value.slice(selectionEnd);
+            const newCursor = selectionStart + openTag.length;
+            textBox.value = before + openTag + closeTag + after;
+            textBox.selectionStart = textBox.selectionEnd = newCursor;
+        } else {
+            const before = value.slice(0, selectionStart);
+            const selected = value.slice(selectionStart, selectionEnd);
+            const after = value.slice(selectionEnd);
+            textBox.value = before + openTag + selected + closeTag + after;
+            textBox.selectionStart = selectionStart + openTag.length;
+            textBox.selectionEnd = selectionEnd + openTag.length;
+        }
+    }
+    let lastHighlighted = null;
+    let lastType = null; 
+    let lastRefreshTime = 0; 
+
+    function getEligiblePostCells(isOwnReply) {
+        const selector = isOwnReply
+            ? '.postCell:has(a.youName), .opCell:has(a.youName)'
+            : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
+        return Array.from(document.querySelectorAll(selector));
+    }
+
+    function scrollToReply(isOwnReply = true, getNextReply = true) {
+        const postCells = getEligiblePostCells(isOwnReply);
+        if (!postCells.length) return;
+        let currentIndex = -1;
+        const expectedType = isOwnReply ? "own" : "reply";
+        if (
+            lastType === expectedType &&
+            lastHighlighted
+        ) {
+            const container = lastHighlighted.closest('.postCell, .opCell');
+            currentIndex = postCells.indexOf(container);
+        }
+        if (currentIndex === -1) {
+            const viewportMiddle = window.innerHeight / 2;
+            currentIndex = postCells.findIndex(cell => {
+                const rect = cell.getBoundingClientRect();
+                return rect.top + rect.height / 2 > viewportMiddle;
+            });
+            if (currentIndex === -1) {
+                currentIndex = getNextReply ? -1 : postCells.length;
+            }
+        }
+        const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
+        if (targetIndex < 0 || targetIndex >= postCells.length) return;
+
+        const postContainer = postCells[targetIndex];
+        if (postContainer) {
+            postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+            if (lastHighlighted) {
+                lastHighlighted.classList.remove('target-highlight');
+            }
+            let anchorId = null;
+            let anchorElem = postContainer.querySelector('[id^="p"]');
+            if (anchorElem && anchorElem.id) {
+                anchorId = anchorElem.id;
+            } else if (postContainer.id) {
+                anchorId = postContainer.id;
+            }
+            if (anchorId && location.hash !== '#' + anchorId) {
+                history.replaceState(null, '', '#' + anchorId);
+            }
+            const innerPost = postContainer.querySelector('.innerPost');
+            if (innerPost) {
+                innerPost.classList.add('target-highlight');
+                lastHighlighted = innerPost;
+            } else {
+                lastHighlighted = null;
+            }
+            lastType = isOwnReply ? "own" : "reply";
+        }
+    }
+    window.addEventListener('hashchange', () => {
+        if (lastHighlighted) {
+            lastHighlighted.classList.remove('target-highlight');
+            lastHighlighted = null;
+        }
+        const hash = location.hash.replace('#', '');
+        if (hash) {
+            const postElem = document.getElementById(hash);
+            if (postElem) {
+                const innerPost = postElem.querySelector('.innerPost');
+                if (innerPost) {
+                    innerPost.classList.add('target-highlight');
+                    lastHighlighted = innerPost;
+                }
+            }
+        }
+    });
     document.addEventListener("keydown", async function (event) {
         if (!(await shortcutsGloballyEnabled())) return;
+        const active = document.activeElement;
+        if (
+            active &&
+            event.key !== "Tab" && 
+            (active.tagName === "INPUT" ||
+             active.tagName === "TEXTAREA" ||
+             active.isContentEditable)
+        ) {
+            return;
+        }
         if (event.ctrlKey && event.key === "F1") {
             event.preventDefault();
             let menu = document.getElementById("8chanSS-menu") || (await createSettingsMenu());
@@ -2018,11 +2197,39 @@ onReady(async function () {
         }
         if (event.key === "Tab") {
             const qrbody = document.getElementById("qrbody");
-            if (qrbody && document.activeElement !== qrbody) {
-                event.preventDefault();
-                qrbody.focus();
+            const captcha = document.getElementById("QRfieldCaptcha");
+
+            if (qrbody) {
+                if (document.activeElement === qrbody && captcha) {
+                    event.preventDefault();
+                    captcha.focus();
+                } else if (document.activeElement === captcha) {
+                    event.preventDefault();
+                    qrbody.focus();
+                } else if (document.activeElement !== qrbody) {
+                    event.preventDefault();
+                    qrbody.focus();
+                }
             }
             return;
+        }
+        if (
+            event.key === "r" || event.key === "R"
+        ) {
+            if (
+                document.documentElement.classList.contains("is-thread") &&
+                document.getElementById("refreshButton")
+            ) {
+                const now = Date.now();
+                if (now - lastRefreshTime >= 5000) {
+                    event.preventDefault();
+                    document.getElementById("refreshButton").click();
+                    lastRefreshTime = now;
+                } else {
+                    event.preventDefault();
+                }
+                return;
+            }
         }
         if (event.key === "Escape") {
             const textarea = document.getElementById("qrbody");
@@ -2032,7 +2239,6 @@ onReady(async function () {
             const threadWatcher = document.getElementById("watchedMenu");
             if (threadWatcher) threadWatcher.style.display = "none";
             return;
-
         }
         if (event.ctrlKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault();
@@ -2092,113 +2298,6 @@ onReady(async function () {
             }
         });
     }
-    const bbCodeCombinations = new Map([
-        ["s", ["[spoiler]", "[/spoiler]"]],
-        ["b", ["'''", "'''"]],
-        ["u", ["__", "__"]],
-        ["i", ["''", "''"]],
-        ["d", ["==", "=="]],
-        ["m", ["[moe]", "[/moe]"]],
-        ["c", ["[code]", "[/code]"]],
-    ]);
-    function applyBBCode(textBox, key) {
-        const [openTag, closeTag] = bbCodeCombinations.get(key);
-        const { selectionStart, selectionEnd, value } = textBox;
-
-        if (selectionStart === selectionEnd) {
-            const before = value.slice(0, selectionStart);
-            const after = value.slice(selectionEnd);
-            const newCursor = selectionStart + openTag.length;
-            textBox.value = before + openTag + closeTag + after;
-            textBox.selectionStart = textBox.selectionEnd = newCursor;
-        } else {
-            const before = value.slice(0, selectionStart);
-            const selected = value.slice(selectionStart, selectionEnd);
-            const after = value.slice(selectionEnd);
-            textBox.value = before + openTag + selected + closeTag + after;
-            textBox.selectionStart = selectionStart + openTag.length;
-            textBox.selectionEnd = selectionEnd + openTag.length;
-        }
-    }
-    let lastHighlighted = null;
-    let lastType = null; 
-    let lastIndex = -1;
-
-    function getEligiblePostCells(isOwnReply) {
-        const selector = isOwnReply
-            ? '.postCell:has(a.youName), .opCell:has(a.youName)'
-            : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
-        return Array.from(document.querySelectorAll(selector));
-    }
-
-    function scrollToReply(isOwnReply = true, getNextReply = true) {
-        const postCells = getEligiblePostCells(isOwnReply);
-        if (!postCells.length) return;
-        let currentIndex = -1;
-        if (
-            lastType === (isOwnReply ? "own" : "reply") &&
-            lastHighlighted &&
-            (currentIndex = postCells.indexOf(lastHighlighted.closest('.postCell, .opCell'))) !== -1
-        ) {
-        } else {
-            const viewportMiddle = window.innerHeight / 2;
-            currentIndex = postCells.findIndex(cell => {
-                const rect = cell.getBoundingClientRect();
-                return rect.top + rect.height / 2 > viewportMiddle;
-            });
-            if (currentIndex === -1) {
-                currentIndex = getNextReply ? -1 : postCells.length;
-            }
-        }
-        const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
-        if (targetIndex < 0 || targetIndex >= postCells.length) return;
-
-        const postContainer = postCells[targetIndex];
-        if (postContainer) {
-            postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
-            if (lastHighlighted) {
-                lastHighlighted.classList.remove('target-highlight');
-            }
-            let anchorId = null;
-            let anchorElem = postContainer.querySelector('[id^="p"]');
-            if (anchorElem && anchorElem.id) {
-                anchorId = anchorElem.id;
-            } else if (postContainer.id) {
-                anchorId = postContainer.id;
-            }
-            if (anchorId) {
-                if (location.hash !== '#' + anchorId) {
-                    history.replaceState(null, '', '#' + anchorId);
-                }
-            }
-            const innerPost = postContainer.querySelector('.innerPost');
-            if (innerPost) {
-                innerPost.classList.add('target-highlight');
-                lastHighlighted = innerPost;
-            } else {
-                lastHighlighted = null;
-            }
-            lastType = isOwnReply ? "own" : "reply";
-            lastIndex = targetIndex;
-        }
-    }
-    window.addEventListener('hashchange', () => {
-        if (lastHighlighted) {
-            lastHighlighted.classList.remove('target-highlight');
-            lastHighlighted = null;
-        }
-        const hash = location.hash.replace('#', '');
-        if (hash) {
-            const postElem = document.getElementById(hash);
-            if (postElem) {
-                const innerPost = postElem.querySelector('.innerPost');
-                if (innerPost) {
-                    innerPost.classList.add('target-highlight');
-                    lastHighlighted = innerPost;
-                }
-            }
-        }
-    });
     function featureCatalogHiding() {
         const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
         let showHiddenMode = false;
@@ -2344,8 +2443,7 @@ onReady(async function () {
         }
     }
     const opHeadTitle = document.querySelector('.opHead.title');
-    const innerOP = document.querySelector('.innerOp');
-    const innerQuote = document.querySelector('.innerQuote');
+    const innerOP = document.querySelector('.innerOP');
     if (opHeadTitle && innerOP) {
         innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
     }
@@ -2406,7 +2504,7 @@ onReady(async function () {
                 link.title = fullFilename;
             });
         }
-        processLinks(document);    
+        processLinks(document);
         const divThreads = document.querySelector('#divThreads');
         if (divThreads) {
             new MutationObserver(() => {

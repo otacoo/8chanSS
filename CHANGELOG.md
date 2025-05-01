@@ -1,9 +1,26 @@
+
+## v1.39.0
+*2025-05-01*
+
+- New Option: Enhanced Youtube Links
+- New Option: Hide Janitor Forms
+- New Shortcut: `R` to refresh the thread (5 second cooldown, only triggers outside of QR or inputs)
+- Rewrite of Save Scroll Position option, now tab title has an unread post counter
+- `Tab` shortcut key will now switch between QR and captcha input field when QR is in focus
+- Removed JANK THEME FLASH FIX (barely does anything, check Github readme for better solution)
+- Float search field in the catalog to the left
+- Bottom replies will now correctly be taken into account for Inline Replies option
+- Audio playing indicator will no longer append to filenames only thumbs
+- Fix for video hover volume not taking the volume setting into account
+- File uploads will now correctly be shown below OP title and details
+- Slightly adjust inline post shadow
+
 ## v1.38.0
 *2025-04-30*
 
 Small bugfixing update
 
-- Newly added posts will now correcly have their filenames truncated
+- Newly added posts will now correctly have their filenames truncated
 - `ALT` + `W` will now correctly be disabled when shortcuts are disabled
 - Bug fix for inline replies not working correctly for OP
 - (You) quotes will now use the theme's subject color instead of just "red"
