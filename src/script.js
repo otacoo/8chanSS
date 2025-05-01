@@ -842,6 +842,17 @@ onReady(async function () {
             if (!fullSrc || !filemime) return;
 
             // --- Setup floating media element ---
+            // Get user volume setting (default 0.5) first
+            let volume = 0.5;
+            try {
+                if (typeof getSetting === "function") {
+                    const v = await getSetting("hoverVideoVolume");
+                    if (typeof v === "number" && !isNaN(v)) {
+                        volume = Math.max(0, Math.min(1, v / 100));
+                    }
+                }
+            } catch { }
+
             if (isAudio) {
                 // Audio: show indicator, play audio (hidden)
                 const container = thumb.tagName === "IMG"
@@ -854,16 +865,7 @@ onReady(async function () {
                 floatingMedia.src = fullSrc;
                 floatingMedia.controls = false;
                 floatingMedia.style.display = "none";
-                let volume = 0.5;
-                try {
-                    if (typeof getSetting === "function") {
-                        const v = await getSetting("hoverVideoVolume");
-                        if (typeof v === "number" && !isNaN(v)) {
-                            volume = v / 100;
-                        }
-                    }
-                } catch { }
-                floatingMedia.volume = clamp(volume, 0, 1);
+                floatingMedia.volume = volume;
                 document.body.appendChild(floatingMedia);
                 floatingMedia.play().catch(() => { });
 
@@ -903,6 +905,7 @@ onReady(async function () {
                 floatingMedia.loop = true;
                 floatingMedia.muted = false;
                 floatingMedia.playsInline = true;
+                floatingMedia.volume = volume;
             }
             document.body.appendChild(floatingMedia);
 
