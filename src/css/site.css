@@ -17,6 +17,8 @@
 :root.disable-banner #bannerImage,
 :root.hide-checkboxes .deletionCheckBox,
 :root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:nth-child(1)>tr:nth-child(2),
+:root.hide-jannytools #boardContentLinks,
+:root.hide-jannytools #actionsForm,
 .watchedNotification::before,
 #navFadeEnd,
 #navFadeMid {
