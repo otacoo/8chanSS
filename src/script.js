@@ -2502,15 +2502,161 @@ onReady(async function () {
     //////// MENU END ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     ///////// KEYBOARD SHORTCUTS ////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Global toggle for all shortcuts
+    // --- Global toggle for all shortcuts ---
     async function shortcutsGloballyEnabled() {
         return await getSetting("enableShortcuts");
     }
+
+    // --- BBCODE Combination keys and Tags ---
+    const bbCodeCombinations = new Map([
+        ["s", ["[spoiler]", "[/spoiler]"]],
+        ["b", ["'''", "'''"]],
+        ["u", ["__", "__"]],
+        ["i", ["''", "''"]],
+        ["d", ["==", "=="]],
+        ["m", ["[moe]", "[/moe]"]],
+        ["c", ["[code]", "[/code]"]],
+    ]);
+
+    // Helper function for applying BBCode
+    function applyBBCode(textBox, key) {
+        const [openTag, closeTag] = bbCodeCombinations.get(key);
+        const { selectionStart, selectionEnd, value } = textBox;
+
+        if (selectionStart === selectionEnd) {
+            // No selection: insert empty tags and place cursor between them
+            const before = value.slice(0, selectionStart);
+            const after = value.slice(selectionEnd);
+            const newCursor = selectionStart + openTag.length;
+            textBox.value = before + openTag + closeTag + after;
+            textBox.selectionStart = textBox.selectionEnd = newCursor;
+        } else {
+            // Replace selected text with tags around it
+            const before = value.slice(0, selectionStart);
+            const selected = value.slice(selectionStart, selectionEnd);
+            const after = value.slice(selectionEnd);
+            textBox.value = before + openTag + selected + closeTag + after;
+            // Keep selection around the newly wrapped text
+            textBox.selectionStart = selectionStart + openTag.length;
+            textBox.selectionEnd = selectionEnd + openTag.length;
+        }
+    }
+
+    // --- Feature: Scroll between posts functionality ---
+    let lastHighlighted = null;
+    let lastType = null; // "own" or "reply"
+
+    function getEligiblePostCells(isOwnReply) {
+        // Find all .postCell and .opCell that contain at least one matching anchor
+        const selector = isOwnReply
+            ? '.postCell:has(a.youName), .opCell:has(a.youName)'
+            : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
+        return Array.from(document.querySelectorAll(selector));
+    }
+
+    function scrollToReply(isOwnReply = true, getNextReply = true) {
+        const postCells = getEligiblePostCells(isOwnReply);
+        if (!postCells.length) return;
+
+        // Determine current index in postCells for navigation
+        let currentIndex = -1;
+        const expectedType = isOwnReply ? "own" : "reply";
+
+        // Try to use lastHighlighted if it matches the current navigation type and is still present
+        if (
+            lastType === expectedType &&
+            lastHighlighted
+        ) {
+            const container = lastHighlighted.closest('.postCell, .opCell');
+            currentIndex = postCells.indexOf(container);
+        }
+        // If lastHighlighted is not valid, find the first cell below the viewport middle
+        if (currentIndex === -1) {
+            const viewportMiddle = window.innerHeight / 2;
+            currentIndex = postCells.findIndex(cell => {
+                const rect = cell.getBoundingClientRect();
+                return rect.top + rect.height / 2 > viewportMiddle;
+            });
+            // If none found, set to -1 (before first) or postCells.length (after last) depending on direction
+            if (currentIndex === -1) {
+                currentIndex = getNextReply ? -1 : postCells.length;
+            }
+        }
+
+        // Determine target index
+        const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
+        if (targetIndex < 0 || targetIndex >= postCells.length) return;
+
+        const postContainer = postCells[targetIndex];
+        if (postContainer) {
+            postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            // Remove highlight from previous post
+            if (lastHighlighted) {
+                lastHighlighted.classList.remove('target-highlight');
+            }
+
+            // Find the anchor id for this post (usually something like id="p123456")
+            let anchorId = null;
+            let anchorElem = postContainer.querySelector('[id^="p"]');
+            if (anchorElem && anchorElem.id) {
+                anchorId = anchorElem.id;
+            } else if (postContainer.id) {
+                anchorId = postContainer.id;
+            }
+
+            // Update the URL hash to simulate :target
+            if (anchorId && location.hash !== '#' + anchorId) {
+                history.replaceState(null, '', '#' + anchorId);
+            }
+
+            // Add highlight class to .innerPost
+            const innerPost = postContainer.querySelector('.innerPost');
+            if (innerPost) {
+                innerPost.classList.add('target-highlight');
+                lastHighlighted = innerPost;
+            } else {
+                lastHighlighted = null;
+            }
+
+            // Track type for next navigation
+            lastType = isOwnReply ? "own" : "reply";
+        }
+    }
+
+    // Remove highlight and update on hash change
+    window.addEventListener('hashchange', () => {
+        if (lastHighlighted) {
+            lastHighlighted.classList.remove('target-highlight');
+            lastHighlighted = null;
+        }
+        const hash = location.hash.replace('#', '');
+        if (hash) {
+            const postElem = document.getElementById(hash);
+            if (postElem) {
+                const innerPost = postElem.querySelector('.innerPost');
+                if (innerPost) {
+                    innerPost.classList.add('target-highlight');
+                    lastHighlighted = innerPost;
+                }
+            }
+        }
+    });
 
     // --- Consolidated Keyboard Shortcuts ---
     document.addEventListener("keydown", async function (event) {
         // Check if global toggle is enabled first
         if (!(await shortcutsGloballyEnabled())) return;
+
+        // Don't trigger shortcuts in input/textarea/contenteditable except for QR textarea
+        const active = document.activeElement;
+        if (
+            active &&
+            active !== document.getElementById("qrbody") &&
+            (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)
+        ) {
+            return;
+        }
 
         // Open 8chanSS menu (CTRL + F1)
         if (event.ctrlKey && event.key === "F1") {
@@ -2569,7 +2715,6 @@ onReady(async function () {
             const threadWatcher = document.getElementById("watchedMenu");
             if (threadWatcher) threadWatcher.style.display = "none";
             return;
-
         }
 
         // Scroll between posts with CTRL+Arrow keys
@@ -2581,13 +2726,11 @@ onReady(async function () {
             return;
         }
 
-        // --- Watch Thread on ALT+W Keyboard Shortcut ---
-        // Only trigger if ALT+W is pressed and no input/textarea is focused
+        // Watch Thread on ALT+W Keyboard Shortcut
         if (
             event.altKey &&
             (event.key === "w" || event.key === "W")
         ) {
-            // Prevent default browser behavior (e.g., closing tab in some browsers)
             event.preventDefault();
             const btn = document.querySelector(".watchButton");
             if (btn && !btn.classList.contains("watched-active")) {
@@ -2600,7 +2743,7 @@ onReady(async function () {
         }
     });
 
-    // (CTRL + Enter) and BBCodes - Keep separate as it's specific to the textarea
+    // (CTRL + Enter) and BBCodes - Only for QR textarea
     const replyTextarea = document.getElementById("qrbody");
     if (replyTextarea) {
         replyTextarea.addEventListener("keydown", async function (event) {
@@ -2643,145 +2786,6 @@ onReady(async function () {
             }
         });
     }
-
-    // BBCODE Combination keys and Tags
-    const bbCodeCombinations = new Map([
-        ["s", ["[spoiler]", "[/spoiler]"]],
-        ["b", ["'''", "'''"]],
-        ["u", ["__", "__"]],
-        ["i", ["''", "''"]],
-        ["d", ["==", "=="]],
-        ["m", ["[moe]", "[/moe]"]],
-        ["c", ["[code]", "[/code]"]],
-    ]);
-
-    // Helper function for applying BBCode
-    function applyBBCode(textBox, key) {
-        const [openTag, closeTag] = bbCodeCombinations.get(key);
-        const { selectionStart, selectionEnd, value } = textBox;
-
-        if (selectionStart === selectionEnd) {
-            // No selection: insert empty tags and place cursor between them
-            const before = value.slice(0, selectionStart);
-            const after = value.slice(selectionEnd);
-            const newCursor = selectionStart + openTag.length;
-            textBox.value = before + openTag + closeTag + after;
-            textBox.selectionStart = textBox.selectionEnd = newCursor;
-        } else {
-            // Replace selected text with tags around it
-            const before = value.slice(0, selectionStart);
-            const selected = value.slice(selectionStart, selectionEnd);
-            const after = value.slice(selectionEnd);
-            textBox.value = before + openTag + selected + closeTag + after;
-            // Keep selection around the newly wrapped text
-            textBox.selectionStart = selectionStart + openTag.length;
-            textBox.selectionEnd = selectionEnd + openTag.length;
-        }
-    }
-
-    // --- Feature: Scroll between posts functionality ---
-    let lastHighlighted = null;
-    let lastType = null; // "own" or "reply"
-    let lastIndex = -1;
-
-    function getEligiblePostCells(isOwnReply) {
-        // Find all .postCell and .opCell that contain at least one matching anchor
-        const selector = isOwnReply
-            ? '.postCell:has(a.youName), .opCell:has(a.youName)'
-            : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
-        // Use Array.from to get a static list in DOM order
-        return Array.from(document.querySelectorAll(selector));
-    }
-
-    function scrollToReply(isOwnReply = true, getNextReply = true) {
-        const postCells = getEligiblePostCells(isOwnReply);
-        if (!postCells.length) return;
-
-        // Determine current index
-        let currentIndex = -1;
-
-        // If lastType matches and lastHighlighted is still in the list, use its index
-        if (
-            lastType === (isOwnReply ? "own" : "reply") &&
-            lastHighlighted &&
-            (currentIndex = postCells.indexOf(lastHighlighted.closest('.postCell, .opCell'))) !== -1
-        ) {
-            // Use found index
-        } else {
-            // Otherwise, find the first cell whose top is below the middle of the viewport
-            const viewportMiddle = window.innerHeight / 2;
-            currentIndex = postCells.findIndex(cell => {
-                const rect = cell.getBoundingClientRect();
-                return rect.top + rect.height / 2 > viewportMiddle;
-            });
-            if (currentIndex === -1) {
-                // If none found, default to first or last depending on direction
-                currentIndex = getNextReply ? -1 : postCells.length;
-            }
-        }
-
-        // Determine target index
-        const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
-        if (targetIndex < 0 || targetIndex >= postCells.length) return;
-
-        const postContainer = postCells[targetIndex];
-        if (postContainer) {
-            postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
-
-            // Remove highlight from previous post
-            if (lastHighlighted) {
-                lastHighlighted.classList.remove('target-highlight');
-            }
-
-            // Find the anchor id for this post (usually something like id="p123456")
-            let anchorId = null;
-            let anchorElem = postContainer.querySelector('[id^="p"]');
-            if (anchorElem && anchorElem.id) {
-                anchorId = anchorElem.id;
-            } else if (postContainer.id) {
-                anchorId = postContainer.id;
-            }
-
-            // Update the URL hash to simulate :target
-            if (anchorId) {
-                if (location.hash !== '#' + anchorId) {
-                    history.replaceState(null, '', '#' + anchorId);
-                }
-            }
-
-            // Add highlight class to .innerPost
-            const innerPost = postContainer.querySelector('.innerPost');
-            if (innerPost) {
-                innerPost.classList.add('target-highlight');
-                lastHighlighted = innerPost;
-            } else {
-                lastHighlighted = null;
-            }
-
-            // Track type and index for next navigation
-            lastType = isOwnReply ? "own" : "reply";
-            lastIndex = targetIndex;
-        }
-    }
-
-    // Remove highlight and update on hash change
-    window.addEventListener('hashchange', () => {
-        if (lastHighlighted) {
-            lastHighlighted.classList.remove('target-highlight');
-            lastHighlighted = null;
-        }
-        const hash = location.hash.replace('#', '');
-        if (hash) {
-            const postElem = document.getElementById(hash);
-            if (postElem) {
-                const innerPost = postElem.querySelector('.innerPost');
-                if (innerPost) {
-                    innerPost.classList.add('target-highlight');
-                    lastHighlighted = innerPost;
-                }
-            }
-        }
-    });
 
     // ---- Feature: Hide catalog threads with SHIFT+click, per-board storage.
     function featureCatalogHiding() {
