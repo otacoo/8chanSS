@@ -242,14 +242,15 @@ onReady(async function () {
         }
 
         // URL-based class toggling
+        const path = window.location.pathname.toLowerCase();
         const urlClassMap = [
             { pattern: /\/catalog\.html$/i, className: "is-catalog" },
             { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
-            { pattern: /\/[^/]+\/(#)?$/i, className: "is-index" },
+            { pattern: /\/[^/]+\/$/i, className: "is-index" },
         ];
-        const currentPath = window.location.pathname.toLowerCase() + window.location.hash;
+
         urlClassMap.forEach(({ pattern, className }) => {
-            if (pattern.test(currentPath)) {
+            if (pattern.test(path)) {
                 document.documentElement.classList.add(className);
             } else {
                 document.documentElement.classList.remove(className);
@@ -2485,6 +2486,7 @@ onReady(async function () {
     // --- Feature: Scroll between posts functionality ---
     let lastHighlighted = null;
     let lastType = null; // "own" or "reply"
+    let lastRefreshTime = 0; // Refresh cooldown
 
     function getEligiblePostCells(isOwnReply) {
         // Find all .postCell and .opCell that contain at least one matching anchor
@@ -2592,8 +2594,10 @@ onReady(async function () {
         const active = document.activeElement;
         if (
             active &&
-            active !== document.getElementById("qrbody") &&
-            (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)
+            event.key !== "Tab" && // Allow Tab key to pass through
+            (active.tagName === "INPUT" ||
+             active.tagName === "TEXTAREA" ||
+             active.isContentEditable)
         ) {
             return;
         }
@@ -2630,26 +2634,31 @@ onReady(async function () {
         if (event.key === "Tab") {
             const qrbody = document.getElementById("qrbody");
             const captcha = document.getElementById("QRfieldCaptcha");
+
             if (qrbody) {
-                if (document.activeElement !== qrbody) {
-                    event.preventDefault();
-                    qrbody.focus();
-                } else if (captcha) {
+                if (document.activeElement === qrbody && captcha) {
+                    // If focus is on qrbody and captcha exists, focus captcha
                     event.preventDefault();
                     captcha.focus();
+                } else if (document.activeElement === captcha) {
+                    // If focus is on captcha, cycle back to qrbody
+                    event.preventDefault();
+                    qrbody.focus();
+                } else if (document.activeElement !== qrbody) {
+                    // If focus is anywhere else, focus qrbody
+                    event.preventDefault();
+                    qrbody.focus();
                 }
             }
             return;
         }
 
         // (R key): refresh index page with 4 sec cooldown
-        let lastRefreshTime = 0;
-
         if (
             event.key === "r" || event.key === "R"
         ) {
             if (
-                document.documentElement.classList.contains("is-index") &&
+                document.documentElement.classList.contains("is-thread") &&
                 document.getElementById("refreshButton")
             ) {
                 const now = Date.now();
