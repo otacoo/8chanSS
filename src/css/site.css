@@ -54,6 +54,17 @@ nav.navHeader {
     box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
 }
 
+/* (You) Replies */
+:root.highlight-you .innerPost:has(> .postInfo.title > .youName) {
+    border-left: dashed #68b723 3px;
+}
+
+:root.highlight-you .innerPost:has(>.divMessage>.you),
+:root.highlight-you .innerPost:has(>.divMessage>*:not(div)>.you),
+:root.highlight-you .innerPost:has(>.divMessage>*:not(div)>*:not(div)>.you) {
+    border-left: solid var(--subject-color) 3px;
+}
+
 /* Fit Replies */
 :root.fit-replies :not(.hidden).innerPost {
     margin-left: 10px;
