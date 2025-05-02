@@ -667,21 +667,27 @@ onReady(async function () {
         const catalogDiv = document.querySelector('.catalogDiv');
         if (!catalogDiv) return;
 
-        function setLinksTargetBlank(cell) {
+        function setLinksTargetBlankInCell(cell) {
             const link = cell.querySelector('a.linkThumb');
             if (link) link.setAttribute('target', '_blank');
         }
 
         // Initial run for existing cells
-        catalogDiv.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
+        catalogDiv.querySelectorAll('.catalogCell').forEach(setLinksTargetBlankInCell);
 
         // Observe catalog container for new cells
-        if (catalogDiv) {
-            const observer = new MutationObserver(() => {
-                setLinksTargetBlank(catalogDiv);
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1 && node.classList.contains('catalogCell')) {
+                        setLinksTargetBlankInCell(node);
+                    } else if (node.nodeType === 1) {
+                        node.querySelectorAll && node.querySelectorAll('.catalogCell').forEach(setLinksTargetBlankInCell);
+                    }
+                });
             });
-            observer.observe(catalogDiv, { childList: true, subtree: true });
-        }
+        });
+        observer.observe(catalogDiv, { childList: true, subtree: true });
     }
 
     // ---- Feature: Image/Video/Audio Hover Preview
@@ -947,27 +953,43 @@ onReady(async function () {
 
         // --- Attach listeners to thumbnails and audio links ---
         function attachThumbListeners(root = document) {
+            // Attach to all a.linkThumb > img and a.imgLink > img in root
             root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
                 if (!thumb._fullImgHoverBound) {
                     thumb.addEventListener("mouseenter", onThumbEnter);
                     thumb._fullImgHoverBound = true;
                 }
             });
+            // If root itself is such an img, attach as well
+            if (
+                root.tagName === "IMG" &&
+                root.parentElement &&
+                (root.parentElement.matches("a.linkThumb") || root.parentElement.matches("a.imgLink")) &&
+                !root._fullImgHoverBound
+            ) {
+                root.addEventListener("mouseenter", onThumbEnter);
+                root._fullImgHoverBound = true;
+            }
         }
 
-        // --- Initialization ---
+        // Attach to all existing thumbs at startup
         attachThumbListeners();
 
-        // --- Watch for new elements ---
-        new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        attachThumbListeners(node);
-                    }
-                }
-            }
-        }).observe(document.body, { childList: true, subtree: true });
+        // Observe for any new nodes under #divThreads
+        const divThreads = document.getElementById("divThreads");
+        if (divThreads) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1) {
+                            // Attach to this node if it's a thumb, or to any thumbs inside it
+                            attachThumbListeners(node);
+                        }
+                    });
+                });
+            });
+            observer.observe(divThreads, { childList: true, subtree: true });
+        }
     }
 
     // --- Feature: Inline replies (barebones) ---
@@ -2597,8 +2619,8 @@ onReady(async function () {
             active &&
             event.key !== "Tab" && // Allow Tab key to pass through
             (active.tagName === "INPUT" ||
-             active.tagName === "TEXTAREA" ||
-             active.isContentEditable)
+                active.tagName === "TEXTAREA" ||
+                active.isContentEditable)
         ) {
             return;
         }
@@ -2654,18 +2676,25 @@ onReady(async function () {
             return;
         }
 
-        // (R key): refresh index page with 4 sec cooldown
-        if (
-            event.key === "r" || event.key === "R"
-        ) {
+        // (R key): refresh thread page with 5 sec cooldown
+        if (event.key === "r" || event.key === "R") {
+            const isThread = document.documentElement.classList.contains("is-thread");
+            const isCatalog = document.documentElement.classList.contains("is-catalog");
+            const threadRefreshBtn = document.getElementById("refreshButton");
+            const catalogRefreshBtn = document.getElementById("catalogRefreshButton");
+            const now = Date.now();
+
             if (
-                document.documentElement.classList.contains("is-thread") &&
-                document.getElementById("refreshButton")
+                (isThread && threadRefreshBtn) ||
+                (isCatalog && catalogRefreshBtn)
             ) {
-                const now = Date.now();
                 if (now - lastRefreshTime >= 5000) {
                     event.preventDefault();
-                    document.getElementById("refreshButton").click();
+                    if (isThread && threadRefreshBtn) {
+                        threadRefreshBtn.click();
+                    } else if (isCatalog && catalogRefreshBtn) {
+                        catalogRefreshBtn.click();
+                    }
                     lastRefreshTime = now;
                 } else {
                     event.preventDefault();
