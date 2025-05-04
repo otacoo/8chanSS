@@ -162,6 +162,8 @@ onReady(async function () {
     function flattenSettings() {
         Object.keys(scriptSettings).forEach((category) => {
             Object.keys(scriptSettings[category]).forEach((key) => {
+                // Skip keys that start with an underscore
+                if (key.startsWith('_')) return;
                 flatSettings[key] = scriptSettings[category][key];
 
                 // Also flatten any sub-options
@@ -413,6 +415,7 @@ onReady(async function () {
         let tabTitleBase = null;
 
         function updateTabTitle() {
+            if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
         }
@@ -667,22 +670,22 @@ onReady(async function () {
         const catalogDiv = document.querySelector('.catalogDiv');
         if (!catalogDiv) return;
 
-        function setLinksTargetBlankInCell(cell) {
+        function setLinksTargetBlank(cell) {
             const link = cell.querySelector('a.linkThumb');
             if (link) link.setAttribute('target', '_blank');
         }
 
         // Initial run for existing cells
-        catalogDiv.querySelectorAll('.catalogCell').forEach(setLinksTargetBlankInCell);
+        catalogDiv.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
 
         // Observe catalog container for new cells
         const observer = new MutationObserver((mutations) => {
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType === 1 && node.classList.contains('catalogCell')) {
-                        setLinksTargetBlankInCell(node);
+                        setLinksTargetBlank(node);
                     } else if (node.nodeType === 1) {
-                        node.querySelectorAll && node.querySelectorAll('.catalogCell').forEach(setLinksTargetBlankInCell);
+                        node.querySelectorAll && node.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
                     }
                 });
             });
@@ -694,7 +697,7 @@ onReady(async function () {
     function featureImageHover() {
         // --- Config ---
         const MEDIA_MAX_WIDTH = "90vw";
-        const MEDIA_OPACITY_LOADING = "0.75";
+        const MEDIA_OPACITY_LOADING = "0";
         const MEDIA_OPACITY_LOADED = "1";
         const MEDIA_OFFSET = 2; // Margin between cursor and image, in vw
         const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
@@ -1530,8 +1533,8 @@ onReady(async function () {
         }
     }
 
-    // --- Feature: Beep and/or notify on (You) ---
-    function featureBeepOnYou() {
+    // --- Feature: Beep on (You) ---
+    async function featureBeepOnYou() {
         // Beep sound (base64)
         const beep = new Audio(
             "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
@@ -1554,8 +1557,8 @@ onReady(async function () {
             if (customMsg) customMsgSetting = customMsg;
         }
 
-        // Call initialization
-        initSettings();
+        // Await settings before observer setup!
+        await initSettings();
 
         // Function to play the beep sound
         function playBeep() {
