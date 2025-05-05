@@ -382,7 +382,7 @@ onReady(async function () {
     async function featureSaveScroll() {
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
-        const MAX_THREADS = 100;
+        const MAX_THREADS = 150;
         const threadPagePattern = /^\/[^/]+\/res\/[^/]+\.html$/i;
         // Early return if page not a thread
         if (!threadPagePattern.test(window.location.pathname)) return;
