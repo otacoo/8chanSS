@@ -1,3 +1,12 @@
+## v1.41.0
+*2025-05-05*
+
+May I suggest a reset of your 8chanSS settings?
+
+- Removed the "Enable Inline Replies" option, too buggy
+- Inlined backlinks and quotelinks will still get a dashed underline and reduced opacity
+- Add a shadow to the Quick Reply
+
 ## v1.40.0
 *2025-05-05*
 
