@@ -1092,7 +1092,6 @@ onReady(async function () {
                 const isNotThumbnail = !img.src.includes("/.media/t_");
                 const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
 
-
                 if (isNotThumbnail || isCustomSpoiler) {
                     let href = link.getAttribute("href");
                     if (!href) return;
