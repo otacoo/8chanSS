@@ -679,14 +679,11 @@ onReady(async function () {
         const MEDIA_MAX_WIDTH = "90vw";
         const MEDIA_OPACITY_LOADING = "0";
         const MEDIA_OPACITY_LOADED = "1";
-        const MEDIA_OFFSET = 2; // Margin between cursor and image, in vw
+        const MEDIA_OFFSET = 50; // Margin between cursor and image, in px
         const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
 
         // Calculate and convert vw/vh to numbers in pixels
-        function getMediaOffset() {
-            return window.innerWidth * (MEDIA_OFFSET / 100);
-        }
         function getMediaBottomMargin() {
             return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
         }
@@ -702,7 +699,7 @@ onReady(async function () {
             return Math.max(min, Math.min(max, val));
         }
 
-        // --- Utility: Position floating media to the right of mouse, never touching bottom ---
+        // --- Utility: Position floating media to the right or left of mouse, never touching bottom ---
         function positionFloatingMedia(event) {
             if (!floatingMedia) return;
             const vw = window.innerWidth;
@@ -710,17 +707,29 @@ onReady(async function () {
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
 
-            const MEDIA_OFFSET_PX = getMediaOffset();
             const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
             const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth; // Calculate scrollbar width
 
-            // Clamp to viewport
-            // Horizontally, always to the right of the cursor, with margin, but clamp to right edge (account for scrollbar)
-            let x = event.clientX + MEDIA_OFFSET_PX;
-            x = clamp(x, 0, vw - mw - SCROLLBAR_WIDTH);
+            let x, y;
 
-            // Vertically, align top to cursor, but clamp so it never touches bottom or top
-            let y = event.clientY;
+            // Try to show on the right of the cursor first
+            let rightX = event.clientX + MEDIA_OFFSET;
+            let leftX = event.clientX - MEDIA_OFFSET - mw;
+
+            // If there's enough space on the right, use it
+            if (rightX + mw <= vw - SCROLLBAR_WIDTH) {
+                x = rightX;
+            }
+            // Else, if there's enough space on the left, use it
+            else if (leftX >= 0) {
+                x = leftX;
+            }
+            // Else, clamp to fit in viewport
+            else {
+                x = clamp(rightX, 0, vw - mw - SCROLLBAR_WIDTH);
+            }
+
+            y = event.clientY;
             const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
             y = Math.max(0, Math.min(y, maxY));
 
@@ -894,33 +903,34 @@ onReady(async function () {
             }
             document.body.appendChild(floatingMedia);
 
-            // --- Initial placement ---
-            // Wait for media to load enough to get dimensions, then place
-            function initialPlacement() {
-                // Use the last mouse event for accurate placement
-                if (lastMouseEvent) {
-                    positionFloatingMedia(lastMouseEvent);
-                }
-            }
-            // Only add mousemove after initial placement
-            function enableMouseMove() {
-                document.addEventListener("mousemove", mouseMoveHandler);
-                cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
-            }
+            // Placement of the image
+            // --- Always follow the cursor, even while loading ---
             function mouseMoveHandler(ev) {
+                lastMouseEvent = ev;
                 positionFloatingMedia(ev);
             }
+            document.addEventListener("mousemove", mouseMoveHandler);
+            cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
+
+            // Place at initial mouse position
+            if (lastMouseEvent) {
+                positionFloatingMedia(lastMouseEvent);
+            }
+
+            // When loaded, fade in and reposition with real size
             if (isVideo) {
                 floatingMedia.onloadeddata = function () {
-                    initialPlacement();
-                    enableMouseMove();
-                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                    if (floatingMedia) {
+                        floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                        if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                    }
                 };
             } else {
                 floatingMedia.onload = function () {
-                    initialPlacement();
-                    enableMouseMove();
-                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                    if (floatingMedia) {
+                        floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                        if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                    }
                 };
             }
             // If error, cleanup
