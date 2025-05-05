@@ -1090,6 +1090,8 @@ onReady(async function () {
                 const isCustomSpoiler = img.src.includes("/custom.spoiler");
                 // Check if this is NOT already a thumbnail
                 const isNotThumbnail = !img.src.includes("/.media/t_");
+                const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
+
 
                 if (isNotThumbnail || isCustomSpoiler) {
                     let href = link.getAttribute("href");
@@ -1099,14 +1101,17 @@ onReady(async function () {
                     const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
                     if (!match) return;
 
-                    // Use the thumbnail path (t_filename)
-                    const transformedSrc = `/.media/t_${match[1]}`;
-                    img.src = transformedSrc;
+                    if (!hasFilenameExtension) {
+                        // Use the thumbnail path (t_filename)
+                        const transformedSrc = `/.media/t_${match[1]}`;
+                        img.src = transformedSrc;
+                    } else return;
 
                     // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
                     if (await getSetting("blurSpoilers_removeSpoilers")) {
                         img.style.filter = "";
                         img.style.transition = "";
+                        img.style.border = "1px dotted var(--border-color)";
                         img.onmouseover = null;
                         img.onmouseout = null;
                         return;
