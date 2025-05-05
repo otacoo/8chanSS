@@ -1745,50 +1745,62 @@ onReady(async function () {
 
         postCommon.selectedFiles[index] = renamedFile;
 
-        // Update the label
-        const labels = document.querySelectorAll('#qrFilesBody .selectedCell .nameLabel');
-        const label = labels[index];
-        if (label) {
-            label.textContent = finalName;
-            label.title = finalName;
-        }
+        // Update the label in all containers
+        updateFileLabels(finalName, index);
     }
 
-    // Event delegation for .nameLabel clicks within #qrFilesBody
-    function handleQrFilesBodyClick(event) {
-        const label = event.target.closest('.nameLabel');
-        if (!label || !label.closest('#qrFilesBody')) return;
+    // Helper to update the label text in all relevant containers
+    function updateFileLabels(finalName, index) {
+        const selectors = [
+            '#qrFilesBody .selectedCell .nameLabel',
+            '#postingFormContents .selectedCell .nameLabel'
+        ];
+        selectors.forEach(sel => {
+            const labels = document.querySelectorAll(sel);
+            const label = labels[index];
+            if (label) {
+                label.textContent = finalName;
+                label.title = finalName;
+            }
+        });
+    }
 
-        // Find the index of the clicked label among all visible .nameLabel elements
-        const labels = Array.from(document.querySelectorAll('#qrFilesBody .selectedCell .nameLabel'));
+    // Unified event delegation for .nameLabel clicks in both containers
+    function handleNameLabelClick(event) {
+        const label = event.target.closest('.nameLabel');
+        if (!label) return;
+
+        // Determine which container this label is in
+        const container = label.closest('#qrFilesBody, #postingFormContents');
+        if (!container) return;
+
+        // Find the index of the clicked label among all visible .nameLabel elements in this container
+        const labels = Array.from(container.querySelectorAll('.selectedCell .nameLabel'));
         const index = labels.indexOf(label);
         if (index !== -1) {
             renameFileAtIndex(index);
         }
     }
 
-    // Observe changes in #qrFilesBody and ensure event delegation is attached
-    function observeQrFilesBody() {
-        const qrFilesBody = document.querySelector('#qrFilesBody');
-        if (!qrFilesBody) return;
+    // Attach event delegation to a container if not already attached
+    function observeNameLabelClicks(containerSelector) {
+        const container = document.querySelector(containerSelector);
+        if (!container) return;
 
-        // Attach the event listener once
-        if (!qrFilesBody.dataset.renameDelegationAttached) {
-            qrFilesBody.addEventListener('click', handleQrFilesBodyClick);
-            qrFilesBody.dataset.renameDelegationAttached = 'true';
+        if (!container.dataset.renameDelegationAttached) {
+            container.addEventListener('click', handleNameLabelClick);
+            container.dataset.renameDelegationAttached = 'true';
         }
     }
 
-    // Watch #qrFilesBody for changes
-    function startQrFilesBodyObserver() {
-        const qrFilesBody = document.querySelector('#qrFilesBody');
-        if (!qrFilesBody) return;
-        // Attach event delegation once
-        observeQrFilesBody();
+    // Watch both containers for changes and attach event delegation
+    function startNameLabelObservers() {
+        observeNameLabelClicks('#qrFilesBody');
+        observeNameLabelClicks('#postingFormContents');
     }
 
     // Init
-    startQrFilesBodyObserver();
+    startNameLabelObservers();
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
