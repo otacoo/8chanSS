@@ -64,7 +64,6 @@ onReady(async function () {
         },
         threads: {
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            enableNestedReplies: { label: "Enable Inline Replies", default: false },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -343,10 +342,6 @@ onReady(async function () {
     }
     if (await getSetting("enableThreadHiding")) {
         featureCatalogHiding();
-    }
-    if (await getSetting("enableNestedReplies")) {
-        localStorage.setItem("inlineReplies", "true");
-        featureNestedReplies();
     }
     if (await getSetting("switchTimeFormat")) {
         featureLabelCreated12h();
@@ -993,89 +988,6 @@ onReady(async function () {
             });
             observer.observe(divThreads, { childList: true, subtree: true });
         }
-    }
-
-    // --- Feature: Inline replies (barebones) ---
-    function featureNestedReplies() {
-        let observer;
-        // Store if bottom backlinks are enabled first
-        const bottomBacklinksEnabled = localStorage.getItem("bottomBacklinks") === "true";
-        // Move .replyPreview after the correct title element as a direct child of .innerOP or .innerPost
-        function ensureReplyPreviewPlacement(root = document) {
-            // Skip if bottom backlinks are enabled
-            if (bottomBacklinksEnabled) return;
-
-            root.querySelectorAll('.replyPreview').forEach(replyPreview => {
-                // Find the closest .innerOP or .innerPost ancestor
-                let container = replyPreview.closest('.innerOP, .innerPost');
-                if (!container) return;
-
-                // Determine which title to use
-                let titleSelector = container.classList.contains('innerOP') ? '.opHead.title' : '.postInfo.title';
-                let titleElem = Array.from(container.children).find(child => child.matches && child.matches(titleSelector));
-                if (!titleElem) return;
-
-                // Only move if not already in the correct position
-                if (replyPreview.parentElement !== container || titleElem.nextSibling !== replyPreview) {
-                    container.insertBefore(replyPreview, titleElem.nextSibling);
-                }
-            });
-        }
-
-        // Always add new .inlineQuote divs as first child of their closest .replyPreview parent
-        function ensureInlineQuotePlacement(root = document) {
-            if (bottomBacklinksEnabled) return;
-
-            root.querySelectorAll('.inlineQuote').forEach(inlineQuote => {
-                const replyPreview = inlineQuote.closest('.replyPreview');
-                if (!replyPreview) return;
-                replyPreview.insertBefore(inlineQuote, replyPreview.firstChild);
-            });
-        }
-        // Observer to reconnect after each mutation
-        observer = new MutationObserver(() => {
-            observer.disconnect();
-            // Only run ensureReplyPreviewPlacement if bottom backlinks are not enabled
-            if (!bottomBacklinksEnabled) {
-                ensureReplyPreviewPlacement(document);
-            }
-            ensureInlineQuotePlacement(document);
-            // Reconnect observer
-            const postsContainer = document.querySelector('.opCell');
-            if (postsContainer) {
-                observer.observe(postsContainer, { childList: true, subtree: true });
-            }
-        });
-        // Observer for the initial setup
-        const postsContainer = document.querySelector('.opCell');
-        if (postsContainer) {
-            observer.observe(postsContainer, { childList: true, subtree: true });
-        }
-
-        // --- Feature: Dashed underline for inlined reply backlinks ---
-        document.addEventListener('click', function (e) {
-            const a = e.target.closest('.panelBacklinks > a');
-            if (!a) return;
-            setTimeout(() => {
-                a.classList.toggle('reply-inlined');
-            }, 0);
-        });
-
-        // --- Feature: Add 'quote-inlined' class to clicked .quoteLink <a> ---
-        document.addEventListener('click', function (e) {
-            const quoteLink = e.target.closest('a.quoteLink');
-            if (!quoteLink) return;
-            setTimeout(() => {
-                quoteLink.classList.toggle('quote-inlined');
-            }, 0);
-        });
-
-        // Only run initial ensureReplyPreviewPlacement if bottom backlinks are not enabled
-        if (!bottomBacklinksEnabled) {
-            ensureReplyPreviewPlacement(document);
-        }
-
-        ensureInlineQuotePlacement(document);
     }
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
@@ -3007,6 +2919,23 @@ onReady(async function () {
     if (opHeadTitle && innerOP) {
         innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
     }
+
+    // Dashed underline for inlined reply backlinks and quotelinks
+    document.addEventListener('click', function (e) {
+        const a = e.target.closest('.panelBacklinks > a');
+        if (a) {
+            setTimeout(() => {
+                a.classList.toggle('reply-inlined');
+            }, 0);
+            return;
+        }
+        const b = e.target.closest('a.quoteLink');
+        if (b) {
+            setTimeout(() => {
+                b.classList.toggle('quote-inlined');
+            }, 0);
+        }
+    });
 
     // Show all posts by ID
     function enableIdFiltering() {

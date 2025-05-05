@@ -125,12 +125,15 @@
 
 /* Custom class added through the userscript for backlinks */
 .reply-inlined {
+    opacity: 0.5;
     text-decoration: underline dashed !important;
     text-underline-offset: 2px;
 }
 
 .quote-inlined {
     opacity: 0.5;
+    text-decoration: underline dashed !important;
+    text-underline-offset: 2px;
 }
 
 .target-highlight {
