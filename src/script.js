@@ -1459,7 +1459,7 @@ onReady(async function () {
     }
 
     // Init
-    onReady(featureMarkYourPost);
+    featureMarkYourPost();
 
     // --- Feature: Scroll Arrows ---
     function featureScrollArrows() {
