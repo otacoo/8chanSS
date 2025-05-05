@@ -6,26 +6,6 @@ function onReady(fn) {
         fn();
     }
 }
-////////// Disable/Enable native extension settings //////
-(function () {
-    function updateLocalStorage(removeKeys = [], setMap = {}) {
-        for (const key of removeKeys) {
-            localStorage.removeItem(key);
-        }
-        for (const [key, value] of Object.entries(setMap)) {
-            localStorage.setItem(key, value);
-        }
-    }
-
-    try {
-        updateLocalStorage(
-            ["hoveringImage"],      // Keys to remove
-            {}      // Keys to set
-        );
-    } catch (e) {
-        // Ignore errors (e.g., storage not available)
-    }
-})();
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     "use strict";
@@ -176,6 +156,7 @@ onReady(async function () {
                 );
             });
         });
+        Object.freeze(flatSettings); // Prevent accidental mutation
     }
     flattenSettings();
 
@@ -234,13 +215,16 @@ onReady(async function () {
         }
 
         // All other toggles
-        for (const [settingKey, className] of Object.entries(classToggles)) {
-            if (await getSetting(settingKey)) {
+        const settingKeys = Object.keys(classToggles);
+        const settingValues = await Promise.all(settingKeys.map(getSetting));
+        settingKeys.forEach((key, i) => {
+            const className = classToggles[key];
+            if (settingValues[i]) {
                 document.documentElement.classList.add(className);
             } else {
                 document.documentElement.classList.remove(className);
             }
-        }
+        });
 
         // URL-based class toggling
         const path = window.location.pathname.toLowerCase();
@@ -281,8 +265,8 @@ onReady(async function () {
         }
     }
 
-    // Call the function on DOM ready
-    onReady(featureSidebar);
+    // Init
+    featureSidebar();
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -367,6 +351,7 @@ onReady(async function () {
             enabled = await getSetting("enableThreadImageHover");
         }
         if (enabled) {
+            localStorage.removeItem("hoveringImage");
             featureImageHover();
         }
     }
@@ -1214,12 +1199,8 @@ onReady(async function () {
                 });
             }
         }
-
-        // Run on DOM ready
-        onReady(() => {
-            showThreadWatcher();
-            addCloseListener();
-        });
+        showThreadWatcher();
+        addCloseListener();
     }
 
     ///////// THREAD WATCHER END ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1310,7 +1291,6 @@ onReady(async function () {
 
                 const postId = getPostIdFromMenu(menu);
                 const tYous = getTYous();
-                // Convert to number for comparison
                 const isMarked = postId && tYous.includes(Number(postId));
                 li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
 
@@ -1325,7 +1305,6 @@ onReady(async function () {
                     const postId = getPostIdFromMenu(menu);
                     if (!postId) return;
                     let tYous = getTYous();
-                    // Convert to number for comparison
                     const numericPostId = Number(postId);
                     const idx = tYous.indexOf(numericPostId);
                     if (idx === -1) {
@@ -1340,16 +1319,21 @@ onReady(async function () {
                         li.textContent = "Mark as Your Post";
                     }
                 });
-
-                window.addEventListener("storage", function (event) {
-                    if (event.key === T_YOUS_KEY) {
-                        const tYous = getTYous();
-                        const isMarked = postId && tYous.includes(Number(postId));
-                        li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
-                    }
-                });
             });
         }
+
+        // Single storage event listener for all menu entries
+        window.addEventListener("storage", function (event) {
+            if (event.key === T_YOUS_KEY) {
+                document.querySelectorAll("." + MENU_ENTRY_CLASS).forEach(li => {
+                    const menu = li.closest(MENU_SELECTOR);
+                    const postId = getPostIdFromMenu(menu);
+                    const tYous = getTYous();
+                    const isMarked = postId && tYous.includes(Number(postId));
+                    li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
+                });
+            }
+        });
 
         // --- Observe for Dynamic Menus ---
         const observer = new MutationObserver(mutations => {
@@ -1357,9 +1341,20 @@ onReady(async function () {
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType !== 1) continue;
                     if (node.matches && node.matches(MENU_SELECTOR)) {
+                        // Set data-post-id
+                        if (!node.hasAttribute('data-post-id')) {
+                            const btn = node.closest('.extraMenuButton');
+                            const postCell = btn && btn.closest('.postCell, .opCell');
+                            if (postCell) node.setAttribute('data-post-id', postCell.id);
+                        }
                         addMenuEntries(node.parentNode || node);
                     } else if (node.querySelectorAll) {
                         node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                            if (!menu.hasAttribute('data-post-id')) {
+                                const btn = menu.closest('.extraMenuButton');
+                                const postCell = btn && btn.closest('.postCell, .opCell');
+                                if (postCell) menu.setAttribute('data-post-id', postCell.id);
+                            }
                             addMenuEntries(menu.parentNode || menu);
                         });
                     }
@@ -1504,25 +1499,21 @@ onReady(async function () {
         // Create MutationObserver to detect when you are quoted
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (
-                        node.nodeType === 1 &&
-                        node.querySelector &&
-                        node.querySelector("a.quoteLink.you")
-                    ) {
-                        // If the quote is inside .innerPost, do not beep or notify
-                        if (node.closest('.innerPost')) {
-                            continue;
-                        }
-
-                        // Only play beep if the setting is enabled
-                        if (beepOnYouSetting) {
-                            playBeep();
-                        }
-
-                        // Trigger notification if enabled
-                        if (notifyOnYouSetting) {
-                            notifyOnYou();
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (
+                            node.nodeType === 1 &&
+                            node.matches &&
+                            node.matches('.postCell, .opCell') &&
+                            node.querySelector("a.quoteLink.you") &&
+                            !node.closest('.innerPost')
+                        ) {
+                            if (beepOnYouSetting) {
+                                playBeep();
+                            }
+                            if (notifyOnYouSetting) {
+                                notifyOnYou();
+                            }
                         }
                     }
                 }
@@ -1660,19 +1651,23 @@ onReady(async function () {
         updateFileLabels(finalName, index);
     }
 
+    function getSelectedCellIndex(element) {
+        const cell = element.closest('.selectedCell');
+        if (!cell || !cell.parentElement) return -1;
+        const cells = Array.from(cell.parentElement.querySelectorAll(':scope > .selectedCell'));
+        return cells.indexOf(cell);
+    }
+
     // Helper to update the label text in all relevant containers
     function updateFileLabels(finalName, index) {
-        const selectors = [
-            '#qrFilesBody .selectedCell .nameLabel',
-            '#postingFormContents .selectedCell .nameLabel'
-        ];
-        selectors.forEach(sel => {
-            const labels = document.querySelectorAll(sel);
-            const label = labels[index];
-            if (label) {
-                label.textContent = finalName;
-                label.title = finalName;
-            }
+        //update name in both forms from nth file
+        //CSS :nth-of-type starts from 1, arrays start from 0
+        const cssIndex = index + 1;
+        const selector = `form .selectedCell:nth-of-type(${cssIndex}) .nameLabel`;
+        const labels = document.querySelectorAll(selector);
+        labels.forEach(label => {
+            label.textContent = finalName;
+            label.title = finalName;
         });
     }
 
@@ -1680,38 +1675,119 @@ onReady(async function () {
     function handleNameLabelClick(event) {
         const label = event.target.closest('.nameLabel');
         if (!label) return;
-
-        // Determine which container this label is in
-        const container = label.closest('#qrFilesBody, #postingFormContents');
-        if (!container) return;
-
-        // Find the index of the clicked label among all visible .nameLabel elements in this container
-        const labels = Array.from(container.querySelectorAll('.selectedCell .nameLabel'));
-        const index = labels.indexOf(label);
+        const index = getSelectedCellIndex(label);
         if (index !== -1) {
             renameFileAtIndex(index);
         }
     }
 
-    // Attach event delegation to a container if not already attached
-    function observeNameLabelClicks(containerSelector) {
-        const container = document.querySelector(containerSelector);
-        if (!container) return;
+    function handleCustomRemoveClick(event) {
+        //Prevent any original 'onclick' attribute or other listeners
+        //This isnt doing anything as we already removed the node.onclick function
+        event.stopImmediatePropagation();
 
+        const button = event.currentTarget;
+        const index = getSelectedCellIndex(button);
+
+        if (index === -1) {
+            console.error("Could not determine index of the cell to remove.");
+            return;
+        }
+
+        //Remove the file from the data array
+        const removedFiles = postCommon.selectedFiles.splice(index, 1);
+
+        // Adjust budget if a file was actually removed from the array
+        if (removedFiles && removedFiles.length > 0 && removedFiles[0]) {
+            // Ensure adjustBudget exists and the file has a size property
+            if (typeof postCommon.adjustBudget === 'function' && typeof removedFiles[0].size === 'number') {
+                postCommon.adjustBudget(-removedFiles[0].size);
+            } else {
+                console.warn("postCommon.adjustBudget function missing or removed file has no size property.");
+            }
+        } else {
+            console.warn("Spliced file array but got no result for index:", index);
+        }
+
+        //Remove the file's cells from both forms
+        //CSS :nth-of-type starts from 1, arrays start from 0
+        const cssIndex = index + 1;
+        const selector = `form .selectedCell:nth-of-type(${cssIndex})`;
+        const fileCells = document.querySelectorAll(selector);
+        fileCells.forEach(cell => {
+            cell.remove();
+        });
+    }
+
+    // Attach event delegation to a container if not already attached
+    function observePostForms(containerSelector) {
+        const container = document.querySelector(containerSelector);
+        if (!container) {
+            // console.warn(`Container ${containerSelector} not found.`);
+            return;
+        }
+
+        // Attach Name Label Click Listener (Delegated) ---
         if (!container.dataset.renameDelegationAttached) {
-            container.addEventListener('click', handleNameLabelClick);
+            // Use capture phase potentially if stopImmediatePropagation in remove handler
+            // interferes, but usually bubble phase is fine.
+            container.addEventListener('click', handleNameLabelClick, false); // Use bubble phase
             container.dataset.renameDelegationAttached = 'true';
+            // console.log(`Attached name label listener to ${containerSelector}`);
+        }
+
+        // Process Remove Buttons (Existing and Future) ---
+        // Helper function to attach the custom handler to a button
+        const setupRemoveButton = (button) => {
+            if (!button.dataset.customRemoveAttached) {
+                // Remove the original inline onclick function, if it exists
+                if (typeof button.onclick === 'function') {
+                    button.onclick = null;
+                }
+                // Add our custom listener
+                button.addEventListener('click', handleCustomRemoveClick);
+                button.dataset.customRemoveAttached = 'true'; // Mark as processed
+            }
+        };
+
+        // Setup MutationObserver if not already attached to this container
+        if (!container.dataset.removeObserverAttached) {
+            const removeBtnObserver = (mutationsList, observer) => {
+                for (const mutation of mutationsList) {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach(node => {
+                            // Only process if the added node is a div.selectedCell
+                            if (
+                                node.nodeType === Node.ELEMENT_NODE &&
+                                node.matches('div.selectedCell')
+                            ) {
+                                node.querySelectorAll('.removeButton').forEach(setupRemoveButton);
+                            }
+                        });
+                    }
+                }
+            };
+
+            // Create and start the observer
+            const rmvObserver = new MutationObserver(removeBtnObserver);
+            rmvObserver.observe(container, {
+                childList: true,
+                subtree: true
+            });
+
+            // Mark the container so we don't attach multiple observers
+            container.dataset.removeObserverAttached = 'true';
         }
     }
 
     // Watch both containers for changes and attach event delegation
-    function startNameLabelObservers() {
-        observeNameLabelClicks('#qrFilesBody');
-        observeNameLabelClicks('#postingFormContents');
+    function startObservingPostForms() {
+        observePostForms('#qrFilesBody');
+        observePostForms('#postingFormContents');
     }
 
     // Init
-    startNameLabelObservers();
+    startObservingPostForms();
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2751,8 +2827,6 @@ onReady(async function () {
 
         // Hide all catalog cells whose thread numbers are in the hidden list for this board
         async function applyHiddenThreads() {
-            // Load the per-board hidden threads object from storage
-            const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
             const hiddenThreadsObjRaw = await GM.getValue(STORAGE_KEY, "{}");
             let hiddenThreadsObj;
             try {
@@ -2890,7 +2964,6 @@ onReady(async function () {
                 observer.observe(catalogContainer, { childList: true, subtree: true });
             }
         }
-
         hideThreadsOnRefresh();
     }
 
