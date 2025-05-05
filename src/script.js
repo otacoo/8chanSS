@@ -1087,7 +1087,7 @@ onReady(async function () {
                 if (!img) return;
 
                 // Check if this is a custom spoiler image
-                const isCustomSpoiler = img.src.includes("/custom.spoiler");
+                const isCustomSpoiler = img.src.includes("/custom.spoiler") || img.src.includes("/spoiler.png");
                 // Check if this is NOT already a thumbnail
                 const isNotThumbnail = !img.src.includes("/.media/t_");
                 const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
