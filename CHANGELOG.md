@@ -1,3 +1,20 @@
+## v1.40.0
+*2025-05-05*
+
+- Apply Anon's bruteforce solution for (You) borders on inline quoted posts
+- `R` shortcut key will now refresh the catalog as well
+- (You) notifications should work again (see known issues below)
+- Opening catalog threads in a new tab should now work after a refresh of the catalog
+- (You) highlights will now show in the Index page as well
+- File renaming will now work on the posting form as well and both QR and Posting Form will be synced
+- Removed Spoilers will now get a small dotted border to show they were spoilers
+- Small dimension image spoiler thumbnails should no longer be broken
+- Fix for certain board's spoiler images not being removed
+
+Know Issues:
+- Unread count in the tab will disappear if a (You) notification is sent and until new posts are added
+- Renaming multiple files and then deleting one or more files will upload the wrong file as the file index goes out of sync
+
 
 ## v1.39.0
 *2025-05-01*
