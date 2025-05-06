@@ -884,6 +884,7 @@ onReady(async function () {
             // --- Image or Video ---
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
             floatingMedia.src = fullSrc;
+            floatingMedia.id = "hover-preview-media";
             floatingMedia.style.position = "fixed";
             floatingMedia.style.zIndex = "9999";
             floatingMedia.style.pointerEvents = "none";
