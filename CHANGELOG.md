@@ -3,6 +3,8 @@
 
 - Apply Anon's fix for file renamer issue
 - Hovered Images will no longer "jump" to the mouse cursor when finished loading
+- Hovered Images can now show on both sides of the cursor
+- Mark as Your Post menu entry will now correctly show "Unmark as Your Post" when the post is currently yours
 - Small spoilered thumbnails should no longer have broken thumbnails (all edge cases hopefully)
 - Various code optimizations
 
