@@ -1,3 +1,12 @@
+## v1.42.0
+*2025-05-06*
+
+- Apply Anon's fix for file renamer issue
+- Hovered Images will no longer "jump" to the mouse cursor when finished loading
+- Small spoilered thumbnails should no longer have broken thumbnails (all edge cases hopefully)
+- Various code optimizations
+
+
 ## v1.41.0
 *2025-05-05*
 

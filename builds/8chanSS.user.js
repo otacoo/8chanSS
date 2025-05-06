@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.41.0
+// @version      1.42.0
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -28,24 +28,6 @@ function onReady(fn) {
         fn();
     }
 }
-(function () {
-    function updateLocalStorage(removeKeys = [], setMap = {}) {
-        for (const key of removeKeys) {
-            localStorage.removeItem(key);
-        }
-        for (const [key, value] of Object.entries(setMap)) {
-            localStorage.setItem(key, value);
-        }
-    }
-
-    try {
-        updateLocalStorage(
-            ["hoveringImage"],      
-            {}      
-        );
-    } catch (e) {
-    }
-})();
 onReady(async function () {
     "use strict";
     const scriptSettings = {
@@ -189,6 +171,7 @@ onReady(async function () {
                 );
             });
         });
+        Object.freeze(flatSettings); 
     }
     flattenSettings();
     async function getSetting(key) {
@@ -237,13 +220,16 @@ onReady(async function () {
         } else {
             document.documentElement.classList.remove("ss-sidebar");
         }
-        for (const [settingKey, className] of Object.entries(classToggles)) {
-            if (await getSetting(settingKey)) {
+        const settingKeys = Object.keys(classToggles);
+        const settingValues = await Promise.all(settingKeys.map(getSetting));
+        settingKeys.forEach((key, i) => {
+            const className = classToggles[key];
+            if (settingValues[i]) {
                 document.documentElement.classList.add(className);
             } else {
                 document.documentElement.classList.remove(className);
             }
-        }
+        });
         const path = window.location.pathname.toLowerCase();
         const urlClassMap = [
             { pattern: /\/catalog\.html$/i, className: "is-catalog" },
@@ -278,7 +264,7 @@ onReady(async function () {
             mainPanel.style.marginLeft = "0";
         }
     }
-    onReady(featureSidebar);
+    featureSidebar();
     const currentPath = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
 
@@ -352,6 +338,7 @@ onReady(async function () {
             enabled = await getSetting("enableThreadImageHover");
         }
         if (enabled) {
+            localStorage.removeItem("hoveringImage");
             featureImageHover();
         }
     }
@@ -629,12 +616,9 @@ onReady(async function () {
         const MEDIA_MAX_WIDTH = "90vw";
         const MEDIA_OPACITY_LOADING = "0";
         const MEDIA_OPACITY_LOADED = "1";
-        const MEDIA_OFFSET = 2; 
+        const MEDIA_OFFSET = 50; 
         const MEDIA_BOTTOM_MARGIN = 3; 
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
-        function getMediaOffset() {
-            return window.innerWidth * (MEDIA_OFFSET / 100);
-        }
         function getMediaBottomMargin() {
             return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
         }
@@ -652,12 +636,23 @@ onReady(async function () {
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
 
-            const MEDIA_OFFSET_PX = getMediaOffset();
             const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
             const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth; 
-            let x = event.clientX + MEDIA_OFFSET_PX;
-            x = clamp(x, 0, vw - mw - SCROLLBAR_WIDTH);
-            let y = event.clientY;
+
+            let x, y;
+            let rightX = event.clientX + MEDIA_OFFSET;
+            let leftX = event.clientX - MEDIA_OFFSET - mw;
+            if (rightX + mw <= vw - SCROLLBAR_WIDTH) {
+                x = rightX;
+            }
+            else if (leftX >= 0) {
+                x = leftX;
+            }
+            else {
+                x = clamp(rightX, 0, vw - mw - SCROLLBAR_WIDTH);
+            }
+
+            y = event.clientY;
             const maxY = vh - mh - MEDIA_BOTTOM_MARGIN_PX;
             y = Math.max(0, Math.min(y, maxY));
 
@@ -810,29 +805,28 @@ onReady(async function () {
                 floatingMedia.volume = volume;
             }
             document.body.appendChild(floatingMedia);
-            function initialPlacement() {
-                if (lastMouseEvent) {
-                    positionFloatingMedia(lastMouseEvent);
-                }
-            }
-            function enableMouseMove() {
-                document.addEventListener("mousemove", mouseMoveHandler);
-                cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
-            }
             function mouseMoveHandler(ev) {
+                lastMouseEvent = ev;
                 positionFloatingMedia(ev);
+            }
+            document.addEventListener("mousemove", mouseMoveHandler);
+            cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
+            if (lastMouseEvent) {
+                positionFloatingMedia(lastMouseEvent);
             }
             if (isVideo) {
                 floatingMedia.onloadeddata = function () {
-                    initialPlacement();
-                    enableMouseMove();
-                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                    if (floatingMedia) {
+                        floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                        if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                    }
                 };
             } else {
                 floatingMedia.onload = function () {
-                    initialPlacement();
-                    enableMouseMove();
-                    if (floatingMedia) floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                    if (floatingMedia) {
+                        floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                        if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                    }
                 };
             }
             floatingMedia.onerror = cleanupFloatingMedia;
@@ -880,7 +874,15 @@ onReady(async function () {
             spoilerLinks.forEach(async (link) => {
                 const img = link.querySelector("img");
                 if (!img) return;
-                const isCustomSpoiler = img.src.includes("/custom.spoiler") || img.src.includes("/spoiler.png");
+                if (
+                    /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) && 
+                    !/\/\.media\/t_[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) 
+                ) {
+                    return;
+                }
+                const isCustomSpoiler = img.src.includes("/custom.spoiler")
+                    || img.src.includes("/*/custom.spoiler")
+                    || img.src.includes("/spoiler.png");
                 const isNotThumbnail = !img.src.includes("/.media/t_");
                 const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
 
@@ -889,11 +891,30 @@ onReady(async function () {
                     if (!href) return;
                     const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
                     if (!match) return;
-
-                    if (!hasFilenameExtension) {
-                        const transformedSrc = `/.media/t_${match[1]}`;
-                        img.src = transformedSrc;
-                    } else return;
+                    const fileMime = link.getAttribute("data-filemime") || "";
+                    const mimeToExt = {
+                        "image/jpeg": ".jpg",
+                        "image/jpg": ".jpg",
+                        "image/png": ".png",
+                        "image/gif": ".gif",
+                        "image/webp": ".webp",
+                        "image/bmp": ".bmp",
+                    };
+                    const ext = mimeToExt[fileMime.toLowerCase()] || "";
+                    const fileWidthAttr = link.getAttribute("data-filewidth");
+                    const fileHeightAttr = link.getAttribute("data-fileheight");
+                    let transformedSrc;
+                    if (
+                        (fileWidthAttr && Number(fileWidthAttr) < 250) ||
+                        (fileHeightAttr && Number(fileHeightAttr) < 250)
+                    ) {
+                        transformedSrc = `/.media/${match[1]}${ext}`;
+                    } else if (!hasFilenameExtension && isCustomSpoiler) {
+                        transformedSrc = `/.media/t_${match[1]}`;
+                    } else {
+                        return;
+                    }
+                    img.src = transformedSrc;
                     if (await getSetting("blurSpoilers_removeSpoilers")) {
                         img.style.filter = "";
                         img.style.transition = "";
@@ -1039,10 +1060,8 @@ onReady(async function () {
                 });
             }
         }
-        onReady(() => {
-            showThreadWatcher();
-            addCloseListener();
-        });
+        showThreadWatcher();
+        addCloseListener();
     }
     function featureMarkYourPost() {
         function getBoardName() {
@@ -1141,24 +1160,37 @@ onReady(async function () {
                         li.textContent = "Mark as Your Post";
                     }
                 });
-
-                window.addEventListener("storage", function (event) {
-                    if (event.key === T_YOUS_KEY) {
-                        const tYous = getTYous();
-                        const isMarked = postId && tYous.includes(Number(postId));
-                        li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
-                    }
-                });
             });
         }
+        window.addEventListener("storage", function (event) {
+            if (event.key === T_YOUS_KEY) {
+                document.querySelectorAll("." + MENU_ENTRY_CLASS).forEach(li => {
+                    const menu = li.closest(MENU_SELECTOR);
+                    const postId = getPostIdFromMenu(menu);
+                    const tYous = getTYous();
+                    const isMarked = postId && tYous.includes(Number(postId));
+                    li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
+                });
+            }
+        });
         const observer = new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType !== 1) continue;
                     if (node.matches && node.matches(MENU_SELECTOR)) {
+                        if (!node.hasAttribute('data-post-id')) {
+                            const btn = node.closest('.extraMenuButton');
+                            const postCell = btn && btn.closest('.postCell, .opCell');
+                            if (postCell) node.setAttribute('data-post-id', postCell.id);
+                        }
                         addMenuEntries(node.parentNode || node);
                     } else if (node.querySelectorAll) {
                         node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                            if (!menu.hasAttribute('data-post-id')) {
+                                const btn = menu.closest('.extraMenuButton');
+                                const postCell = btn && btn.closest('.postCell, .opCell');
+                                if (postCell) menu.setAttribute('data-post-id', postCell.id);
+                            }
                             addMenuEntries(menu.parentNode || menu);
                         });
                     }
@@ -1266,20 +1298,21 @@ onReady(async function () {
         });
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (
-                        node.nodeType === 1 &&
-                        node.querySelector &&
-                        node.querySelector("a.quoteLink.you")
-                    ) {
-                        if (node.closest('.innerPost')) {
-                            continue;
-                        }
-                        if (beepOnYouSetting) {
-                            playBeep();
-                        }
-                        if (notifyOnYouSetting) {
-                            notifyOnYou();
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (
+                            node.nodeType === 1 &&
+                            node.matches &&
+                            node.matches('.postCell, .opCell') &&
+                            node.querySelector("a.quoteLink.you") &&
+                            !node.closest('.innerPost')
+                        ) {
+                            if (beepOnYouSetting) {
+                                playBeep();
+                            }
+                            if (notifyOnYouSetting) {
+                                notifyOnYou();
+                            }
                         }
                     }
                 }
@@ -1394,45 +1427,104 @@ onReady(async function () {
         postCommon.selectedFiles[index] = renamedFile;
         updateFileLabels(finalName, index);
     }
+
+    function getSelectedCellIndex(element) {
+        const cell = element.closest('.selectedCell');
+        if (!cell || !cell.parentElement) return -1;
+        const cells = Array.from(cell.parentElement.querySelectorAll(':scope > .selectedCell'));
+        return cells.indexOf(cell);
+    }
     function updateFileLabels(finalName, index) {
-        const selectors = [
-            '#qrFilesBody .selectedCell .nameLabel',
-            '#postingFormContents .selectedCell .nameLabel'
-        ];
-        selectors.forEach(sel => {
-            const labels = document.querySelectorAll(sel);
-            const label = labels[index];
-            if (label) {
-                label.textContent = finalName;
-                label.title = finalName;
-            }
+        const cssIndex = index + 1;
+        const selector = `form .selectedCell:nth-of-type(${cssIndex}) .nameLabel`;
+        const labels = document.querySelectorAll(selector);
+        labels.forEach(label => {
+            label.textContent = finalName;
+            label.title = finalName;
         });
     }
     function handleNameLabelClick(event) {
         const label = event.target.closest('.nameLabel');
         if (!label) return;
-        const container = label.closest('#qrFilesBody, #postingFormContents');
-        if (!container) return;
-        const labels = Array.from(container.querySelectorAll('.selectedCell .nameLabel'));
-        const index = labels.indexOf(label);
+        const index = getSelectedCellIndex(label);
         if (index !== -1) {
             renameFileAtIndex(index);
         }
     }
-    function observeNameLabelClicks(containerSelector) {
-        const container = document.querySelector(containerSelector);
-        if (!container) return;
 
+    function handleCustomRemoveClick(event) {
+        event.stopImmediatePropagation();
+
+        const button = event.currentTarget;
+        const index = getSelectedCellIndex(button);
+
+        if (index === -1) {
+            console.error("Could not determine index of the cell to remove.");
+            return;
+        }
+        const removedFiles = postCommon.selectedFiles.splice(index, 1);
+        if (removedFiles && removedFiles.length > 0 && removedFiles[0]) {
+            if (typeof postCommon.adjustBudget === 'function' && typeof removedFiles[0].size === 'number') {
+                postCommon.adjustBudget(-removedFiles[0].size);
+            } else {
+                console.warn("postCommon.adjustBudget function missing or removed file has no size property.");
+            }
+        } else {
+            console.warn("Spliced file array but got no result for index:", index);
+        }
+        const cssIndex = index + 1;
+        const selector = `form .selectedCell:nth-of-type(${cssIndex})`;
+        const fileCells = document.querySelectorAll(selector);
+        fileCells.forEach(cell => {
+            cell.remove();
+        });
+    }
+    function observePostForms(containerSelector) {
+        const container = document.querySelector(containerSelector);
+        if (!container) {
+            return;
+        }
         if (!container.dataset.renameDelegationAttached) {
-            container.addEventListener('click', handleNameLabelClick);
+            container.addEventListener('click', handleNameLabelClick, false); 
             container.dataset.renameDelegationAttached = 'true';
         }
+        const setupRemoveButton = (button) => {
+            if (!button.dataset.customRemoveAttached) {
+                if (typeof button.onclick === 'function') {
+                    button.onclick = null;
+                }
+                button.addEventListener('click', handleCustomRemoveClick);
+                button.dataset.customRemoveAttached = 'true'; 
+            }
+        };
+        if (!container.dataset.removeObserverAttached) {
+            const removeBtnObserver = (mutationsList, observer) => {
+                for (const mutation of mutationsList) {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach(node => {
+                            if (
+                                node.nodeType === Node.ELEMENT_NODE &&
+                                node.matches('div.selectedCell')
+                            ) {
+                                node.querySelectorAll('.removeButton').forEach(setupRemoveButton);
+                            }
+                        });
+                    }
+                }
+            };
+            const rmvObserver = new MutationObserver(removeBtnObserver);
+            rmvObserver.observe(container, {
+                childList: true,
+                subtree: true
+            });
+            container.dataset.removeObserverAttached = 'true';
+        }
     }
-    function startNameLabelObservers() {
-        observeNameLabelClicks('#qrFilesBody');
-        observeNameLabelClicks('#postingFormContents');
+    function startObservingPostForms() {
+        observePostForms('#qrFilesBody');
+        observePostForms('#postingFormContents');
     }
-    startNameLabelObservers();
+    startObservingPostForms();
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
         if (menu) return menu;
@@ -1660,7 +1752,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.41.0</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.42.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -2300,7 +2392,6 @@ onReady(async function () {
             await GM.setValue(STORAGE_KEY, JSON.stringify(obj));
         }
         async function applyHiddenThreads() {
-            const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
             const hiddenThreadsObjRaw = await GM.getValue(STORAGE_KEY, "{}");
             let hiddenThreadsObj;
             try {
@@ -2407,7 +2498,6 @@ onReady(async function () {
                 observer.observe(catalogContainer, { childList: true, subtree: true });
             }
         }
-
         hideThreadsOnRefresh();
     }
     const captchaInput = document.getElementById("QRfieldCaptcha");
