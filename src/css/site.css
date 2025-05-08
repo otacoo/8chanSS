@@ -44,6 +44,11 @@ nav.navHeader {
     z-index: 300;
 }
 
+nav.navHeader > .nav-boards:hover {
+    overflow-x: scroll;
+    scrollbar-width: thin;
+}
+
 :not(:root.bottom-header) .navHeader {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -106,6 +111,7 @@ video {
 
 :root.auto-expand-tw #watchedMenu .floatingContainer {
     height: fit-content !important;
+    padding-bottom: 10px;
 }
 
 .watchedCellLabel a::before {
