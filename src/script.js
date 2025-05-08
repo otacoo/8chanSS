@@ -762,14 +762,28 @@ onReady(async function () {
         function getFullMediaSrc(thumbNode, filemime) {
             if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
+
+            // Get parent link to check for small image dimensions
+            const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
+            const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
+            const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
+            const isSmallImage = (fileWidth && fileWidth < 250) || (fileHeight && fileHeight < 250);
+
+            // For small images, use the original src directly without transformation
+            if (isSmallImage && thumbnailSrc.match(/\/\.media\/[^\/]+\.[a-zA-Z0-9]+$/)) {
+                return thumbnailSrc;
+            }
+
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
                 base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|ogg|mp3|m4a|wav)$/i, "");
                 const mimeToExt = {
                     "image/jpeg": ".jpg",
                     "image/jpg": ".jpg",
+                    "image/jxl": ".jxl", // Future-proofing JXL support (lol as if)
                     "image/png": ".png",
                     "image/gif": ".gif",
+                    "image/avif": ".avif",
                     "image/webp": ".webp",
                     "image/bmp": ".bmp",
                     "video/mp4": ".mp4",
@@ -788,7 +802,6 @@ onReady(async function () {
                 /\/custom\.spoiler$/i.test(thumbnailSrc) ||
                 /\/audioGenericThumb\.png$/i.test(thumbnailSrc)
             ) {
-                const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
                 if (parentA && parentA.getAttribute("href")) {
                     return parentA.getAttribute("href");
                 }
@@ -796,7 +809,6 @@ onReady(async function () {
             }
             return null;
         }
-
         // --- Main hover handler ---
         async function onThumbEnter(e) {
             cleanupFloatingMedia();
@@ -816,8 +828,10 @@ onReady(async function () {
                     {
                         jpg: "image/jpeg",
                         jpeg: "image/jpeg",
+                        jxl: "image/jxl",
                         png: "image/png",
                         gif: "image/gif",
+                        avif: "image/avif",
                         webp: "image/webp",
                         bmp: "image/bmp",
                         mp4: "video/mp4",
