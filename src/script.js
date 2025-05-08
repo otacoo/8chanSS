@@ -44,10 +44,12 @@ onReady(async function () {
         },
         threads: {
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
+            threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
             scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
+            enableHashNav: { label: "Hash Navigation", default: false },
             beepOnYou: { label: "Beep on (You)", default: false },
             notifyOnYou: {
                 label: "Notify when (You) (!)",
@@ -339,6 +341,12 @@ onReady(async function () {
     }
     if (await getSetting("enhanceYoutube")) {
         enhanceYouTubeLinks();
+    }
+    if (await getSetting("threadStatsInHeader")) {
+        threadInfoHeader();
+    }
+    if (await getSetting("enableHashNav")) {
+        hashNavigation();
     }
 
     // Check if we should enable image hover based on the current page
@@ -1059,7 +1067,7 @@ onReady(async function () {
                         return;
                     }
                     img.src = transformedSrc;
-                    
+
                     // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
                     if (await getSetting("blurSpoilers_removeSpoilers")) {
                         img.style.filter = "";
@@ -1260,7 +1268,147 @@ onReady(async function () {
         addCloseListener();
     }
 
+    // --- Feature: Mark All Threads as Read Button ---
+    function markAllThreadsAsRead() {
+        const handleDiv = document.querySelector('#watchedMenu > div.handle');
+        if (!handleDiv) return;
+        // Check if the button already exists to avoid duplicates
+        if (handleDiv.querySelector('.watchedCellDismissButton.markAllRead')) return;
+
+        // Create the "Mark all threads as read" button
+        const btn = document.createElement('a');
+        btn.className = 'watchedCellDismissButton glowOnHover coloredIcon markAllRead';
+        btn.title = 'Mark all threads as read';
+        btn.style.float = 'right';
+        btn.style.paddingTop = '3px';
+
+        // Add click handler to mark all threads as read
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            setTimeout(function () {
+                const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+                if (!watchedMenu) return;
+
+                // Select all matching <td> elements and click them
+                const markButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
+                markButtons.forEach(btn => btn.click());
+            }, 20);
+        });
+
+        // Append the button as the last child of div.handle
+        handleDiv.appendChild(btn);
+    }
+    markAllThreadsAsRead();
+
     ///////// THREAD WATCHER END ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // --- Feature: Hash Navigation ---
+    // Adapted from impregnator's code for 8chan Lightweight Extended Suite
+    // MIT License
+    // https://greasyfork.org/en/scripts/533173-8chan-lightweight-extended-suite
+    function hashNavigation() {
+        // Only proceed if the page has the is-thread class
+        if (!document.documentElement.classList.contains("is-thread")) return;
+        // Add # links to quote/backlink anchors within a container
+        function addHashLinks(container = document) {
+            const links = container.querySelectorAll('.panelBacklinks a, .altBacklinks a, .divMessage .quoteLink');
+            links.forEach(link => {
+                if (
+                    link.dataset.hashProcessed ||
+                    (link.nextSibling && link.nextSibling.classList && link.nextSibling.classList.contains('hash-link-container'))
+                ) return;
+
+                // Create # link
+                const hashSpan = document.createElement('span');
+                hashSpan.textContent = ' #';
+                hashSpan.className = 'hash-link';
+                hashSpan.style.cursor = 'pointer';
+                hashSpan.style.color = 'var(--navbar-text-color)';
+                hashSpan.title = 'Scroll to post';
+
+                // Wrap in container
+                const wrapper = document.createElement('span');
+                wrapper.className = 'hash-link-container';
+                wrapper.appendChild(hashSpan);
+
+                link.insertAdjacentElement('afterend', wrapper);
+                link.dataset.hashProcessed = 'true';
+            });
+        }
+
+        // Event delegation for hash link clicks
+        document.addEventListener('click', function (e) {
+            if (e.target.classList.contains('hash-link')) {
+                e.preventDefault();
+                const link = e.target.closest('.hash-link-container').previousElementSibling;
+                if (!link) return;
+                const postId = link.textContent.replace('>>', '').trim();
+                const postElem = document.getElementById(postId);
+                if (postElem) {
+                    window.location.hash = `#${postId}`;
+                }
+            }
+        }, true);
+
+        // Initial run
+        addHashLinks();
+
+        // Patch tooltips if present
+        if (window.tooltips) {
+            // Patch loadTooltip and addLoadedTooltip to always call addHashLinks
+            ['loadTooltip', 'addLoadedTooltip'].forEach(fn => {
+                if (typeof tooltips[fn] === 'function') {
+                    const orig = tooltips[fn];
+                    tooltips[fn] = function (...args) {
+                        const result = orig.apply(this, args);
+                        // Try to find the container to apply hash links
+                        let container = args[0];
+                        if (container && container.nodeType === Node.ELEMENT_NODE) {
+                            addHashLinks(container);
+                        }
+                        return result;
+                    };
+                }
+            });
+
+            // Patch addInlineClick and processQuote to skip hash links
+            ['addInlineClick', 'processQuote'].forEach(fn => {
+                if (typeof tooltips[fn] === 'function') {
+                    const orig = tooltips[fn];
+                    tooltips[fn] = function (quote, ...rest) {
+                        if (
+                            !quote.href ||
+                            quote.classList.contains('hash-link') ||
+                            quote.closest('.hash-link-container') ||
+                            quote.href.includes('#q')
+                        ) {
+                            return;
+                        }
+                        return orig.apply(this, [quote, ...rest]);
+                    };
+                }
+            });
+        }
+
+        // Observe for dynamically added quote/backlink links
+        const postsContainer = document.querySelector('.divPosts') || document.body;
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // If the node itself is a relevant link, process its parent
+                        if (node.matches && node.matches('.panelBacklinks a, .altBacklinks a, .divMessage .quoteLink')) {
+                            addHashLinks(node.parentElement || node);
+                        } else {
+                            // Otherwise, process any relevant links within the node
+                            addHashLinks(node);
+                        }
+                    }
+                });
+            });
+        });
+        observer.observe(postsContainer, { childList: true, subtree: true });
+    }
 
     // --- Feature: Mark Posts as Yours ---
     function featureMarkYourPost() {
@@ -1845,6 +1993,107 @@ onReady(async function () {
 
     // Init
     startObservingPostForms();
+
+    // --- Feature: Truncate Filenames and Show Only Extension ---
+    function truncateFilenames(filenameLength) {
+        function processLinks(root = document) {
+            root.querySelectorAll('a.originalNameLink').forEach(link => {
+                // Skip if already processed
+                if (link.dataset.truncated === "1") return;
+                const fullFilename = link.getAttribute('download');
+                if (!fullFilename) return;
+                const lastDot = fullFilename.lastIndexOf('.');
+                if (lastDot === -1) return; // No extension found
+                const name = fullFilename.slice(0, lastDot);
+                const ext = fullFilename.slice(lastDot);
+                // Only truncate if needed
+                let truncated = fullFilename;
+                if (name.length > filenameLength) {
+                    truncated = name.slice(0, filenameLength) + '(...)' + ext;
+                }
+                // Set initial truncated text
+                link.textContent = truncated;
+                // Mark as processed to avoid reprocessing
+                link.dataset.truncated = "1";
+                // Show full filename on hover, revert on mouseout
+                link.addEventListener('mouseenter', function () {
+                    link.textContent = fullFilename;
+                });
+                link.addEventListener('mouseleave', function () {
+                    link.textContent = truncated;
+                });
+                // Optional: set title attribute for accessibility
+                link.title = fullFilename;
+            });
+        }
+        // Initial processing
+        processLinks(document);
+        // Set up observer for dynamically added links in #divThreads
+        const divThreads = document.querySelector('#divThreads');
+        if (divThreads) {
+            new MutationObserver(() => {
+                processLinks(divThreads);
+            }).observe(divThreads, { childList: true, subtree: true });
+        }
+    }
+
+    // --- Feature: Show Thread Stats in Header ---
+    function threadInfoHeader(retries = 10, delay = 200) {
+        const navHeader = document.querySelector('.navHeader');
+        const navOptionsSpan = document.getElementById('navOptionsSpan');
+        const postCountEl = document.getElementById('postCount');
+        const userCountEl = document.getElementById('userCountLabel');
+        const fileCountEl = document.getElementById('fileCount');
+
+        // If any required element is missing, retry after a delay (up to retries times)
+        if (!navHeader || !navOptionsSpan || !postCountEl || !userCountEl || !fileCountEl) {
+            if (retries > 0) {
+                setTimeout(() => threadInfoHeader(retries - 1, delay), delay);
+            }
+            return;
+        }
+
+        // Get stats
+        const postCount = postCountEl.textContent || '0';
+        const userCount = userCountEl.textContent || '0';
+        const fileCount = fileCountEl.textContent || '0';
+
+        // Find or create display element
+        let statsDisplay = navHeader.querySelector('.thread-stats-display');
+        if (!statsDisplay) {
+            statsDisplay = document.createElement('span');
+            statsDisplay.className = 'thread-stats-display';
+            statsDisplay.style.marginRight = '1px';
+        }
+
+        statsDisplay.innerHTML = `
+        [ 
+        <span class="statLabel">Posts: </span><span class="statNumb">${postCount}</span> | 
+        <span class="statLabel">Users: </span><span class="statNumb">${userCount}</span> | 
+        <span class="statLabel">Files: </span><span class="statNumb">${fileCount}</span>
+        ]
+        `;
+
+        // Prepend statsDisplay to #navOptionsSpan if it exists
+        if (statsDisplay.parentNode && statsDisplay.parentNode !== navOptionsSpan) {
+            statsDisplay.parentNode.removeChild(statsDisplay);
+        }
+        if (navOptionsSpan.firstChild !== statsDisplay) {
+            navOptionsSpan.insertBefore(statsDisplay, navOptionsSpan.firstChild);
+        }
+
+        // Observe changes to stats and update header accordingly (only once)
+        if (!threadInfoHeader._observerInitialized) {
+            const statIds = ['postCount', 'userCountLabel', 'fileCount'];
+            statIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    new MutationObserver(() => threadInfoHeader(0, delay)).observe(el, { childList: true, subtree: true, characterData: true });
+                }
+            });
+            threadInfoHeader._observerInitialized = true;
+        }
+    }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2541,7 +2790,7 @@ onReady(async function () {
         ["b", ["'''", "'''"]],
         ["u", ["__", "__"]],
         ["i", ["''", "''"]],
-        ["d", ["==", "=="]],
+        ["d", ["==", "=="]],           // Srz Biznizz
         ["m", ["[moe]", "[/moe]"]],
         ["c", ["[code]", "[/code]"]],
     ]);
@@ -3103,48 +3352,5 @@ onReady(async function () {
         }
 
         document.body.addEventListener("click", handleClick);
-    }
-
-    // Truncate Filenames and Show Only Extension
-    function truncateFilenames(filenameLength) {
-        function processLinks(root = document) {
-            root.querySelectorAll('a.originalNameLink').forEach(link => {
-                // Skip if already processed
-                if (link.dataset.truncated === "1") return;
-                const fullFilename = link.getAttribute('download');
-                if (!fullFilename) return;
-                const lastDot = fullFilename.lastIndexOf('.');
-                if (lastDot === -1) return; // No extension found
-                const name = fullFilename.slice(0, lastDot);
-                const ext = fullFilename.slice(lastDot);
-                // Only truncate if needed
-                let truncated = fullFilename;
-                if (name.length > filenameLength) {
-                    truncated = name.slice(0, filenameLength) + '(...)' + ext;
-                }
-                // Set initial truncated text
-                link.textContent = truncated;
-                // Mark as processed to avoid reprocessing
-                link.dataset.truncated = "1";
-                // Show full filename on hover, revert on mouseout
-                link.addEventListener('mouseenter', function () {
-                    link.textContent = fullFilename;
-                });
-                link.addEventListener('mouseleave', function () {
-                    link.textContent = truncated;
-                });
-                // Optional: set title attribute for accessibility
-                link.title = fullFilename;
-            });
-        }
-        // Initial processing
-        processLinks(document);
-        // Set up observer for dynamically added links in #divThreads
-        const divThreads = document.querySelector('#divThreads');
-        if (divThreads) {
-            new MutationObserver(() => {
-                processLinks(divThreads);
-            }).observe(divThreads, { childList: true, subtree: true });
-        }
     }
 });

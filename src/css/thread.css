@@ -142,6 +142,14 @@
     color: var(--marked-text-color);
 }
 
+.statLabel {
+    color: var(--link-color);
+}
+
+.statNumb {
+    color: var(--text-color);
+}
+
 /* Not sure what this is about, guess we'll find out */
 .postCell::before {
     display: inline !important;
