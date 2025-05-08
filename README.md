@@ -6,7 +6,7 @@ A :warning: WORK IN PROGRESS :warning: userscript to add functionality to 8chan,
 ## [![install](https://github.com/user-attachments/assets/9a9d62fd-0b3e-460b-bb6c-092dd38b2b8d)](https://github.com/otacoo/8chanSS/raw/refs/heads/main/builds/8chanSS.user.js)
 
 
-### Install instructions
+### Install
 
 First install a userscript manager:
 - **Firefox**: Requires the [Violentmonkey](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/) addon.
