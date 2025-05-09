@@ -1341,11 +1341,24 @@ onReady(async function () {
             if (e.target.classList.contains('hash-link')) {
                 e.preventDefault();
                 const link = e.target.closest('.hash-link-container').previousElementSibling;
-                if (!link) return;
-                const postId = link.textContent.replace('>>', '').trim();
+                if (!link || !link.href) return;
+                // Extract post ID from the href's hash
+                const hashMatch = link.href.match(/#(\d+)$/);
+                if (!hashMatch) return;
+                const postId = hashMatch[1];
                 const postElem = document.getElementById(postId);
                 if (postElem) {
                     window.location.hash = `#${postId}`;
+                    if (postElem.classList.contains('opCell')) {
+                        // Scroll to "start" with a small offset
+                        const offset = 25; // px
+                        const rect = postElem.getBoundingClientRect();
+                        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                        const targetY = rect.top + scrollTop - offset;
+                        window.scrollTo({ top: targetY, behavior: "smooth" });
+                    } else {
+                        postElem.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
                 }
             }
         }, true);
