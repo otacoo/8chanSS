@@ -1,3 +1,16 @@
+## v1.43.0
+*2025-05-09*
+
+- New option: Hash Navigation (adds a hash next to the quote/backlink to navigate to that post, adapated from impregnator's code for 8chan Lightweight Extended Suite, MIT License)
+- New option: Thread Stats in Header
+- New feature: Eye button to mark all threads as read in the TW
+- Added a small padding to TW so the last thread in the list can be closed
+- Hover media now has an id (#hover-preview-media) so it can styled by users
+- Add AVIF and JXL support (lol) for future-proofing
+- Fix for APNG and small images not showing on hover
+- Custom Board List will now get a small scrollbar on hover if its content is cut off from showing in full
+- Experimental: the hide Announcement setting will now store a very simple hash of the current message and unhide itself if the message changes (no way to test if it works without the message changing however)
+
 ## v1.42.0
 *2025-05-06*
 
