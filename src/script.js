@@ -199,7 +199,6 @@ onReady(async function () {
             hidePostingForm: "hide-posting-form",
             hidePostingForm_showCatalogForm: "show-catalog-form",
             hideDefaultBL: "hide-defaultBL",
-            hideAnnouncement: "hide-announcement",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-you",
             threadHideCloseBtn: "hide-close-btn",
@@ -347,6 +346,9 @@ onReady(async function () {
     }
     if (await getSetting("enableHashNav")) {
         hashNavigation();
+    }
+    if (await getSetting("hideAnnouncement")) {
+        featureHideAnnouncement();
     }
 
     // Check if we should enable image hover based on the current page
@@ -1660,6 +1662,56 @@ onReady(async function () {
                 localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
             });
         }
+    }
+
+    // --- Feature: Hide Announcement and unhide if message changes ---
+    async function featureHideAnnouncement() {
+        // Simple fast hash function (djb2)
+        function simpleHash(str) {
+            let hash = 5381;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) + hash) + str.charCodeAt(i);
+            }
+            return hash >>> 0; // Unsigned
+        }
+        // Helper to process the dynamic announcement element
+        async function processElement(selector, settingKey, hashKey) {
+            const el = document.querySelector(selector);
+            if (!el) return;
+
+            const content = el.textContent || "";
+            const hash = simpleHash(content);
+            // Get setting from GM storage
+            const shouldHide = await GM.getValue("8chanSS_" + settingKey, "false") === "true";
+            // Helper to update setting in GM storage
+            async function setSetting(val) {
+                await GM.setValue("8chanSS_" + settingKey, String(val));
+            }
+            // Reference to the root element for toggling the class
+            const root = document.documentElement;
+
+            if (shouldHide) {
+                root.classList.add("hide-announcement");
+                await GM.setValue("8chanSS_" + hashKey, hash);
+                // Set up MutationObserver to detect content changes
+                const observer = new MutationObserver(async () => {
+                    const newContent = el.textContent || "";
+                    const newHash = simpleHash(newContent);
+                    if (newHash !== hash) {
+                        // Content changed: remove class and disable setting
+                        root.classList.remove("hide-announcement");
+                        await setSetting(false);
+                        await GM.deleteValue("8chanSS_" + hashKey);
+                        observer.disconnect();
+                    }
+                });
+                observer.observe(el, { childList: true, subtree: true, characterData: true });
+            } else {
+                root.classList.remove("hide-announcement");
+                await GM.deleteValue("8chanSS_" + hashKey);
+            }
+        }
+        await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
     }
 
     // --- Feature: Beep on (You) ---
