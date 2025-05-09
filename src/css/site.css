@@ -45,7 +45,8 @@ nav.navHeader {
 }
 
 nav.navHeader > .nav-boards:hover {
-    overflow-x: scroll;
+    overflow-x: auto;
+    overflow-y: hidden;
     scrollbar-width: thin;
 }
 
