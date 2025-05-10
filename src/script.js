@@ -76,7 +76,23 @@ onReady(async function () {
                     }
                 }
             },
-            customFavicon: { label: "Custom Favicon", default: false },
+            customFavicon: { 
+                label: "Custom Favicon", 
+                default: false,
+                subOptions: {
+                    faviconStyle: {
+                        label: "Favicon Style",
+                        type: "select",
+                        default: "default",
+                        options: [
+                            { value: "default", label: "Default" },
+                            { value: "pixel", label: "Pixel" },
+                            { value: "eight", label: "Eight" },
+                            { value: "pixelalt", label: "Pixel Alt" }
+                        ]
+                    }
+                }
+            },
             _threadsMediaTitle: { type: "title", label: ":: Media" },
             _threadsSection2: { type: "separator" },
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
@@ -2430,21 +2446,57 @@ onReady(async function () {
 
     // Feature: Custom Favicon Setting
     async function featureCustomFavicon() {
+        // Define favicon paths for different styles
+        const FAVICON_STYLES = {
+            default: {
+                base: FAVICON_BASE,
+                unread: FAVICON_UNREAD,
+                you: FAVICON_YOU
+            },
+            pixel: {
+                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/base.png', {encoding: 'base64'}) %>",
+                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/unread.png', {encoding: 'base64'}) %>",
+                you: "data:image/png;base64,<%= grunt.file.read('src/img/fav/you.png', {encoding: 'base64'}) %>"
+            },
+            eight: {
+                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/base.png', {encoding: 'base64'}) %>",
+                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/unread.png', {encoding: 'base64'}) %>",
+                you: "data:image/png;base64,<%= grunt.file.read('src/img/fav/you.png', {encoding: 'base64'}) %>"
+            },
+            pixelalt: {
+                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/base.png', {encoding: 'base64'}) %>",
+                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/unread.png', {encoding: 'base64'}) %>",
+                you: "data:image/png;base64,<%= grunt.file.read('src/img/fav/you.png', {encoding: 'base64'}) %>"
+            }
+        };
+
+        // Get the selected favicon style
+        const faviconStyle = await getSetting("customFavicon_faviconStyle") || "default";
+        const favicons = FAVICON_STYLES[faviconStyle] || FAVICON_STYLES.default;
+
         // Set favicon to base on load
-        setFavicon(FAVICON_BASE);
+        setFavicon(favicons.base);
 
         // Expose API for other features
         window.customFaviconAPI = {
-            setBase: () => setFavicon(FAVICON_BASE),
-            setUnread: () => setFavicon(FAVICON_UNREAD),
-            setNotification: () => setFavicon(FAVICON_YOU)
+            setBase: () => setFavicon(favicons.base),
+            setUnread: () => setFavicon(favicons.unread),
+            setNotification: () => setFavicon(favicons.you)
         };
 
         // Listen for storage changes to reset favicon if setting is toggled
         window.addEventListener("8chanSS_settingChanged", async (e) => {
-            if (e.detail && e.detail.key === "customFavicon") {
-                if (await getSetting("customFavicon")) {
-                    setFavicon(FAVICON_BASE);
+            if (e.detail && (e.detail.key === "customFavicon" || e.detail.key === "customFavicon_faviconStyle")) {
+                const enabled = await getSetting("customFavicon");
+                const style = await getSetting("customFavicon_faviconStyle") || "default";
+                const currentFavicons = FAVICON_STYLES[style] || FAVICON_STYLES.default;
+
+                if (enabled) {
+                    setFavicon(currentFavicons.base);
+                    // Update the API methods to use the new style
+                    window.customFaviconAPI.setBase = () => setFavicon(currentFavicons.base);
+                    window.customFaviconAPI.setUnread = () => setFavicon(currentFavicons.unread);
+                    window.customFaviconAPI.setNotification = () => setFavicon(currentFavicons.you);
                 } else {
                     // Optionally revert to site's default favicon
                     setFavicon(FAVICON_BASE);
@@ -2952,6 +3004,42 @@ onReady(async function () {
 
                         subWrapper.appendChild(subLabel);
                         subWrapper.appendChild(subInput);
+                    } else if (subSetting.type === "select") {
+                        // Select dropdown for options like favicon style
+                        const subLabel = document.createElement("label");
+                        subLabel.htmlFor = "setting_" + fullKey;
+                        subLabel.textContent = subSetting.label + ": ";
+
+                        const subSelect = document.createElement("select");
+                        subSelect.id = "setting_" + fullKey;
+                        subSelect.style.marginLeft = "5px";
+                        subSelect.style.width = "120px";
+
+                        // Add options to select
+                        if (Array.isArray(subSetting.options)) {
+                            subSetting.options.forEach(option => {
+                                const optionEl = document.createElement("option");
+                                optionEl.value = option.value;
+                                optionEl.textContent = option.label;
+                                if (tempSettings[fullKey] === option.value) {
+                                    optionEl.selected = true;
+                                }
+                                subSelect.appendChild(optionEl);
+                            });
+                        }
+
+                        // Set default if no value is selected
+                        if (!subSelect.value && subSetting.default) {
+                            subSelect.value = subSetting.default;
+                            tempSettings[fullKey] = subSetting.default;
+                        }
+
+                        subSelect.addEventListener("change", function () {
+                            tempSettings[fullKey] = subSelect.value;
+                        });
+
+                        subWrapper.appendChild(subLabel);
+                        subWrapper.appendChild(subSelect);
                     } else {
                         // Checkbox for boolean suboptions (existing code)
                         const subCheckbox = document.createElement("input");
