@@ -1197,7 +1197,8 @@ onReady(async function () {
 
         // --- Watch for new inline media elements and thumbnails ---
         function setupMediaObserver() {
-            const observer = new MutationObserver((mutations) => {
+            // Observer for new media elements (video/audio)
+            const mediaObserver = new MutationObserver((mutations) => {
                 mutations.forEach(mutation => {
                     mutation.addedNodes.forEach(node => {
                         if (node.nodeType !== 1) return; // Element nodes only
@@ -1233,30 +1234,46 @@ onReady(async function () {
                                 }
                             }
                         }
-
-                        // Also check for thumbnails to attach hover listeners
-                        attachThumbListeners(node);
                     });
                 });
             });
 
-            observer.observe(document.body, {
+            mediaObserver.observe(document.body, {
                 childList: true,
                 subtree: true
             });
 
-            return observer;
+            // Specific observer for #divThreads to attach hover listeners to thumbnails
+            const divThreads = document.getElementById("divThreads");
+            if (divThreads) {
+                const thumbObserver = new MutationObserver((mutations) => {
+                    mutations.forEach(mutation => {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) {
+                                // Attach to this node if it's a thumb, or to any thumbs inside it
+                                attachThumbListeners(node);
+                            }
+                        });
+                    });
+                });
+
+                thumbObserver.observe(divThreads, { childList: true, subtree: true });
+
+                return [mediaObserver, thumbObserver];
+            }
+
+            return [mediaObserver];
         }
 
         // Attach to all existing thumbs at startup
         attachThumbListeners();
 
-        // Set up observer for new media elements
-        const mediaObserver = setupMediaObserver();
+        // Set up observers for new elements
+        const observers = setupMediaObserver();
 
         // Clean up on page unload
         window.addEventListener('unload', () => {
-            mediaObserver.disconnect();
+            observers.forEach(observer => observer.disconnect());
         });
     }
 
