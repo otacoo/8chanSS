@@ -35,6 +35,7 @@ onReady(async function () {
             autoExpandTW: { label: "Auto Expand Thread Watcher", default: false },
             _siteSiteTitle: { type: "title", label: ":: Site" },
             _siteSection2: { type: "separator" },
+            enableBottomHeader: { label: "Bottom Header", default: false },
             enableHeaderCatalogLinks: {
                 label: "Header Catalog Links",
                 default: true,
@@ -45,7 +46,6 @@ onReady(async function () {
                     }
                 }
             },
-            enableBottomHeader: { label: "Bottom Header", default: false },
             enableScrollSave: {
                 label: "Save Scroll Position",
                 default: true,
@@ -60,26 +60,26 @@ onReady(async function () {
             hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
-            enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            threadStatsInHeader: { label: "Thread Stats in Header", default: false },
-            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
-            fadeQuickReply: { label: "Fade Quick Reply", default: false },
-            watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
-            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
-            enableHashNav: { label: "Hash Navigation", default: false },
+            _threadsNotiTitle: { type: "title", label: ":: Notifications" },
+            _threadsSection1: { type: "separator" },
+            highlightOnYou: { label: "Highlight (You) posts", default: true },
             beepOnYou: { label: "Beep on (You)", default: false },
             notifyOnYou: {
-                label: "Notify when (You) (!)",
+                label: "Tab Notification when (You) (!)",
                 default: true,
                 subOptions: {
                     customMessage: {
-                        label: "Custom Notification",
+                        label: "Custom Text (7 chars. max)",
                         default: "",
                         type: "text",
                         maxLength: 8
                     }
                 }
             },
+            customFavicon: { label: "Custom Favicon", default: false },
+            _threadsMediaTitle: { type: "title", label: ":: Media" },
+            _threadsSection2: { type: "separator" },
+            enableThreadImageHover: { label: "Thread Image Hover", default: true },
             blurSpoilers: {
                 label: "Blur Spoilers",
                 default: false,
@@ -90,6 +90,12 @@ onReady(async function () {
                     }
                 }
             },
+            _threadsNavTitle: { type: "title", label: ":: Navigation & Others" },
+            _threadsSection3: { type: "separator" },
+            enableHashNav: { label: "Hash Navigation", default: false },
+            threadStatsInHeader: { label: "Thread Stats in Header", default: false },
+            watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
             deleteSavedName: { label: "Delete Name Checkbox", default: true }
         },
         catalog: {
@@ -114,9 +120,12 @@ onReady(async function () {
             },
             hideBanner: { label: "Hide Board Banners", default: false },
             hideDefaultBL: { label: "Hide Default Board List", default: true },
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
+            hideJannyTools: { label: "Hide Janitor Forms", default: false },
             _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
-            highlightOnYou: { label: "Highlight (You) posts", default: true },
+            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
+            fadeQuickReply: { label: "Fade Quick Reply", default: false },
             enableFitReplies: { label: "Fit Replies", default: false },
             enableSidebar: {
                 label: "Enable Sidebar",
@@ -133,7 +142,6 @@ onReady(async function () {
             hideCheckboxes: { label: "Hide Checkboxes", default: false }
         },
         miscel: {
-            customFavicon: { label: "Custom Favicon", default: false },
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
             enhanceYoutube: { label: "Enhanced Youtube Links", type: "checkbox", default: true },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
@@ -150,9 +158,7 @@ onReady(async function () {
                         max: 50
                     }
                 }
-            },
-            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
-            hideJannyTools: { label: "Hide Janitor Forms", default: false }
+            }
         }
     };
 
