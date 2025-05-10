@@ -735,23 +735,30 @@ onReady(async function () {
             "audio/x-wav": ".wav",
         };
 
-        // Calculate and convert vw/vh to numbers in pixels
-        function getMediaBottomMargin() {
-            return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
-        }
+        // Global media time storage - accessible to all functions
+        window._mediaPlaybackTimes = window._mediaPlaybackTimes || new Map();
 
         // --- Initial state ---
         let floatingMedia = null;
         let cleanupFns = [];
         let currentAudioIndicator = null;
         let lastMouseEvent = null; // Store last mouse event for initial placement
+        let currentMediaHash = null; // Current media hash being hovered
+
+        // --- Utility: Extract hash from URL ---
+        function extractMediaHash(url) {
+            if (!url) return null;
+            // Match the hash part of the URL (the long hexadecimal string)
+            const match = url.match(/\/(?:t_)?([a-f0-9]{40,})(?:\.[a-z0-9]+)?$/i);
+            return match ? match[1] : null;
+        }
 
         // --- Utility: Clamp value between min and max ---
         function clamp(val, min, max) {
             return Math.max(min, Math.min(max, val));
         }
 
-        // --- Utility: Position floating media to the right or left of mouse, never touching bottom ---
+        // --- Utility: Position floating media to the right or left of mouse ---
         function positionFloatingMedia(event) {
             if (!floatingMedia) return;
             const vw = window.innerWidth;
@@ -759,8 +766,8 @@ onReady(async function () {
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
 
-            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
-            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth; // Calculate scrollbar width
+            const MEDIA_BOTTOM_MARGIN_PX = window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
+            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth;
 
             let x, y;
 
@@ -791,8 +798,17 @@ onReady(async function () {
 
         // --- Utility: Clean up floating media and event listeners ---
         function cleanupFloatingMedia() {
+            // Save current time before cleanup
+            if (floatingMedia && currentMediaHash && ["VIDEO", "AUDIO"].includes(floatingMedia.tagName)) {
+                window._mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
+
+                // Update any inline media with the same hash
+                updateInlineMediaTime(currentMediaHash, floatingMedia.currentTime);
+            }
+
             cleanupFns.forEach(fn => { try { fn(); } catch { } });
             cleanupFns = [];
+
             if (floatingMedia) {
                 if (["VIDEO", "AUDIO"].includes(floatingMedia.tagName)) {
                     try {
@@ -804,14 +820,63 @@ onReady(async function () {
                 floatingMedia.remove();
                 floatingMedia = null;
             }
+
             if (currentAudioIndicator && currentAudioIndicator.parentNode) {
                 currentAudioIndicator.parentNode.removeChild(currentAudioIndicator);
                 currentAudioIndicator = null;
             }
+
+            currentMediaHash = null;
         }
 
-         // --- Helper: Get full media URL from thumbnail and MIME type ---
-         function getFullMediaSrc(thumbNode, filemime) {
+        // --- Utility: Update all inline media with a specific hash ---
+        function updateInlineMediaTime(hash, time) {
+            if (!hash) return;
+
+            // Find all video and audio elements
+            const mediaElements = document.querySelectorAll('video, audio');
+
+            mediaElements.forEach(element => {
+                // Check if this element has the target hash
+                const src = element.src || (element.querySelector('source') ? element.querySelector('source').src : '');
+                if (!src) return;
+
+                const elementHash = extractMediaHash(src);
+                if (elementHash === hash) {
+                    // Only update if the difference is significant
+                    if (Math.abs(element.currentTime - time) > 0.3) {
+                        element.currentTime = time;
+                    }
+                }
+            });
+        }
+
+        // --- Helper: Find inline media element by hash ---
+        function findInlineMedia(mediaHash, mediaType) {
+            if (!mediaHash || !mediaType) return null;
+
+            // Look for any media elements in the document
+            const allMediaElements = document.querySelectorAll(mediaType);
+            for (const element of allMediaElements) {
+                // Check both direct src and source children
+                let src = element.src;
+                if (!src && element.querySelector('source')) {
+                    src = element.querySelector('source').src;
+                }
+
+                if (src) {
+                    const elementHash = extractMediaHash(src);
+                    if (elementHash === mediaHash) {
+                        return element;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // --- Helper: Get full media URL from thumbnail and MIME type ---
+        function getFullMediaSrc(thumbNode, filemime) {
             if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
 
@@ -835,6 +900,7 @@ onReady(async function () {
             if (isSmallImage && thumbnailSrc.match(/\/\.media\/[^\/]+\.[a-zA-Z0-9]+$/)) {
                 return thumbnailSrc;
             }
+
             // If "t_" thumbnail
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
@@ -847,6 +913,7 @@ onReady(async function () {
                 }
                 return base + ext;
             }
+
             // If src is a direct hash (no t_) and has no extension, append extension unless APNG
             if (
                 thumbnailSrc.match(/^\/\.media\/[a-f0-9]{40,}$/i) && // hash only, no extension
@@ -860,6 +927,7 @@ onReady(async function () {
                 }
                 return thumbnailSrc + ext;
             }
+
             if (
                 /\/spoiler\.png$/i.test(thumbnailSrc) ||
                 /\/custom\.spoiler$/i.test(thumbnailSrc) ||
@@ -870,6 +938,7 @@ onReady(async function () {
                 }
                 return null;
             }
+
             return null;
         }
 
@@ -909,6 +978,9 @@ onReady(async function () {
                 fullSrc = getFullMediaSrc(thumb, filemime);
                 isVideo = filemime && filemime.startsWith("video/");
                 isAudio = filemime && filemime.startsWith("audio/");
+
+                // Extract media hash for finding inline media
+                currentMediaHash = extractMediaHash(href);
             }
 
             if (!fullSrc || !filemime) return;
@@ -925,20 +997,74 @@ onReady(async function () {
                 }
             } catch { }
 
+            // Check for existing inline media or stored time
+            let initialTime = 0;
+
+            if (currentMediaHash && (isVideo || isAudio)) {
+                // First check for an inline media element
+                const mediaType = isVideo ? 'video' : 'audio';
+                const inlineMedia = findInlineMedia(currentMediaHash, mediaType);
+
+                if (inlineMedia && !inlineMedia.paused) {
+                    // If inline media exists and is playing, use its current time
+                    initialTime = inlineMedia.currentTime;
+
+                    // Set up a timeupdate listener on the inline media to keep hover in sync
+                    const updateHoverTime = () => {
+                        if (floatingMedia && !floatingMedia.paused) {
+                            // Only update if difference is significant
+                            if (Math.abs(floatingMedia.currentTime - inlineMedia.currentTime) > 0.3) {
+                                floatingMedia.currentTime = inlineMedia.currentTime;
+                            }
+                        }
+                    };
+
+                    inlineMedia.addEventListener('timeupdate', updateHoverTime);
+                    cleanupFns.push(() => inlineMedia.removeEventListener('timeupdate', updateHoverTime));
+                } else if (window._mediaPlaybackTimes.has(currentMediaHash)) {
+                    // Otherwise use stored time
+                    initialTime = window._mediaPlaybackTimes.get(currentMediaHash);
+                }
+            }
+
             if (isAudio) {
                 // Audio: show indicator, play audio (hidden)
-                // Always append indicator to the nearest .imgLink or .linkThumb
                 let container = thumb.closest("a.linkThumb, a.imgLink");
                 if (container && !container.style.position) {
                     container.style.position = "relative";
                 }
+
                 floatingMedia = document.createElement("audio");
-                floatingMedia.src = fullSrc;
                 floatingMedia.controls = false;
                 floatingMedia.style.display = "none";
                 floatingMedia.volume = volume;
+                floatingMedia.preload = "auto";
+
+                // Set up event listeners
+                floatingMedia.addEventListener('loadedmetadata', function onLoadedMetadata() {
+                    // Set initial time if available
+                    if (initialTime > 0) {
+                        floatingMedia.currentTime = initialTime;
+                    }
+                }, { once: true });
+
+                floatingMedia.addEventListener('canplay', function onCanPlay() {
+                    floatingMedia.play().catch(() => { });
+                }, { once: true });
+
+                // Set up timeupdate listener to store current time
+                floatingMedia.addEventListener('timeupdate', () => {
+                    if (currentMediaHash && !floatingMedia.paused) {
+                        window._mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
+
+                        // Also update any inline media with this hash
+                        updateInlineMediaTime(currentMediaHash, floatingMedia.currentTime);
+                    }
+                });
+
+                // Set src after setting up listeners
+                floatingMedia.src = fullSrc;
                 document.body.appendChild(floatingMedia);
-                floatingMedia.play().catch(() => { });
 
                 // Show indicator
                 const indicator = document.createElement("div");
@@ -962,7 +1088,6 @@ onReady(async function () {
 
             // --- Image or Video ---
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
-            floatingMedia.src = fullSrc;
             floatingMedia.id = "hover-preview-media";
             floatingMedia.style.position = "fixed";
             floatingMedia.style.zIndex = "9999";
@@ -971,20 +1096,57 @@ onReady(async function () {
             floatingMedia.style.left = "-9999px";
             floatingMedia.style.top = "-9999px";
             floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
+
             // Dynamically set maxHeight to fit above the bottom margin
-            const availableHeight = window.innerHeight - getMediaBottomMargin();
+            const availableHeight = window.innerHeight * (1 - MEDIA_BOTTOM_MARGIN / 100);
             floatingMedia.style.maxHeight = `${availableHeight}px`;
+
             if (isVideo) {
                 floatingMedia.autoplay = true;
                 floatingMedia.loop = true;
                 floatingMedia.muted = false;
                 floatingMedia.playsInline = true;
                 floatingMedia.volume = volume;
+                floatingMedia.preload = "auto";
+
+                // Set up event listeners
+                floatingMedia.addEventListener('loadedmetadata', function onLoadedMetadata() {
+                    // Set initial time if available
+                    if (initialTime > 0) {
+                        floatingMedia.currentTime = initialTime;
+                    }
+                    // Initial positioning
+                    if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                }, { once: true });
+
+                floatingMedia.addEventListener('canplay', function onCanPlay() {
+                    floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                    if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                }, { once: true });
+
+                // Set up timeupdate listener to store current time
+                floatingMedia.addEventListener('timeupdate', () => {
+                    if (currentMediaHash && !floatingMedia.paused) {
+                        window._mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
+
+                        // Also update any inline media with this hash
+                        updateInlineMediaTime(currentMediaHash, floatingMedia.currentTime);
+                    }
+                });
+            } else {
+                // For images
+                floatingMedia.onload = function () {
+                    floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                    if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                };
             }
+
+            // Set src after setting up listeners
+            floatingMedia.src = fullSrc;
+            floatingMedia.onerror = cleanupFloatingMedia;
             document.body.appendChild(floatingMedia);
 
-            // Placement of the image
-            // --- Always follow the cursor, even while loading ---
+            // Placement of the image - follow cursor
             function mouseMoveHandler(ev) {
                 lastMouseEvent = ev;
                 positionFloatingMedia(ev);
@@ -996,25 +1158,6 @@ onReady(async function () {
             if (lastMouseEvent) {
                 positionFloatingMedia(lastMouseEvent);
             }
-
-            // When loaded, fade in and reposition with real size
-            if (isVideo) {
-                floatingMedia.onloadeddata = function () {
-                    if (floatingMedia) {
-                        floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
-                        if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
-                    }
-                };
-            } else {
-                floatingMedia.onload = function () {
-                    if (floatingMedia) {
-                        floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
-                        if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
-                    }
-                };
-            }
-            // If error, cleanup
-            floatingMedia.onerror = cleanupFloatingMedia;
 
             // Cleanup on leave/scroll
             function leaveHandler() { cleanupFloatingMedia(); }
@@ -1033,6 +1176,7 @@ onReady(async function () {
                     thumb._fullImgHoverBound = true;
                 }
             });
+
             // If root itself is such an img, attach as well
             if (
                 root.tagName === "IMG" &&
@@ -1045,24 +1189,69 @@ onReady(async function () {
             }
         }
 
-        // Attach to all existing thumbs at startup
-        attachThumbListeners();
-
-        // Observe for any new nodes under #divThreads
-        const divThreads = document.getElementById("divThreads");
-        if (divThreads) {
+        // --- Watch for new inline media elements and thumbnails ---
+        function setupMediaObserver() {
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach(mutation => {
                     mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === 1) {
-                            // Attach to this node if it's a thumb, or to any thumbs inside it
-                            attachThumbListeners(node);
+                        if (node.nodeType !== 1) return; // Element nodes only
+
+                        // Check if this is a video or audio element
+                        if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
+                            // Set up timeupdate listener to store current time
+                            node.addEventListener('timeupdate', () => {
+                                if (!node.paused) {
+                                    const src = node.src || (node.querySelector('source') ? node.querySelector('source').src : '');
+                                    if (src) {
+                                        const hash = extractMediaHash(src);
+                                        if (hash) {
+                                            window._mediaPlaybackTimes.set(hash, node.currentTime);
+
+                                            // Update any hover media with this hash
+                                            if (floatingMedia && currentMediaHash === hash) {
+                                                if (Math.abs(floatingMedia.currentTime - node.currentTime) > 0.3) {
+                                                    floatingMedia.currentTime = node.currentTime;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+
+                            // Set initial time if available
+                            const src = node.src || (node.querySelector('source') ? node.querySelector('source').src : '');
+                            if (src) {
+                                const hash = extractMediaHash(src);
+                                if (hash && window._mediaPlaybackTimes.has(hash)) {
+                                    node.currentTime = window._mediaPlaybackTimes.get(hash);
+                                }
+                            }
                         }
+
+                        // Also check for thumbnails to attach hover listeners
+                        attachThumbListeners(node);
                     });
                 });
             });
-            observer.observe(divThreads, { childList: true, subtree: true });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            return observer;
         }
+
+        // Attach to all existing thumbs at startup
+        attachThumbListeners();
+
+        // Set up observer for new media elements
+        const mediaObserver = setupMediaObserver();
+
+        // Clean up on page unload
+        window.addEventListener('unload', () => {
+            mediaObserver.disconnect();
+        });
     }
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
