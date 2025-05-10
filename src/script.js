@@ -6,6 +6,23 @@ function onReady(fn) {
         fn();
     }
 }
+/////////// Custom Favicon API //////////
+// This module manages favicon switching for unread, notification, and base states.
+const FAVICON_BASE = "data:image/png;base64,<%= grunt.file.read('src/img/fav/base.png', {encoding: 'base64'}) %>";
+const FAVICON_UNREAD = "data:image/png;base64,<%= grunt.file.read('src/img/fav/unread.png', {encoding: 'base64'}) %>";
+const FAVICON_YOU = "data:image/png;base64,<%= grunt.file.read('src/img/fav/you.png', {encoding: 'base64'}) %>";
+
+// Utility: Set favicon to a given data URL
+function setFavicon(dataUrl) {
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+    }
+    link.type = "image/png";
+    link.href = dataUrl;
+}
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     "use strict";
@@ -116,6 +133,7 @@ onReady(async function () {
             hideCheckboxes: { label: "Hide Checkboxes", default: false }
         },
         miscel: {
+            customFavicon: { label: "Custom Favicon", default: false },
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
             enhanceYoutube: { label: "Enhanced Youtube Links", type: "checkbox", default: true },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
@@ -350,6 +368,9 @@ onReady(async function () {
     if (await getSetting("hideAnnouncement")) {
         featureHideAnnouncement();
     }
+    if (await getSetting("customFavicon")) {
+        featureCustomFavicon();
+    }
 
     // Check if we should enable image hover based on the current page
     async function initImageHover() {
@@ -408,6 +429,7 @@ onReady(async function () {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
+            window.customFaviconAPI.setUnread();
         }
 
         async function updateUnseenCountFromSaved() {
@@ -580,7 +602,7 @@ onReady(async function () {
             });
             observer.observe(divPosts, { childList: true, subtree: false });
         }
-
+        // Remove unread line at the bottom
         async function removeUnreadLineIfAtBottom() {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
             const margin = 20; // px
@@ -588,6 +610,7 @@ onReady(async function () {
                 const oldMarker = document.getElementById(UNREAD_LINE_ID);
                 if (oldMarker && oldMarker.parentNode) {
                     oldMarker.parentNode.removeChild(oldMarker);
+                    window.customFaviconAPI.setBase();
                 }
             }
         }
@@ -693,6 +716,25 @@ onReady(async function () {
         const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
 
+        // --- Shared MIME to extension mapping ---
+        const mimeToExt = {
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/jxl": ".jxl",
+            "image/png": ".png",
+            "image/apng": ".png",
+            "image/gif": ".gif",
+            "image/avif": ".avif",
+            "image/webp": ".webp",
+            "image/bmp": ".bmp",
+            "video/mp4": ".mp4",
+            "video/webm": ".webm",
+            "audio/ogg": ".ogg",
+            "audio/mpeg": ".mp3",
+            "audio/x-m4a": ".m4a",
+            "audio/x-wav": ".wav",
+        };
+
         // Calculate and convert vw/vh to numbers in pixels
         function getMediaBottomMargin() {
             return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
@@ -768,8 +810,8 @@ onReady(async function () {
             }
         }
 
-        // --- Helper: Get full media URL from thumbnail and MIME type ---
-        function getFullMediaSrc(thumbNode, filemime) {
+         // --- Helper: Get full media URL from thumbnail and MIME type ---
+         function getFullMediaSrc(thumbNode, filemime) {
             if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
 
@@ -779,33 +821,44 @@ onReady(async function () {
             const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
             const isSmallImage = (fileWidth && fileWidth < 250) || (fileHeight && fileHeight < 250);
 
+            // Special case: small PNG, no t_, no extension: leave src alone
+            if (
+                isSmallImage &&
+                filemime.toLowerCase() === "image/png" &&
+                !/\/t_/.test(thumbnailSrc) &&
+                !/\.[a-z0-9]+$/i.test(thumbnailSrc)
+            ) {
+                return thumbnailSrc;
+            }
+
             // For small images, use the original src directly without transformation
             if (isSmallImage && thumbnailSrc.match(/\/\.media\/[^\/]+\.[a-zA-Z0-9]+$/)) {
                 return thumbnailSrc;
             }
-
+            // If "t_" thumbnail
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
-                base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|ogg|mp3|m4a|wav)$/i, "");
-                const mimeToExt = {
-                    "image/jpeg": ".jpg",
-                    "image/jpg": ".jpg",
-                    "image/jxl": ".jxl", // Future-proofing JXL support (lol as if)
-                    "image/png": ".png",
-                    "image/gif": ".gif",
-                    "image/avif": ".avif",
-                    "image/webp": ".webp",
-                    "image/bmp": ".bmp",
-                    "video/mp4": ".mp4",
-                    "video/webm": ".webm",
-                    "audio/ogg": ".ogg",
-                    "audio/mpeg": ".mp3",
-                    "audio/x-m4a": ".m4a",
-                    "audio/x-wav": ".wav",
-                };
+                base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|ogg|mp3|m4a|wav)$/i, "");
                 const ext = mimeToExt[filemime.toLowerCase()];
                 if (!ext) return null;
+                // If APNG, do not append extension (special case)
+                if (filemime.toLowerCase() === "image/apng") {
+                    return base;
+                }
                 return base + ext;
+            }
+            // If src is a direct hash (no t_) and has no extension, append extension unless APNG
+            if (
+                thumbnailSrc.match(/^\/\.media\/[a-f0-9]{40,}$/i) && // hash only, no extension
+                !/\.[a-z0-9]+$/i.test(thumbnailSrc)
+            ) {
+                const ext = mimeToExt[filemime.toLowerCase()];
+                if (!ext) return null;
+                // If APNG, do not append extension
+                if (filemime.toLowerCase() === "image/apng") {
+                    return thumbnailSrc;
+                }
+                return thumbnailSrc + ext;
             }
             if (
                 /\/spoiler\.png$/i.test(thumbnailSrc) ||
@@ -819,6 +872,7 @@ onReady(async function () {
             }
             return null;
         }
+
         // --- Main hover handler ---
         async function onThumbEnter(e) {
             cleanupFloatingMedia();
@@ -840,6 +894,7 @@ onReady(async function () {
                         jpeg: "image/jpeg",
                         jxl: "image/jxl",
                         png: "image/png",
+                        apng: "image/apng",
                         gif: "image/gif",
                         avif: "image/avif",
                         webp: "image/webp",
@@ -1754,6 +1809,7 @@ onReady(async function () {
         function notifyOnYou() {
             if (!window.isNotifying && !document.hasFocus()) {
                 window.isNotifying = true;
+                window.customFaviconAPI.setNotification();
                 document.title = customMsgSetting + " " + window.originalTitle;
             }
         }
@@ -2158,6 +2214,31 @@ onReady(async function () {
             });
             threadInfoHeader._observerInitialized = true;
         }
+    }
+
+    // Feature: Custom Favicon Setting
+    async function featureCustomFavicon() {
+        // Set favicon to base on load
+        setFavicon(FAVICON_BASE);
+
+        // Expose API for other features
+        window.customFaviconAPI = {
+            setBase: () => setFavicon(FAVICON_BASE),
+            setUnread: () => setFavicon(FAVICON_UNREAD),
+            setNotification: () => setFavicon(FAVICON_YOU)
+        };
+
+        // Listen for storage changes to reset favicon if setting is toggled
+        window.addEventListener("8chanSS_settingChanged", async (e) => {
+            if (e.detail && e.detail.key === "customFavicon") {
+                if (await getSetting("customFavicon")) {
+                    setFavicon(FAVICON_BASE);
+                } else {
+                    // Optionally revert to site's default favicon
+                    setFavicon(FAVICON_BASE);
+                }
+            }
+        });
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
