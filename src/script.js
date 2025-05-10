@@ -76,8 +76,8 @@ onReady(async function () {
                     }
                 }
             },
-            customFavicon: { 
-                label: "Custom Favicon", 
+            customFavicon: {
+                label: "Custom Favicon",
                 default: false,
                 subOptions: {
                     faviconStyle: {
@@ -2042,11 +2042,38 @@ onReady(async function () {
             }
         }
 
-        // Remove notification when tab regains focus
+        // Remove notification when user scrolls to the bottom of the page
+        function setupNotificationScrollHandler() {
+            // Define the offset from the bottom (in pixels)
+            const BOTTOM_OFFSET = 50;
+
+            // Function to check if user has scrolled to the bottom
+            function checkScrollPosition() {
+                if (!window.isNotifying) return;
+
+                const scrollPosition = window.scrollY + window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+
+                // If user has scrolled to near the bottom (with offset)
+                if (scrollPosition >= documentHeight - BOTTOM_OFFSET) {
+                    document.title = window.originalTitle;
+                    window.customFaviconAPI.setBase();
+                    window.isNotifying = false;
+
+                    // Remove the scroll listener once notification is cleared
+                    window.removeEventListener('scroll', checkScrollPosition);
+                }
+            }
+
+            // Add scroll event listener
+            window.addEventListener('scroll', checkScrollPosition);
+        }
+
+        // Set up the scroll handler when a notification appears
         window.addEventListener("focus", () => {
             if (window.isNotifying) {
-                document.title = window.originalTitle;
-                window.isNotifying = false;
+                // Clear notification when user scrolls to bottom
+                setupNotificationScrollHandler();
             }
         });
 
