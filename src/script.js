@@ -647,6 +647,15 @@ onReady(async function () {
 
     // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
+        // Debounce utility to avoid excessive calls during rapid DOM mutations
+        function debounce(fn, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
         async function appendCatalogToLinks() {
             const navboardsSpan = document.getElementById("navBoardsSpan");
             if (navboardsSpan) {
@@ -656,8 +665,14 @@ onReady(async function () {
                 );
 
                 for (let link of links) {
-                    if (link.href && !link.href.endsWith("/catalog.html")) {
+                    // Prevent duplicate appends and only process once
+                    if (
+                        link.href &&
+                        !link.href.endsWith("/catalog.html") &&
+                        !link.dataset.catalogLinkProcessed
+                    ) {
                         link.href += "/catalog.html";
+                        link.dataset.catalogLinkProcessed = "1";
 
                         // Set target="_blank" if the option is enabled
                         if (openInNewTab) {
@@ -672,41 +687,40 @@ onReady(async function () {
             }
         }
 
+        // Initial run
         appendCatalogToLinks();
-        const observer = new MutationObserver(appendCatalogToLinks);
+
+        // Debounced observer callback for performance
+        const debouncedAppend = debounce(appendCatalogToLinks, 100);
         const config = { childList: true, subtree: true };
         const navboardsSpan = document.getElementById("navBoardsSpan");
-        if (navboardsSpan) {
+        // Prevent multiple observers
+        if (navboardsSpan && !navboardsSpan._catalogLinksObserverAttached) {
+            const observer = new MutationObserver(debouncedAppend);
             observer.observe(navboardsSpan, config);
+            navboardsSpan._catalogLinksObserverAttached = true;
         }
     }
 
-    // Feature: Always Open Catalog Threads in New Tab ---
+    // --- Feature: Always Open Catalog Threads in New Tab ---
     function catalogThreadsInNewTab() {
         const catalogDiv = document.querySelector('.catalogDiv');
         if (!catalogDiv) return;
 
-        function setLinksTargetBlank(cell) {
-            const link = cell.querySelector('a.linkThumb');
-            if (link) link.setAttribute('target', '_blank');
-        }
-
-        // Initial run for existing cells
-        catalogDiv.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
-
-        // Observe catalog container for new cells
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach(mutation => {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1 && node.classList.contains('catalogCell')) {
-                        setLinksTargetBlank(node);
-                    } else if (node.nodeType === 1) {
-                        node.querySelectorAll && node.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
-                    }
-                });
-            });
+        // Set target="_blank" for existing cells
+        catalogDiv.querySelectorAll('.catalogCell a.linkThumb').forEach(link => {
+            if (link.getAttribute('target') !== '_blank') {
+                link.setAttribute('target', '_blank');
+            }
         });
-        observer.observe(catalogDiv, { childList: true, subtree: true });
+
+        // Use event delegation for future clicks (no MutationObserver needed)
+        catalogDiv.addEventListener('click', function (e) {
+            const link = e.target.closest('.catalogCell a.linkThumb');
+            if (link && link.getAttribute('target') !== '_blank') {
+                link.setAttribute('target', '_blank');
+            }
+        });
     }
 
     // ---- Feature: Image/Video/Audio Hover Preview
