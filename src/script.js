@@ -3843,7 +3843,9 @@ onReady(async function () {
         const footer = document.getElementById('footer');
         if (footer && !footer._scrollBlocked) {
             footer._scrollBlocked = true; // Prevent double-wrapping
-            footer.scrollIntoView = function () { };
+            footer.scrollIntoView = function () {
+                return;
+            };
         }
     }
 
@@ -3871,7 +3873,7 @@ onReady(async function () {
         }
     });
 
-    // Show all posts by ID
+    // --- Feature: Show all posts by ID ---
     function enableIdFiltering() {
         const postCellSelector = ".postCell";
         const labelIdSelector = ".labelId";
@@ -3886,26 +3888,29 @@ onReady(async function () {
                 cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
             });
         }
-        // Click
+        // Click handler
         function handleClick(event) {
             const clickedLabel = event.target.closest(labelIdSelector);
             // Only trigger if inside a .postCell and not inside a preview
-            if (clickedLabel && clickedLabel.closest(".postCell") && !clickedLabel.closest(".de-pview")) {
+            if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
+                event.preventDefault();
+                event.stopPropagation();
+
                 const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
                 const rect = clickedLabel.getBoundingClientRect();
                 const cursorOffsetY = event.clientY - rect.top;
 
                 if (activeFilterColor === clickedColor) {
-                    applyFilter(null);
+                    applyFilter(null); // Toggle off if already active
                 } else {
                     applyFilter(clickedColor);
                 }
+
                 // Scroll to keep the clicked label in view
                 clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
                 window.scrollBy(0, cursorOffsetY - rect.height / 2);
             }
         }
-
         document.body.addEventListener("click", handleClick);
     }
 });
