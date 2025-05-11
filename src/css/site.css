@@ -61,7 +61,8 @@ nav.navHeader > .nav-boards:hover {
 }
 
 /* (You) Replies */
-:root.highlight-you .innerPost:has(> .postInfo.title > .youName) {
+:root.highlight-you .innerPost:has(> .postInfo.title > .youName),
+:root.highlight-you .innerOP:has(> .opHead.title > .youName) {
     border-left: dashed #68b723 3px;
 }
 
@@ -147,14 +148,6 @@ video {
 #watchedMenu .floatingContainer {
     scrollbar-width: thin;
     scrollbar-color: var(--link-color) var(--contrast-color);
-}
-
-.watched-mention-highlight {
-    color: var(--board-title-color);
-}
-
-.watched-mention-bold {
-    font-weight: bold;
 }
 
 /* Up/Down Arrows */

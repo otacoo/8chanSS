@@ -56,10 +56,10 @@ onReady(async function () {
                 default: true,
                 subOptions: {
                     customMessage: {
-                        label: "Custom Text (7 chars. max)",
+                        label: "Custom Text (8 chars. max)",
                         default: "",
                         type: "text",
-                        maxLength: 8
+                        maxLength: 9
                     }
                 }
             },
@@ -1465,13 +1465,7 @@ onReady(async function () {
                 const originalText = labelLink.textContent;
                 const decodedText = decodeHtmlEntitiesTwice(originalText);
                 if (labelLink.textContent !== decodedText) {
-                    // Remove all event listeners by cloning and replacing the node
-                    const cleanLabelLink = labelLink.cloneNode(false);
-                    cleanLabelLink.textContent = decodedText;
-                    // Copy over only safe attributes (like href, class, etc.)
-                    if (labelLink.parentNode) {
-                        labelLink.parentNode.replaceChild(cleanLabelLink, labelLink);
-                    }
+                    labelLink.textContent = decodedText;
                 }
             }
 
@@ -1479,9 +1473,10 @@ onReady(async function () {
             const notificationText = notification.textContent.trim();
 
             function styleMentionYou(labelLink, notification, totalReplies) {
-                labelLink.classList.add("watched-mention-highlight");
-                notification.classList.add("watched-mention-highlight", "watched-mention-bold");
+                labelLink.style.color = "var(--board-title-color)";
+                notification.style.color = "var(--board-title-color)";
                 notification.textContent = ` (${totalReplies}) (You)`;
+                notification.style.fontWeight = "bold";
             }
 
             function styleMentionNumber(notification, notificationText) {
@@ -2164,7 +2159,7 @@ onReady(async function () {
 
                     oscillator.type = 'sine';
                     oscillator.frequency.value = 550; // frequency in hertz
-                    gainNode.gain.value = 0.01; // volume
+                    gainNode.gain.value = 0.1; // volume
 
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
