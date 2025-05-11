@@ -1324,11 +1324,41 @@ onReady(async function () {
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
     function featureBlurSpoilers() {
-        function revealSpoilers() {
+        // Utility: MIME type to extension mapping
+        function getExtensionForMimeType(mime) {
+            const map = {
+                "image/jpeg": ".jpg",
+                "image/jpg": ".jpg",
+                "image/jxl": ".jxl",
+                "image/png": ".png",
+                "image/apng": ".png",
+                "image/gif": ".gif",
+                "image/avif": ".avif",
+                "image/webp": ".webp",
+                "image/bmp": ".bmp",
+            };
+            return map[mime.toLowerCase()] || "";
+        }
+
+        // Debounce utility
+        function debounce(fn, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        // Main spoiler reveal logic
+        async function revealSpoilers() {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
-            spoilerLinks.forEach(async (link) => {
+            // Cache setting outside the loop for performance
+            const removeSpoilers = await getSetting("blurSpoilers_removeSpoilers");
+
+            spoilerLinks.forEach((link) => {
                 const img = link.querySelector("img");
                 if (!img) return;
+
                 // Skip if src is already a full media file (not t_ and has extension)
                 if (
                     /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) && // has extension
@@ -1336,6 +1366,7 @@ onReady(async function () {
                 ) {
                     return;
                 }
+
                 // Check if this is a custom spoiler image
                 const isCustomSpoiler = img.src.includes("/custom.spoiler")
                     || img.src.includes("/*/custom.spoiler")
@@ -1353,18 +1384,9 @@ onReady(async function () {
 
                     // Get file extension from data-filemime
                     const fileMime = link.getAttribute("data-filemime") || "";
-                    // Map common mime types to extensions
-                    const mimeToExt = {
-                        "image/jpeg": ".jpg",
-                        "image/jpg": ".jpg",
-                        "image/png": ".png",
-                        "image/gif": ".gif",
-                        "image/webp": ".webp",
-                        "image/bmp": ".bmp",
-                    };
-                    const ext = mimeToExt[fileMime.toLowerCase()] || "";
+                    const ext = getExtensionForMimeType(fileMime);
 
-                    // Check for data-filewidth attribute
+                    // Check for data-filewidth/height attribute
                     const fileWidthAttr = link.getAttribute("data-filewidth");
                     const fileHeightAttr = link.getAttribute("data-fileheight");
                     let transformedSrc;
@@ -1382,50 +1404,76 @@ onReady(async function () {
                     }
                     img.src = transformedSrc;
 
+                    // Remove previous event listeners if any
+                    if (img._blurSpoilerMouseOver) {
+                        img.removeEventListener("mouseover", img._blurSpoilerMouseOver);
+                        img._blurSpoilerMouseOver = null;
+                    }
+                    if (img._blurSpoilerMouseOut) {
+                        img.removeEventListener("mouseout", img._blurSpoilerMouseOut);
+                        img._blurSpoilerMouseOut = null;
+                    }
+
                     // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                    if (await getSetting("blurSpoilers_removeSpoilers")) {
+                    if (removeSpoilers) {
                         img.style.filter = "";
                         img.style.transition = "";
                         img.style.border = "1px dotted var(--border-color)";
-                        img.onmouseover = null;
-                        img.onmouseout = null;
-                        return;
                     } else {
                         img.style.filter = "blur(5px)";
                         img.style.transition = "filter 0.3s ease";
-                        img.addEventListener("mouseover", () => {
+                        // Use named handlers for proper cleanup
+                        img._blurSpoilerMouseOver = () => {
                             img.style.filter = "none";
-                        });
-                        img.addEventListener("mouseout", () => {
+                        };
+                        img._blurSpoilerMouseOut = () => {
                             img.style.filter = "blur(5px)";
-                        });
+                        };
+                        img.addEventListener("mouseover", img._blurSpoilerMouseOver);
+                        img.addEventListener("mouseout", img._blurSpoilerMouseOut);
                     }
                 }
             });
         }
 
+        // Debounced version for MutationObserver
+        const debouncedRevealSpoilers = debounce(revealSpoilers, 100);
+
         // Initial run
         revealSpoilers();
 
-        // Observe for dynamically added spoilers
-        const observer = new MutationObserver(revealSpoilers);
-        observer.observe(document.body, { childList: true, subtree: true });
+        // Observe only relevant containers for dynamically added spoilers
+        const observer = new MutationObserver(debouncedRevealSpoilers);
+        const postsContainer = document.querySelector('.divPosts');
+        const catalogContainer = document.querySelector('.catalogDiv');
+        if (postsContainer) {
+            observer.observe(postsContainer, { childList: true, subtree: true });
+        }
+        if (catalogContainer) {
+            observer.observe(catalogContainer, { childList: true, subtree: true });
+        }
     }
 
     ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Decode HTML entities in <a> to string (e.g., &gt; to >, &apos; to ')
-    function decodeHtmlEntitiesTwice(html) {
+    const decodeHtmlEntitiesTwice = (() => {
         const txt = document.createElement('textarea');
-        txt.innerHTML = html;
-        const once = txt.value;
-        txt.innerHTML = once;
-        return txt.value;
-    }
+        return function(html) {
+            txt.innerHTML = html;
+            const once = txt.value;
+            txt.innerHTML = once;
+            return txt.value;
+        };
+    })();
+
     // --- Feature: Highlight TW mentions and new posts ---
     function highlightMentions() {
         const watchedCells = document.querySelectorAll("#watchedMenu .watchedCell");
         if (!watchedCells.length) return; // Early exit if no watched cells
+
+        // Cache the watchButton element outside the loop
+        const watchButton = document.querySelector(".opHead .watchButton");
 
         // Process all cells in a single pass
         watchedCells.forEach((cell) => {
@@ -1444,20 +1492,24 @@ onReady(async function () {
                 }
 
                 // Highlight watch button if this thread is open
-                if (document.location.href.includes(href)) {
-                    const watchButton = document.querySelector(".opHead .watchButton");
-                    if (watchButton) {
-                        watchButton.style.color = "var(--board-title-color)";
-                        watchButton.title = "Watched";
-                    }
+                if (document.location.href.includes(href) && watchButton) {
+                    watchButton.style.color = "var(--board-title-color)";
+                    watchButton.title = "Watched";
                 }
 
                 // Decode HTML entities (only if needed)
                 const originalHtml = labelLink.innerHTML;
                 const decodedText = decodeHtmlEntitiesTwice(originalHtml);
-                if (labelLink.textContent !== decodedText) {
-                    labelLink.textContent = decodedText;
+                // Simple sanitization: remove script tags as a precaution
+                const sanitizedText = decodedText.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+                if (labelLink.textContent !== sanitizedText) {
+                    labelLink.textContent = sanitizedText;
                 }
+            }
+
+            // Skip if already processed
+            if (notification.dataset.processed === "true") {
+                return;
             }
 
             // Process notification text
@@ -1497,8 +1549,12 @@ onReady(async function () {
     // Observe #watchedMenu for changes to update highlights dynamically
     const watchedMenu = document.getElementById("watchedMenu");
     if (watchedMenu) {
+        let debounceTimer;
         const observer = new MutationObserver(() => {
-            highlightMentions();
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                highlightMentions();
+            }, 100); // Adjust delay as needed
         });
         observer.observe(watchedMenu, { childList: true, subtree: true });
     }
