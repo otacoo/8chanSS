@@ -733,27 +733,42 @@ onReady(async function () {
         const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
 
-        // --- Shared MIME to extension mapping ---
-        const mimeToExt = {
-            "image/jpeg": ".jpg",
-            "image/jpg": ".jpg",
-            "image/jxl": ".jxl",
-            "image/png": ".png",
-            "image/apng": ".png",
-            "image/gif": ".gif",
-            "image/avif": ".avif",
-            "image/webp": ".webp",
-            "image/bmp": ".bmp",
-            "video/mp4": ".mp4",
-            "video/webm": ".webm",
-            "audio/ogg": ".ogg",
-            "audio/mpeg": ".mp3",
-            "audio/x-m4a": ".m4a",
-            "audio/x-wav": ".wav",
-        };
+        // --- Utility: MIME type to extension mapping ---
+        function getExtensionForMimeType(mime) {
+            const map = {
+                "image/jpeg": ".jpg",
+                "image/jpg": ".jpg",
+                "image/jxl": ".jxl",
+                "image/png": ".png",
+                "image/apng": ".png",
+                "image/gif": ".gif",
+                "image/avif": ".avif",
+                "image/webp": ".webp",
+                "image/bmp": ".bmp",
+                "video/mp4": ".mp4",
+                "video/webm": ".webm",
+                "audio/ogg": ".ogg",
+                "audio/mpeg": ".mp3",
+                "audio/x-m4a": ".m4a",
+                "audio/x-wav": ".wav",
+            };
+            return map[mime.toLowerCase()] || null;
+        }
 
-        // Global media time storage - accessible to all functions
-        window._mediaPlaybackTimes = window._mediaPlaybackTimes || new Map();
+        // --- Utility: Sanitize URLs before assigning to src/href ---
+        function sanitizeUrl(url) {
+            try {
+                const parsed = new URL(url, window.location.origin);
+                // Only allow http(s) protocols and same-origin or trusted hosts
+                if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+                    return parsed.href;
+                }
+            } catch { }
+            return "";
+        }
+
+        // --- Module-scoped media time storage ---
+        const _mediaPlaybackTimes = new Map();
 
         // --- Initial state ---
         let floatingMedia = null;
@@ -817,7 +832,7 @@ onReady(async function () {
         function cleanupFloatingMedia() {
             // Save current time before cleanup
             if (floatingMedia && currentMediaHash && ["VIDEO", "AUDIO"].includes(floatingMedia.tagName)) {
-                window._mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
+                _mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
 
                 // Update any inline media with the same hash
                 updateInlineMediaTime(currentMediaHash, floatingMedia.currentTime);
@@ -922,7 +937,7 @@ onReady(async function () {
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
                 base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|ogg|mp3|m4a|wav)$/i, "");
-                const ext = mimeToExt[filemime.toLowerCase()];
+                const ext = getExtensionForMimeType(filemime);
                 if (!ext) return null;
                 // If APNG, do not append extension (special case)
                 if (filemime.toLowerCase() === "image/apng") {
@@ -936,7 +951,7 @@ onReady(async function () {
                 thumbnailSrc.match(/^\/\.media\/[a-f0-9]{40,}$/i) && // hash only, no extension
                 !/\.[a-z0-9]+$/i.test(thumbnailSrc)
             ) {
-                const ext = mimeToExt[filemime.toLowerCase()];
+                const ext = getExtensionForMimeType(filemime);
                 if (!ext) return null;
                 // If APNG, do not append extension
                 if (filemime.toLowerCase() === "image/apng") {
@@ -1027,7 +1042,7 @@ onReady(async function () {
             let inlineMedia = null;
 
             if (currentMediaHash && (isVideo || isAudio)) {
-                // First check for an inline media elemen][L]
+                // First check for an inline media element
                 const mediaType = isVideo ? 'video' : 'audio';
                 inlineMedia = findInlineMedia(currentMediaHash, mediaType);
 
@@ -1045,8 +1060,8 @@ onReady(async function () {
                     };
                     inlineMedia.addEventListener('timeupdate', updateHoverTime);
                     cleanupFns.push(() => inlineMedia.removeEventListener('timeupdate', updateHoverTime));
-                } else if (window._mediaPlaybackTimes.has(currentMediaHash)) {
-                    initialTime = window._mediaPlaybackTimes.get(currentMediaHash);
+                } else if (_mediaPlaybackTimes.has(currentMediaHash)) {
+                    initialTime = _mediaPlaybackTimes.get(currentMediaHash);
                 }
             }
 
@@ -1079,14 +1094,15 @@ onReady(async function () {
                 if (isVideo || isAudio) {
                     floatingMedia.addEventListener('timeupdate', () => {
                         if (syncPlayback && currentMediaHash && !floatingMedia.paused) {
-                            window._mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
+                            _mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
                             updateInlineMediaTime(currentMediaHash, floatingMedia.currentTime);
                         }
                     });
                 }
 
-                // Set src after setting up listeners
-                floatingMedia.src = fullSrc;
+                // Set src after setting up listeners, with sanitization
+                floatingMedia.src = sanitizeUrl(fullSrc);
+                floatingMedia.onerror = cleanupFloatingMedia;
                 document.body.appendChild(floatingMedia);
 
                 // Show indicator
@@ -1150,7 +1166,7 @@ onReady(async function () {
                 // Set up timeupdate listener to store current time
                 floatingMedia.addEventListener('timeupdate', () => {
                     if (currentMediaHash && !floatingMedia.paused) {
-                        window._mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
+                        _mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
 
                         // Also update any inline media with this hash
                         updateInlineMediaTime(currentMediaHash, floatingMedia.currentTime);
@@ -1164,12 +1180,13 @@ onReady(async function () {
                 };
             }
 
-            // Set src after setting up listeners
-            floatingMedia.src = fullSrc;
+            // Set src after setting up listeners, with sanitization
+            floatingMedia.src = sanitizeUrl(fullSrc);
             floatingMedia.onerror = cleanupFloatingMedia;
             document.body.appendChild(floatingMedia);
 
-            // Placement of the image - follow cursor
+            // Placement of image - follow cursor
+            let mouseMoveThrottleTimeout = null;
             function mouseMoveHandler(ev) {
                 lastMouseEvent = ev;
                 positionFloatingMedia(ev);
@@ -1229,7 +1246,7 @@ onReady(async function () {
                                     if (src) {
                                         const hash = extractMediaHash(src);
                                         if (hash) {
-                                            window._mediaPlaybackTimes.set(hash, node.currentTime);
+                                            _mediaPlaybackTimes.set(hash, node.currentTime);
 
                                             // Update any hover media with this hash
                                             if (floatingMedia && currentMediaHash === hash) {
@@ -1246,8 +1263,8 @@ onReady(async function () {
                             const src = node.src || (node.querySelector('source') ? node.querySelector('source').src : '');
                             if (src) {
                                 const hash = extractMediaHash(src);
-                                if (hash && window._mediaPlaybackTimes.has(hash)) {
-                                    node.currentTime = window._mediaPlaybackTimes.get(hash);
+                                if (hash && _mediaPlaybackTimes.has(hash)) {
+                                    node.currentTime = _mediaPlaybackTimes.get(hash);
                                 }
                             }
                         }
@@ -1291,6 +1308,17 @@ onReady(async function () {
         // Clean up on page unload
         window.addEventListener('unload', () => {
             observers.forEach(observer => observer.disconnect());
+            // Explicitly clean up floating media and event listeners
+            if (typeof cleanupFloatingMedia === "function") {
+                cleanupFloatingMedia();
+            }
+            // Remove all mouseenter listeners from thumbs
+            document.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
+                if (thumb._fullImgHoverBound) {
+                    thumb.removeEventListener("mouseenter", onThumbEnter);
+                    delete thumb._fullImgHoverBound;
+                }
+            });
         });
     }
 
