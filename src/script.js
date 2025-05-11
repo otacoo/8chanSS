@@ -1,27 +1,11 @@
-////////// HELPERS ///////////////////////
+////////// HELPERS ///////////////////////  
+// Function to run when DOM is ready
 function onReady(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
     } else {
         fn();
     }
-}
-/////////// Custom Favicon API //////////
-// This module manages favicon switching for unread, notification, and base states.
-const FAVICON_BASE = "data:image/png;base64,<%= grunt.file.read('src/img/fav/base.png', {encoding: 'base64'}) %>";
-const FAVICON_UNREAD = "data:image/png;base64,<%= grunt.file.read('src/img/fav/unread.png', {encoding: 'base64'}) %>";
-const FAVICON_YOU = "data:image/png;base64,<%= grunt.file.read('src/img/fav/you.png', {encoding: 'base64'}) %>";
-
-// Utility: Set favicon to a given data URL
-function setFavicon(dataUrl) {
-    let link = document.querySelector("link[rel~='icon']");
-    if (!link) {
-        link = document.createElement("link");
-        link.rel = "icon";
-        document.head.appendChild(link);
-    }
-    link.type = "image/png";
-    link.href = dataUrl;
 }
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
@@ -76,23 +60,6 @@ onReady(async function () {
                         default: "",
                         type: "text",
                         maxLength: 8
-                    }
-                }
-            },
-            customFavicon: {
-                label: "Custom Favicon",
-                default: false,
-                subOptions: {
-                    faviconStyle: {
-                        label: "Favicon Style",
-                        type: "select",
-                        default: "default",
-                        options: [
-                            { value: "default", label: "Default" },
-                            { value: "pixel", label: "Pixel" },
-                            { value: "eight", label: "Eight" },
-                            { value: "pixelalt", label: "Pixel Alt" }
-                        ]
                     }
                 }
             },
@@ -393,9 +360,6 @@ onReady(async function () {
     if (await getSetting("hideAnnouncement")) {
         featureHideAnnouncement();
     }
-    if (await getSetting("customFavicon")) {
-        featureCustomFavicon();
-    }
 
     // Check if we should enable image hover based on the current page
     async function initImageHover() {
@@ -414,14 +378,21 @@ onReady(async function () {
     // Init
     initImageHover();
 
+    //////////// FEATURES ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     // --- Feature: Save Scroll Position ---
     async function featureSaveScroll() {
+        // Get the current .divPosts
+        function getDivPosts() {
+            return document.querySelector(".divPosts");
+        }
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
         const MAX_THREADS = 150;
         const threadPagePattern = /^\/[^/]+\/res\/[^/]+\.html$/i;
         // Early return if page not a thread
         if (!threadPagePattern.test(window.location.pathname)) return;
+
         // Helper functions
         // Get board name and thread number
         function getBoardAndThread() {
@@ -440,9 +411,16 @@ onReady(async function () {
         }
         // Get current post count
         function getCurrentPostCount() {
-            const divPosts = document.querySelector(".divPosts");
+            const divPosts = getDivPosts();
             if (!divPosts) return 0;
             return divPosts.querySelectorAll(":scope > .postCell[id]").length;
+        }
+        // Remove unread line marker
+        function removeUnreadLineMarker() {
+            const oldMarker = document.getElementById(UNREAD_LINE_ID);
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
         }
 
         // --- Unseen post count logic ---
@@ -454,7 +432,6 @@ onReady(async function () {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
-            window.customFaviconAPI.setUnread();
         }
 
         async function updateUnseenCountFromSaved() {
@@ -475,6 +452,7 @@ onReady(async function () {
             const info = getBoardAndThread();
             if (!info || !(await getSetting("enableScrollSave"))) return;
 
+            // Always get the latest .divPosts
             const posts = Array.from(document.querySelectorAll(".divPosts > .postCell[id]"));
             let maxIndex = -1;
             for (let i = 0; i < posts.length; ++i) {
@@ -552,10 +530,12 @@ onReady(async function () {
 
             const anchor = window.location.hash ? window.location.hash.replace(/^#/, "") : null;
 
-            // If anchor, scroll to the postCell with that id
-            if (anchor) {
+            // If anchor, scroll to the postCell with that id (sanitized)
+            const safeAnchor = anchor && /^[a-zA-Z0-9_-]+$/.test(anchor) ? anchor : null;
+
+            if (safeAnchor) {
                 setTimeout(() => {
-                    const post = document.getElementById(anchor);
+                    const post = document.getElementById(safeAnchor);
                     if (post && post.classList.contains("postCell")) {
                         post.scrollIntoView({ behavior: "auto", block: "start" });
                     }
@@ -574,8 +554,7 @@ onReady(async function () {
         // Add an unread-line marker after the .postCell <div> at a specific scroll position
         async function addUnreadLineAtSavedScrollPosition(scrollPosition, centerAfter = false) {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-
-            const divPosts = document.querySelector(".divPosts");
+            const divPosts = getDivPosts();
             if (!divPosts) return;
 
             // Find the postCell whose top is just below or equal to the scrollPosition
@@ -589,10 +568,7 @@ onReady(async function () {
             if (!targetPost) return;
 
             // Remove old marker if exists
-            const oldMarker = document.getElementById(UNREAD_LINE_ID);
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
+            removeUnreadLineMarker();
 
             // Insert marker after the target post
             const marker = document.createElement("hr");
@@ -620,23 +596,20 @@ onReady(async function () {
 
         // Watch for changes in .divPosts (new posts)
         function observePostCount() {
-            const divPosts = document.querySelector(".divPosts");
+            const divPosts = getDivPosts();
             if (!divPosts) return;
             const observer = new MutationObserver(() => {
                 updateUnseenCountFromSaved();
             });
             observer.observe(divPosts, { childList: true, subtree: false });
         }
+
         // Remove unread line at the bottom
         async function removeUnreadLineIfAtBottom() {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
             const margin = 20; // px
             if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
-                const oldMarker = document.getElementById(UNREAD_LINE_ID);
-                if (oldMarker && oldMarker.parentNode) {
-                    oldMarker.parentNode.removeChild(oldMarker);
-                    window.customFaviconAPI.setBase();
-                }
+                removeUnreadLineMarker();
             }
         }
 
@@ -656,9 +629,14 @@ onReady(async function () {
             observePostCount();
         });
 
-        window.addEventListener("scroll", async () => {
-            await onScrollUpdateSeen();
-            await removeUnreadLineIfAtBottom();
+        let scrollTimeout = null;
+        window.addEventListener("scroll", () => {
+            if (scrollTimeout) return;
+            scrollTimeout = setTimeout(async () => {
+                await onScrollUpdateSeen();
+                await removeUnreadLineIfAtBottom();
+                scrollTimeout = null;
+            }, 100); // 100ms throttle to the scroll event
         });
 
         // Initial restore and unseen count update (in case load event already fired)
@@ -1730,43 +1708,6 @@ onReady(async function () {
         // Initial run
         addHashLinks();
 
-        // Patch tooltips if present
-        if (window.tooltips) {
-            // Patch loadTooltip and addLoadedTooltip to always call addHashLinks
-            ['loadTooltip', 'addLoadedTooltip'].forEach(fn => {
-                if (typeof tooltips[fn] === 'function') {
-                    const orig = tooltips[fn];
-                    tooltips[fn] = function (...args) {
-                        const result = orig.apply(this, args);
-                        // Try to find the container to apply hash links
-                        let container = args[0];
-                        if (container && container.nodeType === Node.ELEMENT_NODE) {
-                            addHashLinks(container);
-                        }
-                        return result;
-                    };
-                }
-            });
-
-            // Patch addInlineClick and processQuote to skip hash links
-            ['addInlineClick', 'processQuote'].forEach(fn => {
-                if (typeof tooltips[fn] === 'function') {
-                    const orig = tooltips[fn];
-                    tooltips[fn] = function (quote, ...rest) {
-                        if (
-                            !quote.href ||
-                            quote.classList.contains('hash-link') ||
-                            quote.closest('.hash-link-container') ||
-                            quote.href.includes('#q')
-                        ) {
-                            return;
-                        }
-                        return orig.apply(this, [quote, ...rest]);
-                    };
-                }
-            });
-        }
-
         // Observe for dynamically added quote/backlink links
         const postsContainer = document.querySelector('.divPosts') || document.body;
         const observer = new MutationObserver(mutations => {
@@ -2079,12 +2020,39 @@ onReady(async function () {
         await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
     }
 
-    // --- Feature: Beep on (You) ---
+    /**
+     * Feature: Beep on (You) - Optimized
+     */
     async function featureBeepOnYou() {
-        // Beep sound (base64)
-        const beep = new Audio(
-            "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
-        );
+        // Create Web Audio API beep (reuse context)
+        let audioContext = null;
+        function createBeepSound() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return function playBeep() {
+                try {
+                    // Create oscillator for the beep
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = 550; // frequency in hertz
+                    gainNode.gain.value = 0.01; // volume
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    // Start and stop the beep
+                    oscillator.start();
+                    setTimeout(() => {
+                        oscillator.stop();
+                    }, 100); // 100ms beep duration
+                } catch (e) {
+                    console.warn("Beep failed:", e);
+                }
+            };
+        }
 
         // Store the original title globally so all functions can access it
         window.originalTitle = document.title;
@@ -2102,48 +2070,41 @@ onReady(async function () {
             const customMsg = await getSetting("notifyOnYou_customMessage");
             if (customMsg) customMsgSetting = customMsg;
         }
-
-        // Await settings before observer setup!
+        // Await settings before observer setup
         await initSettings();
 
-        // Function to play the beep sound
-        function playBeep() {
-            if (beep.paused) {
-                beep.play().catch((e) => console.warn("Beep failed:", e));
-            } else {
-                beep.currentTime = 0; // Reset to start if already playing
-            }
-        }
+        // Store the beep
+        const playBeep = createBeepSound();
 
-        // Function to notify on (You)
+        // // Function to notify on (You)
+        let scrollHandlerActive = false;
         function notifyOnYou() {
             if (!window.isNotifying && !document.hasFocus()) {
                 window.isNotifying = true;
-                window.customFaviconAPI.setNotification();
                 document.title = customMsgSetting + " " + window.originalTitle;
             }
         }
 
         // Remove notification when user scrolls to the bottom of the page
         function setupNotificationScrollHandler() {
-            // Define the offset from the bottom (in pixels)
+            if (scrollHandlerActive) return;
+            scrollHandlerActive = true;
             const BOTTOM_OFFSET = 50;
 
             // Function to check if user has scrolled to the bottom
             function checkScrollPosition() {
                 if (!window.isNotifying) return;
-
                 const scrollPosition = window.scrollY + window.innerHeight;
                 const documentHeight = document.documentElement.scrollHeight;
 
                 // If user has scrolled to near the bottom (with offset)
                 if (scrollPosition >= documentHeight - BOTTOM_OFFSET) {
                     document.title = window.originalTitle;
-                    window.customFaviconAPI.setBase();
                     window.isNotifying = false;
 
                     // Remove the scroll listener once notification is cleared
                     window.removeEventListener('scroll', checkScrollPosition);
+                    scrollHandlerActive = false;
                 }
             }
 
@@ -2162,21 +2123,19 @@ onReady(async function () {
         // Create MutationObserver to detect when you are quoted
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
-                for (const mutation of mutations) {
-                    for (const node of mutation.addedNodes) {
-                        if (
-                            node.nodeType === 1 &&
-                            node.matches &&
-                            node.matches('.postCell, .opCell') &&
-                            node.querySelector("a.quoteLink.you") &&
-                            !node.closest('.innerPost')
-                        ) {
-                            if (beepOnYouSetting) {
-                                playBeep();
-                            }
-                            if (notifyOnYouSetting) {
-                                notifyOnYou();
-                            }
+                for (const node of mutation.addedNodes) {
+                    if (
+                        node.nodeType === 1 &&
+                        typeof node.matches === "function" &&
+                        (node.matches('.postCell') || node.matches('.opCell')) &&
+                        node.querySelector("a.quoteLink.you") &&
+                        !node.closest('.innerPost')
+                    ) {
+                        if (beepOnYouSetting) {
+                            playBeep();
+                        }
+                        if (notifyOnYouSetting) {
+                            notifyOnYou();
                         }
                     }
                 }
@@ -2286,172 +2245,6 @@ onReady(async function () {
         }
     }
 
-    // --- Feature: File Renamer ---
-    function renameFileAtIndex(index) {
-        const currentFile = postCommon.selectedFiles[index];
-        if (!currentFile) return;
-        const currentName = currentFile.name;
-        const newName = prompt("Enter new file name:", currentName);
-
-        if (!newName || newName === currentName) return;
-
-        const extension = currentName.includes('.') ? currentName.substring(currentName.lastIndexOf('.')) : '';
-        const hasExtension = newName.includes('.');
-        const finalName = hasExtension ? newName : newName + extension;
-
-        if (hasExtension && newName.substring(newName.lastIndexOf('.')) !== extension) {
-            alert(`You cannot change the file extension. The extension must remain "${extension}".`);
-            return;
-        }
-        const renamedFile = new File([currentFile], finalName, {
-            type: currentFile.type,
-            lastModified: currentFile.lastModified,
-        });
-
-        postCommon.selectedFiles[index] = renamedFile;
-
-        // Update the label in all containers
-        updateFileLabels(finalName, index);
-    }
-
-    function getSelectedCellIndex(element) {
-        const cell = element.closest('.selectedCell');
-        if (!cell || !cell.parentElement) return -1;
-        const cells = Array.from(cell.parentElement.querySelectorAll(':scope > .selectedCell'));
-        return cells.indexOf(cell);
-    }
-
-    // Helper to update the label text in all relevant containers
-    function updateFileLabels(finalName, index) {
-        //update name in both forms from nth file
-        //CSS :nth-of-type starts from 1, arrays start from 0
-        const cssIndex = index + 1;
-        const selector = `form .selectedCell:nth-of-type(${cssIndex}) .nameLabel`;
-        const labels = document.querySelectorAll(selector);
-        labels.forEach(label => {
-            label.textContent = finalName;
-            label.title = finalName;
-        });
-    }
-
-    // Unified event delegation for .nameLabel clicks in both containers
-    function handleNameLabelClick(event) {
-        const label = event.target.closest('.nameLabel');
-        if (!label) return;
-        const index = getSelectedCellIndex(label);
-        if (index !== -1) {
-            renameFileAtIndex(index);
-        }
-    }
-
-    function handleCustomRemoveClick(event) {
-        //Prevent any original 'onclick' attribute or other listeners
-        //This isnt doing anything as we already removed the node.onclick function
-        event.stopImmediatePropagation();
-
-        const button = event.currentTarget;
-        const index = getSelectedCellIndex(button);
-
-        if (index === -1) {
-            console.error("Could not determine index of the cell to remove.");
-            return;
-        }
-
-        //Remove the file from the data array
-        const removedFiles = postCommon.selectedFiles.splice(index, 1);
-
-        // Adjust budget if a file was actually removed from the array
-        if (removedFiles && removedFiles.length > 0 && removedFiles[0]) {
-            // Ensure adjustBudget exists and the file has a size property
-            if (typeof postCommon.adjustBudget === 'function' && typeof removedFiles[0].size === 'number') {
-                postCommon.adjustBudget(-removedFiles[0].size);
-            } else {
-                console.warn("postCommon.adjustBudget function missing or removed file has no size property.");
-            }
-        } else {
-            console.warn("Spliced file array but got no result for index:", index);
-        }
-
-        //Remove the file's cells from both forms
-        //CSS :nth-of-type starts from 1, arrays start from 0
-        const cssIndex = index + 1;
-        const selector = `form .selectedCell:nth-of-type(${cssIndex})`;
-        const fileCells = document.querySelectorAll(selector);
-        fileCells.forEach(cell => {
-            cell.remove();
-        });
-    }
-
-    // Attach event delegation to a container if not already attached
-    function observePostForms(containerSelector) {
-        const container = document.querySelector(containerSelector);
-        if (!container) {
-            // console.warn(`Container ${containerSelector} not found.`);
-            return;
-        }
-
-        // Attach Name Label Click Listener (Delegated) ---
-        if (!container.dataset.renameDelegationAttached) {
-            // Use capture phase potentially if stopImmediatePropagation in remove handler
-            // interferes, but usually bubble phase is fine.
-            container.addEventListener('click', handleNameLabelClick, false); // Use bubble phase
-            container.dataset.renameDelegationAttached = 'true';
-            // console.log(`Attached name label listener to ${containerSelector}`);
-        }
-
-        // Process Remove Buttons (Existing and Future) ---
-        // Helper function to attach the custom handler to a button
-        const setupRemoveButton = (button) => {
-            if (!button.dataset.customRemoveAttached) {
-                // Remove the original inline onclick function, if it exists
-                if (typeof button.onclick === 'function') {
-                    button.onclick = null;
-                }
-                // Add our custom listener
-                button.addEventListener('click', handleCustomRemoveClick);
-                button.dataset.customRemoveAttached = 'true'; // Mark as processed
-            }
-        };
-
-        // Setup MutationObserver if not already attached to this container
-        if (!container.dataset.removeObserverAttached) {
-            const removeBtnObserver = (mutationsList, observer) => {
-                for (const mutation of mutationsList) {
-                    if (mutation.type === 'childList') {
-                        mutation.addedNodes.forEach(node => {
-                            // Only process if the added node is a div.selectedCell
-                            if (
-                                node.nodeType === Node.ELEMENT_NODE &&
-                                node.matches('div.selectedCell')
-                            ) {
-                                node.querySelectorAll('.removeButton').forEach(setupRemoveButton);
-                            }
-                        });
-                    }
-                }
-            };
-
-            // Create and start the observer
-            const rmvObserver = new MutationObserver(removeBtnObserver);
-            rmvObserver.observe(container, {
-                childList: true,
-                subtree: true
-            });
-
-            // Mark the container so we don't attach multiple observers
-            container.dataset.removeObserverAttached = 'true';
-        }
-    }
-
-    // Watch both containers for changes and attach event delegation
-    function startObservingPostForms() {
-        observePostForms('#qrFilesBody');
-        observePostForms('#postingFormContents');
-    }
-
-    // Init
-    startObservingPostForms();
-
     // --- Feature: Truncate Filenames and Show Only Extension ---
     function truncateFilenames(filenameLength) {
         function processLinks(root = document) {
@@ -2553,66 +2346,6 @@ onReady(async function () {
         }
     }
 
-    // Feature: Custom Favicon Setting
-    async function featureCustomFavicon() {
-        // Define favicon paths for different styles
-        const FAVICON_STYLES = {
-            default: {
-                base: FAVICON_BASE,
-                unread: FAVICON_UNREAD,
-                you: FAVICON_YOU
-            },
-            pixel: {
-                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/base.png', {encoding: 'base64'}) %>",
-                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/unread.png', {encoding: 'base64'}) %>",
-                you: "data:image/png;base64,<%= grunt.file.read('src/img/fav/you.png', {encoding: 'base64'}) %>"
-            },
-            eight: {
-                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/base.png', {encoding: 'base64'}) %>",
-                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/unread.png', {encoding: 'base64'}) %>",
-                you: "data:image/png;base64,<%= grunt.file.read('src/img/fav/you.png', {encoding: 'base64'}) %>"
-            },
-            pixelalt: {
-                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/base.png', {encoding: 'base64'}) %>",
-                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/unread.png', {encoding: 'base64'}) %>",
-                you: "data:image/png;base64,<%= grunt.file.read('src/img/fav/you.png', {encoding: 'base64'}) %>"
-            }
-        };
-
-        // Get the selected favicon style
-        const faviconStyle = await getSetting("customFavicon_faviconStyle") || "default";
-        const favicons = FAVICON_STYLES[faviconStyle] || FAVICON_STYLES.default;
-
-        // Set favicon to base on load
-        setFavicon(favicons.base);
-
-        // Expose API for other features
-        window.customFaviconAPI = {
-            setBase: () => setFavicon(favicons.base),
-            setUnread: () => setFavicon(favicons.unread),
-            setNotification: () => setFavicon(favicons.you)
-        };
-
-        // Listen for storage changes to reset favicon if setting is toggled
-        window.addEventListener("8chanSS_settingChanged", async (e) => {
-            if (e.detail && (e.detail.key === "customFavicon" || e.detail.key === "customFavicon_faviconStyle")) {
-                const enabled = await getSetting("customFavicon");
-                const style = await getSetting("customFavicon_faviconStyle") || "default";
-                const currentFavicons = FAVICON_STYLES[style] || FAVICON_STYLES.default;
-
-                if (enabled) {
-                    setFavicon(currentFavicons.base);
-                    // Update the API methods to use the new style
-                    window.customFaviconAPI.setBase = () => setFavicon(currentFavicons.base);
-                    window.customFaviconAPI.setUnread = () => setFavicon(currentFavicons.unread);
-                    window.customFaviconAPI.setNotification = () => setFavicon(currentFavicons.you);
-                } else {
-                    // Optionally revert to site's default favicon
-                    setFavicon(FAVICON_BASE);
-                }
-            }
-        });
-    }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
