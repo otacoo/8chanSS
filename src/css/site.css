@@ -149,6 +149,14 @@ video {
     scrollbar-color: var(--link-color) var(--contrast-color);
 }
 
+.watched-mention-highlight {
+    color: var(--board-title-color);
+}
+
+.watched-mention-bold {
+    font-weight: bold;
+}
+
 /* Up/Down Arrows */
 .scroll-arrow-btn {
     position: fixed;

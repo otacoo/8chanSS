@@ -1434,10 +1434,8 @@ onReady(async function () {
     // --- Feature: Highlight TW mentions and new posts ---
     function highlightMentions() {
         const watchedCells = document.querySelectorAll("#watchedMenu .watchedCell");
-        if (!watchedCells.length) return; // Early exit if no watched cells
-
-        // Cache the watchButton element outside the loop
         const watchButton = document.querySelector(".opHead .watchButton");
+        if (!watchedCells.length) return; // Early exit if no watched cells
 
         // Process all cells in a single pass
         watchedCells.forEach((cell) => {
@@ -1456,50 +1454,56 @@ onReady(async function () {
                 }
 
                 // Highlight watch button if this thread is open
-                if (document.location.href.includes(href) && watchButton) {
-                    watchButton.style.color = "var(--board-title-color)";
-                    watchButton.title = "Watched";
+                if (document.location.href.includes(href)) {
+                    if (watchButton) {
+                        watchButton.style.color = "var(--board-title-color)";
+                        watchButton.title = "Watched";
+                    }
                 }
 
                 // Decode HTML entities (only if needed)
-                const originalHtml = labelLink.innerHTML;
-                const decodedText = decodeHtmlEntitiesTwice(originalHtml);
-                // Simple sanitization: remove script tags as a precaution
-                const sanitizedText = decodedText.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
-                if (labelLink.textContent !== sanitizedText) {
-                    labelLink.textContent = sanitizedText;
+                const originalText = labelLink.textContent;
+                const decodedText = decodeHtmlEntitiesTwice(originalText);
+                if (labelLink.textContent !== decodedText) {
+                    // Remove all event listeners by cloning and replacing the node
+                    const cleanLabelLink = labelLink.cloneNode(false);
+                    cleanLabelLink.textContent = decodedText;
+                    // Copy over only safe attributes (like href, class, etc.)
+                    if (labelLink.parentNode) {
+                        labelLink.parentNode.replaceChild(cleanLabelLink, labelLink);
+                    }
                 }
-            }
-
-            // Skip if already processed
-            if (notification.dataset.processed === "true") {
-                return;
             }
 
             // Process notification text
             const notificationText = notification.textContent.trim();
 
+            function styleMentionYou(labelLink, notification, totalReplies) {
+                labelLink.classList.add("watched-mention-highlight");
+                notification.classList.add("watched-mention-highlight", "watched-mention-bold");
+                notification.textContent = ` (${totalReplies}) (You)`;
+            }
+
+            function styleMentionNumber(notification, notificationText) {
+                notification.textContent = ` (${notificationText})`;
+                notification.style.color = "var(--link-color)";
+                notification.style.fontWeight = "bold";
+            }
+
             // Skip if already processed (starts with parenthesis)
-            if (notificationText.startsWith("(")) {
+            if (notificationText.startsWith("(") === true) {
                 return;
             }
 
             // Case 1: Has "(you)" - format "2, 1 (you)"
-            if (notificationText.includes("(you)")) {
+            if (notificationText.includes("(you)") === true) {
                 const parts = notificationText.split(", ");
                 const totalReplies = parts[0];
-
-                // Apply styling
-                labelLink.style.color = "var(--board-title-color)";
-                notification.style.color = "var(--board-title-color)";
-                notification.textContent = ` (${totalReplies}) (You)`;
-                notification.style.fontWeight = "bold";
+                styleMentionYou(labelLink, notification, totalReplies);
             }
             // Case 2: Just a number - format "2"
             else if (/^\d+$/.test(notificationText)) {
-                notification.textContent = ` (${notificationText})`;
-                notification.style.color = "var(--link-color)";
-                notification.style.fontWeight = "bold";
+                styleMentionNumber(notification, notificationText);
             }
 
             // Mark as processed
@@ -1513,12 +1517,8 @@ onReady(async function () {
     // Observe #watchedMenu for changes to update highlights dynamically
     const watchedMenu = document.getElementById("watchedMenu");
     if (watchedMenu) {
-        let debounceTimer;
         const observer = new MutationObserver(() => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                highlightMentions();
-            }, 100); // Adjust delay as needed
+            highlightMentions();
         });
         observer.observe(watchedMenu, { childList: true, subtree: true });
     }
