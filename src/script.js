@@ -1567,18 +1567,88 @@ onReady(async function () {
         btn.style.float = 'right';
         btn.style.paddingTop = '3px';
 
+        let isProcessing = false;
+
+        // Helper to check if there are unread threads
+        function hasUnreadThreads() {
+            const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+            if (!watchedMenu) return false;
+            return watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]').length > 0;
+        }
+
+        // Helper to update button state
+        function updateButtonState() {
+            if (hasUnreadThreads()) {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                btn.title = 'Mark all threads as read';
+            } else {
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+                btn.title = 'No unread threads';
+            }
+        }
+
         // Add click handler to mark all threads as read
         btn.addEventListener('click', function (e) {
             e.preventDefault();
+            if (isProcessing || btn.style.pointerEvents === 'none') return;
+            isProcessing = true;
+            btn.style.opacity = '0.5';
+
+            markAllThreadsAsReadWithRetry(3, function () {
+                isProcessing = false;
+                updateButtonState();
+            });
+        });
+
+        // Function to mark all threads with retry capability
+        function markAllThreadsAsReadWithRetry(retriesLeft, callback) {
             setTimeout(function () {
                 const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
-                if (!watchedMenu) return;
-
-                // Select all matching <td> elements and click them
+                if (!watchedMenu) {
+                    if (callback) callback();
+                    return;
+                }
                 const markButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
-                markButtons.forEach(btn => btn.click());
-            }, 20);
-        });
+                if (markButtons.length === 0) {
+                    updateButtonState();
+                    if (callback) callback();
+                    return;
+                }
+
+                let processed = 0;
+                function processNextButton() {
+                    if (processed >= markButtons.length) {
+                        const remainingButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
+                        if (remainingButtons.length > 0 && retriesLeft > 0) {
+                            setTimeout(() => markAllThreadsAsReadWithRetry(retriesLeft - 1, callback), 200);
+                        } else {
+                            if (callback) callback();
+                        }
+                        return;
+                    }
+                    try {
+                        markButtons[processed].click();
+                    } catch (e) {
+                        console.log("Error clicking button:", e);
+                    }
+                    processed++;
+                    setTimeout(processNextButton, 50);
+                }
+                processNextButton();
+            }, 100);
+        }
+
+        // Observe the watchedMenu for changes to enable/disable the button dynamically
+        const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+        if (watchedMenu) {
+            const observer = new MutationObserver(updateButtonState);
+            observer.observe(watchedMenu, { childList: true, subtree: true });
+        }
+
+        // Set initial state
+        updateButtonState();
 
         // Append the button as the last child of div.handle
         handleDiv.appendChild(btn);
