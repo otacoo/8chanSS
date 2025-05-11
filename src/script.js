@@ -1339,26 +1339,11 @@ onReady(async function () {
             };
             return map[mime.toLowerCase()] || "";
         }
-
-        // Debounce utility
-        function debounce(fn, delay) {
-            let timeout;
-            return function (...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => fn.apply(this, args), delay);
-            };
-        }
-
-        // Main spoiler reveal logic
-        async function revealSpoilers() {
+        function revealSpoilers() {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
-            // Cache setting outside the loop for performance
-            const removeSpoilers = await getSetting("blurSpoilers_removeSpoilers");
-
-            spoilerLinks.forEach((link) => {
+            spoilerLinks.forEach(async (link) => {
                 const img = link.querySelector("img");
                 if (!img) return;
-
                 // Skip if src is already a full media file (not t_ and has extension)
                 if (
                     /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) && // has extension
@@ -1366,7 +1351,6 @@ onReady(async function () {
                 ) {
                     return;
                 }
-
                 // Check if this is a custom spoiler image
                 const isCustomSpoiler = img.src.includes("/custom.spoiler")
                     || img.src.includes("/*/custom.spoiler")
@@ -1386,7 +1370,7 @@ onReady(async function () {
                     const fileMime = link.getAttribute("data-filemime") || "";
                     const ext = getExtensionForMimeType(fileMime);
 
-                    // Check for data-filewidth/height attribute
+                    // Check for data-filewidth attribute
                     const fileWidthAttr = link.getAttribute("data-filewidth");
                     const fileHeightAttr = link.getAttribute("data-fileheight");
                     let transformedSrc;
@@ -1404,54 +1388,34 @@ onReady(async function () {
                     }
                     img.src = transformedSrc;
 
-                    // Remove previous event listeners if any
-                    if (img._blurSpoilerMouseOver) {
-                        img.removeEventListener("mouseover", img._blurSpoilerMouseOver);
-                        img._blurSpoilerMouseOver = null;
-                    }
-                    if (img._blurSpoilerMouseOut) {
-                        img.removeEventListener("mouseout", img._blurSpoilerMouseOut);
-                        img._blurSpoilerMouseOut = null;
-                    }
-
                     // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                    if (removeSpoilers) {
+                    if (await getSetting("blurSpoilers_removeSpoilers")) {
                         img.style.filter = "";
                         img.style.transition = "";
                         img.style.border = "1px dotted var(--border-color)";
+                        img.onmouseover = null;
+                        img.onmouseout = null;
+                        return;
                     } else {
                         img.style.filter = "blur(5px)";
                         img.style.transition = "filter 0.3s ease";
-                        // Use named handlers for proper cleanup
-                        img._blurSpoilerMouseOver = () => {
+                        img.addEventListener("mouseover", () => {
                             img.style.filter = "none";
-                        };
-                        img._blurSpoilerMouseOut = () => {
+                        });
+                        img.addEventListener("mouseout", () => {
                             img.style.filter = "blur(5px)";
-                        };
-                        img.addEventListener("mouseover", img._blurSpoilerMouseOver);
-                        img.addEventListener("mouseout", img._blurSpoilerMouseOut);
+                        });
                     }
                 }
             });
         }
 
-        // Debounced version for MutationObserver
-        const debouncedRevealSpoilers = debounce(revealSpoilers, 100);
-
         // Initial run
         revealSpoilers();
 
-        // Observe only relevant containers for dynamically added spoilers
-        const observer = new MutationObserver(debouncedRevealSpoilers);
-        const postsContainer = document.querySelector('.divPosts');
-        const catalogContainer = document.querySelector('.catalogDiv');
-        if (postsContainer) {
-            observer.observe(postsContainer, { childList: true, subtree: true });
-        }
-        if (catalogContainer) {
-            observer.observe(catalogContainer, { childList: true, subtree: true });
-        }
+        // Observe for dynamically added spoilers
+        const observer = new MutationObserver(revealSpoilers);
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1763,12 +1727,17 @@ onReady(async function () {
     function hashNavigation() {
         // Only proceed if the page has the is-thread class
         if (!document.documentElement.classList.contains("is-thread")) return;
+
+        // Use a WeakSet to track processed links
+        const processedLinks = new WeakSet();
+
         // Add # links to quote/backlink anchors within a container
         function addHashLinks(container = document) {
             const links = container.querySelectorAll('.panelBacklinks a, .altBacklinks a, .divMessage .quoteLink');
+            // Cache NodeList in a variable to avoid multiple queries
             links.forEach(link => {
                 if (
-                    link.dataset.hashProcessed ||
+                    processedLinks.has(link) ||
                     (link.nextSibling && link.nextSibling.classList && link.nextSibling.classList.contains('hash-link-container'))
                 ) return;
 
@@ -1786,12 +1755,62 @@ onReady(async function () {
                 wrapper.appendChild(hashSpan);
 
                 link.insertAdjacentElement('afterend', wrapper);
-                link.dataset.hashProcessed = 'true';
+                processedLinks.add(link);
             });
         }
 
+        // Simple debounce utility
+        function debounce(fn, delay) {
+            let timer;
+            return function(...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        // Initial run
+        addHashLinks();
+        // Patch tooltips if present
+        if (window.tooltips) {
+            // Patch loadTooltip and addLoadedTooltip to always call addHashLinks
+            ['loadTooltip', 'addLoadedTooltip'].forEach(fn => {
+                if (typeof tooltips[fn] === 'function') {
+                    const orig = tooltips[fn];
+                    tooltips[fn] = function (...args) {
+                        const result = orig.apply(this, args);
+                        // Try to find the container to apply hash links
+                        let container = args[0];
+                        if (container && container.nodeType === Node.ELEMENT_NODE) {
+                            addHashLinks(container);
+                        }
+                        return result;
+                    };
+                }
+            });
+            // Patch addInlineClick and processQuote to skip hash links
+            ['addInlineClick', 'processQuote'].forEach(fn => {
+                if (typeof tooltips[fn] === 'function') {
+                    const orig = tooltips[fn];
+                    tooltips[fn] = function (quote, ...rest) {
+                        if (
+                            !quote.href ||
+                            quote.classList.contains('hash-link') ||
+                            quote.closest('.hash-link-container') ||
+                            quote.href.includes('#q')
+                        ) {
+                            return;
+                        }
+                        return orig.apply(this, [quote, ...rest]);
+                    };
+                }
+            });
+        }
+
+        // Observe for dynamically added quote/backlink links
+        const postsContainer = document.querySelector('.divPosts') || document.body;
+
         // Event delegation for hash link clicks
-        document.addEventListener('click', function (e) {
+        postsContainer.addEventListener('click', function (e) {
             if (e.target.classList.contains('hash-link')) {
                 e.preventDefault();
                 const link = e.target.closest('.hash-link-container').previousElementSibling;
@@ -1800,11 +1819,13 @@ onReady(async function () {
                 const hashMatch = link.href.match(/#(\d+)$/);
                 if (!hashMatch) return;
                 const postId = hashMatch[1];
-                const postElem = document.getElementById(postId);
+                // Sanitize postId: only allow digits (adjust regex as needed for your ID format)
+                const safePostId = /^[0-9]+$/.test(postId) ? postId : null;
+                if (!safePostId) return;
+                const postElem = document.getElementById(safePostId);
                 if (postElem) {
-                    window.location.hash = `#${postId}`;
+                    window.location.hash = `#${safePostId}`;
                     if (postElem.classList.contains('opCell')) {
-                        // Scroll to "start" with a small offset
                         const offset = 25; // px
                         const rect = postElem.getBoundingClientRect();
                         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -1817,25 +1838,18 @@ onReady(async function () {
             }
         }, true);
 
-        // Initial run
-        addHashLinks();
+        const debouncedAddHashLinks = debounce(addHashLinks, 25);
 
-        // Observe for dynamically added quote/backlink links
-        const postsContainer = document.querySelector('.divPosts') || document.body;
         const observer = new MutationObserver(mutations => {
+            let shouldUpdate = false;
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType === Node.ELEMENT_NODE) {
-                        // If the node itself is a relevant link, process its parent
-                        if (node.matches && node.matches('.panelBacklinks a, .altBacklinks a, .divMessage .quoteLink')) {
-                            addHashLinks(node.parentElement || node);
-                        } else {
-                            // Otherwise, process any relevant links within the node
-                            addHashLinks(node);
-                        }
+                        shouldUpdate = true;
                     }
                 });
             });
+            if (shouldUpdate) debouncedAddHashLinks();
         });
         observer.observe(postsContainer, { childList: true, subtree: true });
     }
