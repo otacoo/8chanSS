@@ -2036,10 +2036,6 @@ onReady(async function () {
             const hash = simpleHash(content);
             // Get setting from GM storage
             const shouldHide = await GM.getValue("8chanSS_" + settingKey, "false") === "true";
-            // Helper to update setting in GM storage
-            async function setSetting(val) {
-                await GM.setValue("8chanSS_" + settingKey, String(val));
-            }
             // Reference to the root element for toggling the class
             const root = document.documentElement;
 
@@ -2053,7 +2049,14 @@ onReady(async function () {
                     if (newHash !== hash) {
                         // Content changed: remove class and disable setting
                         root.classList.remove("hide-announcement");
-                        await setSetting(false);
+                        // Update both app setting and GM storage
+                        if (typeof window.setSetting === "function") {
+                            await window.setSetting("hideAnnouncement", false);
+                        }
+                        await GM.setValue("8chanSS_" + settingKey, "false");
+                        // Also update the settings menu checkbox if open
+                        const menuCheckbox = document.getElementById("setting_hideAnnouncement");
+                        if (menuCheckbox) menuCheckbox.checked = false;
                         await GM.deleteValue("8chanSS_" + hashKey);
                         observer.disconnect();
                     }
