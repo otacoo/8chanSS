@@ -57,6 +57,9 @@ onReady(async function () {
                 }
             },
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
+            _siteMediaTitle: { type: "title", label: ":: Media" },
+            _siteSection3: { type: "separator" },
+            syncHoverPlayback: { label: "Sync Hover Playback with Inline", default: false },
             hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
@@ -967,7 +970,7 @@ onReady(async function () {
         // --- Main hover handler ---
         async function onThumbEnter(e) {
             cleanupFloatingMedia();
-            lastMouseEvent = e; // Store the mouse event for initial placement
+            lastMouseEvent = e; // Store last mouse event for initial placement
             const thumb = e.currentTarget;
             let filemime = null, fullSrc = null, isVideo = false, isAudio = false;
 
@@ -1008,7 +1011,6 @@ onReady(async function () {
             if (!fullSrc || !filemime) return;
 
             // --- Setup floating media element ---
-            // Get user volume setting (default 0.5) first
             let volume = 0.5;
             try {
                 if (typeof getSetting === "function") {
@@ -1019,32 +1021,39 @@ onReady(async function () {
                 }
             } catch { }
 
+            // --- Check if playback sync is enabled ---
+            let syncPlayback = true;
+            try {
+                if (typeof getSetting === "function") {
+                    const v = await getSetting("syncHoverPlayback");
+                    syncPlayback = v !== false; // default true
+                }
+            } catch { syncPlayback = true; }
+
             // Check for existing inline media or stored time
             let initialTime = 0;
+            let inlineMedia = null;
 
             if (currentMediaHash && (isVideo || isAudio)) {
-                // First check for an inline media element
+                // First check for an inline media elemen][L]
                 const mediaType = isVideo ? 'video' : 'audio';
-                const inlineMedia = findInlineMedia(currentMediaHash, mediaType);
+                inlineMedia = findInlineMedia(currentMediaHash, mediaType);
 
-                if (inlineMedia && !inlineMedia.paused) {
+                if (syncPlayback && inlineMedia && !inlineMedia.paused) {
                     // If inline media exists and is playing, use its current time
                     initialTime = inlineMedia.currentTime;
 
                     // Set up a timeupdate listener on the inline media to keep hover in sync
                     const updateHoverTime = () => {
                         if (floatingMedia && !floatingMedia.paused) {
-                            // Only update if difference is significant
                             if (Math.abs(floatingMedia.currentTime - inlineMedia.currentTime) > 0.3) {
                                 floatingMedia.currentTime = inlineMedia.currentTime;
                             }
                         }
                     };
-
                     inlineMedia.addEventListener('timeupdate', updateHoverTime);
                     cleanupFns.push(() => inlineMedia.removeEventListener('timeupdate', updateHoverTime));
                 } else if (window._mediaPlaybackTimes.has(currentMediaHash)) {
-                    // Otherwise use stored time
                     initialTime = window._mediaPlaybackTimes.get(currentMediaHash);
                 }
             }
@@ -1075,14 +1084,14 @@ onReady(async function () {
                 }, { once: true });
 
                 // Set up timeupdate listener to store current time
-                floatingMedia.addEventListener('timeupdate', () => {
-                    if (currentMediaHash && !floatingMedia.paused) {
-                        window._mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
-
-                        // Also update any inline media with this hash
-                        updateInlineMediaTime(currentMediaHash, floatingMedia.currentTime);
-                    }
-                });
+                if (isVideo || isAudio) {
+                    floatingMedia.addEventListener('timeupdate', () => {
+                        if (syncPlayback && currentMediaHash && !floatingMedia.paused) {
+                            window._mediaPlaybackTimes.set(currentMediaHash, floatingMedia.currentTime);
+                            updateInlineMediaTime(currentMediaHash, floatingMedia.currentTime);
+                        }
+                    });
+                }
 
                 // Set src after setting up listeners
                 floatingMedia.src = fullSrc;
