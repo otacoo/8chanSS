@@ -1624,18 +1624,7 @@ onReady(async function () {
             }
         }
 
-        function addCloseListener() {
-            const watchedMenu = document.getElementById("watchedMenu");
-            if (!watchedMenu) return;
-            const closeBtn = watchedMenu.querySelector(".close-btn");
-            if (closeBtn) {
-                closeBtn.addEventListener("click", () => {
-                    watchedMenu.style.display = "none";
-                });
-            }
-        }
         showThreadWatcher();
-        addCloseListener();
     }
 
     // --- Feature: Mark All Threads as Read Button ---
@@ -1651,8 +1640,6 @@ onReady(async function () {
         btn.title = 'Mark all threads as read';
         btn.style.float = 'right';
         btn.style.paddingTop = '3px';
-
-        let isProcessing = false;
 
         // Helper to check if there are unread threads
         function hasUnreadThreads() {
@@ -1674,18 +1661,18 @@ onReady(async function () {
             }
         }
 
-        // Add click handler to mark all threads as read
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (isProcessing || btn.style.pointerEvents === 'none') return;
-            isProcessing = true;
-            btn.style.opacity = '0.5';
-
-            markAllThreadsAsReadWithRetry(3, function () {
-                isProcessing = false;
-                updateButtonState();
+        // Reusable function to find and click all 'Mark as read' buttons
+        function clickAllMarkAsReadButtons(watchedMenu) {
+            const markButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
+            markButtons.forEach(btn => {
+                try {
+                    btn.click();
+                } catch (e) {
+                    console.log("Error clicking button:", e);
+                }
             });
-        });
+            return markButtons.length;
+        }
 
         // Function to mark all threads with retry capability
         function markAllThreadsAsReadWithRetry(retriesLeft, callback) {
@@ -1695,41 +1682,45 @@ onReady(async function () {
                     if (callback) callback();
                     return;
                 }
-                const markButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
-                if (markButtons.length === 0) {
+                const clickedCount = clickAllMarkAsReadButtons(watchedMenu);
+                if (clickedCount === 0) {
                     updateButtonState();
                     if (callback) callback();
                     return;
                 }
-
-                let processed = 0;
-                function processNextButton() {
-                    if (processed >= markButtons.length) {
-                        const remainingButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
-                        if (remainingButtons.length > 0 && retriesLeft > 0) {
-                            setTimeout(() => markAllThreadsAsReadWithRetry(retriesLeft - 1, callback), 200);
-                        } else {
-                            if (callback) callback();
-                        }
-                        return;
-                    }
-                    try {
-                        markButtons[processed].click();
-                    } catch (e) {
-                        console.log("Error clicking button:", e);
-                    }
-                    processed++;
-                    setTimeout(processNextButton, 50);
+                if (retriesLeft > 0) {
+                    setTimeout(() => markAllThreadsAsReadWithRetry(retriesLeft - 1, callback), 200);
+                } else if (callback) {
+                    callback();
                 }
-                processNextButton();
             }, 100);
+        }
+
+        // Debounce helper
+        function debounce(fn, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), delay);
+            };
         }
 
         // Observe the watchedMenu for changes to enable/disable the button dynamically
         const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+        let observer = null;
         if (watchedMenu) {
-            const observer = new MutationObserver(updateButtonState);
+            const debouncedUpdate = debounce(updateButtonState, 100);
+            observer = new MutationObserver(debouncedUpdate);
             observer.observe(watchedMenu, { childList: true, subtree: true });
+
+            // Disconnect observer when watchedMenu is removed or hidden
+            const removalObserver = new MutationObserver(() => {
+                if (!document.body.contains(watchedMenu) || watchedMenu.style.display === "none") {
+                    observer.disconnect();
+                    removalObserver.disconnect();
+                }
+            });
+            removalObserver.observe(document.body, { childList: true, subtree: true });
         }
 
         // Set initial state
@@ -1737,6 +1728,29 @@ onReady(async function () {
 
         // Append the button as the last child of div.handle
         handleDiv.appendChild(btn);
+
+        // Event delegation for close button and mark-all-read button
+        document.body.addEventListener('click', function(e) {
+            // Close button delegation
+            const closeBtn = e.target.closest('#watchedMenu .close-btn');
+            if (closeBtn) {
+                const watchedMenu = document.getElementById("watchedMenu");
+                if (watchedMenu) watchedMenu.style.display = "none";
+                return;
+            }
+            // Mark all as read button delegation
+            const markAllBtn = e.target.closest('.watchedCellDismissButton.markAllRead');
+            if (markAllBtn) {
+                e.preventDefault();
+                if (markAllBtn.style.pointerEvents === 'none' || markAllBtn.dataset.processing === 'true') return;
+                markAllBtn.dataset.processing = 'true';
+                markAllBtn.style.opacity = '0.5';
+                markAllThreadsAsReadWithRetry(3, function () {
+                    markAllBtn.dataset.processing = 'false';
+                    updateButtonState();
+                });
+            }
+        });
     }
     markAllThreadsAsRead();
 
