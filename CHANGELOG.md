@@ -1,3 +1,11 @@
+### v1.44.1 (Patch)
+*2025-05-12*
+
+- Fix for Image Hover not working correctly after refactor
+- Added in v1.44.0: M4V format support
+- Remove old meta @grant added in the last version
+- Small code changes & fixes
+
 ## v1.44.0
 *2025-05-12*
 

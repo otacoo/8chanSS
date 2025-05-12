@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.44.0
+// @version      1.44.1
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -15,24 +15,19 @@
 // @grant        GM.setValue
 // @grant        GM.deleteValue
 // @grant        GM.listValues
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        GM_deleteValue
-// @grant        GM_listValues
 // @run-at       document-start
 // @updateURL    https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.meta.js
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAZlBMVEUAAABdlloAhl758AH58AH58AcAhl758ADj4CYAh14AhV4AhV0Ahl748AcChl4Chl0Ab2H58AIAhl758AD58AAAhl757wL48AD47wL78QL47wcAh1748AF3oFfs5yEAh1/68QDz7BM5qSu8AAAAH3RSTlMA/lg/OYtM8g/onXtoXzAaCdzBsIFzczMeaCXXyrmp9ddA3QAAANpJREFUSMft0tkOgjAQheFjtVCQVVxwnfr+L+kWM5FOC73TxP/6fBedFJwpyx5CtSpqSHXWpns4qYxo1cDtkNp7GoOW9KgSwM4+09KeEhmw4H0IuGJDAbCw79a8nwJYFDQCuO1gT8oLWCiKAXavKA5cZ78I5n/wBx7wfb+1TwOggpD2gxxSpvWBrIbY3AcUPK1lkMNbJ4FV4wd964KsQqBF6oAEwcoh2GAk/QlyjNYx4AeHMicGxxoTOrRvIB5IPtULJJhY+QIFJrd9gCUi0tdZjqgu5yYOGAO5G/kyc3TkciPeAAAAAElFTkSuQmCC
 // ==/UserScript==
 
-function onReady(fn) {
+(function (fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
     } else {
         fn();
     }
-}
-onReady(async function () {
+})(async function () {
     "use strict";
     const scriptSettings = {
         site: {
@@ -78,7 +73,7 @@ onReady(async function () {
                 default: true,
                 subOptions: {
                     customMessage: {
-                        label: "Custom Text (8 chars. max)",
+                        label: "Custom Text (max: 8 chars.)",
                         default: "",
                         type: "text",
                         maxLength: 9
@@ -105,7 +100,7 @@ onReady(async function () {
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
             scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
             saveQrCheckboxes: { label: "Remember QR Checkboxes State", default: false },
-            deleteSavedName: { label: "Delete Name Checkbox", default: true }
+            deleteSavedName: { label: "Delete Name Checkbox", default: false }
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
@@ -170,23 +165,28 @@ onReady(async function () {
             }
         }
     };
-    const flatSettings = {};
+
+    Object.freeze(scriptSettings); 
+    let flatSettings = null;
     function flattenSettings() {
+        if (flatSettings !== null) return flatSettings; 
+        const result = {};
         Object.keys(scriptSettings).forEach((category) => {
             Object.keys(scriptSettings[category]).forEach((key) => {
                 if (key.startsWith('_')) return;
-                flatSettings[key] = scriptSettings[category][key];
+                result[key] = scriptSettings[category][key];
                 if (!scriptSettings[category][key].subOptions) return;
                 Object.keys(scriptSettings[category][key].subOptions).forEach(
                     (subKey) => {
                         const fullKey = `${key}_${subKey}`;
-                        flatSettings[fullKey] =
+                        result[fullKey] =
                             scriptSettings[category][key].subOptions[subKey];
                     }
                 );
             });
         });
-        Object.freeze(flatSettings); 
+        flatSettings = Object.freeze(result);
+        return flatSettings;
     }
     flattenSettings();
     async function getSetting(key) {
@@ -194,7 +194,13 @@ onReady(async function () {
             console.warn(`Setting key not found: ${key}`);
             return false;
         }
-        let val = await GM.getValue("8chanSS_" + key, null);
+        let val;
+        try {
+            val = await GM.getValue("8chanSS_" + key, null);
+        } catch (err) {
+            console.error(`Failed to get setting for key ${key}:`, err);
+            return flatSettings[key]?.default ?? false;
+        }
         if (val === null) return flatSettings[key].default;
         if (flatSettings[key].type === "number") return Number(val);
         if (flatSettings[key].type === "text") return String(val).replace(/[<>"']/g, "").slice(0, flatSettings[key].maxLength || 32);
@@ -203,7 +209,11 @@ onReady(async function () {
     }
 
     async function setSetting(key, value) {
-        await GM.setValue("8chanSS_" + key, String(value));
+        try {
+            await GM.setValue("8chanSS_" + key, String(value));
+        } catch (err) {
+            console.error(`Failed to set setting for key ${key}:`, err);
+        }
     }
     async function featureCssClassToggles() {
         document.documentElement.classList.add("8chanSS");
@@ -688,7 +698,7 @@ onReady(async function () {
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
 
-            const MEDIA_BOTTOM_MARGIN_PX = window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
+            const MEDIA_BOTTOM_MARGIN_PX = window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100); 
 
             let x, y;
             let rightX = event.clientX + MEDIA_OFFSET;
@@ -821,9 +831,8 @@ onReady(async function () {
                 isAudio = filemime && filemime.startsWith("audio/");
             }
 
-            if (!fullSrc || !filemime) return;
             fullSrc = sanitizeUrl(fullSrc);
-            if (!fullSrc) return;
+            if (!fullSrc || !filemime) return;
             let volume = 0.5;
             try {
                 if (typeof getSetting === "function") {
@@ -845,15 +854,7 @@ onReady(async function () {
                 floatingMedia.style.display = "none";
                 floatingMedia.volume = volume;
                 document.body.appendChild(floatingMedia);
-
-                const mediaLoadTimeout = setTimeout(() => {
-                    cleanupFloatingMedia();
-                }, 5000); 
-
-                floatingMedia.onloadeddata = function () {
-                    clearTimeout(mediaLoadTimeout);
-                    floatingMedia.play().catch(() => { });
-                };
+                floatingMedia.play().catch(() => { });
                 const indicator = document.createElement("div");
                 indicator.classList.add("audio-preview-indicator");
                 indicator.textContent = AUDIO_INDICATOR_TEXT;
@@ -900,13 +901,8 @@ onReady(async function () {
             if (lastMouseEvent) {
                 positionFloatingMedia(lastMouseEvent);
             }
-            const mediaLoadTimeout = setTimeout(() => {
-                cleanupFloatingMedia();
-            }, 5000); 
-
             if (isVideo) {
                 floatingMedia.onloadeddata = function () {
-                    clearTimeout(mediaLoadTimeout);
                     if (floatingMedia) {
                         floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
                         if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
@@ -914,65 +910,49 @@ onReady(async function () {
                 };
             } else {
                 floatingMedia.onload = function () {
-                    clearTimeout(mediaLoadTimeout);
                     if (floatingMedia) {
                         floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
                         if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
                     }
                 };
             }
-            floatingMedia.onerror = function () {
-                clearTimeout(mediaLoadTimeout);
-                cleanupFloatingMedia();
-            };
+            floatingMedia.onerror = cleanupFloatingMedia;
             function leaveHandler() { cleanupFloatingMedia(); }
             thumb.addEventListener("mouseleave", leaveHandler, { once: true });
             window.addEventListener("scroll", leaveHandler, { passive: true, once: true });
             cleanupFns.push(() => thumb.removeEventListener("mouseleave", leaveHandler));
             cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
         }
-        const hoverBoundMap = new WeakMap();
-
         function attachThumbListeners(root = document) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const thumb = entry.target;
-                        if (!hoverBoundMap.has(thumb)) {
-                            thumb.addEventListener("mouseenter", onThumbEnter, { passive: true });
-                            hoverBoundMap.set(thumb, true);
-                            observer.unobserve(thumb); 
-                        }
-                    }
-                });
-            });
-
             root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
-                if (!hoverBoundMap.has(thumb)) {
-                    observer.observe(thumb);
+                if (!thumb._fullImgHoverBound) {
+                    thumb.addEventListener("mouseenter", onThumbEnter);
+                    thumb._fullImgHoverBound = true;
                 }
             });
             if (
                 root.tagName === "IMG" &&
                 root.parentElement &&
                 (root.parentElement.matches("a.linkThumb") || root.parentElement.matches("a.imgLink")) &&
-                !hoverBoundMap.has(root)
+                !root._fullImgHoverBound
             ) {
-                root.addEventListener("mouseenter", onThumbEnter, { passive: true });
-                hoverBoundMap.set(root, true);
+                root.addEventListener("mouseenter", onThumbEnter);
+                root._fullImgHoverBound = true;
             }
         }
         attachThumbListeners();
         const divThreads = document.getElementById("divThreads");
         if (divThreads) {
             const observer = new MutationObserver((mutations) => {
+                const addedElements = [];
                 for (const mutation of mutations) {
                     for (const node of mutation.addedNodes) {
-                        if (node.nodeType === 1) { 
-                            attachThumbListeners(node);
+                        if (node.nodeType === 1) {
+                            addedElements.push(node);
                         }
                     }
                 }
+                addedElements.forEach(node => attachThumbListeners(node));
             });
             observer.observe(divThreads, { childList: true, subtree: true });
         }
@@ -2155,7 +2135,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.44.0</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.44.1</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -2934,10 +2914,13 @@ onReady(async function () {
         }
         hideThreadsOnRefresh();
     }
-    const captchaInput = document.getElementById("QRfieldCaptcha");
-    if (captchaInput) {
-        captchaInput.autocomplete = "off";
+    function noCaptchaHistory() {
+        const captchaInput = document.getElementById("QRfieldCaptcha");
+        if (captchaInput) {
+            captchaInput.autocomplete = "off";
+        }
     }
+    noCaptchaHistory();
     function preventFooterScrollIntoView() {
         const footer = document.getElementById('footer');
         if (footer && !footer._scrollBlocked) {
@@ -2947,11 +2930,14 @@ onReady(async function () {
             };
         }
     }
-    const opHeadTitle = document.querySelector('.opHead.title');
-    const innerOP = document.querySelector('.innerOP');
-    if (opHeadTitle && innerOP) {
-        innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
+    function moveFileUploadsBelowOp() {
+        const opHeadTitle = document.querySelector('.opHead.title');
+        const innerOP = document.querySelector('.innerOP');
+        if (opHeadTitle && innerOP) {
+            innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
+        }
     }
+    moveFileUploadsBelowOp();
     document.addEventListener('click', function (e) {
         const a = e.target.closest('.panelBacklinks > a');
         if (a) {
