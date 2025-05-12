@@ -1,14 +1,11 @@
-////////// HELPERS ///////////////////////  
-// Function to run when DOM is ready
-function onReady(fn) {
+////////// START OF THE SCRIPT ///////////////////////
+(function(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
     } else {
         fn();
     }
-}
-//////// START OF THE SCRIPT ////////////////////
-onReady(async function () {
+})(async function () {
     "use strict";
     // --- Default Settings ---
     const scriptSettings = {
@@ -55,7 +52,7 @@ onReady(async function () {
                 default: true,
                 subOptions: {
                     customMessage: {
-                        label: "Custom Text (8 chars. max)",
+                        label: "Custom Text (max: 8 chars.)",
                         default: "",
                         type: "text",
                         maxLength: 9
@@ -82,7 +79,7 @@ onReady(async function () {
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
             scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
             saveQrCheckboxes: { label: "Remember QR Checkboxes State", default: false },
-            deleteSavedName: { label: "Delete Name Checkbox", default: true }
+            deleteSavedName: { label: "Delete Name Checkbox", default: false }
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
@@ -148,27 +145,30 @@ onReady(async function () {
         }
     };
 
+    Object.freeze(scriptSettings); // Prevent accidental mutation of original settings
+    
     // Flatten settings for backward compatibility with existing functions
-    const flatSettings = {};
+    let flatSettings = null;
     function flattenSettings() {
+        if (flatSettings !== null) return flatSettings; // Return cached if already flattened
+        const result = {};
         Object.keys(scriptSettings).forEach((category) => {
             Object.keys(scriptSettings[category]).forEach((key) => {
-                // Skip keys that start with an underscore
                 if (key.startsWith('_')) return;
-                flatSettings[key] = scriptSettings[category][key];
-
                 // Also flatten any sub-options
+                result[key] = scriptSettings[category][key];
                 if (!scriptSettings[category][key].subOptions) return;
                 Object.keys(scriptSettings[category][key].subOptions).forEach(
                     (subKey) => {
                         const fullKey = `${key}_${subKey}`;
-                        flatSettings[fullKey] =
+                        result[fullKey] =
                             scriptSettings[category][key].subOptions[subKey];
                     }
                 );
             });
         });
-        Object.freeze(flatSettings); // Prevent accidental mutation
+        flatSettings = Object.freeze(result);
+        return flatSettings;
     }
     flattenSettings();
 
@@ -178,7 +178,13 @@ onReady(async function () {
             console.warn(`Setting key not found: ${key}`);
             return false;
         }
-        let val = await GM.getValue("8chanSS_" + key, null);
+        let val;
+        try {
+            val = await GM.getValue("8chanSS_" + key, null);
+        } catch (err) {
+            console.error(`Failed to get setting for key ${key}:`, err);
+            return flatSettings[key]?.default ?? false;
+        }
         if (val === null) return flatSettings[key].default;
         if (flatSettings[key].type === "number") return Number(val);
         if (flatSettings[key].type === "text") return String(val).replace(/[<>"']/g, "").slice(0, flatSettings[key].maxLength || 32);
@@ -188,7 +194,11 @@ onReady(async function () {
 
     async function setSetting(key, value) {
         // Always store as string for consistency
-        await GM.setValue("8chanSS_" + key, String(value));
+        try {
+            await GM.setValue("8chanSS_" + key, String(value));
+        } catch (err) {
+            console.error(`Failed to set setting for key ${key}:`, err);
+        }
     }
 
     // --- Root CSS Class Toggles ---
