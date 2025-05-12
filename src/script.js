@@ -40,7 +40,6 @@ onReady(async function () {
                     }
                 }
             },
-            saveQrCheckboxes: { label: "Remember QR Checkboxes State", default: false },
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
@@ -83,6 +82,7 @@ onReady(async function () {
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
             scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
+            saveQrCheckboxes: { label: "Remember QR Checkboxes State", default: false },
             deleteSavedName: { label: "Delete Name Checkbox", default: true }
         },
         catalog: {
