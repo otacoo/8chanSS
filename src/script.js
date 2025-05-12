@@ -40,6 +40,7 @@ onReady(async function () {
                     }
                 }
             },
+            saveQrCheckboxes: { label: "Remember QR Checkboxes State", default: false },
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
@@ -359,6 +360,9 @@ onReady(async function () {
     }
     if (await getSetting("hideAnnouncement")) {
         featureHideAnnouncement();
+    }
+    if (await getSetting("saveQrCheckboxes")) {
+        rememberQrCheckboxes();
     }
 
     // Check if we should enable image hover based on the current page
@@ -1423,7 +1427,7 @@ onReady(async function () {
     // Decode HTML entities in <a> to string (e.g., &gt; to >, &apos; to ')
     const decodeHtmlEntitiesTwice = (() => {
         const txt = document.createElement('textarea');
-        return function(html) {
+        return function (html) {
             txt.innerHTML = html;
             const once = txt.value;
             txt.innerHTML = once;
@@ -1658,7 +1662,7 @@ onReady(async function () {
         // Debounce helper
         function debounce(fn, delay) {
             let timeout;
-            return function(...args) {
+            return function (...args) {
                 clearTimeout(timeout);
                 timeout = setTimeout(() => fn.apply(this, args), delay);
             };
@@ -1689,7 +1693,7 @@ onReady(async function () {
         handleDiv.appendChild(btn);
 
         // Event delegation for close button and mark-all-read button
-        document.body.addEventListener('click', function(e) {
+        document.body.addEventListener('click', function (e) {
             // Close button delegation
             const closeBtn = e.target.closest('#watchedMenu .close-btn');
             if (closeBtn) {
@@ -1757,7 +1761,7 @@ onReady(async function () {
         // Simple debounce utility
         function debounce(fn, delay) {
             let timer;
-            return function(...args) {
+            return function (...args) {
                 clearTimeout(timer);
                 timer = setTimeout(() => fn.apply(this, args), delay);
             };
@@ -2088,6 +2092,78 @@ onReady(async function () {
         }
     }
 
+    // --- Feature: Remember QR Checkbox State ---
+    function rememberQrCheckboxes() {
+        const QR_CHECKBOX_IDS = [
+            "qrcheckboxNoFlag",
+            "qrcheckboxSpoiler",
+            "qrcheckboxScramble",
+            "qrdoSageCheckbox",
+            "qralwaysUseBypassCheckBox"
+        ];
+
+        // GM Storage key for checkbox states
+        const QR_CHECKBOX_STATE_KEY = "qr_checkbox_states";
+
+        // Loads the saved checkbox states from GM Storage.
+        async function loadQrCheckboxStates() {
+            const raw = await GM.getValue(QR_CHECKBOX_STATE_KEY, "{}");
+            try {
+                const parsed = JSON.parse(raw);
+                const safeState = {};
+                QR_CHECKBOX_IDS.forEach(id => {
+                    if (Object.prototype.hasOwnProperty.call(parsed, id) && typeof parsed[id] === "boolean") {
+                        safeState[id] = parsed[id];
+                    }
+                });
+                return safeState;
+            } catch {
+                return {};
+            }
+        }
+
+        // Saves the checkbox states to GM Storage.
+        async function saveQrCheckboxStates(state) {
+            await GM.setValue(QR_CHECKBOX_STATE_KEY, JSON.stringify(state));
+        }
+
+        // Simple debounce utility
+        function debounce(fn, delay) {
+            let timer;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        // Initializes the checkboxes' states from storage and sets up change listeners.
+        async function init() {
+            const state = await loadQrCheckboxStates();
+
+            QR_CHECKBOX_IDS.forEach(id => {
+                const checkbox = document.getElementById(id);
+                if (!checkbox) return;
+
+                // Set initial state if saved
+                if (typeof state[id] === "boolean") {
+                    checkbox.checked = state[id];
+                }
+
+                const debouncedSave = debounce(async (id, checkbox) => {
+                    const currentState = await loadQrCheckboxStates();
+                    currentState[id] = checkbox.checked;
+                    await saveQrCheckboxStates(currentState);
+                }, 50);
+
+                checkbox.addEventListener("change", () => {
+                    debouncedSave(id, checkbox);
+                });
+            });
+        }
+        //
+        init();
+    }
+
     // --- Feature: Hide Announcement and unhide if message changes ---
     async function featureHideAnnouncement() {
         // Simple fast hash function (djb2)
@@ -2141,9 +2217,7 @@ onReady(async function () {
         await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
     }
 
-    /**
-     * Feature: Beep on (You) - Optimized
-     */
+    // --- Feature: Beep/Notify on (You) ---
     async function featureBeepOnYou() {
         // Create Web Audio API beep (reuse context)
         let audioContext = null;
@@ -2566,6 +2640,7 @@ onReady(async function () {
         tabContent.style.maxHeight = "65vh";
         tabContent.style.overflowY = "auto";
         tabContent.style.scrollbarWidth = "thin";
+        tabContent.style.fontSize = "smaller";
 
         // Store current (unsaved) values
         const tempSettings = {};
