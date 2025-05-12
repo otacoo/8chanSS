@@ -786,7 +786,7 @@
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
 
-            const MEDIA_BOTTOM_MARGIN_PX = window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
+            const MEDIA_BOTTOM_MARGIN_PX = window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100); // Calculate scrollbar width
 
             let x, y;
 
@@ -863,7 +863,6 @@
             if (isSmallImage && thumbnailSrc.match(/\/\.media\/[^\/]+\.[a-zA-Z0-9]+$/)) {
                 return thumbnailSrc;
             }
-
             // If "t_" thumbnail
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
@@ -878,7 +877,6 @@
                 if (!ext) return null;
                 return base + ext;
             }
-
             // If src is a direct hash (no t_) and has no extension, append extension unless APNG or m4v
             if (
                 thumbnailSrc.match(/^\/\.media\/[a-f0-9]{40,}$/i) && // hash only, no extension
@@ -910,7 +908,7 @@
         // --- Main hover handler ---
         async function onThumbEnter(e) {
             cleanupFloatingMedia();
-            lastMouseEvent = e; // Store mouse event for initial placement
+            lastMouseEvent = e; // Store the mouse event for initial placement
             const thumb = e.currentTarget;
             let filemime = null, fullSrc = null, isVideo = false, isAudio = false;
 
@@ -946,9 +944,8 @@
                 isAudio = filemime && filemime.startsWith("audio/");
             }
 
-            if (!fullSrc || !filemime) return;
             fullSrc = sanitizeUrl(fullSrc);
-            if (!fullSrc) return;
+            if (!fullSrc || !filemime) return;
 
             // --- Setup floating media element ---
             // Get user volume setting (default 0.5) first
@@ -975,15 +972,7 @@
                 floatingMedia.style.display = "none";
                 floatingMedia.volume = volume;
                 document.body.appendChild(floatingMedia);
-
-                const mediaLoadTimeout = setTimeout(() => {
-                    cleanupFloatingMedia();
-                }, 5000); // 5 seconds timeout
-
-                floatingMedia.onloadeddata = function () {
-                    clearTimeout(mediaLoadTimeout);
-                    floatingMedia.play().catch(() => { });
-                };
+                floatingMedia.play().catch(() => { });
 
                 // Show indicator
                 const indicator = document.createElement("div");
@@ -1044,13 +1033,8 @@
             }
 
             // When loaded, fade in and reposition with real size
-            const mediaLoadTimeout = setTimeout(() => {
-                cleanupFloatingMedia();
-            }, 5000); // 5 seconds timeout
-
             if (isVideo) {
                 floatingMedia.onloadeddata = function () {
-                    clearTimeout(mediaLoadTimeout);
                     if (floatingMedia) {
                         floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
                         if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
@@ -1058,7 +1042,6 @@
                 };
             } else {
                 floatingMedia.onload = function () {
-                    clearTimeout(mediaLoadTimeout);
                     if (floatingMedia) {
                         floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
                         if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
@@ -1066,10 +1049,7 @@
                 };
             }
             // If error, cleanup
-            floatingMedia.onerror = function () {
-                clearTimeout(mediaLoadTimeout);
-                cleanupFloatingMedia();
-            };
+            floatingMedia.onerror = cleanupFloatingMedia;
 
             // Cleanup on leave/scroll
             function leaveHandler() { cleanupFloatingMedia(); }
@@ -1079,39 +1059,24 @@
             cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
         }
 
-        // --- Attach listeners to thumbnails and audio links ---
-        const hoverBoundMap = new WeakMap();
-
+// --- Attach listeners to thumbnails and audio links ---
         function attachThumbListeners(root = document) {
-            // Use IntersectionObserver to only attach listeners to visible thumbnails
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const thumb = entry.target;
-                        if (!hoverBoundMap.has(thumb)) {
-                            thumb.addEventListener("mouseenter", onThumbEnter, { passive: true });
-                            hoverBoundMap.set(thumb, true);
-                            observer.unobserve(thumb); // No need to keep observing once bound
-                        }
-                    }
-                });
-            });
-
+            // Attach to all a.linkThumb > img and a.imgLink > img in root
             root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
-                if (!hoverBoundMap.has(thumb)) {
-                    observer.observe(thumb);
+                if (!thumb._fullImgHoverBound) {
+                    thumb.addEventListener("mouseenter", onThumbEnter);
+                    thumb._fullImgHoverBound = true;
                 }
             });
-
             // If root itself is such an img, attach as well
             if (
                 root.tagName === "IMG" &&
                 root.parentElement &&
                 (root.parentElement.matches("a.linkThumb") || root.parentElement.matches("a.imgLink")) &&
-                !hoverBoundMap.has(root)
+                !root._fullImgHoverBound
             ) {
-                root.addEventListener("mouseenter", onThumbEnter, { passive: true });
-                hoverBoundMap.set(root, true);
+                root.addEventListener("mouseenter", onThumbEnter);
+                root._fullImgHoverBound = true;
             }
         }
 
@@ -1122,14 +1087,17 @@
         const divThreads = document.getElementById("divThreads");
         if (divThreads) {
             const observer = new MutationObserver((mutations) => {
+                // Flatten all added nodes from all mutations into a single array
+                const addedElements = [];
                 for (const mutation of mutations) {
                     for (const node of mutation.addedNodes) {
-                        if (node.nodeType === 1) { // Element node
-                            // Attach to this node if it's a thumb, or to any thumbs inside it
-                            attachThumbListeners(node);
+                        if (node.nodeType === 1) {
+                            addedElements.push(node);
                         }
                     }
                 }
+                // Attach listeners for each added element
+                addedElements.forEach(node => attachThumbListeners(node));
             });
             observer.observe(divThreads, { childList: true, subtree: true });
         }
