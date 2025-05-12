@@ -308,79 +308,62 @@ onReady(async function () {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Feature Initialization based on Settings ---
-    // TODO: We could map this later, but I like it for easier reading and adding new items atm
-    if (await getSetting("enableScrollSave")) {
-        featureSaveScroll();
+    // Map all the settings to their functions
+    const featureMap = [
+        { key: "enableScrollSave", fn: featureSaveScroll },
+        { key: "watchThreadOnReply", fn: featureWatchThreadOnReply },
+        { key: "blurSpoilers", fn: featureBlurSpoilers },
+        { key: "enableHeaderCatalogLinks", fn: featureHeaderCatalogLinks },
+        { key: "openCatalogThreadNewTab", fn: catalogThreadsInNewTab },
+        { key: "deleteSavedName", fn: featureDeleteNameCheckbox },
+        { key: "enableScrollArrows", fn: featureScrollArrows },
+        { key: "alwaysShowTW", fn: featureAlwaysShowTW },
+        { key: "scrollToBottom", fn: preventFooterScrollIntoView },
+        { key: "enableThreadHiding", fn: featureCatalogHiding },
+        { key: "switchTimeFormat", fn: featureLabelCreated12h },
+        { key: "enableIdFilters", fn: enableIdFiltering },
+        { key: "enhanceYoutube", fn: enhanceYouTubeLinks },
+        { key: "threadStatsInHeader", fn: threadInfoHeader },
+        { key: "enableHashNav", fn: hashNavigation },
+        { key: "hideAnnouncement", fn: featureHideAnnouncement },
+        { key: "saveQrCheckboxes", fn: rememberQrCheckboxes },
+    ];
+    // Enable/disable setting
+    for (const { key, fn } of featureMap) {
+        try {
+            if (await getSetting(key)) {
+                fn();
+            }
+        } catch (e) {
+            console.error(`${fn.name || 'Feature'} failed:`, e);
+        }
     }
-    if (await getSetting("watchThreadOnReply")) {
-        featureWatchThreadOnReply();
-    }
-    if (await getSetting("blurSpoilers")) {
-        featureBlurSpoilers();
-    }
-    if (await getSetting("enableHeaderCatalogLinks")) {
-        featureHeaderCatalogLinks();
-    }
-    if (await getSetting("openCatalogThreadNewTab")) {
-        catalogThreadsInNewTab();
-    }
-    if (await getSetting("deleteSavedName")) {
-        featureDeleteNameCheckbox();
-    }
-    if (await getSetting("enableScrollArrows")) {
-        featureScrollArrows();
-    }
-    if (await getSetting("alwaysShowTW")) {
-        featureAlwaysShowTW();
-    }
-    if (await getSetting("scrollToBottom")) {
-        preventFooterScrollIntoView();
-    }
-    if (await getSetting("enableThreadHiding")) {
-        featureCatalogHiding();
-    }
-    if (await getSetting("switchTimeFormat")) {
-        featureLabelCreated12h();
-    }
+    // Truncate filenames
     if (await getSetting("truncFilenames")) {
-        const filenameLength = await getSetting("truncFilenames_customTrunc");
-        truncateFilenames(filenameLength);
-    }
-    if (await getSetting("enableIdFilters")) {
-        enableIdFiltering();
-    }
-    if (await getSetting("enhanceYoutube")) {
-        enhanceYouTubeLinks();
-    }
-    if (await getSetting("threadStatsInHeader")) {
-        threadInfoHeader();
-    }
-    if (await getSetting("enableHashNav")) {
-        hashNavigation();
-    }
-    if (await getSetting("hideAnnouncement")) {
-        featureHideAnnouncement();
-    }
-    if (await getSetting("saveQrCheckboxes")) {
-        rememberQrCheckboxes();
+        try {
+            const filenameLength = await getSetting("truncFilenames_customTrunc");
+            truncateFilenames(filenameLength);
+        } catch (e) {
+            console.error("truncateFilenames failed:", e);
+        }
     }
 
-    // Check if we should enable image hover based on the current page
-    async function initImageHover() {
-        const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
-        let enabled = false;
+    // Image Hover - Check if we should enable hover based on the current page
+    const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
+    let imageHoverEnabled = false;
+    try {
         if (isCatalogPage) {
-            enabled = await getSetting("enableCatalogImageHover");
+            imageHoverEnabled = await getSetting("enableCatalogImageHover");
         } else {
-            enabled = await getSetting("enableThreadImageHover");
+            imageHoverEnabled = await getSetting("enableThreadImageHover");
         }
-        if (enabled) {
+        if (imageHoverEnabled) {
             localStorage.removeItem("hoveringImage");
             featureImageHover();
         }
+    } catch (e) {
+        console.error("featureImageHover failed:", e);
     }
-    // Init
-    initImageHover();
 
     //////////// FEATURES ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2164,56 +2147,54 @@ onReady(async function () {
         init();
     }
 
-    // --- Feature: Hide Announcement and unhide if message changes ---
+
+    // --- Feature: Hide Announcement and unhide if message changes (Optimized) ---
     async function featureHideAnnouncement() {
-        // Simple fast hash function (djb2)
-        function simpleHash(str) {
+        // Utility for hashing content
+        function getContentHash(str) {
             let hash = 5381;
             for (let i = 0; i < str.length; i++) {
                 hash = ((hash << 5) + hash) + str.charCodeAt(i);
             }
-            return hash >>> 0; // Unsigned
+            return hash >>> 0;
         }
+
         // Helper to process the dynamic announcement element
         async function processElement(selector, settingKey, hashKey) {
             const el = document.querySelector(selector);
             if (!el) return;
 
             const content = el.textContent || "";
-            const hash = simpleHash(content);
-            // Get setting from GM storage
-            const shouldHide = await GM.getValue("8chanSS_" + settingKey, "false") === "true";
+            const sanitizedContent = content.replace(/[^\w\s.,!?-]/g, ""); // Basic sanitization
+            const hash = getContentHash(sanitizedContent);
+
+            // Get setting and stored hash from GM storage
+            const shouldHide = await GM.getValue(`8chanSS_${settingKey}`, "false") === "true";
+            const storedHash = await GM.getValue(`8chanSS_${hashKey}`, null);
+
             // Reference to the root element for toggling the class
             const root = document.documentElement;
 
             if (shouldHide) {
-                root.classList.add("hide-announcement");
-                await GM.setValue("8chanSS_" + hashKey, hash);
-                // Set up MutationObserver to detect content changes
-                const observer = new MutationObserver(async () => {
-                    const newContent = el.textContent || "";
-                    const newHash = simpleHash(newContent);
-                    if (newHash !== hash) {
-                        // Content changed: remove class and disable setting
-                        root.classList.remove("hide-announcement");
-                        // Update both app setting and GM storage
-                        if (typeof window.setSetting === "function") {
-                            await window.setSetting("hideAnnouncement", false);
-                        }
-                        await GM.setValue("8chanSS_" + settingKey, "false");
-                        // Also update the settings menu checkbox if open
-                        const menuCheckbox = document.getElementById("setting_hideAnnouncement");
-                        if (menuCheckbox) menuCheckbox.checked = false;
-                        await GM.deleteValue("8chanSS_" + hashKey);
-                        observer.disconnect();
+                if (storedHash !== null && String(storedHash) !== String(hash)) {
+                    // Announcement content changed: disable the setting
+                    if (typeof window.setSetting === "function") {
+                        await window.setSetting("hideAnnouncement", false);
                     }
-                });
-                observer.observe(el, { childList: true, subtree: true, characterData: true });
+                    await GM.setValue(`8chanSS_${settingKey}`, "false");
+                    await GM.deleteValue(`8chanSS_${hashKey}`);
+                    // No need to remove class; on reload, class won't be present
+                    return;
+                }
+                // Hash is equal to stored hash or first time: hide announcement and store hash
+                root.classList.add("hide-announcement");
+                await GM.setValue(`8chanSS_${hashKey}`, hash);
             } else {
                 root.classList.remove("hide-announcement");
-                await GM.deleteValue("8chanSS_" + hashKey);
+                await GM.deleteValue(`8chanSS_${hashKey}`);
             }
         }
+
         await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
     }
 
