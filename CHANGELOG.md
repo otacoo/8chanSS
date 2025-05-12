@@ -3,6 +3,7 @@
 
 - New option: Remember QR Checkboxes State
 - Re-implemented the Beep on (You) feature to use the web audio API
+- Add M4V video support
 - Re-organized the settings menu
 - OP posts that are yours will now also get the highlight border
 - Custom (You) notification will now only disappear when scrolled to the bottom not on tab/window focus
