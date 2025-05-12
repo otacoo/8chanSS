@@ -1,3 +1,15 @@
+## v1.44.0
+*2025-05-12*
+
+- New option: Remember QR Checkboxes State
+- Re-implemented the Beep on (You) feature to use the web audio API
+- Re-organized the settings menu
+- OP posts that are yours will now also get the highlight border
+- Custom (You) notification will now only disappear when scrolled to the bottom not on tab/window focus
+- Announcement *should* now correctly unhide itself when the message changes & the setting is enabled
+- Lots of code optimizations and safety features, if an option or feature fails it should no longer lock the whole script and will throw an error instead
+- Removed: Rename Filenames feature (temporarily)
+
 ## v1.43.0
 *2025-05-09*
 

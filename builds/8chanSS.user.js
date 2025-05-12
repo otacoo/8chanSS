@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.43.0
+// @version      1.44.0
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -15,6 +15,10 @@
 // @grant        GM.setValue
 // @grant        GM.deleteValue
 // @grant        GM.listValues
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_deleteValue
+// @grant        GM_listValues
 // @run-at       document-start
 // @updateURL    https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.meta.js
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
@@ -38,6 +42,7 @@ onReady(async function () {
             autoExpandTW: { label: "Auto Expand Thread Watcher", default: false },
             _siteSiteTitle: { type: "title", label: ":: Site" },
             _siteSection2: { type: "separator" },
+            enableBottomHeader: { label: "Bottom Header", default: false },
             enableHeaderCatalogLinks: {
                 label: "Header Catalog Links",
                 default: true,
@@ -48,7 +53,6 @@ onReady(async function () {
                     }
                 }
             },
-            enableBottomHeader: { label: "Bottom Header", default: false },
             enableScrollSave: {
                 label: "Save Scroll Position",
                 default: true,
@@ -60,29 +64,30 @@ onReady(async function () {
                 }
             },
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
+            _siteMediaTitle: { type: "title", label: ":: Media" },
+            _siteSection3: { type: "separator" },
             hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
-            enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            threadStatsInHeader: { label: "Thread Stats in Header", default: false },
-            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
-            fadeQuickReply: { label: "Fade Quick Reply", default: false },
-            watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
-            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
-            enableHashNav: { label: "Hash Navigation", default: false },
+            _threadsNotiTitle: { type: "title", label: ":: Notifications" },
+            _threadsSection1: { type: "separator" },
+            highlightOnYou: { label: "Highlight (You) posts", default: true },
             beepOnYou: { label: "Beep on (You)", default: false },
             notifyOnYou: {
-                label: "Notify when (You) (!)",
+                label: "Tab Notification when (You) (!)",
                 default: true,
                 subOptions: {
                     customMessage: {
-                        label: "Custom Notification",
+                        label: "Custom Text (8 chars. max)",
                         default: "",
                         type: "text",
-                        maxLength: 8
+                        maxLength: 9
                     }
                 }
             },
+            _threadsMediaTitle: { type: "title", label: ":: Media" },
+            _threadsSection2: { type: "separator" },
+            enableThreadImageHover: { label: "Thread Image Hover", default: true },
             blurSpoilers: {
                 label: "Blur Spoilers",
                 default: false,
@@ -93,6 +98,13 @@ onReady(async function () {
                     }
                 }
             },
+            _threadsNavTitle: { type: "title", label: ":: Navigation & Others" },
+            _threadsSection3: { type: "separator" },
+            enableHashNav: { label: "Hash Navigation", default: false },
+            threadStatsInHeader: { label: "Thread Stats in Header", default: false },
+            watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
+            saveQrCheckboxes: { label: "Remember QR Checkboxes State", default: false },
             deleteSavedName: { label: "Delete Name Checkbox", default: true }
         },
         catalog: {
@@ -117,9 +129,12 @@ onReady(async function () {
             },
             hideBanner: { label: "Hide Board Banners", default: false },
             hideDefaultBL: { label: "Hide Default Board List", default: true },
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
+            hideJannyTools: { label: "Hide Janitor Forms", default: false },
             _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
-            highlightOnYou: { label: "Highlight (You) posts", default: true },
+            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
+            fadeQuickReply: { label: "Fade Quick Reply", default: false },
             enableFitReplies: { label: "Fit Replies", default: false },
             enableSidebar: {
                 label: "Enable Sidebar",
@@ -152,9 +167,7 @@ onReady(async function () {
                         max: 50
                     }
                 }
-            },
-            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
-            hideJannyTools: { label: "Hide Janitor Forms", default: false }
+            }
         }
     };
     const flatSettings = {};
@@ -272,7 +285,7 @@ onReady(async function () {
     let css = "";
 
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:has(>.divMessage>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>:not(div)>.you){border-left:solid var(--subject-color) 3px}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}";
+        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-you .innerOP:has(> .opHead.title > .youName),:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:has(>.divMessage>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>:not(div)>.you){border-left:solid var(--subject-color) 3px}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}";
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
         css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}";
@@ -287,73 +300,61 @@ onReady(async function () {
         style.textContent = css;
         document.head.appendChild(style);
     }
-    if (await getSetting("enableScrollSave")) {
-        featureSaveScroll();
-    }
-    if (await getSetting("watchThreadOnReply")) {
-        featureWatchThreadOnReply();
-    }
-    if (await getSetting("blurSpoilers")) {
-        featureBlurSpoilers();
-    }
-    if (await getSetting("enableHeaderCatalogLinks")) {
-        featureHeaderCatalogLinks();
-    }
-    if (await getSetting("openCatalogThreadNewTab")) {
-        catalogThreadsInNewTab();
-    }
-    if (await getSetting("deleteSavedName")) {
-        featureDeleteNameCheckbox();
-    }
-    if (await getSetting("enableScrollArrows")) {
-        featureScrollArrows();
-    }
-    if (await getSetting("alwaysShowTW")) {
-        featureAlwaysShowTW();
-    }
-    if (await getSetting("scrollToBottom")) {
-        preventFooterScrollIntoView();
-    }
-    if (await getSetting("enableThreadHiding")) {
-        featureCatalogHiding();
-    }
-    if (await getSetting("switchTimeFormat")) {
-        featureLabelCreated12h();
+    const featureMap = [
+        { key: "enableScrollSave", fn: featureSaveScroll },
+        { key: "watchThreadOnReply", fn: featureWatchThreadOnReply },
+        { key: "blurSpoilers", fn: featureBlurSpoilers },
+        { key: "enableHeaderCatalogLinks", fn: featureHeaderCatalogLinks },
+        { key: "openCatalogThreadNewTab", fn: catalogThreadsInNewTab },
+        { key: "deleteSavedName", fn: featureDeleteNameCheckbox },
+        { key: "enableScrollArrows", fn: featureScrollArrows },
+        { key: "alwaysShowTW", fn: featureAlwaysShowTW },
+        { key: "scrollToBottom", fn: preventFooterScrollIntoView },
+        { key: "enableThreadHiding", fn: featureCatalogHiding },
+        { key: "switchTimeFormat", fn: featureLabelCreated12h },
+        { key: "enableIdFilters", fn: enableIdFiltering },
+        { key: "enhanceYoutube", fn: enhanceYouTubeLinks },
+        { key: "threadStatsInHeader", fn: threadInfoHeader },
+        { key: "enableHashNav", fn: hashNavigation },
+        { key: "hideAnnouncement", fn: featureHideAnnouncement },
+        { key: "saveQrCheckboxes", fn: rememberQrCheckboxes },
+    ];
+    for (const { key, fn } of featureMap) {
+        try {
+            if (await getSetting(key)) {
+                fn();
+            }
+        } catch (e) {
+            console.error(`${fn.name || 'Feature'} failed:`, e);
+        }
     }
     if (await getSetting("truncFilenames")) {
-        const filenameLength = await getSetting("truncFilenames_customTrunc");
-        truncateFilenames(filenameLength);
-    }
-    if (await getSetting("enableIdFilters")) {
-        enableIdFiltering();
-    }
-    if (await getSetting("enhanceYoutube")) {
-        enhanceYouTubeLinks();
-    }
-    if (await getSetting("threadStatsInHeader")) {
-        threadInfoHeader();
-    }
-    if (await getSetting("enableHashNav")) {
-        hashNavigation();
-    }
-    if (await getSetting("hideAnnouncement")) {
-        featureHideAnnouncement();
-    }
-    async function initImageHover() {
-        const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
-        let enabled = false;
-        if (isCatalogPage) {
-            enabled = await getSetting("enableCatalogImageHover");
-        } else {
-            enabled = await getSetting("enableThreadImageHover");
+        try {
+            const filenameLength = await getSetting("truncFilenames_customTrunc");
+            truncateFilenames(filenameLength);
+        } catch (e) {
+            console.error("truncateFilenames failed:", e);
         }
-        if (enabled) {
+    }
+    const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
+    let imageHoverEnabled = false;
+    try {
+        if (isCatalogPage) {
+            imageHoverEnabled = await getSetting("enableCatalogImageHover");
+        } else {
+            imageHoverEnabled = await getSetting("enableThreadImageHover");
+        }
+        if (imageHoverEnabled) {
             localStorage.removeItem("hoveringImage");
             featureImageHover();
         }
+    } catch (e) {
+        console.error("featureImageHover failed:", e);
     }
-    initImageHover();
     async function featureSaveScroll() {
+        function getDivPosts() {
+            return document.querySelector(".divPosts");
+        }
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
         const MAX_THREADS = 150;
@@ -373,9 +374,15 @@ onReady(async function () {
             await GM.setValue(STORAGE_KEY, JSON.stringify(data));
         }
         function getCurrentPostCount() {
-            const divPosts = document.querySelector(".divPosts");
+            const divPosts = getDivPosts();
             if (!divPosts) return 0;
             return divPosts.querySelectorAll(":scope > .postCell[id]").length;
+        }
+        function removeUnreadLineMarker() {
+            const oldMarker = document.getElementById(UNREAD_LINE_ID);
+            if (oldMarker && oldMarker.parentNode) {
+                oldMarker.parentNode.removeChild(oldMarker);
+            }
         }
         let lastSeenPostCount = 0;
         let unseenCount = 0;
@@ -402,7 +409,6 @@ onReady(async function () {
         async function onScrollUpdateSeen() {
             const info = getBoardAndThread();
             if (!info || !(await getSetting("enableScrollSave"))) return;
-
             const posts = Array.from(document.querySelectorAll(".divPosts > .postCell[id]"));
             let maxIndex = -1;
             for (let i = 0; i < posts.length; ++i) {
@@ -475,9 +481,11 @@ onReady(async function () {
             if (!saved || typeof saved.position !== "number") return;
 
             const anchor = window.location.hash ? window.location.hash.replace(/^#/, "") : null;
-            if (anchor) {
+            const safeAnchor = anchor && /^[a-zA-Z0-9_-]+$/.test(anchor) ? anchor : null;
+
+            if (safeAnchor) {
                 setTimeout(() => {
-                    const post = document.getElementById(anchor);
+                    const post = document.getElementById(safeAnchor);
                     if (post && post.classList.contains("postCell")) {
                         post.scrollIntoView({ behavior: "auto", block: "start" });
                     }
@@ -492,8 +500,7 @@ onReady(async function () {
         }
         async function addUnreadLineAtSavedScrollPosition(scrollPosition, centerAfter = false) {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-
-            const divPosts = document.querySelector(".divPosts");
+            const divPosts = getDivPosts();
             if (!divPosts) return;
             const posts = Array.from(divPosts.querySelectorAll(":scope > .postCell[id]"));
             let targetPost = null;
@@ -503,10 +510,7 @@ onReady(async function () {
                 targetPost = posts[i];
             }
             if (!targetPost) return;
-            const oldMarker = document.getElementById(UNREAD_LINE_ID);
-            if (oldMarker && oldMarker.parentNode) {
-                oldMarker.parentNode.removeChild(oldMarker);
-            }
+            removeUnreadLineMarker();
             const marker = document.createElement("hr");
             marker.id = UNREAD_LINE_ID;
             if (targetPost.nextSibling) {
@@ -527,22 +531,18 @@ onReady(async function () {
             }
         }
         function observePostCount() {
-            const divPosts = document.querySelector(".divPosts");
+            const divPosts = getDivPosts();
             if (!divPosts) return;
             const observer = new MutationObserver(() => {
                 updateUnseenCountFromSaved();
             });
             observer.observe(divPosts, { childList: true, subtree: false });
         }
-
         async function removeUnreadLineIfAtBottom() {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
             const margin = 20; 
             if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
-                const oldMarker = document.getElementById(UNREAD_LINE_ID);
-                if (oldMarker && oldMarker.parentNode) {
-                    oldMarker.parentNode.removeChild(oldMarker);
-                }
+                removeUnreadLineMarker();
             }
         }
         window.addEventListener("beforeunload", () => {
@@ -560,15 +560,28 @@ onReady(async function () {
             observePostCount();
         });
 
-        window.addEventListener("scroll", async () => {
-            await onScrollUpdateSeen();
-            await removeUnreadLineIfAtBottom();
+        let scrollTimeout = null;
+        window.addEventListener("scroll", () => {
+            if (scrollTimeout) return;
+            scrollTimeout = setTimeout(async () => {
+                await onScrollUpdateSeen();
+                await removeUnreadLineIfAtBottom();
+                scrollTimeout = null;
+            }, 100); 
         });
         await restoreScrollPosition();
         await updateUnseenCountFromSaved();
         observePostCount();
     }
     async function featureHeaderCatalogLinks() {
+        function debounce(fn, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
         async function appendCatalogToLinks() {
             const navboardsSpan = document.getElementById("navBoardsSpan");
             if (navboardsSpan) {
@@ -578,8 +591,13 @@ onReady(async function () {
                 );
 
                 for (let link of links) {
-                    if (link.href && !link.href.endsWith("/catalog.html")) {
+                    if (
+                        link.href &&
+                        !link.href.endsWith("/catalog.html") &&
+                        !link.dataset.catalogLinkProcessed
+                    ) {
                         link.href += "/catalog.html";
+                        link.dataset.catalogLinkProcessed = "1";
                         if (openInNewTab) {
                             link.target = "_blank";
                             link.rel = "noopener noreferrer"; 
@@ -591,36 +609,30 @@ onReady(async function () {
                 }
             }
         }
-
         appendCatalogToLinks();
-        const observer = new MutationObserver(appendCatalogToLinks);
+        const debouncedAppend = debounce(appendCatalogToLinks, 100);
         const config = { childList: true, subtree: true };
         const navboardsSpan = document.getElementById("navBoardsSpan");
-        if (navboardsSpan) {
+        if (navboardsSpan && !navboardsSpan._catalogLinksObserverAttached) {
+            const observer = new MutationObserver(debouncedAppend);
             observer.observe(navboardsSpan, config);
+            navboardsSpan._catalogLinksObserverAttached = true;
         }
     }
     function catalogThreadsInNewTab() {
         const catalogDiv = document.querySelector('.catalogDiv');
         if (!catalogDiv) return;
-
-        function setLinksTargetBlank(cell) {
-            const link = cell.querySelector('a.linkThumb');
-            if (link) link.setAttribute('target', '_blank');
-        }
-        catalogDiv.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach(mutation => {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1 && node.classList.contains('catalogCell')) {
-                        setLinksTargetBlank(node);
-                    } else if (node.nodeType === 1) {
-                        node.querySelectorAll && node.querySelectorAll('.catalogCell').forEach(setLinksTargetBlank);
-                    }
-                });
-            });
+        catalogDiv.querySelectorAll('.catalogCell a.linkThumb').forEach(link => {
+            if (link.getAttribute('target') !== '_blank') {
+                link.setAttribute('target', '_blank');
+            }
         });
-        observer.observe(catalogDiv, { childList: true, subtree: true });
+        catalogDiv.addEventListener('click', function (e) {
+            const link = e.target.closest('.catalogCell a.linkThumb');
+            if (link && link.getAttribute('target') !== '_blank') {
+                link.setAttribute('target', '_blank');
+            }
+        });
     }
     function featureImageHover() {
         const MEDIA_MAX_WIDTH = "90vw";
@@ -629,13 +641,43 @@ onReady(async function () {
         const MEDIA_OFFSET = 50; 
         const MEDIA_BOTTOM_MARGIN = 3; 
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
-        function getMediaBottomMargin() {
-            return window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
+        function getExtensionForMimeType(mime) {
+            const map = {
+                "image/jpeg": ".jpg",
+                "image/jpg": ".jpg",
+                "image/jxl": ".jxl",
+                "image/png": ".png",
+                "image/apng": ".png",
+                "image/gif": ".gif",
+                "image/avif": ".avif",
+                "image/webp": ".webp",
+                "image/bmp": ".bmp",
+                "video/mp4": ".mp4",
+                "video/webm": ".webm",
+                "video/x-m4v": ".m4v",
+                "audio/ogg": ".ogg",
+                "audio/mpeg": ".mp3",
+                "audio/x-m4a": ".m4a",
+                "audio/x-wav": ".wav",
+            };
+            return map[mime.toLowerCase()] || null;
+        }
+        function sanitizeUrl(url) {
+            try {
+                const parsed = new URL(url, window.location.origin);
+                if ((parsed.protocol === "http:" || parsed.protocol === "https:") &&
+                    parsed.origin === window.location.origin) {
+                    return parsed.href;
+                }
+            } catch { }
+            return "";
         }
         let floatingMedia = null;
         let cleanupFns = [];
         let currentAudioIndicator = null;
         let lastMouseEvent = null; 
+        const docElement = document.documentElement;
+        const SCROLLBAR_WIDTH = window.innerWidth - docElement.clientWidth; 
         function clamp(val, min, max) {
             return Math.max(min, Math.min(max, val));
         }
@@ -646,8 +688,7 @@ onReady(async function () {
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
 
-            const MEDIA_BOTTOM_MARGIN_PX = getMediaBottomMargin();
-            const SCROLLBAR_WIDTH = window.innerWidth - document.documentElement.clientWidth; 
+            const MEDIA_BOTTOM_MARGIN_PX = window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100);
 
             let x, y;
             let rightX = event.clientX + MEDIA_OFFSET;
@@ -676,6 +717,8 @@ onReady(async function () {
                 if (["VIDEO", "AUDIO"].includes(floatingMedia.tagName)) {
                     try {
                         floatingMedia.pause();
+                        floatingMedia.srcObject = null;
+                        URL.revokeObjectURL(floatingMedia.src);
                         floatingMedia.removeAttribute("src");
                         floatingMedia.load();
                     } catch { }
@@ -695,40 +738,48 @@ onReady(async function () {
             const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
             const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
             const isSmallImage = (fileWidth && fileWidth < 250) || (fileHeight && fileHeight < 250);
+            if (
+                isSmallImage &&
+                filemime.toLowerCase() === "image/png" &&
+                !/\/t_/.test(thumbnailSrc) &&
+                !/\.[a-z0-9]+$/i.test(thumbnailSrc)
+            ) {
+                return thumbnailSrc;
+            }
             if (isSmallImage && thumbnailSrc.match(/\/\.media\/[^\/]+\.[a-zA-Z0-9]+$/)) {
                 return thumbnailSrc;
             }
-
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
-                base = base.replace(/\.(jpe?g|png|gif|webp|webm|mp4|ogg|mp3|m4a|wav)$/i, "");
-                const mimeToExt = {
-                    "image/jpeg": ".jpg",
-                    "image/jpg": ".jpg",
-                    "image/jxl": ".jxl", 
-                    "image/png": ".png",
-                    "image/gif": ".gif",
-                    "image/avif": ".avif",
-                    "image/webp": ".webp",
-                    "image/bmp": ".bmp",
-                    "video/mp4": ".mp4",
-                    "video/webm": ".webm",
-                    "audio/ogg": ".ogg",
-                    "audio/mpeg": ".mp3",
-                    "audio/x-m4a": ".m4a",
-                    "audio/x-wav": ".wav",
-                };
-                const ext = mimeToExt[filemime.toLowerCase()];
+                base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|mp3|m4a|wav)$/i, "");
+                if (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v") {
+                    return base;
+                }
+
+                const ext = getExtensionForMimeType(filemime);
                 if (!ext) return null;
                 return base + ext;
             }
+            if (
+                thumbnailSrc.match(/^\/\.media\/[a-f0-9]{40,}$/i) && 
+                !/\.[a-z0-9]+$/i.test(thumbnailSrc)
+            ) {
+                if (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v") {
+                    return thumbnailSrc;
+                }
+
+                const ext = getExtensionForMimeType(filemime);
+                if (!ext) return null;
+                return thumbnailSrc + ext;
+            }
+
             if (
                 /\/spoiler\.png$/i.test(thumbnailSrc) ||
                 /\/custom\.spoiler$/i.test(thumbnailSrc) ||
                 /\/audioGenericThumb\.png$/i.test(thumbnailSrc)
             ) {
                 if (parentA && parentA.getAttribute("href")) {
-                    return parentA.getAttribute("href");
+                    return sanitizeUrl(parentA.getAttribute("href"));
                 }
                 return null;
             }
@@ -752,12 +803,14 @@ onReady(async function () {
                         jpeg: "image/jpeg",
                         jxl: "image/jxl",
                         png: "image/png",
+                        apng: "image/apng",
                         gif: "image/gif",
                         avif: "image/avif",
                         webp: "image/webp",
                         bmp: "image/bmp",
                         mp4: "video/mp4",
                         webm: "video/webm",
+                        m4v: "video/x-m4v",
                         ogg: "audio/ogg",
                         mp3: "audio/mpeg",
                         m4a: "audio/x-m4a",
@@ -769,6 +822,8 @@ onReady(async function () {
             }
 
             if (!fullSrc || !filemime) return;
+            fullSrc = sanitizeUrl(fullSrc);
+            if (!fullSrc) return;
             let volume = 0.5;
             try {
                 if (typeof getSetting === "function") {
@@ -790,7 +845,15 @@ onReady(async function () {
                 floatingMedia.style.display = "none";
                 floatingMedia.volume = volume;
                 document.body.appendChild(floatingMedia);
-                floatingMedia.play().catch(() => { });
+
+                const mediaLoadTimeout = setTimeout(() => {
+                    cleanupFloatingMedia();
+                }, 5000); 
+
+                floatingMedia.onloadeddata = function () {
+                    clearTimeout(mediaLoadTimeout);
+                    floatingMedia.play().catch(() => { });
+                };
                 const indicator = document.createElement("div");
                 indicator.classList.add("audio-preview-indicator");
                 indicator.textContent = AUDIO_INDICATOR_TEXT;
@@ -801,7 +864,7 @@ onReady(async function () {
                 const cleanup = () => cleanupFloatingMedia();
                 thumb.addEventListener("mouseleave", cleanup, { once: true });
                 if (container) container.addEventListener("click", cleanup, { once: true });
-                window.addEventListener("scroll", cleanup, { once: true });
+                window.addEventListener("scroll", cleanup, { passive: true, once: true });
                 cleanupFns.push(() => thumb.removeEventListener("mouseleave", cleanup));
                 if (container) cleanupFns.push(() => container.removeEventListener("click", cleanup));
                 cleanupFns.push(() => window.removeEventListener("scroll", cleanup));
@@ -817,7 +880,7 @@ onReady(async function () {
             floatingMedia.style.left = "-9999px";
             floatingMedia.style.top = "-9999px";
             floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
-            const availableHeight = window.innerHeight - getMediaBottomMargin();
+            const availableHeight = window.innerHeight * (1 - MEDIA_BOTTOM_MARGIN / 100);
             floatingMedia.style.maxHeight = `${availableHeight}px`;
             if (isVideo) {
                 floatingMedia.autoplay = true;
@@ -831,13 +894,19 @@ onReady(async function () {
                 lastMouseEvent = ev;
                 positionFloatingMedia(ev);
             }
-            document.addEventListener("mousemove", mouseMoveHandler);
+            document.addEventListener("mousemove", mouseMoveHandler, { passive: true });
+            thumb.addEventListener("mouseleave", leaveHandler, { passive: true, once: true });
             cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
             if (lastMouseEvent) {
                 positionFloatingMedia(lastMouseEvent);
             }
+            const mediaLoadTimeout = setTimeout(() => {
+                cleanupFloatingMedia();
+            }, 5000); 
+
             if (isVideo) {
                 floatingMedia.onloadeddata = function () {
+                    clearTimeout(mediaLoadTimeout);
                     if (floatingMedia) {
                         floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
                         if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
@@ -845,52 +914,84 @@ onReady(async function () {
                 };
             } else {
                 floatingMedia.onload = function () {
+                    clearTimeout(mediaLoadTimeout);
                     if (floatingMedia) {
                         floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
                         if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
                     }
                 };
             }
-            floatingMedia.onerror = cleanupFloatingMedia;
+            floatingMedia.onerror = function () {
+                clearTimeout(mediaLoadTimeout);
+                cleanupFloatingMedia();
+            };
             function leaveHandler() { cleanupFloatingMedia(); }
             thumb.addEventListener("mouseleave", leaveHandler, { once: true });
-            window.addEventListener("scroll", leaveHandler, { once: true });
+            window.addEventListener("scroll", leaveHandler, { passive: true, once: true });
             cleanupFns.push(() => thumb.removeEventListener("mouseleave", leaveHandler));
             cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
         }
+        const hoverBoundMap = new WeakMap();
+
         function attachThumbListeners(root = document) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const thumb = entry.target;
+                        if (!hoverBoundMap.has(thumb)) {
+                            thumb.addEventListener("mouseenter", onThumbEnter, { passive: true });
+                            hoverBoundMap.set(thumb, true);
+                            observer.unobserve(thumb); 
+                        }
+                    }
+                });
+            });
+
             root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
-                if (!thumb._fullImgHoverBound) {
-                    thumb.addEventListener("mouseenter", onThumbEnter);
-                    thumb._fullImgHoverBound = true;
+                if (!hoverBoundMap.has(thumb)) {
+                    observer.observe(thumb);
                 }
             });
             if (
                 root.tagName === "IMG" &&
                 root.parentElement &&
                 (root.parentElement.matches("a.linkThumb") || root.parentElement.matches("a.imgLink")) &&
-                !root._fullImgHoverBound
+                !hoverBoundMap.has(root)
             ) {
-                root.addEventListener("mouseenter", onThumbEnter);
-                root._fullImgHoverBound = true;
+                root.addEventListener("mouseenter", onThumbEnter, { passive: true });
+                hoverBoundMap.set(root, true);
             }
         }
         attachThumbListeners();
         const divThreads = document.getElementById("divThreads");
         if (divThreads) {
             const observer = new MutationObserver((mutations) => {
-                mutations.forEach(mutation => {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === 1) {
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1) { 
                             attachThumbListeners(node);
                         }
-                    });
-                });
+                    }
+                }
             });
             observer.observe(divThreads, { childList: true, subtree: true });
         }
     }
     function featureBlurSpoilers() {
+        function getExtensionForMimeType(mime) {
+            const map = {
+                "image/jpeg": ".jpg",
+                "image/jpg": ".jpg",
+                "image/jxl": ".jxl",
+                "image/png": ".png",
+                "image/apng": ".png",
+                "image/gif": ".gif",
+                "image/avif": ".avif",
+                "image/webp": ".webp",
+                "image/bmp": ".bmp",
+            };
+            return map[mime.toLowerCase()] || "";
+        }
         function revealSpoilers() {
             const spoilerLinks = document.querySelectorAll("a.imgLink");
             spoilerLinks.forEach(async (link) => {
@@ -914,15 +1015,7 @@ onReady(async function () {
                     const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
                     if (!match) return;
                     const fileMime = link.getAttribute("data-filemime") || "";
-                    const mimeToExt = {
-                        "image/jpeg": ".jpg",
-                        "image/jpg": ".jpg",
-                        "image/png": ".png",
-                        "image/gif": ".gif",
-                        "image/webp": ".webp",
-                        "image/bmp": ".bmp",
-                    };
-                    const ext = mimeToExt[fileMime.toLowerCase()] || "";
+                    const ext = getExtensionForMimeType(fileMime);
                     const fileWidthAttr = link.getAttribute("data-filewidth");
                     const fileHeightAttr = link.getAttribute("data-fileheight");
                     let transformedSrc;
@@ -961,15 +1054,18 @@ onReady(async function () {
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
     }
-    function decodeHtmlEntitiesTwice(html) {
+    const decodeHtmlEntitiesTwice = (() => {
         const txt = document.createElement('textarea');
-        txt.innerHTML = html;
-        const once = txt.value;
-        txt.innerHTML = once;
-        return txt.value;
-    }
+        return function (html) {
+            txt.innerHTML = html;
+            const once = txt.value;
+            txt.innerHTML = once;
+            return txt.value;
+        };
+    })();
     function highlightMentions() {
         const watchedCells = document.querySelectorAll("#watchedMenu .watchedCell");
+        const watchButton = document.querySelector(".opHead .watchButton");
         if (!watchedCells.length) return; 
         watchedCells.forEach((cell) => {
             const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
@@ -984,34 +1080,41 @@ onReady(async function () {
                     labelLink.dataset.board = `/${match[1]}/ -`;
                 }
                 if (document.location.href.includes(href)) {
-                    const watchButton = document.querySelector(".opHead .watchButton");
                     if (watchButton) {
                         watchButton.style.color = "var(--board-title-color)";
                         watchButton.title = "Watched";
                     }
                 }
-                const originalHtml = labelLink.innerHTML;
-                const decodedText = decodeHtmlEntitiesTwice(originalHtml);
+                const originalText = labelLink.textContent;
+                const decodedText = decodeHtmlEntitiesTwice(originalText);
                 if (labelLink.textContent !== decodedText) {
                     labelLink.textContent = decodedText;
                 }
             }
             const notificationText = notification.textContent.trim();
-            if (notificationText.startsWith("(")) {
-                return;
-            }
-            if (notificationText.includes("(you)")) {
-                const parts = notificationText.split(", ");
-                const totalReplies = parts[0];
+
+            function styleMentionYou(labelLink, notification, totalReplies) {
                 labelLink.style.color = "var(--board-title-color)";
                 notification.style.color = "var(--board-title-color)";
                 notification.textContent = ` (${totalReplies}) (You)`;
                 notification.style.fontWeight = "bold";
             }
-            else if (/^\d+$/.test(notificationText)) {
+
+            function styleMentionNumber(notification, notificationText) {
                 notification.textContent = ` (${notificationText})`;
                 notification.style.color = "var(--link-color)";
                 notification.style.fontWeight = "bold";
+            }
+            if (notificationText.startsWith("(") === true) {
+                return;
+            }
+            if (notificationText.includes("(you)") === true) {
+                const parts = notificationText.split(", ");
+                const totalReplies = parts[0];
+                styleMentionYou(labelLink, notification, totalReplies);
+            }
+            else if (/^\d+$/.test(notificationText)) {
+                styleMentionNumber(notification, notificationText);
             }
             notification.dataset.processed = "true";
         });
@@ -1072,18 +1175,7 @@ onReady(async function () {
             }
         }
 
-        function addCloseListener() {
-            const watchedMenu = document.getElementById("watchedMenu");
-            if (!watchedMenu) return;
-            const closeBtn = watchedMenu.querySelector(".close-btn");
-            if (closeBtn) {
-                closeBtn.addEventListener("click", () => {
-                    watchedMenu.style.display = "none";
-                });
-            }
-        }
         showThreadWatcher();
-        addCloseListener();
     }
     function markAllThreadsAsRead() {
         const handleDiv = document.querySelector('#watchedMenu > div.handle');
@@ -1094,25 +1186,105 @@ onReady(async function () {
         btn.title = 'Mark all threads as read';
         btn.style.float = 'right';
         btn.style.paddingTop = '3px';
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
+        function hasUnreadThreads() {
+            const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+            if (!watchedMenu) return false;
+            return watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]').length > 0;
+        }
+        function updateButtonState() {
+            if (hasUnreadThreads()) {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                btn.title = 'Mark all threads as read';
+            } else {
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+                btn.title = 'No unread threads';
+            }
+        }
+        function clickAllMarkAsReadButtons(watchedMenu) {
+            const markButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
+            markButtons.forEach(btn => {
+                try {
+                    btn.click();
+                } catch (e) {
+                    console.log("Error clicking button:", e);
+                }
+            });
+            return markButtons.length;
+        }
+        function markAllThreadsAsReadWithRetry(retriesLeft, callback) {
             setTimeout(function () {
                 const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
-                if (!watchedMenu) return;
-                const markButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
-                markButtons.forEach(btn => btn.click());
-            }, 20);
-        });
+                if (!watchedMenu) {
+                    if (callback) callback();
+                    return;
+                }
+                const clickedCount = clickAllMarkAsReadButtons(watchedMenu);
+                if (clickedCount === 0) {
+                    updateButtonState();
+                    if (callback) callback();
+                    return;
+                }
+                if (retriesLeft > 0) {
+                    setTimeout(() => markAllThreadsAsReadWithRetry(retriesLeft - 1, callback), 200);
+                } else if (callback) {
+                    callback();
+                }
+            }, 100);
+        }
+        function debounce(fn, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+        const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+        let observer = null;
+        if (watchedMenu) {
+            const debouncedUpdate = debounce(updateButtonState, 100);
+            observer = new MutationObserver(debouncedUpdate);
+            observer.observe(watchedMenu, { childList: true, subtree: true });
+            const removalObserver = new MutationObserver(() => {
+                if (!document.body.contains(watchedMenu) || watchedMenu.style.display === "none") {
+                    observer.disconnect();
+                    removalObserver.disconnect();
+                }
+            });
+            removalObserver.observe(document.body, { childList: true, subtree: true });
+        }
+        updateButtonState();
         handleDiv.appendChild(btn);
+        document.body.addEventListener('click', function (e) {
+            const closeBtn = e.target.closest('#watchedMenu .close-btn');
+            if (closeBtn) {
+                const watchedMenu = document.getElementById("watchedMenu");
+                if (watchedMenu) watchedMenu.style.display = "none";
+                return;
+            }
+            const markAllBtn = e.target.closest('.watchedCellDismissButton.markAllRead');
+            if (markAllBtn) {
+                e.preventDefault();
+                if (markAllBtn.style.pointerEvents === 'none' || markAllBtn.dataset.processing === 'true') return;
+                markAllBtn.dataset.processing = 'true';
+                markAllBtn.style.opacity = '0.5';
+                markAllThreadsAsReadWithRetry(3, function () {
+                    markAllBtn.dataset.processing = 'false';
+                    updateButtonState();
+                });
+            }
+        });
     }
     markAllThreadsAsRead();
     function hashNavigation() {
         if (!document.documentElement.classList.contains("is-thread")) return;
+        const processedLinks = new WeakSet();
         function addHashLinks(container = document) {
             const links = container.querySelectorAll('.panelBacklinks a, .altBacklinks a, .divMessage .quoteLink');
             links.forEach(link => {
                 if (
-                    link.dataset.hashProcessed ||
+                    processedLinks.has(link) ||
                     (link.nextSibling && link.nextSibling.classList && link.nextSibling.classList.contains('hash-link-container'))
                 ) return;
                 const hashSpan = document.createElement('span');
@@ -1126,32 +1298,16 @@ onReady(async function () {
                 wrapper.appendChild(hashSpan);
 
                 link.insertAdjacentElement('afterend', wrapper);
-                link.dataset.hashProcessed = 'true';
+                processedLinks.add(link);
             });
         }
-        document.addEventListener('click', function (e) {
-            if (e.target.classList.contains('hash-link')) {
-                e.preventDefault();
-                const link = e.target.closest('.hash-link-container').previousElementSibling;
-                if (!link || !link.href) return;
-                const hashMatch = link.href.match(/#(\d+)$/);
-                if (!hashMatch) return;
-                const postId = hashMatch[1];
-                const postElem = document.getElementById(postId);
-                if (postElem) {
-                    window.location.hash = `#${postId}`;
-                    if (postElem.classList.contains('opCell')) {
-                        const offset = 25; 
-                        const rect = postElem.getBoundingClientRect();
-                        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                        const targetY = rect.top + scrollTop - offset;
-                        window.scrollTo({ top: targetY, behavior: "smooth" });
-                    } else {
-                        postElem.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }
-                }
-            }
-        }, true);
+        function debounce(fn, delay) {
+            let timer;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
         addHashLinks();
         if (window.tooltips) {
             ['loadTooltip', 'addLoadedTooltip'].forEach(fn => {
@@ -1185,18 +1341,44 @@ onReady(async function () {
             });
         }
         const postsContainer = document.querySelector('.divPosts') || document.body;
+        postsContainer.addEventListener('click', function (e) {
+            if (e.target.classList.contains('hash-link')) {
+                e.preventDefault();
+                const link = e.target.closest('.hash-link-container').previousElementSibling;
+                if (!link || !link.href) return;
+                const hashMatch = link.href.match(/#(\d+)$/);
+                if (!hashMatch) return;
+                const postId = hashMatch[1];
+                const safePostId = /^[0-9]+$/.test(postId) ? postId : null;
+                if (!safePostId) return;
+                const postElem = document.getElementById(safePostId);
+                if (postElem) {
+                    window.location.hash = `#${safePostId}`;
+                    if (postElem.classList.contains('opCell')) {
+                        const offset = 25; 
+                        const rect = postElem.getBoundingClientRect();
+                        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                        const targetY = rect.top + scrollTop - offset;
+                        window.scrollTo({ top: targetY, behavior: "smooth" });
+                    } else {
+                        postElem.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                }
+            }
+        }, true);
+
+        const debouncedAddHashLinks = debounce(addHashLinks, 25);
+
         const observer = new MutationObserver(mutations => {
+            let shouldUpdate = false;
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType === Node.ELEMENT_NODE) {
-                        if (node.matches && node.matches('.panelBacklinks a, .altBacklinks a, .divMessage .quoteLink')) {
-                            addHashLinks(node.parentElement || node);
-                        } else {
-                            addHashLinks(node);
-                        }
+                        shouldUpdate = true;
                     }
                 });
             });
+            if (shouldUpdate) debouncedAddHashLinks();
         });
         observer.observe(postsContainer, { childList: true, subtree: true });
     }
@@ -1398,51 +1580,127 @@ onReady(async function () {
             });
         }
     }
+    function rememberQrCheckboxes() {
+        const QR_CHECKBOX_IDS = [
+            "qrcheckboxNoFlag",
+            "qrcheckboxSpoiler",
+            "qrcheckboxScramble",
+            "qrdoSageCheckbox",
+            "qralwaysUseBypassCheckBox"
+        ];
+        const QR_CHECKBOX_STATE_KEY = "qr_checkbox_states";
+        async function loadQrCheckboxStates() {
+            const raw = await GM.getValue(QR_CHECKBOX_STATE_KEY, "{}");
+            try {
+                const parsed = JSON.parse(raw);
+                const safeState = {};
+                QR_CHECKBOX_IDS.forEach(id => {
+                    if (Object.prototype.hasOwnProperty.call(parsed, id) && typeof parsed[id] === "boolean") {
+                        safeState[id] = parsed[id];
+                    }
+                });
+                return safeState;
+            } catch {
+                return {};
+            }
+        }
+        async function saveQrCheckboxStates(state) {
+            await GM.setValue(QR_CHECKBOX_STATE_KEY, JSON.stringify(state));
+        }
+        function debounce(fn, delay) {
+            let timer;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+        async function init() {
+            const state = await loadQrCheckboxStates();
+
+            QR_CHECKBOX_IDS.forEach(id => {
+                const checkbox = document.getElementById(id);
+                if (!checkbox) return;
+                if (typeof state[id] === "boolean") {
+                    checkbox.checked = state[id];
+                }
+
+                const debouncedSave = debounce(async (id, checkbox) => {
+                    const currentState = await loadQrCheckboxStates();
+                    currentState[id] = checkbox.checked;
+                    await saveQrCheckboxStates(currentState);
+                }, 50);
+
+                checkbox.addEventListener("change", () => {
+                    debouncedSave(id, checkbox);
+                });
+            });
+        }
+        init();
+    }
     async function featureHideAnnouncement() {
-        function simpleHash(str) {
+        function getContentHash(str) {
             let hash = 5381;
             for (let i = 0; i < str.length; i++) {
                 hash = ((hash << 5) + hash) + str.charCodeAt(i);
             }
-            return hash >>> 0; 
+            return hash >>> 0;
         }
         async function processElement(selector, settingKey, hashKey) {
             const el = document.querySelector(selector);
             if (!el) return;
 
             const content = el.textContent || "";
-            const hash = simpleHash(content);
-            const shouldHide = await GM.getValue("8chanSS_" + settingKey, "false") === "true";
-            async function setSetting(val) {
-                await GM.setValue("8chanSS_" + settingKey, String(val));
-            }
+            const sanitizedContent = content.replace(/[^\w\s.,!?-]/g, ""); 
+            const hash = getContentHash(sanitizedContent);
+            const shouldHide = await GM.getValue(`8chanSS_${settingKey}`, "false") === "true";
+            const storedHash = await GM.getValue(`8chanSS_${hashKey}`, null);
             const root = document.documentElement;
 
             if (shouldHide) {
-                root.classList.add("hide-announcement");
-                await GM.setValue("8chanSS_" + hashKey, hash);
-                const observer = new MutationObserver(async () => {
-                    const newContent = el.textContent || "";
-                    const newHash = simpleHash(newContent);
-                    if (newHash !== hash) {
-                        root.classList.remove("hide-announcement");
-                        await setSetting(false);
-                        await GM.deleteValue("8chanSS_" + hashKey);
-                        observer.disconnect();
+                if (storedHash !== null && String(storedHash) !== String(hash)) {
+                    if (typeof window.setSetting === "function") {
+                        await window.setSetting("hideAnnouncement", false);
                     }
-                });
-                observer.observe(el, { childList: true, subtree: true, characterData: true });
+                    await GM.setValue(`8chanSS_${settingKey}`, "false");
+                    await GM.deleteValue(`8chanSS_${hashKey}`);
+                    return;
+                }
+                root.classList.add("hide-announcement");
+                await GM.setValue(`8chanSS_${hashKey}`, hash);
             } else {
                 root.classList.remove("hide-announcement");
-                await GM.deleteValue("8chanSS_" + hashKey);
+                await GM.deleteValue(`8chanSS_${hashKey}`);
             }
         }
+
         await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
     }
     async function featureBeepOnYou() {
-        const beep = new Audio(
-            "data:audio/wav;base64,UklGRjQDAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAc21wbDwAAABBAAADAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkYXRhzAIAAGMms8em0tleMV4zIpLVo8nhfSlcPR102Ki+5JspVEkdVtKzs+K1NEhUIT7DwKrcy0g6WygsrM2k1NpiLl0zIY/WpMrjgCdbPhxw2Kq+5Z4qUkkdU9K1s+K5NkVTITzBwqnczko3WikrqM+l1NxlLF0zIIvXpsnjgydZPhxs2ay95aIrUEkdUdC3suK8N0NUIjq+xKrcz002WioppdGm091pK1w0IIjYp8jkhydXPxxq2K295aUrTkoeTs65suK+OUFUIzi7xqrb0VA0WSoootKm0t5tKlo1H4TYqMfkiydWQBxm16+85actTEseS8y7seHAPD9TIza5yKra01QyWSson9On0d5wKVk2H4DYqcfkjidUQB1j1rG75KsvSkseScu8seDCPz1TJDW2yara1FYxWSwnm9Sn0N9zKVg2H33ZqsXkkihSQR1g1bK65K0wSEsfR8i+seDEQTxUJTOzy6rY1VowWC0mmNWoz993KVc3H3rYq8TklSlRQh1d1LS647AyR0wgRMbAsN/GRDpTJTKwzKrX1l4vVy4lldWpzt97KVY4IXbUr8LZljVPRCxhw7W3z6ZISkw1VK+4sMWvXEhSPk6buay9sm5JVkZNiLWqtrJ+TldNTnquqbCwilZXU1BwpKirrpNgWFhTaZmnpquZbFlbVmWOpaOonHZcXlljhaGhpZ1+YWBdYn2cn6GdhmdhYGN3lp2enIttY2Jjco+bnJuOdGZlZXCImJqakHpoZ2Zug5WYmZJ/bGlobX6RlpeSg3BqaW16jZSVkoZ0bGtteImSk5KIeG5tbnaFkJKRinxxbm91gY2QkIt/c3BwdH6Kj4+LgnZxcXR8iI2OjIR5c3J0e4WLjYuFe3VzdHmCioyLhn52dHR5gIiKioeAeHV1eH+GiYqHgXp2dnh9hIiJh4J8eHd4fIKHiIeDfXl4eHyBhoeHhH96eHmA"
-        );
+        let audioContext = null;
+        function createBeepSound() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return function playBeep() {
+                try {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = 550; 
+                    gainNode.gain.value = 0.1; 
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    oscillator.start();
+                    setTimeout(() => {
+                        oscillator.stop();
+                    }, 100); 
+                } catch (e) {
+                    console.warn("Beep failed:", e);
+                }
+            };
+        }
         window.originalTitle = document.title;
         window.isNotifying = false;
         let beepOnYouSetting = false;
@@ -1455,42 +1713,51 @@ onReady(async function () {
             if (customMsg) customMsgSetting = customMsg;
         }
         await initSettings();
-        function playBeep() {
-            if (beep.paused) {
-                beep.play().catch((e) => console.warn("Beep failed:", e));
-            } else {
-                beep.currentTime = 0; 
-            }
-        }
+        const playBeep = createBeepSound();
+        let scrollHandlerActive = false;
         function notifyOnYou() {
             if (!window.isNotifying && !document.hasFocus()) {
                 window.isNotifying = true;
                 document.title = customMsgSetting + " " + window.originalTitle;
             }
         }
+        function setupNotificationScrollHandler() {
+            if (scrollHandlerActive) return;
+            scrollHandlerActive = true;
+            const BOTTOM_OFFSET = 50;
+            function checkScrollPosition() {
+                if (!window.isNotifying) return;
+                const scrollPosition = window.scrollY + window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                if (scrollPosition >= documentHeight - BOTTOM_OFFSET) {
+                    document.title = window.originalTitle;
+                    window.isNotifying = false;
+                    window.removeEventListener('scroll', checkScrollPosition);
+                    scrollHandlerActive = false;
+                }
+            }
+            window.addEventListener('scroll', checkScrollPosition);
+        }
         window.addEventListener("focus", () => {
             if (window.isNotifying) {
-                document.title = window.originalTitle;
-                window.isNotifying = false;
+                setupNotificationScrollHandler();
             }
         });
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
-                for (const mutation of mutations) {
-                    for (const node of mutation.addedNodes) {
-                        if (
-                            node.nodeType === 1 &&
-                            node.matches &&
-                            node.matches('.postCell, .opCell') &&
-                            node.querySelector("a.quoteLink.you") &&
-                            !node.closest('.innerPost')
-                        ) {
-                            if (beepOnYouSetting) {
-                                playBeep();
-                            }
-                            if (notifyOnYouSetting) {
-                                notifyOnYou();
-                            }
+                for (const node of mutation.addedNodes) {
+                    if (
+                        node.nodeType === 1 &&
+                        typeof node.matches === "function" &&
+                        (node.matches('.postCell') || node.matches('.opCell')) &&
+                        node.querySelector("a.quoteLink.you") &&
+                        !node.closest('.innerPost')
+                    ) {
+                        if (beepOnYouSetting) {
+                            playBeep();
+                        }
+                        if (notifyOnYouSetting) {
+                            notifyOnYou();
                         }
                     }
                 }
@@ -1581,128 +1848,6 @@ onReady(async function () {
             }).observe(threadsContainer, { childList: true, subtree: true });
         }
     }
-    function renameFileAtIndex(index) {
-        const currentFile = postCommon.selectedFiles[index];
-        if (!currentFile) return;
-        const currentName = currentFile.name;
-        const newName = prompt("Enter new file name:", currentName);
-
-        if (!newName || newName === currentName) return;
-
-        const extension = currentName.includes('.') ? currentName.substring(currentName.lastIndexOf('.')) : '';
-        const hasExtension = newName.includes('.');
-        const finalName = hasExtension ? newName : newName + extension;
-
-        if (hasExtension && newName.substring(newName.lastIndexOf('.')) !== extension) {
-            alert(`You cannot change the file extension. The extension must remain "${extension}".`);
-            return;
-        }
-        const renamedFile = new File([currentFile], finalName, {
-            type: currentFile.type,
-            lastModified: currentFile.lastModified,
-        });
-
-        postCommon.selectedFiles[index] = renamedFile;
-        updateFileLabels(finalName, index);
-    }
-
-    function getSelectedCellIndex(element) {
-        const cell = element.closest('.selectedCell');
-        if (!cell || !cell.parentElement) return -1;
-        const cells = Array.from(cell.parentElement.querySelectorAll(':scope > .selectedCell'));
-        return cells.indexOf(cell);
-    }
-    function updateFileLabels(finalName, index) {
-        const cssIndex = index + 1;
-        const selector = `form .selectedCell:nth-of-type(${cssIndex}) .nameLabel`;
-        const labels = document.querySelectorAll(selector);
-        labels.forEach(label => {
-            label.textContent = finalName;
-            label.title = finalName;
-        });
-    }
-    function handleNameLabelClick(event) {
-        const label = event.target.closest('.nameLabel');
-        if (!label) return;
-        const index = getSelectedCellIndex(label);
-        if (index !== -1) {
-            renameFileAtIndex(index);
-        }
-    }
-
-    function handleCustomRemoveClick(event) {
-        event.stopImmediatePropagation();
-
-        const button = event.currentTarget;
-        const index = getSelectedCellIndex(button);
-
-        if (index === -1) {
-            console.error("Could not determine index of the cell to remove.");
-            return;
-        }
-        const removedFiles = postCommon.selectedFiles.splice(index, 1);
-        if (removedFiles && removedFiles.length > 0 && removedFiles[0]) {
-            if (typeof postCommon.adjustBudget === 'function' && typeof removedFiles[0].size === 'number') {
-                postCommon.adjustBudget(-removedFiles[0].size);
-            } else {
-                console.warn("postCommon.adjustBudget function missing or removed file has no size property.");
-            }
-        } else {
-            console.warn("Spliced file array but got no result for index:", index);
-        }
-        const cssIndex = index + 1;
-        const selector = `form .selectedCell:nth-of-type(${cssIndex})`;
-        const fileCells = document.querySelectorAll(selector);
-        fileCells.forEach(cell => {
-            cell.remove();
-        });
-    }
-    function observePostForms(containerSelector) {
-        const container = document.querySelector(containerSelector);
-        if (!container) {
-            return;
-        }
-        if (!container.dataset.renameDelegationAttached) {
-            container.addEventListener('click', handleNameLabelClick, false); 
-            container.dataset.renameDelegationAttached = 'true';
-        }
-        const setupRemoveButton = (button) => {
-            if (!button.dataset.customRemoveAttached) {
-                if (typeof button.onclick === 'function') {
-                    button.onclick = null;
-                }
-                button.addEventListener('click', handleCustomRemoveClick);
-                button.dataset.customRemoveAttached = 'true'; 
-            }
-        };
-        if (!container.dataset.removeObserverAttached) {
-            const removeBtnObserver = (mutationsList, observer) => {
-                for (const mutation of mutationsList) {
-                    if (mutation.type === 'childList') {
-                        mutation.addedNodes.forEach(node => {
-                            if (
-                                node.nodeType === Node.ELEMENT_NODE &&
-                                node.matches('div.selectedCell')
-                            ) {
-                                node.querySelectorAll('.removeButton').forEach(setupRemoveButton);
-                            }
-                        });
-                    }
-                }
-            };
-            const rmvObserver = new MutationObserver(removeBtnObserver);
-            rmvObserver.observe(container, {
-                childList: true,
-                subtree: true
-            });
-            container.dataset.removeObserverAttached = 'true';
-        }
-    }
-    function startObservingPostForms() {
-        observePostForms('#qrFilesBody');
-        observePostForms('#postingFormContents');
-    }
-    startObservingPostForms();
     function truncateFilenames(filenameLength) {
         function processLinks(root = document) {
             root.querySelectorAll('a.originalNameLink').forEach(link => {
@@ -1869,6 +2014,7 @@ onReady(async function () {
         tabContent.style.maxHeight = "65vh";
         tabContent.style.overflowY = "auto";
         tabContent.style.scrollbarWidth = "thin";
+        tabContent.style.fontSize = "smaller";
         const tempSettings = {};
         await Promise.all(
             Object.keys(flatSettings).map(async (key) => {
@@ -2009,7 +2155,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.43.0</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.44.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -2218,6 +2364,37 @@ onReady(async function () {
 
                         subWrapper.appendChild(subLabel);
                         subWrapper.appendChild(subInput);
+                    } else if (subSetting.type === "select") {
+                        const subLabel = document.createElement("label");
+                        subLabel.htmlFor = "setting_" + fullKey;
+                        subLabel.textContent = subSetting.label + ": ";
+
+                        const subSelect = document.createElement("select");
+                        subSelect.id = "setting_" + fullKey;
+                        subSelect.style.marginLeft = "5px";
+                        subSelect.style.width = "120px";
+                        if (Array.isArray(subSetting.options)) {
+                            subSetting.options.forEach(option => {
+                                const optionEl = document.createElement("option");
+                                optionEl.value = option.value;
+                                optionEl.textContent = option.label;
+                                if (tempSettings[fullKey] === option.value) {
+                                    optionEl.selected = true;
+                                }
+                                subSelect.appendChild(optionEl);
+                            });
+                        }
+                        if (!subSelect.value && subSetting.default) {
+                            subSelect.value = subSetting.default;
+                            tempSettings[fullKey] = subSetting.default;
+                        }
+
+                        subSelect.addEventListener("change", function () {
+                            tempSettings[fullKey] = subSelect.value;
+                        });
+
+                        subWrapper.appendChild(subLabel);
+                        subWrapper.appendChild(subSelect);
                     } else {
                         const subCheckbox = document.createElement("input");
                         subCheckbox.type = "checkbox";
@@ -2765,7 +2942,9 @@ onReady(async function () {
         const footer = document.getElementById('footer');
         if (footer && !footer._scrollBlocked) {
             footer._scrollBlocked = true; 
-            footer.scrollIntoView = function () { };
+            footer.scrollIntoView = function () {
+                return;
+            };
         }
     }
     const opHeadTitle = document.querySelector('.opHead.title');
@@ -2803,13 +2982,16 @@ onReady(async function () {
         }
         function handleClick(event) {
             const clickedLabel = event.target.closest(labelIdSelector);
-            if (clickedLabel && clickedLabel.closest(".postCell") && !clickedLabel.closest(".de-pview")) {
+            if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
+                event.preventDefault();
+                event.stopPropagation();
+
                 const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
                 const rect = clickedLabel.getBoundingClientRect();
                 const cursorOffsetY = event.clientY - rect.top;
 
                 if (activeFilterColor === clickedColor) {
-                    applyFilter(null);
+                    applyFilter(null); 
                 } else {
                     applyFilter(clickedColor);
                 }
@@ -2817,7 +2999,6 @@ onReady(async function () {
                 window.scrollBy(0, cursorOffsetY - rect.height / 2);
             }
         }
-
         document.body.addEventListener("click", handleClick);
     }
 });
