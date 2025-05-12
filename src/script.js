@@ -1974,7 +1974,7 @@
     }
 
 
-    // --- Feature: Hide Announcement and unhide if message changes (Optimized) ---
+    // --- Feature: Hide Announcement and unhide if message changes ---
     async function featureHideAnnouncement() {
         // Utility for hashing content
         function getContentHash(str) {
@@ -3392,7 +3392,7 @@
         });
     }
 
-    // ---- Feature: Hide catalog threads with SHIFT+click, per-board storage.
+    // --- Feature: Hide catalog threads with SHIFT+click, per-board storage ---
     function featureCatalogHiding() {
         const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
         let showHiddenMode = false;
