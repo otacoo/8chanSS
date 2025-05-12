@@ -1,5 +1,5 @@
 ////////// START OF THE SCRIPT ///////////////////////
-(function(fn) {
+(function (fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
     } else {
@@ -146,7 +146,7 @@
     };
 
     Object.freeze(scriptSettings); // Prevent accidental mutation of original settings
-    
+
     // Flatten settings for backward compatibility with existing functions
     let flatSettings = null;
     function flattenSettings() {
@@ -3569,10 +3569,13 @@
     // --- Misc Fixes ---
 
     // Captcha input no history
-    const captchaInput = document.getElementById("QRfieldCaptcha");
-    if (captchaInput) {
-        captchaInput.autocomplete = "off";
+    function noCaptchaHistory() {
+        const captchaInput = document.getElementById("QRfieldCaptcha");
+        if (captchaInput) {
+            captchaInput.autocomplete = "off";
+        }
     }
+    noCaptchaHistory();
 
     // Don't scroll to bottom on post
     function preventFooterScrollIntoView() {
@@ -3586,11 +3589,14 @@
     }
 
     // Move file uploads below OP title
-    const opHeadTitle = document.querySelector('.opHead.title');
-    const innerOP = document.querySelector('.innerOP');
-    if (opHeadTitle && innerOP) {
-        innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
+    function moveFileUploadsBelowOp() {
+        const opHeadTitle = document.querySelector('.opHead.title');
+        const innerOP = document.querySelector('.innerOP');
+        if (opHeadTitle && innerOP) {
+            innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
+        }
     }
+    moveFileUploadsBelowOp();
 
     // Dashed underline for inlined reply backlinks and quotelinks
     document.addEventListener('click', function (e) {
