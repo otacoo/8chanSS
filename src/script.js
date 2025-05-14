@@ -13,7 +13,7 @@ const faviconManager = (() => {
     const STYLES = [
         "default",
         "eight", "eight_dark",
-        "pixel", "pixel_alt"
+        "pixel"
     ];
     const STATES = ["base", "unread", "notif"];
 
@@ -38,13 +38,12 @@ const faviconManager = (() => {
             base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_base.png', {encoding: 'base64'}) %>",
             unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_unread.png', {encoding: 'base64'}) %>",
             notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_notif.png', {encoding: 'base64'}) %>",
-        },
-        pixel_alt: {
-            base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_base.png', {encoding: 'base64'}) %>",
-            unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_unread.png', {encoding: 'base64'}) %>",
-            notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_notif.png', {encoding: 'base64'}) %>",
         }
     };
+
+    // Internal state tracking
+    let currentStyle = "default";
+    let currentState = "base";
 
     // Helper: Remove all previous favicon <link> tags
     function removeFavicons() {
@@ -74,9 +73,7 @@ const faviconManager = (() => {
     async function setFavicon(state = "base") {
         if (!STATES.includes(state)) state = "base";
         const style = await getUserFaviconStyle();
-        const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
-        removeFavicons();
-        insertFavicon(url);
+        await setFaviconStyle(style, state);
     }
 
     // Set favicon forcibly (manual testing, etc.)
@@ -86,6 +83,13 @@ const faviconManager = (() => {
         const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
         removeFavicons();
         insertFavicon(url);
+        // Track state
+        currentStyle = style;
+        currentState = state;
+        // Dispatch event for listeners (e.g., favicon state manager)
+        document.dispatchEvent(new CustomEvent("faviconStateChanged", {
+            detail: { style, state }
+        }));
     }
 
     // Reset to base state (default)
@@ -93,10 +97,16 @@ const faviconManager = (() => {
         await setFavicon("base");
     }
 
+    // Getter for current state (for state managers)
+    function getCurrentFaviconState() {
+        return { style: currentStyle, state: currentState };
+    }
+
     return {
         setFavicon,
         setFaviconStyle,
         resetFavicon,
+        getCurrentFaviconState,
         STYLES,
         STATES
     };
@@ -123,7 +133,6 @@ onReady(async function () {
                         options: [
                             { value: "default", label: "Default" },
                             { value: "pixel", label: "Pixel" },
-                            { value: "pixel_alt", label: "Pixel Alt" },
                             { value: "eight", label: "Eight" },
                             { value: "eight_dark", label: "Eight Dark" }
                         ]
@@ -400,7 +409,6 @@ onReady(async function () {
             mainPanel.style.marginLeft = "0";
         }
     }
-
     // Init
     featureSidebar();
 
@@ -452,7 +460,7 @@ onReady(async function () {
         { key: "hideAnnouncement", fn: featureHideAnnouncement },
         { key: "saveQrCheckboxes", fn: rememberQrCheckboxes },
     ];
-    // Enable setting
+    // Enable settings
     for (const { key, fn } of featureMap) {
         try {
             if (await getSetting(key)) {
@@ -471,6 +479,22 @@ onReady(async function () {
             console.error("truncateFilenames failed:", e);
         }
     }
+    // Custom favicon
+    async function applyCustomFavicon() {
+        try {
+            const customFaviconEnabled = await getSetting("customFavicon");
+            if (customFaviconEnabled) {
+                const selectedFaviconStyle = await getSetting("customFavicon_faviconStyle");
+                await faviconManager.setFaviconStyle(selectedFaviconStyle, "base");
+            } else {
+                await faviconManager.resetFavicon();
+            }
+        } catch (e) {
+            console.error("Custom Favicon setting failed:", e);
+            await faviconManager.resetFavicon();
+        }
+    }
+    applyCustomFavicon();
 
     // Image Hover - Check if we should enable hover based on the current page
     const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
@@ -487,17 +511,6 @@ onReady(async function () {
         }
     } catch (e) {
         console.error("featureImageHover failed:", e);
-    }
-
-    // Set Custom Favicon
-    const customFaviconEnabled = await getSetting("customFavicon");
-    const selectedFaviconStyle = await getSetting("customFavicon_faviconStyle");
-    try {
-        if (customFaviconEnabled) {
-            await faviconManager.setFaviconStyle(selectedFaviconStyle, "base");
-        }
-    } catch (e) {
-        console.error("Custom Favicon setting failed:", e);
     }
 
     //////////// FEATURES ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -550,12 +563,7 @@ onReady(async function () {
         let unseenCount = 0;
         let tabTitleBase = null;
 
-        function updateTabTitle() {
-            if (window.isNotifying) return;
-            if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
-            document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
-        }
-
+        // Update Unseen counter
         async function updateUnseenCountFromSaved() {
             const info = getBoardAndThread();
             if (!info) return;
@@ -566,6 +574,14 @@ onReady(async function () {
             lastSeenPostCount = (saved && typeof saved.lastSeenPostCount === "number") ? saved.lastSeenPostCount : 0;
             unseenCount = Math.max(0, currentCount - lastSeenPostCount);
             updateTabTitle();
+        }
+
+        // Helper: Update Tab title
+        async function updateTabTitle() {
+            if (window.isNotifying) return;
+            if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
+            document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
+            await updateFaviconForUnread();
         }
 
         // Only update lastSeenPostCount if user scrolls down
@@ -640,6 +656,19 @@ onReady(async function () {
             }
         }
 
+        // Helper: Calculate center of screen
+        function scrollElementToViewportCenter(el) {
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const elTop = rect.top + window.pageYOffset;
+            const elHeight = rect.height;
+            const viewportHeight = window.innerHeight;
+
+            // Calculate scroll position so that the element is centered
+            const scrollTo = elTop - (viewportHeight / 2) + (elHeight / 2);
+            window.scrollTo({ top: scrollTo, behavior: "auto" });
+        }
+
         // Restore scroll position for current thread or scroll to anchor postCell
         async function restoreScrollPosition() {
             const info = getBoardAndThread();
@@ -659,10 +688,11 @@ onReady(async function () {
                 setTimeout(() => {
                     const post = document.getElementById(safeAnchor);
                     if (post && post.classList.contains("postCell")) {
-                        post.scrollIntoView({ behavior: "auto", block: "start" });
+                        scrollElementToViewportCenter(post);
                     }
+                    // Add unread-line but do NOT scroll to it
                     addUnreadLineAtSavedScrollPosition(saved.position, false);
-                }, 100);
+                }, 25);
                 return;
             }
 
@@ -712,7 +742,7 @@ onReady(async function () {
                         const scrollY = window.scrollY + rect.top - desiredY;
                         window.scrollTo({ top: scrollY, behavior: "auto" });
                     }
-                }, 0);
+                }, 25);
             }
         }
 
@@ -729,13 +759,14 @@ onReady(async function () {
         // Remove unread line at the bottom
         async function removeUnreadLineIfAtBottom() {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-            const margin = 20; // px
+            const margin = 10; // px
             if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
                 removeUnreadLineMarker();
             }
         }
 
         // --- Event listeners and initialization ---
+        // Save Scroll Position
         window.addEventListener("beforeunload", () => {
             saveScrollPosition();
         });
@@ -744,7 +775,7 @@ onReady(async function () {
             tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             updateTabTitle();
         });
-
+        // On Page Load
         window.addEventListener("load", async () => {
             await restoreScrollPosition();
             await updateUnseenCountFromSaved();
@@ -2172,10 +2203,10 @@ onReady(async function () {
         // Store the beep
         const playBeep = createBeepSound();
 
-        // // Function to notify on (You)
+        // Function to notify on (You)
         let scrollHandlerActive = false;
         function notifyOnYou() {
-            if (!window.isNotifying && !document.hasFocus()) {
+            if (!window.isNotifying) {
                 window.isNotifying = true;
                 document.title = customMsgSetting + " " + window.originalTitle;
             }
