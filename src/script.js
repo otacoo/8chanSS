@@ -1004,7 +1004,7 @@ onReady(async function () {
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
             const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
             const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
-            const isSmallImage = (fileWidth && fileWidth < 250) || (fileHeight && fileHeight < 250);
+            const isSmallImage = (fileWidth && fileWidth < 220) || (fileHeight && fileHeight < 220);
 
             // Special case: small PNG, no t_, no extension: leave src alone
             if (
