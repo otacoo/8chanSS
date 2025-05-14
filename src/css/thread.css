@@ -123,6 +123,11 @@
     display: none;
 }
 
+.deleted-span {
+    color: red;
+    font-weight: bold;
+}
+
 /* Custom class added through the userscript for backlinks */
 .reply-inlined {
     opacity: 0.5;
