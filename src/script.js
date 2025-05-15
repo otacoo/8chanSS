@@ -168,7 +168,6 @@ onReady(async function () {
         threads: {
             _threadsNotiTitle: { type: "title", label: ":: Notifications" },
             _threadsSection1: { type: "separator" },
-            highlightOnYou: { label: "Highlight (You) posts", default: true },
             beepOnYou: { label: "Beep on (You)", default: false },
             notifyOnYou: {
                 label: "Tab Notification when (You) (!)",
@@ -229,6 +228,7 @@ onReady(async function () {
             hideJannyTools: { label: "Hide Janitor Forms", default: false },
             _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
+            highlightOnYou: { label: "Style (You) posts", default: true },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             enableFitReplies: { label: "Fit Replies", default: false },

@@ -61,13 +61,13 @@ nav.navHeader > .nav-boards:hover {
 }
 
 /* (You) Replies */
-.innerOP.yourPost, 
-.innerPost.yourPost {
+:root.highlight-you .innerOP.yourPost, 
+:root.highlight-you .innerPost.yourPost {
     border-left: dashed #68b723 3px;
 }
 
-.innerOP.quotesYou, 
-.innerPost.quotesYou {
+:root.highlight-you .innerOP.quotesYou, 
+:root.highlight-you .innerPost.quotesYou {
     border-left: solid var(--subject-color) 3px;
 }
 
