@@ -581,7 +581,6 @@ onReady(async function () {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
-            await updateFaviconForUnread();
         }
 
         // Only update lastSeenPostCount if user scrolls down
