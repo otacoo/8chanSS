@@ -47,10 +47,6 @@
     opacity: 1;
 }
 
-.floatingMenu {
-    padding: 0 !important;
-}
-
 #qrFilesBody {
     max-width: 310px;
 }

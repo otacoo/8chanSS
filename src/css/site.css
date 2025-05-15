@@ -204,6 +204,15 @@ video {
     z-index: 305 !important;
 }
 
+#quick-reply {
+    padding: 0;
+}
+
+/* Media Viewer */
+#media-viewer {
+    padding: 20px 0 0 !important;
+}
+
 /* 8chanSS settings custom class */
 .ss-chevron {
     transition: transform 0.2s;
