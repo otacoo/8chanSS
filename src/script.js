@@ -502,13 +502,6 @@ onReady(async function () {
     // Init
     enableFavicon();
 
-    // Watch for favicon changes
-    window.addEventListener("8chanSS_settingChanged", (e) => {
-        if (e.detail && (e.detail.key === "customFavicon" || e.detail.key === "customFavicon_faviconStyle")) {
-            enableFavicon();
-        }
-    });
-
     // Image Hover - Check if we should enable hover based on the current page
     const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
     let imageHoverEnabled = false;
@@ -592,7 +585,8 @@ onReady(async function () {
                 if (state !== "unread") {
                     previousFaviconState = { style, state };
                 }
-                faviconManager.setFavicon("unread");
+                // Use setFaviconStyle to preserve current style but change state to "unread"
+                faviconManager.setFaviconStyle(style, "unread");
             } else {
                 // Restore previous favicon state
                 if (state === "unread" && previousFaviconState) {
@@ -2012,12 +2006,13 @@ onReady(async function () {
             if (!window.isNotifying) {
                 window.isNotifying = true;
                 document.title = customMsgSetting + " " + window.originalTitle;
-                // Store previous favicon state before setting notif
+                // Store previous favicon state before setting "notif"
                 const { style, state } = faviconManager.getCurrentFaviconState();
                 if (state !== "notif") {
                     previousFaviconState = { style, state };
                 }
-                faviconManager.setFavicon("notif");
+                // Use setFaviconStyle to preserve current style but change state to "notif"
+                faviconManager.setFaviconStyle(style, "notif");
             }
         }
 
@@ -2330,10 +2325,10 @@ onReady(async function () {
         menu.style.top = "3rem"; // Position of menu
         menu.style.left = "20rem"; // Position of menu
         menu.style.zIndex = "99999";
-        menu.style.background = "#222";
-        menu.style.color = "#fff";
+        menu.style.background = "rgb(from var(--menu-color) r g b / 1)";
+        menu.style.color = "var(--text-color)";
+        menu.style.borderColor = "1px solid var(--border-color)"
         menu.style.padding = "0";
-        menu.style.borderRadius = "8px";
         menu.style.boxShadow = "0 4px 16px rgba(0,0,0,0.25)";
         menu.style.display = "none";
         menu.style.minWidth = "220px";
@@ -2352,10 +2347,9 @@ onReady(async function () {
         header.style.alignItems = "center";
         header.style.marginBottom = "0";
         header.style.cursor = "move";
-        header.style.background = "#333";
-        header.style.padding = "5px 18px 5px";
-        header.style.borderTopLeftRadius = "8px";
-        header.style.borderTopRightRadius = "8px";
+        header.style.color = "var(--subject-color)";
+        header.style.background = "rgb(from var(--contrast-color) r g b / 1)";
+        header.style.padding = "1px 18px 1px";
         header.addEventListener("mousedown", function (e) {
             isDragging = true;
             const rect = menu.getBoundingClientRect();
@@ -2392,8 +2386,9 @@ onReady(async function () {
         const closeBtn = document.createElement("button");
         closeBtn.textContent = "✕";
         closeBtn.style.background = "none";
+        closeBtn.style.setProperty("background", "none", "important");
         closeBtn.style.border = "none";
-        closeBtn.style.color = "#fff";
+        closeBtn.style.color = "var(--subject-color)";
         closeBtn.style.fontSize = "18px";
         closeBtn.style.cursor = "pointer";
         closeBtn.style.marginLeft = "10px";
@@ -2404,11 +2399,44 @@ onReady(async function () {
 
         menu.appendChild(header);
 
+        // Add click outside to close functionality
+        const closeOnOutsideClick = (e) => {
+            if (menu.style.display !== "none" && !menu.contains(e.target)) {
+                // Make sure we're not clicking the menu toggle button
+                const menuToggle = document.getElementById("8chanSS-icon");
+                if (menuToggle && !menuToggle.contains(e.target)) {
+                    menu.style.display = "none";
+                }
+            }
+        };
+
+        // Add the event listener when the menu is shown, remove when hidden
+        Object.defineProperty(menu.style, 'display', {
+            set: function (value) {
+                const oldValue = this.getPropertyValue('display');
+                this.setProperty('display', value);
+
+                // If changing from hidden to visible, add listener
+                if (oldValue === 'none' && value !== 'none') {
+                    setTimeout(() => { // Use timeout to avoid immediate triggering
+                        document.addEventListener('click', closeOnOutsideClick);
+                    }, 10);
+                }
+                // If changing from visible to hidden, remove listener
+                else if (oldValue !== 'none' && value === 'none') {
+                    document.removeEventListener('click', closeOnOutsideClick);
+                }
+            },
+            get: function () {
+                return this.getPropertyValue('display');
+            }
+        });
+
         // Tab navigation
         const tabNav = document.createElement("div");
         tabNav.style.display = "flex";
         tabNav.style.borderBottom = "1px solid #444";
-        tabNav.style.background = "#2a2a2a";
+        tabNav.style.background = "rgb(from var(--menu-color) r g b / 1)";
 
         // Tab content container
         const tabContent = document.createElement("div");
@@ -2460,12 +2488,15 @@ onReady(async function () {
             const tabButton = document.createElement("button");
             tabButton.textContent = tab.label;
             tabButton.dataset.tab = tabId;
-            tabButton.style.background = index === 0 ? "#333" : "transparent";
+            tabButton.style.background = index === 0 ? "var(--contrast-color)" : "transparent";
             tabButton.style.border = "none";
             tabButton.style.borderRight = "1px solid #444";
-            tabButton.style.color = "#fff";
+            tabButton.style.setProperty("border-left-radius", "0", "important");
+            tabButton.style.color = "var(--text-color)";
             tabButton.style.padding = "8px 15px";
             tabButton.style.margin = "5px 0 0 0";
+            tabButton.style.setProperty("border-top-right-radius", "0", "important");
+            tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
             tabButton.style.cursor = "pointer";
             tabButton.style.flex = "1";
             tabButton.style.fontSize = "14px";
@@ -2473,11 +2504,17 @@ onReady(async function () {
 
             // Add rounded corners and margin to the first and last tab
             if (index === 0) {
-                tabButton.style.borderTopLeftRadius = "8px";
+                tabButton.style.setProperty("border-top-left-radius", "8px", "important");
+                tabButton.style.setProperty("border-top-right-radius", "0", "important");
+                tabButton.style.setProperty("border-bottom-left-radius", "0", "important");
+                tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
                 tabButton.style.margin = "5px 0 0 5px";
             }
             if (index === arr.length - 1) {
-                tabButton.style.borderTopRightRadius = "8px";
+                tabButton.style.setProperty("border-top-right-radius", "8px", "important");
+                tabButton.style.setProperty("border-top-left-radius", "0", "important");
+                tabButton.style.setProperty("border-bottom-left-radius", "0", "important");
+                tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
                 tabButton.style.margin = "5px 5px 0 0";
                 tabButton.style.borderRight = "none"; // Remove border on last tab
             }
@@ -2495,7 +2532,7 @@ onReady(async function () {
                 tabNav.querySelectorAll("button").forEach((btn) => {
                     btn.style.background = "transparent";
                 });
-                tabButton.style.background = "#333";
+                tabButton.style.background = "var(--contrast-color)";
             });
 
             tabNav.appendChild(tabButton);
@@ -2520,8 +2557,8 @@ onReady(async function () {
         // Save Button
         const saveBtn = document.createElement("button");
         saveBtn.textContent = "Save";
-        saveBtn.style.background = "#4caf50";
-        saveBtn.style.color = "#fff";
+        saveBtn.style.setProperty("background", "#4caf50", "important");
+        saveBtn.style.setProperty("color", "#fff", "important");
         saveBtn.style.border = "none";
         saveBtn.style.borderRadius = "4px";
         saveBtn.style.padding = "8px 18px";
@@ -2545,8 +2582,8 @@ onReady(async function () {
         // Reset Button
         const resetBtn = document.createElement("button");
         resetBtn.textContent = "Reset";
-        resetBtn.style.background = "#dd3333";
-        resetBtn.style.color = "#fff";
+        resetBtn.style.setProperty("background", "#dd3333", "important");
+        resetBtn.style.setProperty("color", "#fff", "important");
         resetBtn.style.border = "none";
         resetBtn.style.borderRadius = "4px";
         resetBtn.style.padding = "8px 18px";
@@ -2611,6 +2648,7 @@ onReady(async function () {
                 const title = document.createElement("div");
                 title.textContent = setting.label;
                 title.style.fontWeight = "bold";
+                title.style.color = "var(--subject-title)"
                 title.style.fontSize = "1rem";
                 title.style.margin = "10px 0 6px 0";
                 title.style.opacity = "0.9";
@@ -2942,7 +2980,8 @@ onReady(async function () {
                 fontSize: "13px",
             },
             kbd: {
-                background: "#333",
+                background: "#f7f7f7",
+                color: "#000",
                 border: "1px solid #555",
                 borderRadius: "3px",
                 padding: "2px 5px",
