@@ -82,10 +82,6 @@ nav.navHeader > .nav-boards:hover {
     margin-left: 0;
 }
 
-:root.fit-replies .quoteTooltip {
-    display: table !important;
-}
-
 /* Filename & Thumbs */
 .originalNameLink {
     display: inline;
