@@ -69,14 +69,7 @@ const faviconManager = (() => {
         return style;
     }
 
-    // Set favicon based on state ("base", "unread", "notif") and user style
-    async function setFavicon(state = "base") {
-        if (!STATES.includes(state)) state = "base";
-        const style = await getUserFaviconStyle();
-        await setFaviconStyle(style, state);
-    }
-
-    // Set favicon forcibly (manual testing, etc.)
+    // Set favicon style forcibly
     async function setFaviconStyle(style, state = "base") {
         if (!STYLES.includes(style)) style = "default";
         if (!STATES.includes(state)) state = "base";
@@ -86,10 +79,17 @@ const faviconManager = (() => {
         // Track state
         currentStyle = style;
         currentState = state;
-        // Dispatch event for listeners (e.g., favicon state manager)
+        // Dispatch event for listeners
         document.dispatchEvent(new CustomEvent("faviconStateChanged", {
             detail: { style, state }
         }));
+    }
+
+    // Set favicon based on state ("base", "unread", "notif") and user style
+    async function setFavicon(state = "base") {
+        if (!STATES.includes(state)) state = "base";
+        const style = await getUserFaviconStyle();
+        await setFaviconStyle(style, state);
     }
 
     // Reset to base state (default)
@@ -201,7 +201,6 @@ onReady(async function () {
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
             scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
-            saveQrCheckboxes: { label: "Remember QR Checkboxes State", default: false },
             deleteSavedName: { label: "Delete Name Checkbox", default: false }
         },
         catalog: {
@@ -458,7 +457,6 @@ onReady(async function () {
         { key: "threadStatsInHeader", fn: threadInfoHeader },
         { key: "enableHashNav", fn: hashNavigation },
         { key: "hideAnnouncement", fn: featureHideAnnouncement },
-        { key: "saveQrCheckboxes", fn: rememberQrCheckboxes },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -479,22 +477,18 @@ onReady(async function () {
             console.error("truncateFilenames failed:", e);
         }
     }
-    // Custom favicon
-    async function applyCustomFavicon() {
-        try {
-            const customFaviconEnabled = await getSetting("customFavicon");
-            if (customFaviconEnabled) {
-                const selectedFaviconStyle = await getSetting("customFavicon_faviconStyle");
-                await faviconManager.setFaviconStyle(selectedFaviconStyle, "base");
-            } else {
-                await faviconManager.resetFavicon();
-            }
-        } catch (e) {
-            console.error("Custom Favicon setting failed:", e);
+    // Custom Favicon
+    const customFaviconEnabled = await getSetting("customFavicon");
+    try {
+        if (customFaviconEnabled) {
+            faviconManager.setFavicon();
+        } else {
             await faviconManager.resetFavicon();
         }
+    } catch (e) {
+        console.error("Custom Favicon setting failed:", e);
+        await faviconManager.resetFavicon();
     }
-    applyCustomFavicon();
 
     // Image Hover - Check if we should enable hover based on the current page
     const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
@@ -563,6 +557,35 @@ onReady(async function () {
         let unseenCount = 0;
         let tabTitleBase = null;
 
+        // Store previous favicon state so we can restore it
+        let previousFaviconState = null;
+
+        // Helper: Update Tab title and favicon state
+        async function updateTabTitle() {
+            if (window.isNotifying) return;
+            if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
+            document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
+
+            // Get current favicon state
+            const { style, state } = faviconManager.getCurrentFaviconState();
+
+            if (unseenCount > 0) {
+                if (state !== "unread") {
+                    previousFaviconState = { style, state };
+                }
+                faviconManager.setFavicon("unread");
+            } else {
+                // Restore previous favicon state
+                if (state === "unread" && previousFaviconState) {
+                    faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
+                    previousFaviconState = null;
+                } else if (state === "unread") {
+                    // Fallback: reset to default if no previous state
+                    faviconManager.setFavicon("base");
+                }
+            }
+        }
+
         // Update Unseen counter
         async function updateUnseenCountFromSaved() {
             const info = getBoardAndThread();
@@ -574,13 +597,6 @@ onReady(async function () {
             lastSeenPostCount = (saved && typeof saved.lastSeenPostCount === "number") ? saved.lastSeenPostCount : 0;
             unseenCount = Math.max(0, currentCount - lastSeenPostCount);
             updateTabTitle();
-        }
-
-        // Helper: Update Tab title
-        async function updateTabTitle() {
-            if (window.isNotifying) return;
-            if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
-            document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
         }
 
         // Only update lastSeenPostCount if user scrolls down
@@ -1353,7 +1369,7 @@ onReady(async function () {
         // Observe for dynamically added spoilers
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
-    }
+    };
 
     ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2025,79 +2041,6 @@ onReady(async function () {
         }
     }
 
-    // --- Feature: Remember QR Checkbox State ---
-    function rememberQrCheckboxes() {
-        const QR_CHECKBOX_IDS = [
-            "qrcheckboxNoFlag",
-            "qrcheckboxSpoiler",
-            "qrcheckboxScramble",
-            "qrdoSageCheckbox",
-            "qralwaysUseBypassCheckBox"
-        ];
-
-        // GM Storage key for checkbox states
-        const QR_CHECKBOX_STATE_KEY = "qr_checkbox_states";
-
-        // Loads the saved checkbox states from GM Storage.
-        async function loadQrCheckboxStates() {
-            const raw = await GM.getValue(QR_CHECKBOX_STATE_KEY, "{}");
-            try {
-                const parsed = JSON.parse(raw);
-                const safeState = {};
-                QR_CHECKBOX_IDS.forEach(id => {
-                    if (Object.prototype.hasOwnProperty.call(parsed, id) && typeof parsed[id] === "boolean") {
-                        safeState[id] = parsed[id];
-                    }
-                });
-                return safeState;
-            } catch {
-                return {};
-            }
-        }
-
-        // Saves the checkbox states to GM Storage.
-        async function saveQrCheckboxStates(state) {
-            await GM.setValue(QR_CHECKBOX_STATE_KEY, JSON.stringify(state));
-        }
-
-        // Simple debounce utility
-        function debounce(fn, delay) {
-            let timer;
-            return function (...args) {
-                clearTimeout(timer);
-                timer = setTimeout(() => fn.apply(this, args), delay);
-            };
-        }
-
-        // Initializes the checkboxes' states from storage and sets up change listeners.
-        async function init() {
-            const state = await loadQrCheckboxStates();
-
-            QR_CHECKBOX_IDS.forEach(id => {
-                const checkbox = document.getElementById(id);
-                if (!checkbox) return;
-
-                // Set initial state if saved
-                if (typeof state[id] === "boolean") {
-                    checkbox.checked = state[id];
-                }
-
-                const debouncedSave = debounce(async (id, checkbox) => {
-                    const currentState = await loadQrCheckboxStates();
-                    currentState[id] = checkbox.checked;
-                    await saveQrCheckboxStates(currentState);
-                }, 50);
-
-                checkbox.addEventListener("change", () => {
-                    debouncedSave(id, checkbox);
-                });
-            });
-        }
-        //
-        init();
-    }
-
-
     // --- Feature: Hide Announcement and unhide if message changes ---
     async function featureHideAnnouncement() {
         // Utility for hashing content
@@ -2148,9 +2091,10 @@ onReady(async function () {
         await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
     }
 
+
     // --- Feature: Beep/Notify on (You) ---
     async function featureBeepOnYou() {
-        // Create Web Audio API beep (reuse context)
+        // Create Web Audio API beep
         let audioContext = null;
         function createBeepSound() {
             if (!audioContext) {
@@ -2189,6 +2133,9 @@ onReady(async function () {
         let notifyOnYouSetting = false;
         let customMsgSetting = "(!) ";
 
+        // Store previous favicon state so we can restore it after notif
+        let previousFaviconState = null;
+
         // Initialize settings
         async function initSettings() {
             beepOnYouSetting = await getSetting("beepOnYou");
@@ -2208,6 +2155,12 @@ onReady(async function () {
             if (!window.isNotifying) {
                 window.isNotifying = true;
                 document.title = customMsgSetting + " " + window.originalTitle;
+                // Store previous favicon state before setting notif
+                const { style, state } = faviconManager.getCurrentFaviconState();
+                if (state !== "notif") {
+                    previousFaviconState = { style, state };
+                }
+                faviconManager.setFavicon("notif");
             }
         }
 
@@ -2215,7 +2168,7 @@ onReady(async function () {
         function setupNotificationScrollHandler() {
             if (scrollHandlerActive) return;
             scrollHandlerActive = true;
-            const BOTTOM_OFFSET = 50;
+            const BOTTOM_OFFSET = 45;
 
             // Function to check if user has scrolled to the bottom
             function checkScrollPosition() {
@@ -2227,7 +2180,15 @@ onReady(async function () {
                 if (scrollPosition >= documentHeight - BOTTOM_OFFSET) {
                     document.title = window.originalTitle;
                     window.isNotifying = false;
-
+                    // Restore previous favicon state if available
+                    const { state } = faviconManager.getCurrentFaviconState();
+                    if (state === "notif" && previousFaviconState) {
+                        faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
+                        previousFaviconState = null;
+                    } else if (state === "notif") {
+                        // Fallback: reset to base if no previous state
+                        faviconManager.setFavicon("base");
+                    }
                     // Remove the scroll listener once notification is cleared
                     window.removeEventListener('scroll', checkScrollPosition);
                     scrollHandlerActive = false;
@@ -2262,6 +2223,7 @@ onReady(async function () {
                         }
                         if (notifyOnYouSetting) {
                             notifyOnYou();
+                            setupNotificationScrollHandler();
                         }
                     }
                 }
@@ -2285,12 +2247,28 @@ onReady(async function () {
             }
         });
     }
-
     // Init
     featureBeepOnYou();
 
     // --- Feature: Enhanced Youtube links ---
     function enhanceYouTubeLinks() {
+        // In-memory cache
+        const ytTitleCache = {};
+        // Try to load cache from localStorage
+        function loadCache() {
+            try {
+                const data = localStorage.getItem('ytTitleCache');
+                if (data) Object.assign(ytTitleCache, JSON.parse(data));
+            } catch (e) { }
+        }
+        // Save cache to localStorage
+        function saveCache() {
+            try {
+                localStorage.setItem('ytTitleCache', JSON.stringify(ytTitleCache));
+            } catch (e) { }
+        }
+        loadCache();
+
         // Helper to extract YouTube video ID from URL
         function getYouTubeId(url) {
             try {
@@ -2306,9 +2284,20 @@ onReady(async function () {
         }
         // Fetch video title using YouTube oEmbed (no API key needed)
         function fetchYouTubeTitle(videoId) {
+            // Check cache first
+            if (ytTitleCache[videoId]) {
+                return Promise.resolve(ytTitleCache[videoId]);
+            }
             return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
                 .then(r => r.ok ? r.json() : null)
-                .then(data => data ? data.title : null)
+                .then(data => {
+                    const title = data ? data.title : null;
+                    if (title) {
+                        ytTitleCache[videoId] = title;
+                        saveCache();
+                    }
+                    return title;
+                })
                 .catch(() => null);
         }
         // Process all YouTube links
