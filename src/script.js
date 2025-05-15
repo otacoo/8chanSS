@@ -478,17 +478,36 @@ onReady(async function () {
         }
     }
     // Custom Favicon
-    const customFaviconEnabled = await getSetting("customFavicon");
-    try {
-        if (customFaviconEnabled) {
-            faviconManager.setFavicon();
-        } else {
-            await faviconManager.resetFavicon();
+    async function enableFavicon() {
+        try {
+            const customFaviconEnabled = await getSetting("customFavicon");
+            const selectedStyle = await getSetting("customFavicon_faviconStyle");
+
+            if (customFaviconEnabled) {
+                // Make sure selectedStyle is a non-empty string
+                if (selectedStyle && typeof selectedStyle === 'string') {
+                    await faviconManager.setFaviconStyle(selectedStyle);
+                } else {
+                    console.warn("Invalid favicon style:", selectedStyle);
+                    // Fallback to a known style
+                    await faviconManager.setFaviconStyle("eight_dark");
+                }
+            } else {
+                await faviconManager.resetFavicon();
+            }
+        } catch (e) {
+            console.error("Error updating favicon:", e);
         }
-    } catch (e) {
-        console.error("Custom Favicon setting failed:", e);
-        await faviconManager.resetFavicon();
     }
+    // Init
+    enableFavicon();
+
+    // Watch for favicon changes
+    window.addEventListener("8chanSS_settingChanged", (e) => {
+        if (e.detail && (e.detail.key === "customFavicon" || e.detail.key === "customFavicon_faviconStyle")) {
+            enableFavicon();
+        }
+    });
 
     // Image Hover - Check if we should enable hover based on the current page
     const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
