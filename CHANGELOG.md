@@ -1,3 +1,17 @@
+## v1.45.0
+*2025-05-16*
+
+- **New Option:** Auto-hide Header on Scroll
+- **New Option:** Advanced Media Viewer (enables the native setting)
+- **New Option:** Custom Favicon
+- **Renamed**: Hightlight (You) posts -> Style (You) posts, to make use of the native highlighting
+- Settings menu will now make use of the current theme's colors
+- Removed: Mark Posts as Yours feature due to native setting added
+- Removed: Remember QR Checkboxes Status, wasn't working correctly
+- Fix for tooltips getting stuck after site update
+- Style (Deleted) posts text
+
+
 ### v1.44.1 (Patch)
 *2025-05-12*
 

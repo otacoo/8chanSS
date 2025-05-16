@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.44.1
+// @version      1.45.0
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -32,36 +32,33 @@ const faviconManager = (() => {
     const STYLES = [
         "default",
         "eight", "eight_dark",
-        "pixel", "pixel_alt"
+        "pixel"
     ];
     const STATES = ["base", "unread", "notif"];
     const FAVICON_DATA = {
         default: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABL1BMVEVHcExln7ZtpLtrpLyrusF7xuZvsMt5x+aUpauzy9XH3OSru8KCutKNz+vc6u+/z9Xa6O2E0fHK2N50vdp+0PK62ebQ6vWB1PbY6/OK1PJeip2rvcSCxN+DtsvO2+Ho9vzi8vma1u/f7/bn9Pl0utZsi5ex1uWB0vSB0vOa3PfM7frZ8fuG1fWrydWSyuKH0e+S1fBtiZWVw9bk8/mb0+rY7fbm9Png8vlObn18wNx+utOdz+OT0euH0vCBzeyO1/SW0uuQ2feE1PSd3fd+p7ehydqEtMip1eeYx9qr2+/G5PCc0+qp4PXa7fV9l6JyhIyUq7WtyNOn0+XH196pytjJ4+635fjc7PPW7fey5Pi/4O655Paz3u/A4/G73u283eu85faq3/TP7vum4PjD6vq2K6EQAAAAY3RSTlMABw8RBmwRZwMVJQwPgGMPZ8ocJcxTvfmc0AMPJRUk+N+IxcgcAl3q0v3++eQPUZy8Ax3Voszo5gUtF1iWrI7Yhvnf/RAgEmEqoZKJ4K0LBQ8ZWzEme/qS2viG15yKg5bd1P2baID6AAAAjUlEQVQY02NgIAFIc6NwdUNNlQRYEHzD2KQIc3k+CEdWz9ooID4qMNhYmR/ElzFwTk4M8gOyws3kgKSUvqONt09kTAiDv6+CEFBAxcnWgsHDMywhzktbggMoIKxuByRd3KNTtMS4QEawiWhYWjmYuLmqiXJCLGEX17HXVFRFOIGRVVCSlwfFlUzMpHgRABPiE7tfRXJ+AAAAAElFTkSuQmCC",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAACN1BMVEVHcEyH2vyE2vyB1vmB1feR4f+V5P+G3PyP4P+G2fyH2/yO3f6H2v2I2v2F2fyQ4f+Q3v+W5v+F2/2G2/2G3P2D2PuE2fyD2fuH2fyC2fuG2fyn7f+E2fyB1/uI2v2P3vuE2fyE2PyC1faG2vyC2PuQ4f+F3PSF2vyH2u6O4fuB1/uC1vmI2/mJ3v2G2/mI0/KA0/SC2PuQ1/OD2PuC2PuE2fyj6f+C1PWB1/qD2PuD2fyF2vyH3f2C2PuC2fuE2fqA0/WC1/mI3f2F2vuH2/2G2/2M1PGT1e+J1fOD2PuF2vyC2PqE2vmG1fSH1vWC1/qS1vJ+0PF+0PB/0vN/0vOB2PuD2vyD2fuF2f2F2fyE2faG1POG1fWN1PGN1PGN1/WB1PSB1viB0fGB1viB0/OB1PWD0vKF0/Kk3/aF0/KA0/SA1PaA1PWA0vOH0/GO1vOC1PWC1/mC0/Sc2vKQ1fGE1PSX2PKD2PuD2fyD2PyF2vuC2fyx4vaB1vmB1viF1veF1PSV1/Gj3vSC2PyP2PaC1viD2fyn3fOD1viD1PSF1faA1vmA1/qm3vSl2/CF1fah2/O05PeQ1fHH6fd/1vmB2PyC2Pu95vaN1/WB1PXX7/nS7vmR2PWk3POA1viA1vmr3/TW7/nK6vfK6viH1fWH1/e55PW55Pah2/KJ1fPA5/ao3vSo3/XV7/mS1/OZ3Pil4PiB1PWA0/Sc3feQ2few5Pi25fjP7vrD6/rc8vrl9fzW8PvM7fqJG1cLAAAAr3RSTlMAGiygrQIBEQMdFQQMCh4CAwEcERJiPlYdYx4BWn8UAzhWtSRvAxcdCwOBlgsIEe3Dge1jf1sBx3tXTCIPYnA9vpoHJBQP4vP9YSx7PMjCh+jn6br8Yix1P0E7z/7y7f3EmO6u+sT78v30t7Cwz+D6wpDP8+/+4FZXWB9J+56ctMnj+z/EmDjsqsq/mYPu9b3z/en7kkF3+rfQ/vu67a6c8f78/cis7fLvz/To5frUZxH6yAAAAOtJREFUGNNjYIABTR0NeQYEEFSzryyP0kMIMNrWdvV3V7iA2PzCElLqlvXtkxet7qh2YmBQZTI2MbSr692+eNauNT1VDGbO3gV5bg2dfXOXrFs7e2kbg6tnQv7mDU2TZs6bNmXZzjlTGbwS07fElmRsnbByPsuqhTOaGSKySjOzmaOLt01csWD38tYwhsjgTUmF4clFATU79kxvCbVh8MkJSclNjXM3920s87NQlmaw9g/cGBO/3khbRUtWkomDgUHXiiUozUNfSVyIj5OdFeRQOVNHBwNmUUaEN0QUFGXEuNiQfCrAy8MN5wAARRtFcYCtMtMAAAAASUVORK5CYII=",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAACQFBMVEVHcEyE2vyA1PWB1vnkAACS5P+P4P8dAACO3f6I2v2H2v2Q3PeQ3v+Q4f8pAABe8v+G2/2G3P2U5P+n7f+H2fyH2/wJAACI2v2E2fyE2PyG2fyKEBOG2vyQ3/qQ4f+E2fyE2fyI2+uP4fuJ2/mJ3v2J3v+G3fGD2Pui6dOF2vyH3PeH2vyE2fyD2fyF2vyH3f2C2PuC2Pu4AACG3PiI3f2D2PuH2/2G2vWA0/WC1/l52v2B2PuB1/qD2vyE2vmB1feA0/SC1/pjKjB+0PF+0PCD2PaF2vyF2f2F2fyC2PqB1PSB1viC1PV/0vN/0vOE2fqG1fWN1/WB0fGB0/OI0/KD0vKF0/KA0/SA0vOH0/GO1vOJ1fOE1PSD2fuD2PuF2vuC2PuC2fyC2fuE2vOE4v+M1PGD2PyN1PGB1PWF0/KC1/SC1faQNj+D2PuD2fqN1PGQ1/OC2PyI2PeP2PaC1viB1vmB1viF1veF1PSD2fyD1viA1vmA1/qQ1fFyX2+B2PyG1POG1/eB1viT1e+C0/SC1feC3P+p3/SF1veH1/eo3/V+obSN1/W55fa55PV8vNin4feD1PSk2/Gk3/aT2fWc2vKj3vRvbnqXtcWl3/S11+Wh3/eQ1fF5hpusMDepLjaqOj+x3e2B2PqBjqHS7vmR2PXD5PHW8Pq53+6XmKbO6vOB1PWA0/Sc3feQ2feZ3Pil4PjPAQGw5Pi36fykLDC1vsefoq+ldHu4PECpMjTiAADkAACxhIji9vzd8vrO6fSUMEqJAAAAq3RSTlMALLCg/gIDFQQKDAEDAjIPERIBAR0VCBQ4Vh6RJAMDWj4KAwsIGRVjAR0RGltMIg9/gewPB2IUJL6aY2J7LDytw4dZ5+liLD9Be8SYwrr8PP797vrt+/K3z+D6/f5XVx9iSXA4U+JX8sT0kbXNVnbt7T/CxJienLTJOKqZg++dQc+/rvPPxpPovqzl7bfy+s7uyuz96PP7+vv1+/LpzvXw+e/O5Pu6+/71+PplRiTBAAAA7klEQVQY02NggAElZUVZBgQQUvNPy03WQghoJ5Q2dlTHmoHYvAIiUppx5ZNmLWuvSjRhYJBjVDcwTCqbsHXnnr1dNfEMGuaePpGpFRNnrty9YNWSzkoGY1evqLUbps1ZNJdl/sJ9S+sZ3LzD1qXXTt40ezHLvBXLewoZ3MNjMpmYG6Zu3rZrx/7eElsGD981QVl5TS1TZmzZ3ldsrc9gx+QXHJGR39zaP727yEZGmEHP0Xl1QOD6gra6jTlWjGwMDCq69i6h0SHZKU5G0vysIIeK61haODCbqorxsUO9ISghKa8gyo3kUx5OLg44BwA100erMhGdEAAAAABJRU5ErkJggg==",
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAulBMVEUAAAB8rcF2lqSE1PWZ1Oyr1eaqzNqyx9DO7vuc3ffh8vmB0fKv3e/B4e693+56x+bb6e6gydl7wd3L3OOwytSAuNC35fjZ8fuQ2feB1Pbo9vyy5Pjm9Pmp4PW85fbW7feO1/S55Pbk8/mq3/SB0vOK1PLY7fbn9Pnf7/bQ6vWS1fDa7fWH0vCb0+rY6/OH0e+T0evc7POBzezA4/GNz+vJ4+6dz+O62eaSyuLH1958wNx0utbD6vqm4Piw9F0wAAAAPHRSTlMADwXliF4dD/7948uflIVpZSglJBcW+vn5+fj46ODd2tjX1dTS0MzIxb28rayinJyWko6KgHtYU1ExLRzJDM8dAAAAhklEQVQY05WOxRKEQAxEJxnBbRfW3d1d/v+3yBQHihv0IZWXSifNqsiAIt4XqxBzxqs5tDthBsnrocDz4/dkaWiubaz/VOoD515dLx9bJ9HvuhHDra1o8OU7ZJHbGPhe84DawS9UQY5/5poc1DqzTyL2oOQzzp4EbT6yBMuFgTO/FVMCYXmlpd8IdbxYuKsAAAAASUVORK5CYII=",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAw1BMVEUAAACB1/mG2vyC1/iC2fuD2fyE2fyG3P2n3vWH1vaB1PWC2PuE2vyH3PuI2/mk4PaK1vSB0/Og2/OP1vJ/0fGB0/SF1vaC1faB1vmF2vyy5PiP2PbF6vnK6vjU7/mo3fKF0/K55PaL1PKR1vKW2PKK1PGI1fOA0/SP2PWA1PaA1/mB1/qC2PqD2fuC2fuE2fyD2fyE2viE2fyH2vyJ3v2x4va95vbA5/aT1e+S1/PX8PqC1PXO7vqb3fjl9fzc8vq25fjSsPNOAAAAOnRSTlMAmR2tYlc/EOvIxIAsFQv9/fzy8OrQv7afI/7+/f378/Pw7eni4c+8ubCRhXt2b1pKOzgaB/v69PPUtOA8IQAAAL9JREFUGNN1j0UWwjAARJPG00JdcHerYRXg/qciDxZlw+z+bGY+aNJug9+0KCEJazjDURBA0voA0zSNhLw/4CjOFRtY14+QV4PiwXcaAJ29XCyEGHFxHw5RChiWVm2aMx8dtpPnmgIDjnuua3adJUTXQhU0LMebaOm8us6omEAD0FXpbQ/In5371UVgBpKNbftyepNiPg/2HTWy80qrV7vwqOvYUC/yGHm2NQ2Jese+Eie4khHOGg2WkhNVEn/E38P7EOpFNC2nAAAAAElFTkSuQmCC",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABBVBMVEUAAACC1veB2PqB2fuB1faD2fyE2vyH3PqA4PyD1PSB1faB2PuE2vyG2vyI2/jQ7PaM1vSB0/OR1/On3vSG1/eB1vmC2PqE2vmG2vql4Pe54vKF0/KrLzam4PaN1PF+0PGO1fGD1faP2PWE2fyD2fyD2fyI3P6J3v3W8Pqj3vTD5PG11+WXtcW55PVvbnqqOj+XmKac2vKT1e+h3/ex3e2B0fGI0/J+obS4AACBjqGH0/F8vNh5hpuQNj+P2PaA0/VyX2+C1/SKEBOC2ftjKjCE4v8pAAAdAAAJAACD1fXkAADg9Pu05/qb3fiQ2fe1vsefoq+xhIildHu4PECpMjSkLDDPAQEi/+blAAAASXRSTlMArplixVY9FBDMt4MsHQr9/Pzs6cCfeTgj/vTz8/Lw6ObPuVpKQRkH/vv7+/v6+vn48/Py7+7t7ezk4M7OzcS+nZGRcFlTMhUIpnbxjgAAAMxJREFUGNN1z0WywlAURdH7lBcjnuAu390VhwTX+Q+FFBQFHU5vt04tOC4eh9PFOGO+OHaNuI6DWWwXQtM0JtvXVzaq1KNWiaK0cXa6mg9tRQNIePSrIEnZh/Be15EPglBjnLwsFH/CzMuwVAUVpyc5Kzl6/gwzqYsSBy4HaeRKj6NZuNRTWIWqHLw2PVS0btaL2z8igCPTlGjuiX7fvTteIjpR8kFgjC3c2PwSFQDqFZQ3jTe52/loiT2ijP+pS2qDXv/A8lmZR4gz8C3ykRYGbZB0XwAAAABJRU5ErkJggg==",
         },
         eight: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABxVBMVEVHcEw3Wm03Wm04W243Wm00Vmk2V2o2WGs4XG85XG80Vmk0V2o5ZHk4WWxIaHo3WWw4W241WGw1WGs2WW06XG81WGs3WGs3Wm02WW04Wm1DbIBCbIA4Wm02WGs2WWw4WWs3W25Nb4E5XG80WGs7XnE4WWtLb4E7XW81WWw5Wm05XnE4WWw+X3I9X3Kg5fmW5PtXjaOB3fmOu8w6x/JTcYH6/f5ObX6UqLLR6/NIaHlmg5Le8fe3x8+Myd1lnrONyd2U3/Zdm7N8tst0tMqQ4/yI4fx3o7R2o7Ss6vys6v2p5fg/YnU3aYBhm7Jgm7Jrk6Rsk6TA8f+07f43WWs0ZnxWnLZwxuI2ja1Lhp1Zw+U8vuc2WGsypctdxOVanbZBnb1sxeJPh540WGtwoLPEztS07Pzm7vE+an9AYnU4ZHg2epQ9d49KqMhdyuxOyO42sdhGveJGv+VzoLOuvMS27P01WGs+a4BDfZVwkKBayex5prh/qLhzkaC94Ouz2ea12ua83+s3Y3g/aX01Z346d49RwuVMqcgxjKw9uuJEwOdUyu88sthQb4BsiZhniJfj6ezl7O/T3eJRb4De6u7i7fHR3eLf6Oy7I6xQAAAALnRSTlMA1y0TO799VAkJfVT3ave/nWr+19Wp/o2N1/v7O/6/7xP71e/zqfvVv9fzqfPzsy06vQAAAOhJREFUGNNjYIAAJlGdHktGQU4ol4FFxMqmf6I5nwRURIG/wsJ6QpppCp8gRIBbsb6hz8yk2NScESLA5Z9anSSsbDJlqiWQx8zOxuoelCwkIGw2edokBgYZfmkDR3sPowyh0l5rG10GJqWIMENXfT0vo6KqWgsrUQbV7NzIUF8nBz3PwJK6GhEmBpWcvKxgMW9nfVu3ADUNFgaG9ILCEEkBWT8XO1YubmagHZn5UT7yjNFxhgZsECcwhhvHlzWVxyZIsUMEeHlijDtbuyoT5ZghAhziPO3dHW0t6iwwj3LwajY2a2kzQbkABRkwTXzsxiUAAAAASUVORK5CYII=",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAACQ1BMVEVHcEw3Wm0AAAA3Wm0AAAA5XG84XG9IaHoAAAA5ZHk1WGw3WWw4WWwAAAAAAAAAAAAAAAAAAAA0Vmk2WW02V2o0Vmk2WGsAAAAAAABVVVU0V2o3Wm04W24xUGEzVmlCbIA3WGs4Wm04Wm02WWw2WWw3W24AAABpaWlNb4E4W244WWsnN0AMFhs3Wm05XG87XnE4WWs2WGsAAAAxUGAAAAAfHx82WGp5eXk9XnAFCw8+X3I6XG81WGs6XnIfISIhJyorSFccHBw7XG92dnYiIiEpPkqpqKjJyck5Wm05XnE4WWz////6/f46x/KB3fmUqLJ+fn5/fn5IaHmNyd1dm7Og5fmW5PtXjaN2o7TEztSs6vyI4fyPvM1rk6S07f58tss4VWVhm7KuvMSr6Ps3aYA3WWs0ZnxTcYJWnLZwxuI2ja1Lhp1Zw+U8vueU3/YypctwoLODg4O07Pw/YnVSb39Bnb00WGtObX7m7vE+an84ZHg2epQ9d49KqMhdyuxwkKBOyO42sdh0tMpvjJZGveJGv+V/qLi12ubg6++83+uj6P4QGR1zdXU+a4Brd30KFBl4fH1Rb4Dj7PCUnZ/R3eLk5OS7u7tQb4Bmg5JniJfj6eze8ffl7O+3x8/R6/PT3eIjIyM2WGs2WGggICAgISEiIyNDfZVWhpdWi6BdxOVanbZayex5pbJtxuNQiJ9gm7JnmKfl5eWR5P6Y5v7i4uLh4eE3Y3g/aX01Z346d49RwuVMqcgxjKw9uuJEwOdUyu88stgMVNi+AAAAS3RSTlMA1wUtAwkJ9wH3ar9qnwRcWAa/jX19VIK5xlSNE6Lx+/7XO9j9Exbf+53v/uA71fOp/hAut5Kp9PPb89WpOfPmypHV9OKr9vvX86lHMXkwAAABBElEQVQY02NggABmG6vpQYxcrFAug671jLmz5vuzC0NFVLnr582eU+ETyc4FEZDSaO+cWZ6e5OPPCBEQjS1qK1OWK+mYEgTkyYiJCEXEFajI6nRPnjSRgUGJWz48JDgqJkG7J3BCnwUDs152pl90WGhy8+Kp3oH9ZgwGNXU5GYnxeV1rlm71DrA0ZtCvbahOVShu2rxhyRbvABMmhsqW1jRFTcP1m5bbuW905mViqGrMTdFiXLjKb4WrywJTNQ4Gxizf0t7ty1auXWTvNk1dnI+BhzPfd9+u/avXOTiaF0ryszCwSXPuObB3904nWyNeCQGQs9l4PLbt8PRiZuBgEmRhYAAAZkdLgmyX8n8AAAAASUVORK5CYII=",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAACQ1BMVEVHcEw3Wm0AAAA3Wm0AAAA5XG8AAAA4XG8AAABIaHo5ZHk1WGw3WWw4WWwAAAAAAAAAAAAAAAAAAAAAAABVAAA2V2o0VmkAAAA2WGtpAAA2WW00Vmk3Wm0xUWIzVmk0V2o4W243WGs4Wm1CbIAfAAAnKDAMGR84Wm0AAAAxUGA2WGo9XnAFEBM2WWw2WWw4W244WWt2AAA3W255AABNb4E3Wm0AAAA5XG87XnE2WGs4WWsfBQciAADJAAA6XnIhDxIrSVgcAAApOESpAAA+X3I6XG81WGs7XG85Wm05XnE4WWz/AAB+AAD6/f5/AAA6x/KB3fmUqLJIaHldm7ONyd2W5Pug5flXjaOI4fyDAAB2o7TEztSs6vw4VmZ8tsuuvMQ3aYBrk6Rhm7KPvM2r6Pu07f5Sb383WWs0ZnxzBAVWnLZwxuI2ja1Lhp1Zw+U8vufkAAC7AACU3/ZreX8QHCEKGB14PD5Rb4Aypcvj7PCUn6Hg6+/R3eIgAQE/YnUiBQVTcYJvjphBnb3lAADiAADhAAA0WGtObX5woLO07Pzm7vE+an84ZHg2epQ9d49KqMhdyuxwkKBOyO42sdh0tMpGveJGv+V/qLi12ua83+uj6P4jAAAgAwM+a4B5p7Rnmqk2WGs2WWlWiJlWi6BdxOVanbZtxuNQiJ9gm7KR5P6Y5v5Qb4Bmg5JniJfj6eze8ffl7O+3x8/R6/PT3eJDfZVayew3Y3g/aX01Z346d49RwuVMqcgxjKw9uuJEwOdUyu88stgD4wpeAAAAS3RSTlMA1wUtAwkBCZ/392q/agRcWAaCucZ9vxZU3419jaLxVBP+1/uS/uA7ty6p89vY/Z3v9BP0+zsQ1fP+qfPi+znmypGr9vPVqdXX86mMF3yaAAABBElEQVQY02NggABmN5fVQYzcrFAug6nrmo3rNgdySkFFjHgmblq/ocs3mpMbIiBvMmPm2vaGeN9ARoiAdGLn9DZdubTqmiAgT0FCVCwqtUNPVq2kqrKcgUGdRzk8OCQmOVY106+sWJuB2Tw3OyAiNCylsbbA269Ui8Gqb0JeVlJc0ax59a3ePjqaDBb9k3rTFeumrJo/p8XbR4OJoXvqtAwlfcsVKxdZ2zYbcjAx9EzOTzBgXLA0YLGTzWwVcTYGxhz/prnbtyxZttDeuVBSiI+Bl6vCf9+u/VuXOzgaR4rwszCwy3DtObB39053OzMOYQGQs9l5Pbbt8PRiZmBjEmRhYAAAEk9Lgsr0RXkAAAAASUVORK5CYII=",
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA5FBMVEUAAAA3Wm1OboA1WGs7XnE6XG82WGs1Vmk2WGw1V2o3Wm03Wm03W244XG9CbIBIaHo5ZHk2WGs4W242WW01WGvi6++U4/o8an81ZHq17f2r6fyD3/pFv+V3pLZfm7M5eJH6/f6g5fne8ffR6/M6x/Jbyuy94Ou02uZVw+U8vOXS3eJuxuKNyd23x8+Ou8xLqchYnbZxoLOUqLIzja1rk6RXjaNxkaBNh55piZhmg5JTcYFIaHk/YnXA8f9Uyu9OyO5dxOU8stg2sdjEztR8tssypct0tMquvMRBnb1/qLhlnrNDfZVMt0NDAAAAFHRSTlMA1/6/89WpfWpUOy0TCfv39++djVUg8M4AAADPSURBVBjTNc5VEsJAEATQlSgJvhshhrtbFHe4/30ItWH++tVUz4BsFIFDMZTy/5zjwwkdLovVTFS8bTUprV+KEgMZ9boBih71JWQgrs0XgeWIDuPfvixix1yQCkSUorQPFzbuuDZNCAmaEw4ovD+yLK1Rmy6cbisUgOB1+nP3msrO7G15BXCzg0dIctfGzhrhHAC6bRuwQlztjUVZTW8Y54FehmRubUT2Aly1n7r+OY4KMgOpdGvb/X3HxyqDfLW0Og1mHp/2ZSJBw+AEJYtfEOwVJ+cVEq0AAAAASUVORK5CYII=",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAmVBMVEUAAAAoXH0nW3wnWnswZIYoXH0nW30oXH0iVHcgUXIsX3wnXX4nWn0pXoAoXH0qX4ApXH1et+qS0vB7yPB1xfBmu+uM0fGBy/GAxulktuVJjbVHgqUzbpRco8tUk7dOkLY8dJWa2fRwwe6LyORrtNpzsc9oqcxMmMVYlrhimrc/h7NLhqhAfaJarN1Rp9uEv9pOodNtqMU7cpSYIe5fAAAAD3RSTlMAz1Wd/vDp3jMXCI+DkIvxne6HAAAAuklEQVQY0zWOVxKDMBBDd216yq4Nprf0Aqn3P1ycAd6fNBpJMBNKlxgFLATe96QPN5KzjrBKU613L5ozwsnznuizu+FkrIbsyj6TPvA/LzbYZS2vfdKabB86VXeMz8zcpycXQm8s9kkSx+f2mqe9BFmboiwb62RZXnkhuBdT23STHNvBwQCAlCF/zWXS4VZEdoOfiuxiua9W0wW8qwtRXRTOcpLeSiljRoxgQtL9oZraC2BBIJMrw1n9AJTkDhyKCtG8AAAAAElFTkSuQmCC",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABgFBMVEUAAAA4Wm0AAAA2WGs7XnE2WGs4XG84W283Wm0pRFJIaHo5ZHl3AAA3WWwAAAAAAAAdAAA2WW01Vmk4WWw1WGwAAAA1V2onKDBNb4FCbIDJAACpAAAfBQczVmk4WWshDxIiAAAMGR9pAAAFEBMrSVhVAAA0VmkpOEQxUWI4W24AAAAxUGAAAAAhAgJ+AADl7fBfm7NScIE+an82WGv/AAD6/f607f2U5P2s6fyB3fk6x/JRye9byuxbxOVuxuPS3eI5sth8qLZzorSUqLIzja1Nh547d49Pbn80Zn1IaHk3Y3gNGh/lAADiAACj6P6Y5v6I4fyg5fne8feU3/bR6/Pg6+/j6ey83+tEwOc8vue12uZRwuVGv+VGveI9uuKNyd3EztS3x8+PvM18tssypct0tMpMqchKqMiuvMRBnb1anbZWnLZnmqlrk6RXjaOUn6FwkKBWi6BWiJlvjphniJdDfZU2epRmg5I3aYBreX8/YnU4VmZ4PD5zBAW7AACDAAC1tWqYAAAALXRSTlMA1wT+86kJOi0S9/f0v7ifko19ampaVP77+/v28/Hv5uLg39vKxr+rop2CLhaXktx/AAAA80lEQVQY0zXOY5MDYRAE4Jl3kY2ds411bPts27Yvfz3ZSjLf5qmurobWcQxdKKGLbf86/DhaT2QM9pbozY+ry6LoOzS4muDp3N54LciXvgw2wXHnT6nYJ68lSlre4xhP+9PU5FDlQZQbfeaue+kgePzT8Sf8ftHAYS4eWgwsBV/4qleoMMDko7Eb6WRlPsXPeYWRGaAvIu8U9X22cKuBhYCyt1vEKUoKPPd2V01WAuXk1mc/qtehp4lB3jYLgNnwlaK8xeLqQM//8DQBp/E0vLkTieZGbabamJsAazdmk/vnedTprRa3Npt1YrlIMxwAIQSgDr+eKshCsMCtAAAAAElFTkSuQmCC",
         },
         eight_dark: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABelBMVEVHcEwAAAAAAAAAAAABAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASHSEGERQVFRUAAAAAAAACAgIDAgIHBwYaICEcICEEBgYDBQYAAACBtsag5fqX5f01VV+t7P9JW2F8nadEbXo6xvEjIiIcHBt2eHkUFBQ8Pz+kqarb7fNJcHxBbnuT3vVpmKZhlqaJ5P+S5v9adX1bdX2o5PYHGiDB8/+28P+B3vsCFBoKCwwYXXM3ttyC3/srTFYmS1ZAcoI7cYIqeJBWudghiqpoudFjt9FSuNdWcnsLCwxUcntee4RlfYSszNa17f637v6rzNb5/P0TMz0OOUZOVlgNGh5LVVgFEBMrn8I4iqRLxeo/sdQ/tNhZxOSzs7O31d6Xl5e21N7h5ucTXHIQMj0EFx0NHCENFxobPUcDDxNWw+Q2r9MxoMNLuNk/uN1Sxuo6i6QfHx9FSElAR0kgHx/c3d7GyszN5OzIy8z6/P3d5OfY3+LY3N7f4eLO5ewPSZNcAAAAGXRSTlMA1799CVQTO/5qLamN+/f3753V1fP7+/PzQnun4AAAAOZJREFUGNNjYIAALm6RAjVGThYol4FdSF2jpFyVnwcqwsYUWqZZkxgQy88JEWAV80koUlGOr1BlhAgwy/t6SzIKKFeWqoHUszIzGZp5cggyqlRVFwPNY+KV1ZaSU/DgkCzU1BBh4BKyczHXl5E2VnD3iqtV52bgDoxxc1DU1ZGWM/XzDxbmYhCPiAyS5LDUk5EykhdlYmdgCImKtmAU5FA00GJiZmUD2hEWbm0iwChpbyPLDHECo5WSY2paupMrLytEgJPPWSk3Jy/TlokNIsDCw5eUnZWfLMwO8ygLJ2NGigQ3F5QLACEFIoW6o2wzAAAAAElFTkSuQmCC",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAACEFBMVEVHcEwAAAABAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVFRUGERQAAAAAAAAAAAAAAAACAgIAAAAAAAAAAAAAAAAAAAAAAABVVVUAAABpaWkAAAAAAAASHSEfHx8AAAAODg4AAAAAAAAAAAAAAAAcICEAAAAAAAB2dnYAAAAHBwcEBgYAAAB5eXkHBwYjIyMZGBjJyckAAAAXFhYbGxsDAQCpqakAAAADAgIDBQYAAAD///9+fn46xvFEbXogHx92eHkUFBSBtsZBbnug5fqX5f01VV+J5P9adX2t7P+zs7NJW2F8nae28P8HGiAKDAxpmKaB3vuDg4OXl5eq5vgCFBoYXXM3ttwmS1Y7cYIhiqpoudFSuNciIiL6/f3k5ORxcXGAgH+AgICT3vUjIiJUcntlfYRle4KszNa17f75/P0iIyMKCwwqeJDl5eXi4uK7u7vh4eETMz0OOUYCAgEcHBt5fn8NGh5LVVgFEBNbXl8rn8I4iqRLxeo/sdQ/tNhZxOTGy8zb4+Xb3+G21N7h5ueSmp0NHCFhlqaj6f4fHx9AR0kjIyMgICE8Pz96prNkkqHc3d7N5OzIy8ykqarb7fPf4eIQGx41VmBIcHxAcoJkuNGZ5/+C3/uS5v8rTFYbPUdWudhWw+QTXHIQMj0EFx0NFxoDDxM2r9MxoMNLuNk/uN1Sxuo6i6TymV9OAAAAPHRSTlMA1wlqqQW/LQN9AY1U9/efEzv+1QRcWAaCucYW3/Gi+5Lg/tu32P37ne/0LvPzEPTz4vP7yuaRq/Y51fO9NAHzAAABAElEQVQY02NggAB2FoMeZ0ZmJiiXQVB4wrTJU514uaEiAmxVU6bPaM/x4WWGCPCoZ7X1lqeFJjgxQgQ4fbMzbFRl41uanUHqeTjZvPzT1eQUyzpaHYHmscl7uLp4+wUqJaVU1OgwsAtHxQZ7uruFZTom2ibbsDCwlDTFRTsEpXZPzC22tVPWZtCtqy+1Ecrrmjepv9DWToWVobKhMZxRQ8hhwWwj4wItflaG6trIAE1GmznzZ5kb9ilIczEwRtjnd65YtHjuTFOLIhkJEQZmvhj7tWvWLVloYqYfIiXKwcDEzbd09ar1y6ws9fglxUDOZmJmXLncmoWdgYtVnIOBAQC5WD/AFAfHAAAAAABJRU5ErkJggg==",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAACDVBMVEVHcEwAAAABAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVFRUGERQAAAAAAAAAAAACAgIAAAAAAAAAAAAAAAAAAAAAAABVAAAAAABpAAAAAAAfAAAOAAAAAAAAAAAAAAAAAAASHSF2AAAAAAAHBwcAAAAAAAAcICF5AAAAAAAEBgbJAAAAAAAAAAAHBwYbAACpAAAAAAAAAAAjAAAXAAAZAAADAAADAgIDBQYAAAD/AAB+AACAAAA6xvFlfYR2eHlEbXoUFBSBtsZBbnuX5f2DAAA1VV+J5P9adX2t7P9xAADkAACg5fqzs7NJW2F8nae28P8KDQ2Xl5eB3vsCFBogAQEYXXM3tty7AADhAAAmS1YiIiI7cYIhiqpoudFSuNf6/f2q5vgHGiACBQV5PkAgHx9bYGFpmKbGy8zb4+Xb3+GSnJ8iBQXlAADiAAAjIiJUcnuszNa17f75/P0qeJATMz0OOUYcHBsjAAANGh4gAgJLVVgFEBN6qLUrn8I4iqRLxeo/sdQ/tNhZxOS21N7h5ucKCwyT3vUfHx9AR0kNHCE8Pz/c3d7N5OzIy8ykqarb7fPf4eIrTFYQHCAbPUc1VmBIcn5AcoJWudhWw+RklKNkuNFhlqaZ5/+C3/uj6f6S5v8TXHIQMj0EFx0NFxoDDxM2r9MxoMNLuNk/uN1Sxuo6i6SgoXlXAAAAPHRSTlMA1wlqqQW/LQMBfZ9Ujff3Ezv+1QRcWAaCucYW37eS/vGi4Nv79C7z2P379BDz+53v85H2Ocri5vOr1fMvCF7YAAABAElEQVQY02NggAB2FsNuF0ZmJiiXQVC4b1L/RCc+XqiIAFvdhMlTOsoC+JghAjxaJe09VUWhyU6MEAGuwFJHGw2FuJxsF5B6Hi427+BiTUWltLzcDKB5bCqebq4+QSHyvvbpmeoM7MKxiWFe7v4pjhF+tvY2LAwsFW1J8c5ZXYsa8mNs7ZTVGHSbmitthDrnL5hbW2hrJ8vKUNPSGs6oL+S8eKaFXoEqNytDfWNUqgGjzayFMyzNquWkORkYIx3Ke5dPnz1vmrlxtIyECAMzf4LDmtVr50w1NdL2kBLlYGDi5V+yauW6pVYmOtySYiBnMzEzrlhmzcLOwMkqzsHAAACIbz9VUv4FWQAAAABJRU5ErkJggg==",
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAAAAAcHh4DBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQESHSEVFRUGERQAAAAAAAAAAABXc3wLGR4DEhe37/+V5v5WxeY8ttxDbXqt7P/6/P2C3/ug5frb7fM6xvHO5ezf5efe3+DY3uC31d5UudiszNY6sNRluNHHy8yBtsYuoMOkqap8nadll6Y9cYJ2eHlJW2E1VV9MVVgoS1ZCR0kUO0Y8Pz8RMj0jIiIUFBQKCwzB8/+J5P+o5PaT3vVLxepLuNmzs7Mhiqo6i6Q4iqSXl5cqeJBlfYRee4RJcHwYXXMTXHK7ZShPAAAAEnRSTlMA1/7yv6l9alQ7LRMJ+/f3nY0o+Yk1AAAA0UlEQVQY0zXO1RKDMBAF0GwSpFANTt3dHai7/f/vlE7ovt0zO3cXRaMIBPsgxf85Bqt+tTNOZiJR6axcrFZyp6TEQcbN+gJ7t9wYOIgT88GAeJWO/9uXRaqZGksDrtVw2EcTU7ebHQSMLYp9ghSYt/Nbq7AbaM96eSUgYW03Ru5wX8huzOYMFESuhyVjwdDqahNMYwjpLceANHOtFxVlNbxh9BydABvlpyJ/Ad6lu64vG+2EzEFKnUvO0bbnVOUQz6Q+vdZlDWFfJBIYBhGUKH4BCtAU9AMVJ6MAAAAASUVORK5CYII=",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABLFBMVEUAAAAAAAADBAQAAAAAAAAAAAAAAAAAAAABAQECAgIAAAAAAAAAAACnqaoVFRUGERR3d3cAAAAAAAAdHR0AAAAAAAAAAADJyckcICESHSEZGBgXFhYjIyNpaWkAAABVVVUgICAAAAB/f39EbnoNGh3////k5eZVxebh4uIDERULDAy27/+V5v76/f2i5/yC3/s6xvHb4eM/tttUudg6sNRmudHHy8wuoMNll6Y5i6SVmZplfIM9cYJXc3x2eHk1VV9KWFwoS1YRMj0FGB4UFBSt7P+Z5/+J5P+q5viT3vXb7fPN5OxLxerc3d621N43ttxLuNmszNaBtsa7u7uzs7N6prMhiqp8nadkkqEqeJCDg4N5fn8YXXMTXHJxcXFbXl9AR0kbPUcOOUY8Pz+Gf/rZAAAAIHRSTlMA1/Kqn2otEwnVv386+/f39N64ko1aVPv7+/Pm4t/KxnB/XeAAAADqSURBVBjTNc/nkoJAEATg2V2CgFnPy3e7gCCYc85ezjmY9f3fQSxx/vVXU13V4J5AMB0h3rPPXmnte6p0/FFXRLn3cJ8w0p9+fgexo7fnBaWNdAftQOklmwxhmq+Mtv8xRW4n24wLsUaeOn3ycVd7v/qx7Zk6nmMQpH45e5PK3DapEVcZATIwiy2tdpf5oom4GhIA1x9XjNm1698thAH0UsFCHNNS2smhEeQArOrLECPWynbJGY2IAGiS+9P1ZbGsn/o+zhUAPvCdK7yaZv8iEvy/PADwRAPTaqk+kLwiF3ayIzyyhpgI7u4NAyAfb7mvG6QAAAAASUVORK5CYII=",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABDlBMVEUAAAAAAAAEBQQbHR4AAAAAAAAAAAAAAAAAAAAAAAABAQEAAAAAAAAAAAAVFRUGERR3AAAdAAAAAAAdAAAAAAAOAADJAACpAAAZAABpAAAAAABVAAAAAAAKGR6AAABEbnshAgLjAACW5//d3+EQNEADERX/AAC27//6/f2s6fyi5/yC3/s6xvFOxure5eZXxOQ7t91Uudg/s9ZmudHHy8wuoMNilaU5i6SVmptlfYQ9cYJXc3x2eHkVXHI1VV9KWFwoS1Y+Q0QiIiIUFBQKDAyJ5P+T3vXb7fPN5Oy21N5LuNmszNY2r9OBtsZ6qLWzs7Okqaohiqp8nadpmKYqeJBbYGEbPUd5PkC7AABxAADDG85nAAAAHHRSTlMA2PP+qp9qVy0TCb9/Ovf39OS4ko3++/bz38rGKc/yuwAAAOFJREFUGNM1z+WSwkAQBOCZ3Y2R4JzvJhA53N313BV4/xchKcL866+muqohPJURukY5cspRXH46nUksE4qmzx8fnFrhIyYfQaEvT0u6GhQmeARjnh9yJKtaZx38K4Y+zo+5hHzgUL9PpzPrrfi9Odub2z8CKi7a5Tu7VBxmc7cmZ8DcenNk/dyX3gNAFUi/6nK+6dm9AFIAotXyUOKWbV2e5xISgNdtCIJ8VJ6xZDatAeC08ivEf7Mtkhe7KwNAjn9VGs/V+uI6nTBvFIBIJj7tvvZdjGpSys++yOgJwtRw9wFQqBu3wZY/EgAAAABJRU5ErkJggg==",
         },
         pixel: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABIFBMVEXtfwDsfgD//wD/lwH/iQD/mwIPAAAJAAANCAIRGyAeICCLRAC+UwCxTgAQDgkUDwofMjs3OjwPGBz/iwD/iAD/lgGqSQAMAACHQgASDwq5TgAPDQkRHCE3OjwdICAeISEfMjsRGyC5x81prModMDgAAAADBAQzNzkaHB2GQgAFAACUSgDdYQAMCAIGAAATDQeaTAAJBgEgND3NWwAMCwddmbMNCAINBwEhLjMbLTQiLzQkMjhqrcu5yM4wNjk4PD4sMTQsMjUbHB0wNDWksbbO3uRprMp0wOF0v+G5x81zvt/M3OK4xsxoq8mt0eMeICERHCE2SFAgLDJ6weBmqMWau8tBS1AqMDKx0+PJ3OOmz+O5yM6bu8ucvs+1w8iev8+YA/QCAAAARXRSTlMDAwEDAwIcHDLMzAUDAzMzz8/nAwMDAyEFOQM55c7m5c7m/f37auf75wUhBAMzIDUENc8DNf0zNeX7++X9/eXP5fvn+/3g8z6jAAAAw0lEQVQY02NggAJGYSYmJmFGBjifWYJdj12CGSjCyAKUEhHl5eeS5+LnZQVKcbOJsxkYmwl6unoKcogxsPLwccpwmpjbR7t6u/rISjJIcQi4udtYO7jEOWuouyrJMUgr+Hp4BUfFh4WrqWp4u/ozKCp7qAhZhfr5xTg6gVUEuHsJqaoFBcZGRELMAKuwDDG1sLOF2AI2w93NyFAf6g6wLW4Cujra7FrsmkCXQtzBxyMqAnQwC8jlYJdyMyN5iwUqhQMAAI/vHQrIEV42AAAAAElFTkSuQmCC",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABL1BMVEXtfwDsfwH/gQD/hAD/nwD/hQAPYnQJYHQNaIIRdJYeeZeLcDC+bQGxaAEQa4YUbYYfgKM3iKQPc5X/rQD/qwAMYXaqZgGHby+5awISbYcPa4cRdZcRdJYfgKMdeZc3iKMeeZdpwOQdf6K52+gDaIozhqL/rACGbzAFX3b/wgCUcCfdbwAMaIIGX3YTbIWacicJZ4IggaPNaQAMaYVdttoAYH8bfaAif6BqweUNaIINaIIhf6AkgaK53OgAXn8ad5UadpUbd5UwhaI4iaQsg6Asg6EwhKGkzt10yu/O6fLO6fNpwORzye652+jM6PJowOS42+cRdZceeZhpwOUgfp9mvuJ6zO82ja2a0OdBka0qgp+x3vLJ5/Km2vK53Oit3fKt3PKb0Oec0um12eWe0unxDpsQAAAASHRSTlMDAwMDAQIcHDLMzAUDAzMzz8/nAQEhAwUDOTnl5s7mzuX9+/3n+wEFIQEEAzMgNQQ1zwM1/Wr7+/0zNeXl/Wrn5+flz+X7+/1l/uRWAAAAxElEQVQY02NggAJGJhFNESZGBjifWZxdl12cmREkxSLMwsTMy8+lwMXPywqU4mYTZdM3shT09fIV5BBjYOXh45TmNLZyjvPy8wyQl2SQ4BDw9rCwcXFPdrNX9VSWY5CS9ffwCYtNiYxSsXPw8wpikFH0UBIyj4hPSHR1BKsI9PARMlUJCU+KjoGYAVZhFmpi7WQLsQVshkewoYEe1B1gW7wFdLS12DXY1YEuhbiDj4cZ7GCQy8Eu5WZG8hYTixoLkjfRAQBERB40R38l9gAAAABJRU5ErkJggg==",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABGlBMVEVHcEwAAAAAAAAQGyACAAAAAAAAAAAFCAoKCwsBAgIXGxwfMjsFAAAJCgo4PD4dHyAEAAC5yM0FCAoRHCEfMjsQGyBprModMDgPGBwEAgMbAAAAAAAAAQIAAAAZAAAbAwMfND0DAgEUGhw6PkAjMDWksbYBBQcsMTRdmbMAAAAOGBwbLDQDAwQiLjQkMjhqrctprMp0wOF0v+Fzvt/J2+EfBARoq8mt0eMbBAQeICGgrbIgGxuUAADO3uQ4GxusAACerbIsAAA6HR42HR7DAADM3uQ3GholBgc4GxwbGBo6HR0vGBopMDPEAADBAACpAACZucmgrrOwwMURHCFBS1CWuMiewNEgLDI2SFB6weBmqMWmz+Oau8uev8/KIAHwAAAAMHRSTlMAGh7LAgIwMDAwz8/LN83my/035c3m/fvnAeUzMgHl/c8y5c/l/TPl/Wjn++f75f2H22tfAAAApklEQVQY02NgwAlYGJkYWZAF2ATkBNjALFaglCwDB5epvSkXB0iAnVmYWU1ROdDDxc6Bj5eBgZPbwFBfT101yM3PyUSQn0FIxMzIODI6NsTH3dfL1daSQVTMSFxLN8bcPNTb3xmkItjQWEJTJzwiLMDT0doKaAZIhYR2lIaKkryNBcgWsBmGBgoy0jxSPGB3gGwx4OZkkIS7FOQOdmQ3g1zKykA8AABXhxWBHtQCvwAAAABJRU5ErkJggg==",
-        },
-        pixel_alt: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABIFBMVEXtfwDsfgD//wD/lwH/iQD/mwIPAAAJAAANCAIRGyAeICCLRAC+UwCxTgAQDgkUDwofMjs3OjwPGBz/iwD/iAD/lgGqSQAMAACHQgASDwq5TgAPDQkRHCE3OjwdICAeISEfMjsRGyC5x81prModMDgAAAADBAQzNzkaHB2GQgAFAACUSgDdYQAMCAIGAAATDQeaTAAJBgEgND3NWwAMCwddmbMNCAINBwEhLjMbLTQiLzQkMjhqrcu5yM4wNjk4PD4sMTQsMjUbHB0wNDWksbbO3uRprMp0wOF0v+G5x81zvt/M3OK4xsxoq8mt0eMeICERHCE2SFAgLDJ6weBmqMWau8tBS1AqMDKx0+PJ3OOmz+O5yM6bu8ucvs+1w8iev8+YA/QCAAAARXRSTlMDAwEDAwIcHDLMzAUDAzMzz8/nAwMDAyEFOQM55c7m5c7m/f37auf75wUhBAMzIDUENc8DNf0zNeX7++X9/eXP5fvn+/3g8z6jAAAAw0lEQVQY02NggAJGYSYmJmFGBjifWYJdj12CGSjCyAKUEhHl5eeS5+LnZQVKcbOJsxkYmwl6unoKcogxsPLwccpwmpjbR7t6u/rISjJIcQi4udtYO7jEOWuouyrJMUgr+Hp4BUfFh4WrqWp4u/ozKCp7qAhZhfr5xTg6gVUEuHsJqaoFBcZGRELMAKuwDDG1sLOF2AI2w93NyFAf6g6wLW4Cujra7FrsmkCXQtzBxyMqAnQwC8jlYJdyMyN5iwUqhQMAAI/vHQrIEV42AAAAAElFTkSuQmCC",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABFFBMVEVHcEwAAAAAAAAQGyAAAAACAgIFCAoAAAABAgIKCwsfMjsJCgoFBQUFCAo4PD4dHyARHCEfMjsQGyBprMq5yM0EBAQdMDgXGRkPGBwEBQUbGxsXGRoAAAAAAAAAAQIfND0BBQddmbMAAAAZGRkOGBwbLDQDAwQiLjRqrcsDAgEjMDUkMjgbGxssMTQUGBo6PkCksbZprMp0wOF0v+Fzvt9oq8mgrLHJ2d8fHx84Ojs6PD2t0eMbGxseICERHCEgIiOUlJTO3uQgLDJmqMWsrKyeq7A2SFB6weCau8ssKys2ODnM3OLDwsI3OTolJiYbICJBS1AvMzUpLjGZucnEw8Omz+OWtsbBwcGpqamwvsOev8+ewNEWfQDsAAAAMXRSTlMAGh7LAgIwMDAwzzfLN83m5c3m/f3L+8/nAeXPMwEyzzP9aOXn++f7/TLl5f3l5c/9lQgWOwAAAKdJREFUGNNjYMAJWBmZGFmRBdhFlUXZwSwWoJQsA6e4hYuFOCdIgI1ZgFlBU9/M0sfSlY+bgYGDy9BIQ1vXINI33MpchJ+BV9DU2MQ9NCogyC/EytvRlkFI2FhMRd3D2josMMILpMLOyERCSc3JLTrY39PeDGgGSIWEqrOilp6Og4000BawGUaG8nIyPFI8YHeAbDHk4mCQhLsU5A42ZDeDXMrCQDwAAGCIFXpIxh/YAAAAAElFTkSuQmCC",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABGlBMVEVHcEwAAAAAAAAQGyACAAAAAAAAAAAFCAoKCwsBAgIXGxwfMjsFAAAJCgo4PD4dHyAEAAC5yM0FCAoRHCEfMjsQGyBprModMDgPGBwEAgMbAAAAAAAAAQIAAAAZAAAbAwMfND0DAgEUGhw6PkAjMDWksbYBBQcsMTRdmbMAAAAOGBwbLDQDAwQiLjQkMjhqrctprMp0wOF0v+Fzvt/J2+EfBARoq8mt0eMbBAQeICGgrbIgGxuUAADO3uQ4GxusAACerbIsAAA6HR42HR7DAADM3uQ3GholBgc4GxwbGBo6HR0vGBopMDPEAADBAACpAACZucmgrrOwwMURHCFBS1CWuMiewNEgLDI2SFB6weBmqMWmz+Oau8uev8/KIAHwAAAAMHRSTlMAGh7LAgIwMDAwz8/LN83my/035c3m/fvnAeUzMgHl/c8y5c/l/TPl/Wjn++f75f2H22tfAAAApklEQVQY02NgwAlYGJkYWZAF2ATkBNjALFaglCwDB5epvSkXB0iAnVmYWU1ROdDDxc6Bj5eBgZPbwFBfT101yM3PyUSQn0FIxMzIODI6NsTH3dfL1daSQVTMSFxLN8bcPNTb3xmkItjQWEJTJzwiLMDT0doKaAZIhYR2lIaKkryNBcgWsBmGBgoy0jxSPGB3gGwx4OZkkIS7FOQOdmQ3g1zKykA8AABXhxWBHtQCvwAAAABJRU5ErkJggg==",
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAAQDAaMRAAMAAAfMjsRGyAeICARGyAQDgkNCQQIAAAyNjceLzYaHB0PGBw3Ojw3OjwrMTMdLDMDBAQdICAuMzYeISEAAAAMCAKksbZdmbMkMjghLjMgND10v+G5x81prMrO3uTJ3OOr0eOdv8+bu8s7SVCx0+N6weBmqMUeICERHCHxncC+AAAAHnRSTlMAMgQcz+bMzDk1IPv75+fPzv395+bl5Woz/f3l5c9e4GTZAAAAhklEQVQY041P2Q6DMAxry9lxwxjsSpoW2PX//ze2MAlpmjS/ObZsR/yG8jaeWh9kuAvlSuoLJCykeklREGldIlnCMp65b8Ac2z0mWUK4FfHM4eqGqWq6zNJdBAbSPB2dGyt2PADyrqmn4WLfGeyob4dTyy2cAeasNe9YWvz+s3TZIb+f+B9PPUYLBX8tpxIAAAAASUVORK5CYII=",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAdVBMVEUAAAAPaoQMYXQ3iKQfgKMdfqEwhaIdeZceeZcRdJYQbIcNaYQIYHYad5UPc5UmgaADaIoRdJYuhKEigKERdZcAX3+kzt1dttp0yu+53OjO6fNowOSc0ejM6PKv3fJpwOU7j63J5/Km2vJ6zO+12eUeeZgRdZdMQvBCAAAAGHRSTlMAMhzPz/z75szMOTUg5+f95+bl5eVq/f1FNvSFAAAAgUlEQVQY05VP2Q6DMAxroOXqOAZjSw8Ku/j/T6QiIIGQkPCbY8t22AmCW7DjkMQJbCQIlVYhzFL6SKX0vPOXzHNusG/q5y/KI61ilnmO348dyqrNO/1nd4OiKK1zdnGMiEVbicG695xBDmFeTU0tlIE9l5J2UIvhsMxZd8DhiQuYAP0yCNbT1QIaAAAAAElFTkSuQmCC",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAADBAUAAAAQGR4TGx4fMjsEAAAjLjMcLjY4PD65yM0dHyAjMTYaAAAJCgoFCAqksbZdmbMDAwQsMTQAAAB0wOFprMo4GxzL3eMdAwOr0eOYusrDAACewNCgrrM7SVAdGRqrAAB6weCwwMVmqMWerbIeICERHCEvGBolBgeUAAAsAADCmQM2AAAAFXRSTlMAMBvmzc/L/vvO/ebl5Tc3/f3n5Wh99QQQAAAAhElEQVQY05VP2Q7CMAxrmnbdYNykW1t2cR///39EeUBDSEjzmx3LdtQfaK2/OGSLDEYnMGEIRhQwaACKtjpUl2LJ3Hry5W59YqGezdWKOR1j07kHC/VVoaccXYox3Qdx3Ihwv3Vdk/pX33KGOPLzpsTwlBbJIG/hs0NaLIyWyo6fJybgDdPwCHDyGfzdAAAAAElFTkSuQmCC",
         }
     };
+    let currentStyle = "default";
+    let currentState = "base";
     function removeFavicons() {
         document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
     }
@@ -80,28 +77,35 @@ const faviconManager = (() => {
         if (!STYLES.includes(style)) style = "default";
         return style;
     }
-    async function setFavicon(state = "base") {
-        if (!STATES.includes(state)) state = "base";
-        const style = await getUserFaviconStyle();
-        const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
-        removeFavicons();
-        insertFavicon(url);
-    }
     async function setFaviconStyle(style, state = "base") {
         if (!STYLES.includes(style)) style = "default";
         if (!STATES.includes(state)) state = "base";
         const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
         removeFavicons();
         insertFavicon(url);
+        currentStyle = style;
+        currentState = state;
+        document.dispatchEvent(new CustomEvent("faviconStateChanged", {
+            detail: { style, state }
+        }));
+    }
+    async function setFavicon(state = "base") {
+        if (!STATES.includes(state)) state = "base";
+        const style = await getUserFaviconStyle();
+        await setFaviconStyle(style, state);
     }
     async function resetFavicon() {
         await setFavicon("base");
+    }
+    function getCurrentFaviconState() {
+        return { style: currentStyle, state: currentState };
     }
 
     return {
         setFavicon,
         setFaviconStyle,
         resetFavicon,
+        getCurrentFaviconState,
         STYLES,
         STATES
     };
@@ -127,7 +131,6 @@ onReady(async function () {
                         options: [
                             { value: "default", label: "Default" },
                             { value: "pixel", label: "Pixel" },
-                            { value: "pixel_alt", label: "Pixel Alt" },
                             { value: "eight", label: "Eight" },
                             { value: "eight_dark", label: "Eight Dark" }
                         ]
@@ -135,6 +138,7 @@ onReady(async function () {
                 }
             },
             enableBottomHeader: { label: "Bottom Header", default: false },
+            enableAutoHideHeaderScroll: { label: "Auto-hide Header On Scroll", default: false },
             enableHeaderCatalogLinks: {
                 label: "Header Catalog Links",
                 default: true,
@@ -158,12 +162,27 @@ onReady(async function () {
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
+            enableMediaViewer: {
+                label: "Enable Advanced Media Viewer",
+                default: false,
+                subOptions: {
+                    viewerStyle: {
+                        label: "Style",
+                        type: "select",
+                        default: "native",
+                        options: [
+                            { value: "native", label: "Native" },
+                            { value: "topright", label: "Pin Top Right" },
+                            { value: "topleft", label: "Pin Top Left" }
+                        ]
+                    }
+                }
+            },
             hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
             _threadsNotiTitle: { type: "title", label: ":: Notifications" },
             _threadsSection1: { type: "separator" },
-            highlightOnYou: { label: "Highlight (You) posts", default: true },
             beepOnYou: { label: "Beep on (You)", default: false },
             notifyOnYou: {
                 label: "Tab Notification when (You) (!)",
@@ -196,7 +215,6 @@ onReady(async function () {
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
             scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
-            saveQrCheckboxes: { label: "Remember QR Checkboxes State", default: false },
             deleteSavedName: { label: "Delete Name Checkbox", default: false }
         },
         catalog: {
@@ -225,6 +243,7 @@ onReady(async function () {
             hideJannyTools: { label: "Hide Janitor Forms", default: false },
             _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
+            highlightOnYou: { label: "Style (You) posts", default: true },
             enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             enableFitReplies: { label: "Fit Replies", default: false },
@@ -393,10 +412,10 @@ onReady(async function () {
     let css = "";
 
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-you .innerOP:has(> .opHead.title > .youName),:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:has(>.divMessage>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>:not(div)>.you){border-left:solid var(--subject-color) 3px}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}:root.fit-replies .quoteTooltip{display:table!important}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}";
+        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-you .innerOP.yourPost,:root.highlight-you .innerPost.yourPost{border-left:dashed #68b723 3px}:root.highlight-you .innerOP.quotesYou,:root.highlight-you .innerPost.quotesYou{border-left:solid var(--subject-color) 3px}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important;height:fit-content;width:fit-content;max-height:92%;max-width:95%}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}";
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}.floatingMenu{padding:0!important}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}";
+        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin:2px 0}.postCell.is-hidden-by-filter{display:none}.deleted-span{color:red;font-weight:700}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}";
     }
     if (/\/catalog\.html$/.test(currentPath)) {
         css += "#postingForm{margin:2em auto}#divTools>div:nth-child(5){float:left!important;margin-top:9px!important;margin-right:8px}";
@@ -425,7 +444,7 @@ onReady(async function () {
         { key: "threadStatsInHeader", fn: threadInfoHeader },
         { key: "enableHashNav", fn: hashNavigation },
         { key: "hideAnnouncement", fn: featureHideAnnouncement },
-        { key: "saveQrCheckboxes", fn: rememberQrCheckboxes },
+        { key: "enableAutoHideHeaderScroll", fn: autoHideHeaderOnScroll },
     ];
     for (const { key, fn } of featureMap) {
         try {
@@ -444,6 +463,26 @@ onReady(async function () {
             console.error("truncateFilenames failed:", e);
         }
     }
+    async function enableFavicon() {
+        try {
+            const customFaviconEnabled = await getSetting("customFavicon");
+            const selectedStyle = await getSetting("customFavicon_faviconStyle");
+
+            if (customFaviconEnabled) {
+                if (selectedStyle && typeof selectedStyle === 'string') {
+                    await faviconManager.setFaviconStyle(selectedStyle);
+                } else {
+                    console.warn("Invalid favicon style:", selectedStyle);
+                    await faviconManager.setFaviconStyle("eight_dark");
+                }
+            } else {
+                await faviconManager.resetFavicon();
+            }
+        } catch (e) {
+            console.error("Error updating favicon:", e);
+        }
+    }
+    enableFavicon();
     const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
     let imageHoverEnabled = false;
     try {
@@ -458,15 +497,6 @@ onReady(async function () {
         }
     } catch (e) {
         console.error("featureImageHover failed:", e);
-    }
-    const customFaviconEnabled = await getSetting("customFavicon");
-    const selectedFaviconStyle = await getSetting("customFavicon_faviconStyle");
-    try {
-        if (customFaviconEnabled) {
-            await faviconManager.setFaviconStyle(selectedFaviconStyle, "base");
-        }
-    } catch (e) {
-        console.error("Custom Favicon setting failed:", e);
     }
     async function featureSaveScroll() {
         function getDivPosts() {
@@ -504,13 +534,27 @@ onReady(async function () {
         let lastSeenPostCount = 0;
         let unseenCount = 0;
         let tabTitleBase = null;
-
-        function updateTabTitle() {
+        let previousFaviconState = null;
+        async function updateTabTitle() {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
-        }
+            const { style, state } = faviconManager.getCurrentFaviconState();
 
+            if (unseenCount > 0) {
+                if (state !== "unread") {
+                    previousFaviconState = { style, state };
+                }
+                faviconManager.setFaviconStyle(style, "unread");
+            } else {
+                if (state === "unread" && previousFaviconState) {
+                    faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
+                    previousFaviconState = null;
+                } else if (state === "unread") {
+                    faviconManager.setFavicon("base");
+                }
+            }
+        }
         async function updateUnseenCountFromSaved() {
             const info = getBoardAndThread();
             if (!info) return;
@@ -588,6 +632,15 @@ onReady(async function () {
                 await setAllSavedScrollData(allData);
             }
         }
+        function scrollElementToViewportCenter(el) {
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const elTop = rect.top + window.pageYOffset;
+            const elHeight = rect.height;
+            const viewportHeight = window.innerHeight;
+            const scrollTo = elTop - (viewportHeight / 2) + (elHeight / 2);
+            window.scrollTo({ top: scrollTo, behavior: "auto" });
+        }
         async function restoreScrollPosition() {
             const info = getBoardAndThread();
             if (!info || !(await getSetting("enableScrollSave"))) return;
@@ -604,10 +657,10 @@ onReady(async function () {
                 setTimeout(() => {
                     const post = document.getElementById(safeAnchor);
                     if (post && post.classList.contains("postCell")) {
-                        post.scrollIntoView({ behavior: "auto", block: "start" });
+                        scrollElementToViewportCenter(post);
                     }
                     addUnreadLineAtSavedScrollPosition(saved.position, false);
-                }, 100);
+                }, 25);
                 return;
             }
             saved.timestamp = Date.now();
@@ -644,7 +697,7 @@ onReady(async function () {
                         const scrollY = window.scrollY + rect.top - desiredY;
                         window.scrollTo({ top: scrollY, behavior: "auto" });
                     }
-                }, 0);
+                }, 25);
             }
         }
         function observePostCount() {
@@ -657,7 +710,7 @@ onReady(async function () {
         }
         async function removeUnreadLineIfAtBottom() {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-            const margin = 20; 
+            const margin = 10; 
             if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
                 removeUnreadLineMarker();
             }
@@ -670,7 +723,6 @@ onReady(async function () {
             tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             updateTabTitle();
         });
-
         window.addEventListener("load", async () => {
             await restoreScrollPosition();
             await updateUnseenCountFromSaved();
@@ -854,7 +906,7 @@ onReady(async function () {
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
             const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
             const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
-            const isSmallImage = (fileWidth && fileWidth < 250) || (fileHeight && fileHeight < 250);
+            const isSmallImage = (fileWidth && fileWidth < 220) || (fileHeight && fileHeight < 220);
             if (
                 isSmallImage &&
                 filemime.toLowerCase() === "image/png" &&
@@ -1140,6 +1192,45 @@ onReady(async function () {
         revealSpoilers();
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
+    };
+    function autoHideHeaderOnScroll() {
+        const header = document.getElementById('dynamicHeaderThread');
+        if (!header) return;
+        const scrollThreshold = 50; 
+        let lastScrollY = window.scrollY;
+        let scrollDirection = 'none';
+        let ticking = false;
+
+        function updateHeaderVisibility() {
+            const currentScrollY = window.scrollY;
+            scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+            lastScrollY = currentScrollY;
+            const isNearTop = currentScrollY < 100;
+            if (scrollDirection === 'up' || isNearTop) {
+                header.classList.remove('nav-hidden');
+            } else if (scrollDirection === 'down' && currentScrollY > scrollThreshold) {
+                header.classList.add('nav-hidden');
+            }
+
+            ticking = false;
+        }
+        const style = document.createElement('style');
+        style.textContent = `
+            #dynamicHeaderThread {
+                transition: transform 0.3s ease;
+            }
+            #dynamicHeaderThread.nav-hidden {
+                transform: translateY(-100%);
+            }
+        `;
+        document.head.appendChild(style);
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(updateHeaderVisibility);
+                ticking = true;
+            }
+        }, { passive: true });
+        updateHeaderVisibility();
     }
     const decodeHtmlEntitiesTwice = (() => {
         const txt = document.createElement('textarea');
@@ -1469,143 +1560,6 @@ onReady(async function () {
         });
         observer.observe(postsContainer, { childList: true, subtree: true });
     }
-    function featureMarkYourPost() {
-        function getBoardName() {
-            const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
-            if (postCell) return postCell.getAttribute('data-boarduri');
-            const match = location.pathname.match(/^\/([^\/]+)\//);
-            return match ? match[1] : 'unknown';
-        }
-
-        const BOARD_NAME = getBoardName();
-        const T_YOUS_KEY = `${BOARD_NAME}-yous`;
-        const MENU_ENTRY_CLASS = "markYourPostMenuEntry";
-        const MENU_SELECTOR = ".floatingList.extraMenu";
-        function getTYous() {
-            try {
-                const val = localStorage.getItem(T_YOUS_KEY);
-                return val ? JSON.parse(val) : [];
-            } catch {
-                return [];
-            }
-        }
-
-        function setTYous(arr) {
-            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
-        }
-        document.body.addEventListener('click', function (e) {
-            if (e.target.matches('.extraMenuButton')) {
-                const postCell = e.target.closest('.postCell, .opCell');
-                if (!postCell) return;
-                setTimeout(() => {
-                    let menu = e.target.parentNode.querySelector('.floatingList.extraMenu');
-                    if (!menu) {
-                        const menus = Array.from(document.querySelectorAll('.floatingList.extraMenu'));
-                        menu = menus[menus.length - 1];
-                    }
-                    if (menu) {
-                        menu.setAttribute('data-post-id', postCell.id);
-                    }
-                }, 0);
-            }
-        });
-        function getPostIdFromMenu(menu) {
-            return menu.getAttribute('data-post-id') || null;
-        }
-
-        function toggleYouNameClass(postId, add) {
-            const postCell = document.getElementById(postId);
-            if (!postCell) return;
-            const nameLink = postCell.querySelector(".linkName.noEmailName");
-            if (nameLink) {
-                nameLink.classList.toggle("youName", add);
-            }
-        }
-        function addMenuEntries(root = document) {
-            root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
-                if (!menu.closest('.extraMenuButton')) return;
-
-                const ul = menu.querySelector("ul");
-                if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
-
-                const reportLi = Array.from(ul.children).find(
-                    li => li.textContent.trim().toLowerCase() === "report"
-                );
-
-                const li = document.createElement("li");
-                li.className = MENU_ENTRY_CLASS;
-                li.style.cursor = "pointer";
-
-                const postId = getPostIdFromMenu(menu);
-                const tYous = getTYous();
-                const isMarked = postId && tYous.includes(Number(postId));
-                li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
-
-                if (reportLi) {
-                    ul.insertBefore(li, reportLi);
-                } else {
-                    ul.insertBefore(li, ul.firstChild);
-                }
-
-                li.addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    const postId = getPostIdFromMenu(menu);
-                    if (!postId) return;
-                    let tYous = getTYous();
-                    const numericPostId = Number(postId);
-                    const idx = tYous.indexOf(numericPostId);
-                    if (idx === -1) {
-                        tYous.push(numericPostId);
-                        setTYous(tYous);
-                        toggleYouNameClass(postId, true);
-                        li.textContent = "Unmark as Your Post";
-                    } else {
-                        tYous.splice(idx, 1);
-                        setTYous(tYous);
-                        toggleYouNameClass(postId, false);
-                        li.textContent = "Mark as Your Post";
-                    }
-                });
-            });
-        }
-        window.addEventListener("storage", function (event) {
-            if (event.key === T_YOUS_KEY) {
-                document.querySelectorAll("." + MENU_ENTRY_CLASS).forEach(li => {
-                    const menu = li.closest(MENU_SELECTOR);
-                    const postId = getPostIdFromMenu(menu);
-                    const tYous = getTYous();
-                    const isMarked = postId && tYous.includes(Number(postId));
-                    li.textContent = isMarked ? "Unmark as Your Post" : "Mark as Your Post";
-                });
-            }
-        });
-        const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue;
-                    if (node.matches && node.matches(MENU_SELECTOR)) {
-                        if (!node.hasAttribute('data-post-id')) {
-                            const btn = node.closest('.extraMenuButton');
-                            const postCell = btn && btn.closest('.postCell, .opCell');
-                            if (postCell) node.setAttribute('data-post-id', postCell.id);
-                        }
-                        addMenuEntries(node.parentNode || node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
-                            if (!menu.hasAttribute('data-post-id')) {
-                                const btn = menu.closest('.extraMenuButton');
-                                const postCell = btn && btn.closest('.postCell, .opCell');
-                                if (postCell) menu.setAttribute('data-post-id', postCell.id);
-                            }
-                            addMenuEntries(menu.parentNode || menu);
-                        });
-                    }
-                }
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-    featureMarkYourPost();
     function featureScrollArrows() {
         if (document.getElementById("scroll-arrow-up") || document.getElementById("scroll-arrow-down")) {
             return;
@@ -1666,63 +1620,6 @@ onReady(async function () {
                 localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
             });
         }
-    }
-    function rememberQrCheckboxes() {
-        const QR_CHECKBOX_IDS = [
-            "qrcheckboxNoFlag",
-            "qrcheckboxSpoiler",
-            "qrcheckboxScramble",
-            "qrdoSageCheckbox",
-            "qralwaysUseBypassCheckBox"
-        ];
-        const QR_CHECKBOX_STATE_KEY = "qr_checkbox_states";
-        async function loadQrCheckboxStates() {
-            const raw = await GM.getValue(QR_CHECKBOX_STATE_KEY, "{}");
-            try {
-                const parsed = JSON.parse(raw);
-                const safeState = {};
-                QR_CHECKBOX_IDS.forEach(id => {
-                    if (Object.prototype.hasOwnProperty.call(parsed, id) && typeof parsed[id] === "boolean") {
-                        safeState[id] = parsed[id];
-                    }
-                });
-                return safeState;
-            } catch {
-                return {};
-            }
-        }
-        async function saveQrCheckboxStates(state) {
-            await GM.setValue(QR_CHECKBOX_STATE_KEY, JSON.stringify(state));
-        }
-        function debounce(fn, delay) {
-            let timer;
-            return function (...args) {
-                clearTimeout(timer);
-                timer = setTimeout(() => fn.apply(this, args), delay);
-            };
-        }
-        async function init() {
-            const state = await loadQrCheckboxStates();
-
-            QR_CHECKBOX_IDS.forEach(id => {
-                const checkbox = document.getElementById(id);
-                if (!checkbox) return;
-                if (typeof state[id] === "boolean") {
-                    checkbox.checked = state[id];
-                }
-
-                const debouncedSave = debounce(async (id, checkbox) => {
-                    const currentState = await loadQrCheckboxStates();
-                    currentState[id] = checkbox.checked;
-                    await saveQrCheckboxStates(currentState);
-                }, 50);
-
-                checkbox.addEventListener("change", () => {
-                    debouncedSave(id, checkbox);
-                });
-            });
-        }
-        init();
     }
     async function featureHideAnnouncement() {
         function getContentHash(str) {
@@ -1793,6 +1690,7 @@ onReady(async function () {
         let beepOnYouSetting = false;
         let notifyOnYouSetting = false;
         let customMsgSetting = "(!) ";
+        let previousFaviconState = null;
         async function initSettings() {
             beepOnYouSetting = await getSetting("beepOnYou");
             notifyOnYouSetting = await getSetting("notifyOnYou");
@@ -1803,15 +1701,20 @@ onReady(async function () {
         const playBeep = createBeepSound();
         let scrollHandlerActive = false;
         function notifyOnYou() {
-            if (!window.isNotifying && !document.hasFocus()) {
+            if (!window.isNotifying) {
                 window.isNotifying = true;
                 document.title = customMsgSetting + " " + window.originalTitle;
+                const { style, state } = faviconManager.getCurrentFaviconState();
+                if (state !== "notif") {
+                    previousFaviconState = { style, state };
+                }
+                faviconManager.setFaviconStyle(style, "notif");
             }
         }
         function setupNotificationScrollHandler() {
             if (scrollHandlerActive) return;
             scrollHandlerActive = true;
-            const BOTTOM_OFFSET = 50;
+            const BOTTOM_OFFSET = 45;
             function checkScrollPosition() {
                 if (!window.isNotifying) return;
                 const scrollPosition = window.scrollY + window.innerHeight;
@@ -1819,6 +1722,13 @@ onReady(async function () {
                 if (scrollPosition >= documentHeight - BOTTOM_OFFSET) {
                     document.title = window.originalTitle;
                     window.isNotifying = false;
+                    const { state } = faviconManager.getCurrentFaviconState();
+                    if (state === "notif" && previousFaviconState) {
+                        faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
+                        previousFaviconState = null;
+                    } else if (state === "notif") {
+                        faviconManager.setFavicon("base");
+                    }
                     window.removeEventListener('scroll', checkScrollPosition);
                     scrollHandlerActive = false;
                 }
@@ -1845,6 +1755,7 @@ onReady(async function () {
                         }
                         if (notifyOnYouSetting) {
                             notifyOnYou();
+                            setupNotificationScrollHandler();
                         }
                     }
                 }
@@ -1868,6 +1779,19 @@ onReady(async function () {
     }
     featureBeepOnYou();
     function enhanceYouTubeLinks() {
+        const ytTitleCache = {};
+        function loadCache() {
+            try {
+                const data = localStorage.getItem('ytTitleCache');
+                if (data) Object.assign(ytTitleCache, JSON.parse(data));
+            } catch (e) { }
+        }
+        function saveCache() {
+            try {
+                localStorage.setItem('ytTitleCache', JSON.stringify(ytTitleCache));
+            } catch (e) { }
+        }
+        loadCache();
         function getYouTubeId(url) {
             try {
                 const u = new URL(url);
@@ -1881,9 +1805,19 @@ onReady(async function () {
             return null;
         }
         function fetchYouTubeTitle(videoId) {
+            if (ytTitleCache[videoId]) {
+                return Promise.resolve(ytTitleCache[videoId]);
+            }
             return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
                 .then(r => r.ok ? r.json() : null)
-                .then(data => data ? data.title : null)
+                .then(data => {
+                    const title = data ? data.title : null;
+                    if (title) {
+                        ytTitleCache[videoId] = title;
+                        saveCache();
+                    }
+                    return title;
+                })
                 .catch(() => null);
         }
         function processLinks(root = document) {
@@ -2014,6 +1948,53 @@ onReady(async function () {
             threadInfoHeader._observerInitialized = true;
         }
     }
+    function mediaViewerPositioning() {
+        localStorage.setItem("mediaViewer", "true");
+        async function updateMediaViewerClass() {
+            const mediaViewer = document.getElementById('media-viewer');
+            if (!mediaViewer) return;
+
+            const isEnabled = await getSetting("enableMediaViewer");
+            if (!isEnabled) {
+                mediaViewer.classList.remove('topright', 'topleft');
+                return;
+            }
+
+            const viewerStyle = await getSetting("enableMediaViewer_viewerStyle");
+            mediaViewer.classList.remove('topright', 'topleft');
+            if (viewerStyle === 'topright' || viewerStyle === 'topleft') {
+                mediaViewer.classList.add(viewerStyle);
+            } else {
+            }
+        }
+        function setupIfMediaViewerExists() {
+            const mediaViewer = document.getElementById('media-viewer');
+            if (mediaViewer) {
+                updateMediaViewerClass();
+                return true;
+            }
+            return false;
+        }
+        if (setupIfMediaViewerExists()) {
+        } else {
+            const observer = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.addedNodes.length) {
+                        for (const node of mutation.addedNodes) {
+                            if (node.id === 'media-viewer' ||
+                                (node.nodeType === 1 && node.querySelector('#media-viewer'))) {
+                                updateMediaViewerClass();
+                                observer.disconnect();
+                                return;
+                            }
+                        }
+                    }
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+    }
+    mediaViewerPositioning();
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
         if (menu) return menu;
@@ -2023,10 +2004,10 @@ onReady(async function () {
         menu.style.top = "3rem"; 
         menu.style.left = "20rem"; 
         menu.style.zIndex = "99999";
-        menu.style.background = "#222";
-        menu.style.color = "#fff";
+        menu.style.background = "rgb(from var(--menu-color) r g b / 1)";
+        menu.style.color = "var(--text-color)";
+        menu.style.borderColor = "1px solid var(--border-color)";
         menu.style.padding = "0";
-        menu.style.borderRadius = "8px";
         menu.style.boxShadow = "0 4px 16px rgba(0,0,0,0.25)";
         menu.style.display = "none";
         menu.style.minWidth = "220px";
@@ -2043,10 +2024,9 @@ onReady(async function () {
         header.style.alignItems = "center";
         header.style.marginBottom = "0";
         header.style.cursor = "move";
-        header.style.background = "#333";
-        header.style.padding = "5px 18px 5px";
-        header.style.borderTopLeftRadius = "8px";
-        header.style.borderTopRightRadius = "8px";
+        header.style.color = "var(--subject-color)";
+        header.style.background = "rgb(from var(--contrast-color) r g b / 1)";
+        header.style.padding = "1px 18px 1px";
         header.addEventListener("mousedown", function (e) {
             isDragging = true;
             const rect = menu.getBoundingClientRect();
@@ -2081,8 +2061,9 @@ onReady(async function () {
         const closeBtn = document.createElement("button");
         closeBtn.textContent = "✕";
         closeBtn.style.background = "none";
+        closeBtn.style.setProperty("background", "none", "important");
         closeBtn.style.border = "none";
-        closeBtn.style.color = "#fff";
+        closeBtn.style.color = "var(--subject-color)";
         closeBtn.style.fontSize = "18px";
         closeBtn.style.cursor = "pointer";
         closeBtn.style.marginLeft = "10px";
@@ -2092,10 +2073,35 @@ onReady(async function () {
         header.appendChild(closeBtn);
 
         menu.appendChild(header);
+        const closeOnOutsideClick = (e) => {
+            if (menu.style.display !== "none" && !menu.contains(e.target)) {
+                const menuToggle = document.getElementById("8chanSS-icon");
+                if (menuToggle && !menuToggle.contains(e.target)) {
+                    menu.style.display = "none";
+                }
+            }
+        };
+        Object.defineProperty(menu.style, 'display', {
+            set: function (value) {
+                const oldValue = this.getPropertyValue('display');
+                this.setProperty('display', value);
+                if (oldValue === 'none' && value !== 'none') {
+                    setTimeout(() => { 
+                        document.addEventListener('click', closeOnOutsideClick);
+                    }, 10);
+                }
+                else if (oldValue !== 'none' && value === 'none') {
+                    document.removeEventListener('click', closeOnOutsideClick);
+                }
+            },
+            get: function () {
+                return this.getPropertyValue('display');
+            }
+        });
         const tabNav = document.createElement("div");
         tabNav.style.display = "flex";
         tabNav.style.borderBottom = "1px solid #444";
-        tabNav.style.background = "#2a2a2a";
+        tabNav.style.background = "rgb(from var(--menu-color) r g b / 1)";
         const tabContent = document.createElement("div");
         tabContent.style.padding = "15px 16px";
         tabContent.style.maxHeight = "65vh";
@@ -2139,22 +2145,31 @@ onReady(async function () {
             const tabButton = document.createElement("button");
             tabButton.textContent = tab.label;
             tabButton.dataset.tab = tabId;
-            tabButton.style.background = index === 0 ? "#333" : "transparent";
+            tabButton.style.background = index === 0 ? "var(--contrast-color)" : "transparent";
             tabButton.style.border = "none";
             tabButton.style.borderRight = "1px solid #444";
-            tabButton.style.color = "#fff";
+            tabButton.style.setProperty("border-left-radius", "0", "important");
+            tabButton.style.color = "var(--text-color)";
             tabButton.style.padding = "8px 15px";
             tabButton.style.margin = "5px 0 0 0";
+            tabButton.style.setProperty("border-top-right-radius", "0", "important");
+            tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
             tabButton.style.cursor = "pointer";
             tabButton.style.flex = "1";
             tabButton.style.fontSize = "14px";
             tabButton.style.transition = "background 0.2s";
             if (index === 0) {
-                tabButton.style.borderTopLeftRadius = "8px";
+                tabButton.style.setProperty("border-top-left-radius", "8px", "important");
+                tabButton.style.setProperty("border-top-right-radius", "0", "important");
+                tabButton.style.setProperty("border-bottom-left-radius", "0", "important");
+                tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
                 tabButton.style.margin = "5px 0 0 5px";
             }
             if (index === arr.length - 1) {
-                tabButton.style.borderTopRightRadius = "8px";
+                tabButton.style.setProperty("border-top-right-radius", "8px", "important");
+                tabButton.style.setProperty("border-top-left-radius", "0", "important");
+                tabButton.style.setProperty("border-bottom-left-radius", "0", "important");
+                tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
                 tabButton.style.margin = "5px 5px 0 0";
                 tabButton.style.borderRight = "none"; 
             }
@@ -2167,7 +2182,7 @@ onReady(async function () {
                 tabNav.querySelectorAll("button").forEach((btn) => {
                     btn.style.background = "transparent";
                 });
-                tabButton.style.background = "#333";
+                tabButton.style.background = "var(--contrast-color)";
             });
 
             tabNav.appendChild(tabButton);
@@ -2186,8 +2201,8 @@ onReady(async function () {
         buttonContainer.style.padding = "0 18px 15px";
         const saveBtn = document.createElement("button");
         saveBtn.textContent = "Save";
-        saveBtn.style.background = "#4caf50";
-        saveBtn.style.color = "#fff";
+        saveBtn.style.setProperty("background", "#4caf50", "important");
+        saveBtn.style.setProperty("color", "#fff", "important");
         saveBtn.style.border = "none";
         saveBtn.style.borderRadius = "4px";
         saveBtn.style.padding = "8px 18px";
@@ -2209,8 +2224,8 @@ onReady(async function () {
         buttonContainer.appendChild(saveBtn);
         const resetBtn = document.createElement("button");
         resetBtn.textContent = "Reset";
-        resetBtn.style.background = "#dd3333";
-        resetBtn.style.color = "#fff";
+        resetBtn.style.setProperty("background", "#dd3333", "important");
+        resetBtn.style.setProperty("color", "#fff", "important");
         resetBtn.style.border = "none";
         resetBtn.style.borderRadius = "4px";
         resetBtn.style.padding = "8px 18px";
@@ -2242,7 +2257,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.44.1</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. 1.45.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -2266,6 +2281,7 @@ onReady(async function () {
                 const title = document.createElement("div");
                 title.textContent = setting.label;
                 title.style.fontWeight = "bold";
+                title.style.color = "var(--subject-title)";
                 title.style.fontSize = "1rem";
                 title.style.margin = "10px 0 6px 0";
                 title.style.opacity = "0.9";
@@ -2559,7 +2575,8 @@ onReady(async function () {
                 fontSize: "13px",
             },
             kbd: {
-                background: "#333",
+                background: "#f7f7f7",
+                color: "#000",
                 border: "1px solid #555",
                 borderRadius: "3px",
                 padding: "2px 5px",
@@ -3051,6 +3068,29 @@ onReady(async function () {
         }
     }
     moveFileUploadsBelowOp();
+    function styleDeletedSpans() {
+        const divThreads = document.getElementById('divThreads');
+        if (divThreads) {
+            const observer = new MutationObserver(mutations => {
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1) {
+                            const containers = divThreads.querySelectorAll('.postInfo.title');
+                            containers.forEach(container => {
+                                container.querySelectorAll('span:not([class]):not([id])').forEach(span => {
+                                    if (span.textContent.trim() === '(Deleted)') {
+                                        span.classList.add('deleted-span');
+                                    }
+                                });
+                            });
+                        }
+                    }
+                }
+            });
+            observer.observe(divThreads, { childList: true, subtree: true });
+        }
+    }
+    styleDeletedSpans();
     document.addEventListener('click', function (e) {
         const a = e.target.closest('.panelBacklinks > a');
         if (a) {
