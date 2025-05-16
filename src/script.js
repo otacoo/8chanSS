@@ -476,6 +476,7 @@ onReady(async function () {
         { key: "hideAnnouncement", fn: featureHideAnnouncement },
         { key: "enableAutoHideHeaderScroll", fn: autoHideHeaderOnScroll },
         { key: "enableMediaViewer", fn: mediaViewerPositioning },
+        { key: "customFavicon", fn: enableFavicon },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -518,8 +519,6 @@ onReady(async function () {
             console.error("Error updating favicon:", e);
         }
     }
-    // Init
-    enableFavicon();
 
     // Image Hover - Check if we should enable hover based on the current page
     const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
@@ -600,13 +599,13 @@ onReady(async function () {
             // Get current favicon state
             const { style, state } = faviconManager.getCurrentFaviconState();
 
-            if (unseenCount > 0) {
+            if (unseenCount > 0 && (await getSetting("customFavicon"))) {
                 if (state !== "unread") {
                     previousFaviconState = { style, state };
                 }
                 // Use setFaviconStyle to preserve current style but change state to "unread"
                 faviconManager.setFaviconStyle(style, "unread");
-            } else {
+            } else if (unseenCount == 0 && (await getSetting("customFavicon"))) {
                 // Restore previous favicon state
                 if (state === "unread" && previousFaviconState) {
                     faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
@@ -615,6 +614,8 @@ onReady(async function () {
                     // Fallback: reset to default if no previous state
                     faviconManager.setFavicon("base");
                 }
+            } else {
+                // Nothing
             }
         }
 
@@ -2075,17 +2076,19 @@ onReady(async function () {
 
         // Function to notify on (You)
         let scrollHandlerActive = false;
-        function notifyOnYou() {
+        async function notifyOnYou() {
             if (!window.isNotifying) {
                 window.isNotifying = true;
                 document.title = customMsgSetting + " " + window.originalTitle;
-                // Store previous favicon state before setting "notif"
-                const { style, state } = faviconManager.getCurrentFaviconState();
-                if (state !== "notif") {
-                    previousFaviconState = { style, state };
+                if (await getSetting("customFavicon")) {
+                    // Store previous favicon state before setting "notif"
+                    const { style, state } = faviconManager.getCurrentFaviconState();
+                    if (state !== "notif") {
+                        previousFaviconState = { style, state };
+                    }
+                    // Use setFaviconStyle to preserve current style but change state to "notif"
+                    faviconManager.setFaviconStyle(style, "notif");
                 }
-                // Use setFaviconStyle to preserve current style but change state to "notif"
-                faviconManager.setFaviconStyle(style, "notif");
             }
         }
 
