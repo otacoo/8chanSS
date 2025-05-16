@@ -151,16 +151,6 @@ onReady(async function () {
                     }
                 }
             },
-            enableScrollSave: {
-                label: "Save Scroll Position",
-                default: true,
-                subOptions: {
-                    showUnreadLine: {
-                        label: "Show Unread Line",
-                        default: true,
-                    }
-                }
-            },
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
@@ -213,6 +203,16 @@ onReady(async function () {
             },
             _threadsNavTitle: { type: "title", label: ":: Navigation & Others" },
             _threadsSection3: { type: "separator" },
+            enableScrollSave: {
+                label: "Save Scroll Position",
+                default: true,
+                subOptions: {
+                    showUnreadLine: {
+                        label: "Show Unread Line",
+                        default: true,
+                    }
+                }
+            },
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
