@@ -266,6 +266,22 @@ onReady(async function () {
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
             enhanceYoutube: { label: "Enhanced Youtube Links", type: "checkbox", default: true },
+            highlightNewIds: {
+                label: "Highlight New IDs",
+                default: false,
+                subOptions: {
+                    idHlStyle: {
+                        label: "Highlight Style",
+                        type: "select",
+                        default: "moetext",
+                        options: [
+                            { value: "moetext", label: "Moe" },
+                            { value: "glow", label: "Glow" },
+                            { value: "dotted", label: "Border" }
+                        ]
+                    }
+                }
+            },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
@@ -477,6 +493,7 @@ onReady(async function () {
         { key: "enableAutoHideHeaderScroll", fn: autoHideHeaderOnScroll },
         { key: "enableMediaViewer", fn: mediaViewerPositioning },
         { key: "customFavicon", fn: enableFavicon },
+        { key: "highlightNewIds", fn: featureHighlightNewIds },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -2455,6 +2472,50 @@ onReady(async function () {
             // Observe only until media viewer is found
             observer.observe(document.body, { childList: true, subtree: true });
         }
+    }
+
+    // --- Feature: Highlight New IDs ---
+    async function featureHighlightNewIds() {
+        const threads = document.querySelector('.divPosts');
+        const hlStyle = await getSetting("highlightNewIds_idHlStyle");
+        console.log(hlStyle);
+        if (!threads) return;
+
+        // Map option value to actual class name
+        const styleClassMap = {
+            moetext: "moeText",
+            glow: "id-glow",
+            dotted: "id-dotted"
+        };
+        const styleClass = styleClassMap[hlStyle] || "moeText"; // fallback to 'moetext'
+
+        // Build frequency map
+        const idFrequency = {};
+        const labelSpans = threads.querySelectorAll('.labelId');
+        labelSpans.forEach(span => {
+            const id = span.textContent.trim();
+            idFrequency[id] = (idFrequency[id] || 0) + 1;
+        });
+
+        // Track first occurrence and apply class
+        const seen = {};
+        labelSpans.forEach(span => {
+            const id = span.textContent.trim();
+            // Remove all possible highlight classes in case of re-run
+            span.classList.remove('moetext', 'id-glow', 'id-dotted');
+            if (!seen[id]) {
+                seen[id] = true;
+                // Add class if first occurrence
+                span.classList.add(styleClass);
+                // Add a tooltip for clarity
+                span.title = idFrequency[id] === 1
+                    ? "This ID appears only once."
+                    : "This was the first occurrence of this ID.";
+            } else {
+                // Remove tooltip for subsequent occurrences
+                span.title = "";
+            }
+        });
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

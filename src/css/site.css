@@ -61,13 +61,14 @@ nav.navHeader>.nav-boards:hover {
 }
 
 /* (You) Replies */
-:root.highlight-you .innerOP.yourPost,
-:root.highlight-you .innerPost.yourPost {
+:root.highlight-you .innerPost:has(> .postInfo.title > .youName),
+:root.highlight-you .innerOP:has(> .opHead.title > .youName)  {
     border-left: dashed #68b723 3px;
 }
 
-:root.highlight-you .innerOP.quotesYou,
-:root.highlight-you .innerPost.quotesYou {
+:root.highlight-you .innerPost:has(>.divMessage>.you),
+:root.highlight-you .innerPost:has(>.divMessage>*:not(div)>.you),
+:root.highlight-you .innerPost:has(>.divMessage>*:not(div)>*:not(div)>.you) {
     border-left: solid var(--subject-color) 3px;
 }
 
@@ -275,4 +276,12 @@ a.originalNameLink:hover .audio-preview-indicator {
     height: 13px;
     vertical-align: middle;
     margin-right: 2px;
+}
+
+.id-glow {
+    box-shadow: 0 0 12px #000;
+}
+
+.id-dotted {
+    border: 2px dotted white;
 }
