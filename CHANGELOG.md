@@ -1,3 +1,11 @@
+## v1.46.0
+*2025-05-16*
+
+- **New Option:** Highlight new IDs
+- Revert (You) highlighting to better target (You)s
+- Advanced Media Viewer will no longer fit the content to viewport
+- Fix auto-hide header on scroll for bottom header
+
 ### v1.45.2
 *2025-05-16*
 
