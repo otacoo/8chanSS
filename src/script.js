@@ -475,6 +475,7 @@ onReady(async function () {
         { key: "enableHashNav", fn: hashNavigation },
         { key: "hideAnnouncement", fn: featureHideAnnouncement },
         { key: "enableAutoHideHeaderScroll", fn: autoHideHeaderOnScroll },
+        { key: "enableMediaViewer", fn: mediaViewerPositioning },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -2449,8 +2450,6 @@ onReady(async function () {
             observer.observe(document.body, { childList: true, subtree: true });
         }
     }
-    // Init
-    mediaViewerPositioning();
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2757,7 +2756,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: #fff; text-decoration: underline dashed;">Ver. <%= version %></a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. <%= version %></a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
