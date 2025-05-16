@@ -1,5 +1,7 @@
-### v1.45.1
+### v1.45.12
 *2025-05-16*
+
+- Fix for Custom Favicon not being disabled when the setting is off
 
 ### v1.45.1
 *2025-05-16*
