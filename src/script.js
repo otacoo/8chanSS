@@ -2478,7 +2478,6 @@ onReady(async function () {
     async function featureHighlightNewIds() {
         const threads = document.querySelector('.divPosts');
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
-        console.log(hlStyle);
         if (!threads) return;
         // Return early if there are no .spanId elements
         if (!document.querySelector('.spanId')) return;
