@@ -1,6 +1,9 @@
 ### v1.45.1
 *2025-05-16*
 
+### v1.45.1
+*2025-05-16*
+
 - Fix for Advanced Media Preview not being disabled when the setting is off
 - Style Changelog link
 

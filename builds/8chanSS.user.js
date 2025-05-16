@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.45.1
+// @version      1.45.2
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -446,6 +446,7 @@ onReady(async function () {
         { key: "hideAnnouncement", fn: featureHideAnnouncement },
         { key: "enableAutoHideHeaderScroll", fn: autoHideHeaderOnScroll },
         { key: "enableMediaViewer", fn: mediaViewerPositioning },
+        { key: "customFavicon", fn: enableFavicon },
     ];
     for (const { key, fn } of featureMap) {
         try {
@@ -483,7 +484,6 @@ onReady(async function () {
             console.error("Error updating favicon:", e);
         }
     }
-    enableFavicon();
     const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
     let imageHoverEnabled = false;
     try {
@@ -542,18 +542,19 @@ onReady(async function () {
             document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
             const { style, state } = faviconManager.getCurrentFaviconState();
 
-            if (unseenCount > 0) {
+            if (unseenCount > 0 && (await getSetting("customFavicon"))) {
                 if (state !== "unread") {
                     previousFaviconState = { style, state };
                 }
                 faviconManager.setFaviconStyle(style, "unread");
-            } else {
+            } else if (unseenCount == 0 && (await getSetting("customFavicon"))) {
                 if (state === "unread" && previousFaviconState) {
                     faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
                     previousFaviconState = null;
                 } else if (state === "unread") {
                     faviconManager.setFavicon("base");
                 }
+            } else {
             }
         }
         async function updateUnseenCountFromSaved() {
@@ -1701,15 +1702,17 @@ onReady(async function () {
         await initSettings();
         const playBeep = createBeepSound();
         let scrollHandlerActive = false;
-        function notifyOnYou() {
+        async function notifyOnYou() {
             if (!window.isNotifying) {
                 window.isNotifying = true;
                 document.title = customMsgSetting + " " + window.originalTitle;
-                const { style, state } = faviconManager.getCurrentFaviconState();
-                if (state !== "notif") {
-                    previousFaviconState = { style, state };
+                if (await getSetting("customFavicon")) {
+                    const { style, state } = faviconManager.getCurrentFaviconState();
+                    if (state !== "notif") {
+                        previousFaviconState = { style, state };
+                    }
+                    faviconManager.setFaviconStyle(style, "notif");
                 }
-                faviconManager.setFaviconStyle(style, "notif");
             }
         }
         function setupNotificationScrollHandler() {
@@ -2257,7 +2260,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. 1.45.1</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. 1.45.2</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
