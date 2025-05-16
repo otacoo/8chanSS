@@ -2480,6 +2480,8 @@ onReady(async function () {
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
         console.log(hlStyle);
         if (!threads) return;
+        // Return early if there are no .spanId elements
+        if (!document.querySelector('.spanId')) return;
 
         // Map option value to actual class name
         const styleClassMap = {

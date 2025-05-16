@@ -279,7 +279,7 @@ a.originalNameLink:hover .audio-preview-indicator {
 }
 
 .id-glow {
-    box-shadow: 0 0 12px #000;
+    box-shadow: 0 0 12px var(--subject-color);
 }
 
 .id-dotted {
