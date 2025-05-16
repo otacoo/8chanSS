@@ -140,6 +140,7 @@ onReady(async function () {
                 }
             },
             enableBottomHeader: { label: "Bottom Header", default: false },
+            enableAutoHideHeader: { label: "Autohide Header", default: false },
             enableHeaderCatalogLinks: {
                 label: "Header Catalog Links",
                 default: true,
@@ -163,6 +164,22 @@ onReady(async function () {
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
+            enableMediaViewer: {
+                label: "Enable Advanced Media Viewer",
+                default: false,
+                subOptions: {
+                    viewerStyle: {
+                        label: "Style",
+                        type: "select",
+                        default: "native",
+                        options: [
+                            { value: "native", label: "Native" },
+                            { value: "topright", label: "Pin Top Right" },
+                            { value: "topleft", label: "Pin Top Left" }
+                        ]
+                    }
+                }
+            },
             hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
@@ -2312,6 +2329,73 @@ onReady(async function () {
             threadInfoHeader._observerInitialized = true;
         }
     }
+    // --- Feature: Advanced Media Viewer ---
+    function mediaViewerPositioning() {
+        // Set native 8chan setting
+        localStorage.setItem("mediaViewer", "true");
+
+        // Apply the appropriate class based on settings
+        async function updateMediaViewerClass() {
+            const mediaViewer = document.getElementById('media-viewer');
+            if (!mediaViewer) return;
+
+            const isEnabled = await getSetting("enableMediaViewer");
+            if (!isEnabled) {
+                // Remove positioning classes if feature is disabled
+                mediaViewer.classList.remove('topright', 'topleft');
+                return;
+            }
+
+            const viewerStyle = await getSetting("enableMediaViewer_viewerStyle");
+
+            // Remove all positioning classes first
+            mediaViewer.classList.remove('topright', 'topleft');
+
+            // Apply the appropriate class based on setting
+            if (viewerStyle === 'topright' || viewerStyle === 'topleft') {
+                mediaViewer.classList.add(viewerStyle);
+            } else {
+                // For 'native', we don't add any class
+            }
+        }
+
+        // Check if media viewer exists and set up if needed
+        function setupIfMediaViewerExists() {
+            const mediaViewer = document.getElementById('media-viewer');
+            if (mediaViewer) {
+                // Media viewer already exists, apply class immediately
+                updateMediaViewerClass();
+                return true;
+            }
+            return false;
+        }
+
+        // Try to set up immediately if media viewer already exists
+        if (setupIfMediaViewerExists()) {
+            // Media viewer already exists, no need for observer
+        } else {
+            // Set up a one-time observer to detect when the media viewer first appears
+            const observer = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.addedNodes.length) {
+                        for (const node of mutation.addedNodes) {
+                            if (node.id === 'media-viewer' ||
+                                (node.nodeType === 1 && node.querySelector('#media-viewer'))) {
+                                updateMediaViewerClass();
+                                // Disconnect observer since we only need to detect first appearance
+                                observer.disconnect();
+                                return;
+                            }
+                        }
+                    }
+                }
+            });
+            // Observe only until media viewer is found
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+    }
+    // Init
+    mediaViewerPositioning();
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2327,7 +2411,7 @@ onReady(async function () {
         menu.style.zIndex = "99999";
         menu.style.background = "rgb(from var(--menu-color) r g b / 1)";
         menu.style.color = "var(--text-color)";
-        menu.style.borderColor = "1px solid var(--border-color)"
+        menu.style.borderColor = "1px solid var(--border-color)";
         menu.style.padding = "0";
         menu.style.boxShadow = "0 4px 16px rgba(0,0,0,0.25)";
         menu.style.display = "none";
@@ -2648,7 +2732,7 @@ onReady(async function () {
                 const title = document.createElement("div");
                 title.textContent = setting.label;
                 title.style.fontWeight = "bold";
-                title.style.color = "var(--subject-title)"
+                title.style.color = "var(--subject-title)";
                 title.style.fontSize = "1rem";
                 title.style.margin = "10px 0 6px 0";
                 title.style.opacity = "0.9";

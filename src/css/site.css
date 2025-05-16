@@ -44,7 +44,7 @@ nav.navHeader {
     z-index: 300;
 }
 
-nav.navHeader > .nav-boards:hover {
+nav.navHeader>.nav-boards:hover {
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
@@ -61,12 +61,12 @@ nav.navHeader > .nav-boards:hover {
 }
 
 /* (You) Replies */
-:root.highlight-you .innerOP.yourPost, 
+:root.highlight-you .innerOP.yourPost,
 :root.highlight-you .innerPost.yourPost {
     border-left: dashed #68b723 3px;
 }
 
-:root.highlight-you .innerOP.quotesYou, 
+:root.highlight-you .innerOP.quotesYou,
 :root.highlight-you .innerPost.quotesYou {
     border-left: solid var(--subject-color) 3px;
 }
@@ -124,7 +124,8 @@ video {
 
 #watchedMenu,
 #settingsMenu,
-#multiboardMenu {
+#multiboardMenu,
+#media-viewer {
     font-size: smaller;
     padding: 5px !important;
     box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
@@ -211,6 +212,30 @@ video {
 /* Media Viewer */
 #media-viewer {
     padding: 20px 0 0 !important;
+    height: fit-content;
+    width: fit-content;
+    max-height: 92%;
+    max-width: 95%;
+}
+
+#media-viewer.topright {
+    top: 26px !important;
+    right: 0 !important;
+    left: auto !important;
+}
+
+#media-viewer.topleft {
+    top: 26px !important;
+    left: 0 !important;
+    right: auto !important;
+}
+
+#media-viewer.topright::after {
+    pointer-events: none;
+}
+
+#media-viewer.topleft::after {
+    pointer-events: none;
 }
 
 /* 8chanSS settings custom class */
