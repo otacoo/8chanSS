@@ -6,6 +6,8 @@
 - **New Option:** Custom Favicon
 - **Renamed**: Hightlight (You) posts -> Style (You) posts, to make use of the native highlighting
 - Settings menu will now make use of the current theme's colors
+- Settings menu will now close when clicked outside of it
+- Enhanced Youtube Links will now cache the links for faste retrieval
 - Removed: Mark Posts as Yours feature due to native setting added
 - Removed: Remember QR Checkboxes Status, wasn't working correctly
 - Fix for tooltips getting stuck after site update
