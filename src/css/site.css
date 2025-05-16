@@ -212,10 +212,6 @@ video {
 /* Media Viewer */
 #media-viewer {
     padding: 20px 0 0 !important;
-    height: fit-content;
-    width: fit-content;
-    max-height: 92%;
-    max-width: 95%;
 }
 
 #media-viewer.topright {
