@@ -1443,6 +1443,9 @@ onReady(async function () {
             #dynamicHeaderThread.nav-hidden {
                 transform: translateY(-100%);
             }
+            :root.bottom-header #dynamicHeaderThread.nav-hidden {
+                transform: translateY(100%);
+            }
         `;
         document.head.appendChild(style);
 
