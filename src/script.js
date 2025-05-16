@@ -140,7 +140,7 @@ onReady(async function () {
                 }
             },
             enableBottomHeader: { label: "Bottom Header", default: false },
-            enableAutoHideHeader: { label: "Autohide Header", default: false },
+            enableAutoHideHeaderScroll: { label: "Auto-hide Header On Scroll", default: false },
             enableHeaderCatalogLinks: {
                 label: "Header Catalog Links",
                 default: true,
@@ -474,6 +474,7 @@ onReady(async function () {
         { key: "threadStatsInHeader", fn: threadInfoHeader },
         { key: "enableHashNav", fn: hashNavigation },
         { key: "hideAnnouncement", fn: featureHideAnnouncement },
+        { key: "enableAutoHideHeaderScroll", fn: autoHideHeaderOnScroll },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -1400,6 +1401,60 @@ onReady(async function () {
         const observer = new MutationObserver(revealSpoilers);
         observer.observe(document.body, { childList: true, subtree: true });
     };
+
+    // --- Feature: Auto-hide Header on Scroll ---
+    function autoHideHeaderOnScroll() {
+        const header = document.getElementById('dynamicHeaderThread');
+        if (!header) return;
+        // Configuration
+        const scrollThreshold = 50; // How many pixels to scroll before hiding/showing
+        // Track scroll position
+        let lastScrollY = window.scrollY;
+        let scrollDirection = 'none';
+        let ticking = false;
+
+        function updateHeaderVisibility() {
+            // Calculate scroll direction
+            const currentScrollY = window.scrollY;
+            scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+            lastScrollY = currentScrollY;
+            // Calculate if we're near the top of the page
+            const isNearTop = currentScrollY < 100;
+
+            // Show header when:
+            if (scrollDirection === 'up' || isNearTop) {
+                header.classList.remove('nav-hidden');
+            } else if (scrollDirection === 'down' && currentScrollY > scrollThreshold) {
+                // Hide header when scrolling down and not at the top
+                header.classList.add('nav-hidden');
+            }
+
+            ticking = false;
+        }
+
+        // Add CSS for the transition
+        const style = document.createElement('style');
+        style.textContent = `
+            #dynamicHeaderThread {
+                transition: transform 0.3s ease;
+            }
+            #dynamicHeaderThread.nav-hidden {
+                transform: translateY(-100%);
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Listen for scroll events
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(updateHeaderVisibility);
+                ticking = true;
+            }
+        }, { passive: true });
+
+        // Initial check
+        updateHeaderVisibility();
+    }
 
     ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
 
