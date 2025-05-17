@@ -213,6 +213,7 @@ onReady(async function () {
                     }
                 }
             },
+            quoteThreading: { label: "Enable Quote Threading", default: false },
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -494,6 +495,7 @@ onReady(async function () {
         { key: "enableMediaViewer", fn: mediaViewerPositioning },
         { key: "customFavicon", fn: enableFavicon },
         { key: "highlightNewIds", fn: featureHighlightNewIds },
+        { key: "quoteThreading", fn: featureQuoteThreading },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -2553,7 +2555,6 @@ onReady(async function () {
             });
         });
     }
-    featureQuoteThreading();
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
