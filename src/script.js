@@ -1069,8 +1069,18 @@ onReady(async function () {
 
         // --- Helper: Get full media URL from thumbnail and MIME type ---
         function getFullMediaSrc(thumbNode, filemime) {
-            if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
+
+            // If filemime is missing, fallback: use src as-is if in catalogCell or matches extensionless pattern
+            if (!filemime) {
+                if (
+                    thumbNode.closest('.catalogCell') ||
+                    /^\/\.media\/t?_[a-f0-9]{40,}$/i.test(thumbnailSrc.replace(/\\/g, ''))
+                ) {
+                    return thumbnailSrc;
+                }
+                return null;
+            }
 
             // Get parent link to check for small image dimensions
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
@@ -1081,7 +1091,7 @@ onReady(async function () {
             // Special case: small PNG, no t_, no extension: leave src alone
             if (
                 isSmallImage &&
-                filemime.toLowerCase() === "image/png" &&
+                filemime && filemime.toLowerCase() === "image/png" &&
                 !/\/t_/.test(thumbnailSrc) &&
                 !/\.[a-z0-9]+$/i.test(thumbnailSrc)
             ) {
@@ -1092,32 +1102,37 @@ onReady(async function () {
             if (isSmallImage && thumbnailSrc.match(/\/\.media\/[^\/]+\.[a-zA-Z0-9]+$/)) {
                 return thumbnailSrc;
             }
+
             // If "t_" thumbnail
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
                 base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|mp3|m4a|wav)$/i, "");
 
                 // Special cases: APNG and m4v - do not append extension
-                if (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v") {
+                if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
                     return base;
                 }
 
-                const ext = getExtensionForMimeType(filemime);
+                const ext = filemime ? getExtensionForMimeType(filemime) : null;
                 if (!ext) return null;
                 return base + ext;
             }
+
             // If src is a direct hash (no t_) and has no extension, append extension unless APNG or m4v
             if (
                 thumbnailSrc.match(/^\/\.media\/[a-f0-9]{40,}$/i) && // hash only, no extension
                 !/\.[a-z0-9]+$/i.test(thumbnailSrc)
             ) {
                 // Special cases: APNG and m4v - do not append extension
-                if (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v") {
+                if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
                     return thumbnailSrc;
                 }
 
-                const ext = getExtensionForMimeType(filemime);
-                if (!ext) return null;
+                const ext = filemime ? getExtensionForMimeType(filemime) : null;
+                if (!ext) {
+                    // Fallback: load as-is
+                    return thumbnailSrc;
+                }
                 return thumbnailSrc + ext;
             }
 
@@ -1173,8 +1188,9 @@ onReady(async function () {
                 isAudio = filemime && filemime.startsWith("audio/");
             }
 
+            // If filemime is missing, still try to preview if getFullMediaSrc returns something
             fullSrc = sanitizeUrl(fullSrc);
-            if (!fullSrc || !filemime) return;
+            if (!fullSrc) return;
 
             // --- Setup floating media element ---
             // Get user volume setting (default 0.5) first
