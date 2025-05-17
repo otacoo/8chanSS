@@ -94,8 +94,8 @@ nav.navHeader>.nav-boards:hover {
 }
 
 /* Inline Expanded, not Hover */
-.imgExpanded,
-video {
+:not(#media-viewer) > .imgExpanded,
+:not(#media-viewer) > video {
     max-height: 90vh !important;
     object-fit: contain;
     width: auto !important;
