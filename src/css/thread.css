@@ -112,7 +112,11 @@
 }
 
 .inlineQuote {
-    margin: 4px 0 0 15px;
+    margin-top: 4px;
+}
+
+.postInfo.title > .inlineQuote {
+    margin-left: 15px;
 }
 
 .postCell.is-hidden-by-filter {
