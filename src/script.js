@@ -111,6 +111,12 @@ const faviconManager = (() => {
         STATES
     };
 })();
+//////// GLOBAL SELECTORS ///////////////////////
+const divThreads = document.getElementById('#divThreads');
+const innerOP = document.querySelector('.innerOP');
+const divPosts = document.querySelector('.divPosts');
+const opHeadTitle = document.querySelector('.opHead.title');
+
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     "use strict";
@@ -560,10 +566,6 @@ onReady(async function () {
 
     // --- Feature: Save Scroll Position ---
     async function featureSaveScroll() {
-        // Get the current .divPosts
-        function getDivPosts() {
-            return document.querySelector(".divPosts");
-        }
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
         const MAX_THREADS = 150;
@@ -589,7 +591,6 @@ onReady(async function () {
         }
         // Get current post count
         function getCurrentPostCount() {
-            const divPosts = getDivPosts();
             if (!divPosts) return 0;
             return divPosts.querySelectorAll(":scope > .postCell[id]").length;
         }
@@ -773,7 +774,6 @@ onReady(async function () {
         // Add an unread-line marker after the .postCell <div> at a specific scroll position
         async function addUnreadLineAtSavedScrollPosition(scrollPosition, centerAfter = false) {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-            const divPosts = getDivPosts();
             if (!divPosts) return;
 
             // Find the postCell whose top is just below or equal to the scrollPosition
@@ -815,7 +815,6 @@ onReady(async function () {
 
         // Watch for changes in .divPosts (new posts)
         function observePostCount() {
-            const divPosts = getDivPosts();
             if (!divPosts) return;
             const observer = new MutationObserver(() => {
                 updateUnseenCountFromSaved();
@@ -1308,7 +1307,6 @@ onReady(async function () {
         attachThumbListeners();
 
         // Observe for any new nodes under #divThreads
-        const divThreads = document.getElementById("divThreads");
         if (divThreads) {
             const observer = new MutationObserver((mutations) => {
                 // Flatten all added nodes from all mutations into a single array
@@ -2180,7 +2178,7 @@ onReady(async function () {
             }
         });
 
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(divThreads, { childList: true, subtree: false });
 
         // Listen for settings changes
         window.addEventListener("8chanSS_settingChanged", async (e) => {
@@ -2268,7 +2266,7 @@ onReady(async function () {
         // Initial run
         processLinks(document);
         // Observe for dynamically added links
-        const threads = document.querySelector('#divThreads') || document.body;
+        const threads = divThreads || document.body;
         new MutationObserver(() => processLinks(threads)).observe(threads, { childList: true, subtree: true });
     }
 
@@ -2301,12 +2299,11 @@ onReady(async function () {
         // Initial conversion on page load
         convertLabelCreatedTimes();
 
-        // Observe only .divThreads for added posts
-        const threadsContainer = document.querySelector('.divPosts');
-        if (threadsContainer) {
+        // Observe only #divThreads for added posts
+        if (divPosts) {
             new MutationObserver(() => {
-                convertLabelCreatedTimes(threadsContainer);
-            }).observe(threadsContainer, { childList: true, subtree: true });
+                convertLabelCreatedTimes(divPosts);
+            }).observe(divPosts, { childList: true, subtree: true });
         }
     }
 
@@ -2345,7 +2342,6 @@ onReady(async function () {
         // Initial processing
         processLinks(document);
         // Set up observer for dynamically added links in #divThreads
-        const divThreads = document.querySelector('#divThreads');
         if (divThreads) {
             new MutationObserver(() => {
                 processLinks(divThreads);
@@ -3850,8 +3846,6 @@ onReady(async function () {
 
     // Move file uploads below OP title
     function moveFileUploadsBelowOp() {
-        const opHeadTitle = document.querySelector('.opHead.title');
-        const innerOP = document.querySelector('.innerOP');
         if (opHeadTitle && innerOP) {
             innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
         }
@@ -3860,13 +3854,12 @@ onReady(async function () {
 
     // Style (Deleted) span here until it gets a class or id
     function styleDeletedSpans() {
-        const divThreads = document.getElementById('divThreads');
-        if (divThreads) {
+        if (divPosts) {
             const observer = new MutationObserver(mutations => {
                 for (const mutation of mutations) {
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType === 1) {
-                            const containers = divThreads.querySelectorAll('.postInfo.title');
+                            const containers = divPosts.querySelectorAll('.postInfo.title');
                             containers.forEach(container => {
                                 container.querySelectorAll('span:not([class]):not([id])').forEach(span => {
                                     if (span.textContent.trim() === '(Deleted)') {
@@ -3878,7 +3871,7 @@ onReady(async function () {
                     }
                 }
             });
-            observer.observe(divThreads, { childList: true, subtree: true });
+            observer.observe(divPosts, { childList: true, subtree: false });
         }
     }
     styleDeletedSpans();
