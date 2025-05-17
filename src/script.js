@@ -2045,6 +2045,7 @@ onReady(async function () {
 
     // --- Feature: Beep/Notify on (You) ---
     async function featureBeepOnYou() {
+        if (!divPosts) return;
         // Create Web Audio API beep
         let audioContext = null;
         function createBeepSound() {
@@ -2162,7 +2163,6 @@ onReady(async function () {
         });
 
         // Create MutationObserver to detect when you are quoted
-
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
