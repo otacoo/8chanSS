@@ -262,7 +262,7 @@ onReady(async function () {
             },
             threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
-            hideCheckboxes: { label: "Hide Checkboxes", default: false }
+            hideCheckboxes: { label: "Hide Post Checkbox", default: false }
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
