@@ -121,7 +121,7 @@ onReady(async function () {
     const divPosts = document.querySelector(".divPosts");
     const opHeadTitle = document.querySelector(".opHead.title");
 
-    /////// Default Settings ///////////////////////////
+    /////// Default Settings ////////////////////////
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -2237,18 +2237,30 @@ onReady(async function () {
             } catch (e) { }
             return null;
         }
+
+        // Helper to sanitize YouTube video ID (should be 11 valid chars)
+        function sanitizeYouTubeId(videoId) {
+            if (!videoId) return null;
+            // YouTube IDs are 11 chars, letters, numbers, - and _
+            const match = videoId.match(/([a-zA-Z0-9_-]{11})/);
+            return match ? match[1] : null;
+        }
+
         // Fetch video title using YouTube oEmbed (no API key needed)
-        function fetchYouTubeTitle(videoId) {
+        async function fetchYouTubeTitle(videoId) {
+            // Sanitize the videoId before using it
+            const cleanId = sanitizeYouTubeId(videoId);
+            if (!cleanId) return null;
             // Check cache first
-            if (ytTitleCache[videoId]) {
-                return Promise.resolve(ytTitleCache[videoId]);
+            if (ytTitleCache[cleanId]) {
+                return Promise.resolve(ytTitleCache[cleanId]);
             }
-            return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+            return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`)
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     const title = data ? data.title : null;
                     if (title) {
-                        ytTitleCache[videoId] = title;
+                        ytTitleCache[cleanId] = title;
                         saveCache();
                     }
                     return title;
