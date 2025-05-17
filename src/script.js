@@ -2519,6 +2519,42 @@ onReady(async function () {
         });
     }
 
+    // --- Feature: Quote Threading ---
+    function featureQuoteThreading() {
+        // Select all post cells in the document
+        const allPosts = document.querySelectorAll('.divPosts .postCell');
+
+        allPosts.forEach(post => {
+            // Find all backlinks in the post's panelBacklinks
+            const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
+
+            backlinks.forEach(backlink => {
+                // Extract target post ID from data-target-uri
+                const targetUri = backlink.getAttribute('data-target-uri');
+                const targetPostId = targetUri.split('#')[1];
+                const targetPost = document.getElementById(targetPostId);
+
+                if (targetPost) {
+                    // Check if we need to create/move replies container
+                    let repliesContainer = post.nextElementSibling;
+
+                    // Verify if next sibling is a replies container
+                    if (!repliesContainer || !repliesContainer.classList.contains('threadedReplies')) {
+                        repliesContainer = document.createElement('div');
+                        repliesContainer.className = 'threadedReplies';
+                        post.parentNode.insertBefore(repliesContainer, post.nextSibling);
+                    }
+
+                    // Move target post into container if not already there
+                    if (!repliesContainer.contains(targetPost)) {
+                        repliesContainer.appendChild(targetPost);
+                    }
+                }
+            });
+        });
+    }
+    featureQuoteThreading();
+
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Floating Settings Menu with Tabs ---

@@ -156,3 +156,9 @@
     display: inline !important;
     height: auto !important;
 }
+
+/* Quote Thread */
+.threadedReplies {
+    border-left: 1px solid #ccc;
+    padding-left: 15px;
+}
