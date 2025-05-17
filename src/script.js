@@ -111,15 +111,17 @@ const faviconManager = (() => {
         STATES
     };
 })();
-//////// GLOBAL SELECTORS ///////////////////////
-const divThreads = document.getElementById('divThreads');
-const innerOP = document.querySelector('.innerOP');
-const divPosts = document.querySelector('.divPosts');
-const opHeadTitle = document.querySelector('.opHead.title');
-
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     "use strict";
+
+    //////// GLOBAL SELECTORS ///////////////////////
+    const divThreads = document.getElementById("divThreads");
+    const innerOP = document.querySelector(".innerOP");
+    const divPosts = document.querySelector(".divPosts");
+    const opHeadTitle = document.querySelector(".opHead.title");
+
+    /////// Default Settings ///////////////////////////
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -565,7 +567,7 @@ onReady(async function () {
     //////////// FEATURES ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Feature: Save Scroll Position ---
-    async function featureSaveScroll() {        
+    async function featureSaveScroll() {
         function getDivPosts() {
             return document.querySelector(".divPosts");
         }
@@ -2160,6 +2162,7 @@ onReady(async function () {
         });
 
         // Create MutationObserver to detect when you are quoted
+
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
@@ -2182,7 +2185,7 @@ onReady(async function () {
             }
         });
 
-        observer.observe(divThreads, { childList: true, subtree: false });
+        observer.observe(divPosts, { childList: true, subtree: false });
 
         // Listen for settings changes
         window.addEventListener("8chanSS_settingChanged", async (e) => {
