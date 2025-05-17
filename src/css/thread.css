@@ -112,7 +112,7 @@
 }
 
 .inlineQuote {
-    margin: 2px 0;
+    margin: 4px 0 0 15px;
 }
 
 .postCell.is-hidden-by-filter {
