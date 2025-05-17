@@ -112,7 +112,7 @@ const faviconManager = (() => {
     };
 })();
 //////// GLOBAL SELECTORS ///////////////////////
-const divThreads = document.getElementById('#divThreads');
+const divThreads = document.getElementById('divThreads');
 const innerOP = document.querySelector('.innerOP');
 const divPosts = document.querySelector('.divPosts');
 const opHeadTitle = document.querySelector('.opHead.title');
@@ -565,7 +565,10 @@ onReady(async function () {
     //////////// FEATURES ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // --- Feature: Save Scroll Position ---
-    async function featureSaveScroll() {
+    async function featureSaveScroll() {        
+        function getDivPosts() {
+            return document.querySelector(".divPosts");
+        }
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
         const MAX_THREADS = 150;
@@ -591,6 +594,7 @@ onReady(async function () {
         }
         // Get current post count
         function getCurrentPostCount() {
+            const divPosts = getDivPosts();
             if (!divPosts) return 0;
             return divPosts.querySelectorAll(":scope > .postCell[id]").length;
         }
@@ -1862,7 +1866,7 @@ onReady(async function () {
         }
 
         // Observe for dynamically added quote/backlink links
-        const postsContainer = document.querySelector('.divPosts') || document.body;
+        const postsContainer = divPosts || document.body;
 
         // Event delegation for hash link clicks
         postsContainer.addEventListener('click', function (e) {
@@ -2400,12 +2404,13 @@ onReady(async function () {
             statIds.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    new MutationObserver(() => threadInfoHeader(0, delay)).observe(el, { childList: true, subtree: true, characterData: true });
+                    new MutationObserver(() => threadInfoHeader(0, delay)).observe(el, { childList: true, subtree: false, characterData: true });
                 }
             });
             threadInfoHeader._observerInitialized = true;
         }
     }
+
     // --- Feature: Advanced Media Viewer ---
     function mediaViewerPositioning() {
         // Set native 8chan setting
@@ -2468,7 +2473,7 @@ onReady(async function () {
                 }
             });
             // Observe only until media viewer is found
-            observer.observe(document.body, { childList: true, subtree: true });
+            observer.observe(document.body, { childList: true, subtree: false });
         }
     }
 
@@ -3814,7 +3819,7 @@ onReady(async function () {
 
                 // Re-apply hidden threads if catalog is dynamically updated
                 const observer = new MutationObserver(applyHiddenThreads);
-                observer.observe(catalogContainer, { childList: true, subtree: true });
+                observer.observe(catalogContainer, { childList: true, subtree: false });
             }
         }
         hideThreadsOnRefresh();
