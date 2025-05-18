@@ -2674,7 +2674,7 @@ onReady(async function () {
 
         function threadNewPosts() {
             const allPosts = document.querySelectorAll('.divPosts .postCell');
-            processPosts(Array.from(allPosts).slice(-6));
+            processPosts(Array.from(allPosts).slice(-5));
         }
 
         // --- Post Observer ---
