@@ -13,7 +13,7 @@ const faviconManager = (() => {
     const STYLES = [
         "default",
         "eight", "eight_dark",
-        "pixel"
+        "pixel", "pixel_alt"
     ];
     const STATES = ["base", "unread", "notif"];
 
@@ -38,6 +38,11 @@ const faviconManager = (() => {
             base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_base.png', {encoding: 'base64'}) %>",
             unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_unread.png', {encoding: 'base64'}) %>",
             notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_notif.png', {encoding: 'base64'}) %>",
+        },
+        pixel_alt: {
+            base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_base.png', {encoding: 'base64'}) %>",
+            unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_unread.png', {encoding: 'base64'}) %>",
+            notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_notif.png', {encoding: 'base64'}) %>",
         }
     };
 
@@ -141,6 +146,7 @@ onReady(async function () {
                         options: [
                             { value: "default", label: "Default" },
                             { value: "pixel", label: "Pixel" },
+                            { value: "pixel_alt", label: "Pixel Alt" },
                             { value: "eight", label: "Eight" },
                             { value: "eight_dark", label: "Eight Dark" }
                         ]
