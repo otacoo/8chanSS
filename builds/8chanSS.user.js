@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.46.0
+// @version      1.47.0
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -32,29 +32,34 @@ const faviconManager = (() => {
     const STYLES = [
         "default",
         "eight", "eight_dark",
-        "pixel"
+        "pixel", "pixel_alt"
     ];
     const STATES = ["base", "unread", "notif"];
     const FAVICON_DATA = {
         default: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAulBMVEUAAAB8rcF2lqSE1PWZ1Oyr1eaqzNqyx9DO7vuc3ffh8vmB0fKv3e/B4e693+56x+bb6e6gydl7wd3L3OOwytSAuNC35fjZ8fuQ2feB1Pbo9vyy5Pjm9Pmp4PW85fbW7feO1/S55Pbk8/mq3/SB0vOK1PLY7fbn9Pnf7/bQ6vWS1fDa7fWH0vCb0+rY6/OH0e+T0evc7POBzezA4/GNz+vJ4+6dz+O62eaSyuLH1958wNx0utbD6vqm4Piw9F0wAAAAPHRSTlMADwXliF4dD/7948uflIVpZSglJBcW+vn5+fj46ODd2tjX1dTS0MzIxb28rayinJyWko6KgHtYU1ExLRzJDM8dAAAAhklEQVQY05WOxRKEQAxEJxnBbRfW3d1d/v+3yBQHihv0IZWXSifNqsiAIt4XqxBzxqs5tDthBsnrocDz4/dkaWiubaz/VOoD515dLx9bJ9HvuhHDra1o8OU7ZJHbGPhe84DawS9UQY5/5poc1DqzTyL2oOQzzp4EbT6yBMuFgTO/FVMCYXmlpd8IdbxYuKsAAAAASUVORK5CYII=",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAw1BMVEUAAACB1/mG2vyC1/iC2fuD2fyE2fyG3P2n3vWH1vaB1PWC2PuE2vyH3PuI2/mk4PaK1vSB0/Og2/OP1vJ/0fGB0/SF1vaC1faB1vmF2vyy5PiP2PbF6vnK6vjU7/mo3fKF0/K55PaL1PKR1vKW2PKK1PGI1fOA0/SP2PWA1PaA1/mB1/qC2PqD2fuC2fuE2fyD2fyE2viE2fyH2vyJ3v2x4va95vbA5/aT1e+S1/PX8PqC1PXO7vqb3fjl9fzc8vq25fjSsPNOAAAAOnRSTlMAmR2tYlc/EOvIxIAsFQv9/fzy8OrQv7afI/7+/f378/Pw7eni4c+8ubCRhXt2b1pKOzgaB/v69PPUtOA8IQAAAL9JREFUGNN1j0UWwjAARJPG00JdcHerYRXg/qciDxZlw+z+bGY+aNJug9+0KCEJazjDURBA0voA0zSNhLw/4CjOFRtY14+QV4PiwXcaAJ29XCyEGHFxHw5RChiWVm2aMx8dtpPnmgIDjnuua3adJUTXQhU0LMebaOm8us6omEAD0FXpbQ/In5371UVgBpKNbftyepNiPg/2HTWy80qrV7vwqOvYUC/yGHm2NQ2Jese+Eie4khHOGg2WkhNVEn/E38P7EOpFNC2nAAAAAElFTkSuQmCC",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABBVBMVEUAAACC1veB2PqB2fuB1faD2fyE2vyH3PqA4PyD1PSB1faB2PuE2vyG2vyI2/jQ7PaM1vSB0/OR1/On3vSG1/eB1vmC2PqE2vmG2vql4Pe54vKF0/KrLzam4PaN1PF+0PGO1fGD1faP2PWE2fyD2fyD2fyI3P6J3v3W8Pqj3vTD5PG11+WXtcW55PVvbnqqOj+XmKac2vKT1e+h3/ex3e2B0fGI0/J+obS4AACBjqGH0/F8vNh5hpuQNj+P2PaA0/VyX2+C1/SKEBOC2ftjKjCE4v8pAAAdAAAJAACD1fXkAADg9Pu05/qb3fiQ2fe1vsefoq+xhIildHu4PECpMjSkLDDPAQEi/+blAAAASXRSTlMArplixVY9FBDMt4MsHQr9/Pzs6cCfeTgj/vTz8/Lw6ObPuVpKQRkH/vv7+/v6+vn48/Py7+7t7ezk4M7OzcS+nZGRcFlTMhUIpnbxjgAAAMxJREFUGNN1z0WywlAURdH7lBcjnuAu390VhwTX+Q+FFBQFHU5vt04tOC4eh9PFOGO+OHaNuI6DWWwXQtM0JtvXVzaq1KNWiaK0cXa6mg9tRQNIePSrIEnZh/Be15EPglBjnLwsFH/CzMuwVAUVpyc5Kzl6/gwzqYsSBy4HaeRKj6NZuNRTWIWqHLw2PVS0btaL2z8igCPTlGjuiX7fvTteIjpR8kFgjC3c2PwSFQDqFZQ3jTe52/loiT2ijP+pS2qDXv/A8lmZR4gz8C3ykRYGbZB0XwAAAABJRU5ErkJggg==",
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAq1BMVEUAAACKtMV2lqSE1PWZ1Oyr1eaqzNp7udPO7vuc3ffh8vmG0/OB0fKv3e+N0e3B4e693+56x+bb6e6YzeOgydl7wd3L3OOwytS35fjZ8fuQ2feB1Pbo9vyy5Pjm9Pmp4PW85fbW7feO1/S55Pbk8/mq3/TY7fbn9Pnf7/bQ6vWS1fDa7fWH0vCb0+rY6/Pc7POBzezA4/GNz+vJ4+662ebH1958wNzD6vqm4Ph4HvJJAAAAN3RSTlMADwXliF4dGP7949HLn5mUhWllVCglJBf6+fn5+Pjo4N3a2NfV1MzIxb28rayinJKOioB7UzEt0Y3/cQAAAIBJREFUGNOVjsUOhVAMRG97BXcePHd3Q/7/y0hhQWDHrDpJT86wIQHo1t/xHGLb8aNvzHnYFC2KFHh+mu1PNTW6GuVB0vlaJvTsTl2xWjgxw5upCOB3ZLEzXvve5IlE8DdJ5K7QL0nts61cEw9Q8p82kmDGt4ZgbTCwrS/0Rw9IBRlvB34XFuslAAAAAElFTkSuQmCC",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAolBMVEUAAACG2vyC1/iH1vaB1/mC1PSC2PuC2fuD2fyE2fyG3P2I3Pqn3vWB1PWO1fKD2fuE2vqE2vyH3Puk4PaK1vSg2/OP1vJ/0fGB0/SF1vaC1faB1vmF2vyy5PiP2PbF6vnK6vjU7/m/5/ao3fKF0/K55PaW2PKK1PGA0/SP2PWA1/mC2fuE2fyD2fyx4vaT1e+S1/PX8PrO7vqb3fjh9Pu25fiNN6jgAAAAMXRSTlMAHK7Kmf6CYlc/EAnrxOt4OSwV/f3y8OrQv7afI/7+/f379/Pz8OLhvLmRb1pK+/PUqRXqEQAAALhJREFUGNN1j8cSgkAAQ7c3dykiSLFTpaiA/v+vCXrAi7klM5nkgUWrFfjVWgrhqMVDnkQREeuPURBCEevjSaNurrmcsYbo4dQ/NYMA7GxTlhinGj/OZ+QAxc1m9DwrRHad91cJXJIdgsDb+5igyxzImGYowf5r76d9TlwgK7qtbRRat+NwwVwBB1EaGutucFFE9m4aYVu6OYwBaRjj7kzQoSmxYjG9U1+IllQm4XDBUI5o5QTxB/wNI78Nh2SdMuEAAAAASUVORK5CYII=",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA4VBMVEUAAACE3vuD1veC1veB2PqB2fuD2/2H2/2I3PqP1vOB1faE2vyN1/WD1PSB2PuE2vzQ7Pak4PaB0/OG0/J/0fGn3vSB1vmC2PqE2vmG2vq54vKf3fWrLzam4PaO1fGD1faP2PWE2fyD2fyD2fzW8PrD5PG11+WXtcW55PVvbnqqOj+XmKaT1e+x3e1+obS4AACBjqGH0/F8vNh5hpuQNj+P2PZyX2+C1/SKEBOC2ftjKjApAAAdAAAJAACD1fXkAADg9Pu05/qb3fi1vsefoq+xhIildHu4PECpMjSkLDDPAQHtACoGAAAAPnRSTlMAEsOumWJVGwnuuT39zIMs/f388erpn3k4I/Tz8/Lmz7laSkH++/v7+vr5+PPv7ezk4M7OzcSdkZFwWTIVCIgxa4YAAADDSURBVBjTdY/VrgJBGIP/cWZm3XE77oLLLm7v/0BAgMANvWuapv3gqlwOboU05wm6esEijClHp1AIwVX49BiSxrFmM8vq0/J8s5yElgDIx/i3Yprl9+zNcUgCiGFj5rqV6n9W+pzUmmBT35DSnRZ/slLhoaZBq9QnkVmcLrK1U6A2NFUadGNSlc/b1UubIdDE80wsP/Df6xeO84cRK0hTYyZpZ9di9pGgQQLP8BUffPfOP+tU4YiJ8XB0wUp4XR/CO+B76XMRs7uqu4cAAAAASUVORK5CYII=",
         },
         eight: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA5FBMVEUAAAA3Wm1OboA1WGs7XnE6XG82WGs1Vmk2WGw1V2o3Wm03Wm03W244XG9CbIBIaHo5ZHk2WGs4W242WW01WGvi6++U4/o8an81ZHq17f2r6fyD3/pFv+V3pLZfm7M5eJH6/f6g5fne8ffR6/M6x/Jbyuy94Ou02uZVw+U8vOXS3eJuxuKNyd23x8+Ou8xLqchYnbZxoLOUqLIzja1rk6RXjaNxkaBNh55piZhmg5JTcYFIaHk/YnXA8f9Uyu9OyO5dxOU8stg2sdjEztR8tssypct0tMquvMRBnb1/qLhlnrNDfZVMt0NDAAAAFHRSTlMA1/6/89WpfWpUOy0TCfv39++djVUg8M4AAADPSURBVBjTNc5VEsJAEATQlSgJvhshhrtbFHe4/30ItWH++tVUz4BsFIFDMZTy/5zjwwkdLovVTFS8bTUprV+KEgMZ9boBih71JWQgrs0XgeWIDuPfvixix1yQCkSUorQPFzbuuDZNCAmaEw4ovD+yLK1Rmy6cbisUgOB1+nP3msrO7G15BXCzg0dIctfGzhrhHAC6bRuwQlztjUVZTW8Y54FehmRubUT2Aly1n7r+OY4KMgOpdGvb/X3HxyqDfLW0Og1mHp/2ZSJBw+AEJYtfEOwVJ+cVEq0AAAAASUVORK5CYII=",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAmVBMVEUAAAAoXH0nW3wnWnswZIYoXH0nW30oXH0iVHcgUXIsX3wnXX4nWn0pXoAoXH0qX4ApXH1et+qS0vB7yPB1xfBmu+uM0fGBy/GAxulktuVJjbVHgqUzbpRco8tUk7dOkLY8dJWa2fRwwe6LyORrtNpzsc9oqcxMmMVYlrhimrc/h7NLhqhAfaJarN1Rp9uEv9pOodNtqMU7cpSYIe5fAAAAD3RSTlMAz1Wd/vDp3jMXCI+DkIvxne6HAAAAuklEQVQY0zWOVxKDMBBDd216yq4Nprf0Aqn3P1ycAd6fNBpJMBNKlxgFLATe96QPN5KzjrBKU613L5ozwsnznuizu+FkrIbsyj6TPvA/LzbYZS2vfdKabB86VXeMz8zcpycXQm8s9kkSx+f2mqe9BFmboiwb62RZXnkhuBdT23STHNvBwQCAlCF/zWXS4VZEdoOfiuxiua9W0wW8qwtRXRTOcpLeSiljRoxgQtL9oZraC2BBIJMrw1n9AJTkDhyKCtG8AAAAAElFTkSuQmCC",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABgFBMVEUAAAA4Wm0AAAA2WGs7XnE2WGs4XG84W283Wm0pRFJIaHo5ZHl3AAA3WWwAAAAAAAAdAAA2WW01Vmk4WWw1WGwAAAA1V2onKDBNb4FCbIDJAACpAAAfBQczVmk4WWshDxIiAAAMGR9pAAAFEBMrSVhVAAA0VmkpOEQxUWI4W24AAAAxUGAAAAAhAgJ+AADl7fBfm7NScIE+an82WGv/AAD6/f607f2U5P2s6fyB3fk6x/JRye9byuxbxOVuxuPS3eI5sth8qLZzorSUqLIzja1Nh547d49Pbn80Zn1IaHk3Y3gNGh/lAADiAACj6P6Y5v6I4fyg5fne8feU3/bR6/Pg6+/j6ey83+tEwOc8vue12uZRwuVGv+VGveI9uuKNyd3EztS3x8+PvM18tssypct0tMpMqchKqMiuvMRBnb1anbZWnLZnmqlrk6RXjaOUn6FwkKBWi6BWiJlvjphniJdDfZU2epRmg5I3aYBreX8/YnU4VmZ4PD5zBAW7AACDAAC1tWqYAAAALXRSTlMA1wT+86kJOi0S9/f0v7ifko19ampaVP77+/v28/Hv5uLg39vKxr+rop2CLhaXktx/AAAA80lEQVQY0zXOY5MDYRAE4Jl3kY2ds411bPts27Yvfz3ZSjLf5qmurobWcQxdKKGLbf86/DhaT2QM9pbozY+ry6LoOzS4muDp3N54LciXvgw2wXHnT6nYJ68lSlre4xhP+9PU5FDlQZQbfeaue+kgePzT8Sf8ftHAYS4eWgwsBV/4qleoMMDko7Eb6WRlPsXPeYWRGaAvIu8U9X22cKuBhYCyt1vEKUoKPPd2V01WAuXk1mc/qtehp4lB3jYLgNnwlaK8xeLqQM//8DQBp/E0vLkTieZGbabamJsAazdmk/vnedTprRa3Npt1YrlIMxwAIQSgDr+eKshCsMCtAAAAAElFTkSuQmCC",
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAxV2oFSGADP1Y1Wm0zWW1EY3Q1VmgpU2g2VWYkUGUyUWIiTWEAKUcFSmErU2c5W24zVWghUWckTmIKSmEZTmUxUmMwUWP1+fxcc4HL6f7j9f/g7PWi1fWWprFJZXUeSl7Z7v6Myu7d4OOjt8SKrcOSrsFMa30/YnT////C5v/Q6PmHz/nt7/Gw1e+bzu+Dx+7A1+d7wOa+ztqtx9m5v8Sds8KDn7J0lqqJl6GEkZtJfZlRb4E5Zn1Ybnw0YHc3V2kPSWAAQVqY0vZpstqMu9mIutjO0tV5rcyru8dfm7xTmLthh51TfpcZngh2AAAAGHRSTlMA1cx8MBoH8fHm5s3Kv5qUiFhYUFDxmpptBtYcAAAAzUlEQVQY0zWOVRKDQBBEB4+77OLB4+5B43b/64QU8P76VddMQwpTyWGFbEAGXTjoaLxWqmlmSRnF9HUl7bSwKO49fO+vyURQsvCMiDZGY+Xfb1JlQ9iENcJDCMf3SqetOe8tgzDaIz0HTH43GfD8sLfcGCI6VKD7laamtYqNIIhygQHudj6qarDi54aMSRrA1jSfqKkWb5WpFhv/cBYzlyNUc7ClkgnF1+hh2x9pcmomou5cRtpUknYlFhKqznsxux7zNGTUi77LdZg0/QBWixhGoJiKLQAAAABJRU5ErkJggg==",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAtFBMVEUAAAAAYYUAYYQAXIAAW38AYYMAY4YAXYAAYIQAZIcAY4Udc5MAWX8BZogldJQAWn6L2fIRa4xy0faB2/xt0vqI3Ph+0vBdxO1Wp8c/i6l41fhPwO1Ivu1Lo8dEoMYegaYYcZMEa46X5f1NxvZfyfNZyPOI1OxqwuV3w947rttputpdttldq8porscrmcNRnbtEmLpOmLU9krQFb5MHZIVIueY6tuaAyeJOstp1vNRCp9Auh6qJsLovAAAADnRSTlMAWfLRzujVm5EzHAqLiBrNc7IAAADDSURBVBjTNY9XEsIwEEPd0mFtp4d0eocU+v3vRRic9yeNZldCCtsgIBlGI5aWbMX6JE2lHdoEgRDzh1QZDGGYALzmJ/Y3JhfvyHUCYi1/eWzS2Iv5VAchYLhH4ZpvZvue8yTYEmRrbeT7rjvbx8cwSAxklMuoKA6D43lho9mI7FYl5/3B3cQXoBZCkKW1PuWFn7MJdoYf9T3riM5z/6pasvPiXVWfKKrGknK3SNPVsqWO2mHK8y17lpqFRjCrO2LYSn0BV4wQhK3VgFcAAAAASUVORK5CYII=",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABEVBMVEUAAAAAW38AYoUAYoQAYYQAZYgAYYMAZIYAXoEBZom1AwbrAABGAAAALT4AAAAAYYRHAAAAAAAadJTeAAABZohHGymuAABFAACcAAAAAAAAAAAAUnIAZ4oAAAAQao2M2/Qic5Rw0/pKv+1EoscAXoD5AAB31fhfxO0egaYpdpUAa40AWX3/AgK/AAC6AABNAACX5f2B2/xr0fqH2/dNxvZy0fVfyfNZyPN80e+I1OxQv+x7xuA7rttmu9ldttlorsddqsdUpsZLocMrmcNEmLpPm7g+iqkFb5MZcJJYwu1IueY6tuZoweROstp1vNRdsdBCp9Bwt8xAk7U6kbRYnbEuh6oJZYWZdYM1RF0AKDwAHjhOZ3nrAAAAHnRSTlMA0FnyjRzo1psy/v785K2UiVwL+PLu6OPLyL6nm49luDk4AAAA4ElEQVQY0zWP5XLDMBAGT5YpnJRRkiHGOg0zc7lheP8HiTN29t/t7NzMByGCjBlBHFyIiNMWbfRIKryv0KRUojTfImHD2fX6lNm/+R4KBD8p9F0J27RBzj3Ho0FhoPOJw4Iy/x9i4+G30dH3UW+3vgFBXJlFRakY/ffsm3d8Admqfmhat2J0fJFLCIDbNcvVt13l7yyeAJjadCRe15RhPJaNJgHIlzrDkqsVx8/38TQAoFH5fz7fmKZzex27ewXgSLusNmvVJUrnvIeMn6TI6FP9scQIJB8zwRDkzLAsQMAJImsd3S869hIAAAAASUVORK5CYII=",
         },
         eight_dark: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAAAAAcHh4DBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQESHSEVFRUGERQAAAAAAAAAAABXc3wLGR4DEhe37/+V5v5WxeY8ttxDbXqt7P/6/P2C3/ug5frb7fM6xvHO5ezf5efe3+DY3uC31d5UudiszNY6sNRluNHHy8yBtsYuoMOkqap8nadll6Y9cYJ2eHlJW2E1VV9MVVgoS1ZCR0kUO0Y8Pz8RMj0jIiIUFBQKCwzB8/+J5P+o5PaT3vVLxepLuNmzs7Mhiqo6i6Q4iqSXl5cqeJBlfYRee4RJcHwYXXMTXHK7ZShPAAAAEnRSTlMA1/7yv6l9alQ7LRMJ+/f3nY0o+Yk1AAAA0UlEQVQY0zXO1RKDMBAF0GwSpFANTt3dHai7/f/vlE7ovt0zO3cXRaMIBPsgxf85Bqt+tTNOZiJR6axcrFZyp6TEQcbN+gJ7t9wYOIgT88GAeJWO/9uXRaqZGksDrtVw2EcTU7ebHQSMLYp9ghSYt/Nbq7AbaM96eSUgYW03Ru5wX8huzOYMFESuhyVjwdDqahNMYwjpLceANHOtFxVlNbxh9BydABvlpyJ/Ad6lu64vG+2EzEFKnUvO0bbnVOUQz6Q+vdZlDWFfJBIYBhGUKH4BCtAU9AMVJ6MAAAAASUVORK5CYII=",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABLFBMVEUAAAAAAAADBAQAAAAAAAAAAAAAAAAAAAABAQECAgIAAAAAAAAAAACnqaoVFRUGERR3d3cAAAAAAAAdHR0AAAAAAAAAAADJyckcICESHSEZGBgXFhYjIyNpaWkAAABVVVUgICAAAAB/f39EbnoNGh3////k5eZVxebh4uIDERULDAy27/+V5v76/f2i5/yC3/s6xvHb4eM/tttUudg6sNRmudHHy8wuoMNll6Y5i6SVmZplfIM9cYJXc3x2eHk1VV9KWFwoS1YRMj0FGB4UFBSt7P+Z5/+J5P+q5viT3vXb7fPN5OxLxerc3d621N43ttxLuNmszNaBtsa7u7uzs7N6prMhiqp8nadkkqEqeJCDg4N5fn8YXXMTXHJxcXFbXl9AR0kbPUcOOUY8Pz+Gf/rZAAAAIHRSTlMA1/Kqn2otEwnVv386+/f39N64ko1aVPv7+/Pm4t/KxnB/XeAAAADqSURBVBjTNc/nkoJAEATg2V2CgFnPy3e7gCCYc85ezjmY9f3fQSxx/vVXU13V4J5AMB0h3rPPXmnte6p0/FFXRLn3cJ8w0p9+fgexo7fnBaWNdAftQOklmwxhmq+Mtv8xRW4n24wLsUaeOn3ycVd7v/qx7Zk6nmMQpH45e5PK3DapEVcZATIwiy2tdpf5oom4GhIA1x9XjNm1698thAH0UsFCHNNS2smhEeQArOrLECPWynbJGY2IAGiS+9P1ZbGsn/o+zhUAPvCdK7yaZv8iEvy/PADwRAPTaqk+kLwiF3ayIzyyhpgI7u4NAyAfb7mvG6QAAAAASUVORK5CYII=",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABDlBMVEUAAAAAAAAEBQQbHR4AAAAAAAAAAAAAAAAAAAAAAAABAQEAAAAAAAAAAAAVFRUGERR3AAAdAAAAAAAdAAAAAAAOAADJAACpAAAZAABpAAAAAABVAAAAAAAKGR6AAABEbnshAgLjAACW5//d3+EQNEADERX/AAC27//6/f2s6fyi5/yC3/s6xvFOxure5eZXxOQ7t91Uudg/s9ZmudHHy8wuoMNilaU5i6SVmptlfYQ9cYJXc3x2eHkVXHI1VV9KWFwoS1Y+Q0QiIiIUFBQKDAyJ5P+T3vXb7fPN5Oy21N5LuNmszNY2r9OBtsZ6qLWzs7Okqaohiqp8nadpmKYqeJBbYGEbPUd5PkC7AABxAADDG85nAAAAHHRSTlMA2PP+qp9qVy0TCb9/Ovf39OS4ko3++/bz38rGKc/yuwAAAOFJREFUGNM1z+WSwkAQBOCZ3Y2R4JzvJhA53N313BV4/xchKcL866+muqohPJURukY5cspRXH46nUksE4qmzx8fnFrhIyYfQaEvT0u6GhQmeARjnh9yJKtaZx38K4Y+zo+5hHzgUL9PpzPrrfi9Odub2z8CKi7a5Tu7VBxmc7cmZ8DcenNk/dyX3gNAFUi/6nK+6dm9AFIAotXyUOKWbV2e5xISgNdtCIJ8VJ6xZDatAeC08ivEf7Mtkhe7KwNAjn9VGs/V+uI6nTBvFIBIJj7tvvZdjGpSys++yOgJwtRw9wFQqBu3wZY/EgAAAABJRU5ErkJggg==",
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA2FBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAmKCkAAAADBAQAAAD1+fxMTEzM6v4vLy7i9f/E6P/v8PKMye2frbiFo7aNpLQ1P0b////Z7/+I0PrQ6Pmk1vab0/bi7PXe6fKfz+6w1O2Cxu15veS/1OPY2dq8ydOrwdKHtdK1traZqbSQmqF8kZ+QlJhshJSBhIZ7fH0+YnY9R09GREMOIiwfJivp+f/X7fyYzO3g4OBmrtTMzMt0pcKnsrpWjq1Ii6xUcIEyZX8ENUgYNkYAKD1NaNryAAAADnRSTlMAzPGY5tV8WFAwGge/iAmaI18AAADKSURBVBjTNY7XFoIwEEQ3CR1NQi/23rsC9q7//0fiAe7bzLlndyBHI5ibSIYCVdgMmTM1SZ51tGQplZOZOwpvt9YRv1SmKCukuXWjIubMMf++IpU8a0bLYuQwnt5Du4U/qI4opWs2xKAJq65tG/XDaOa12IYA2TY6fjA26tW91V4KGuBJ85XaY2PgzTlSAULX/YplGhhBSVL09Efc732wSH17IWUT0L12DcNnp7tTskJOzjX32GyskA4ZJHn0e5OtoEKBjOI3Jlqefl82Et7gg4sWAAAAAElFTkSuQmCC",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEAAADb3NxEQ0IAAAAAAABISEgAAAAAAAAlKCk9NzGurq6cnJwAAAD+/v73+Pi6u7tNTExGREMwLy7N6v61trY1QEfE6P/t7u+dzu6Mye2rwdKForaNpLTy+f/h9f/Z7//S6vuI0Pqk1vbg6/Sw1O2Cxu2+0uCHtdLKzM2qtbycqrV8kaCPl51shJV8f4I+YnYOIiwfJiud1PaY0vbo6Oh+vuR0vOPg4OBmrtS8ydN0pcLAwMBWjq1Ii6yjpaZUcIEyZX88R08ENUgYNkYAKD0sty6hAAAAFXRSTlMAzZjyWeUa1owv/Oe/roh8UAf26MtVcWhmAAAA10lEQVQY0zWP1ZLDMBRDr+04SbkLpjgMZeZ2mfn/f2ebqas3aTQaHTCyMVEaWXBWhW6rIg40Nv4CrTsdIfijNp22Go22nprzAJ2C1rq7YA5RItZlv92qL7tL5lI25+q4h75X+bT3zHQg5QcBm27GUeT3ewuPc8kw4N0wyYvM7089wSW1gcxuvxhjmZ+VQR0gTNM/x2WFX1zGPGgA7B8mv8RhebTCNa8JAOht8BKGn8k4rFXvrlwA6/A0SJOb4QY15et1+Rwf3u8nsx2tQMPQWmj/Q7BtOP8BG/MW/0ZJlAQAAAAASUVORK5CYII=",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABDlBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAQEAAAAAAAAAAAC2AQHrAAA4AAAAAAAAAABIAgIAAAAAAAAlKCneAABDAACuAABFAACcAAADBAQAAAAAAAC8AABNTE3+AQHN6v72+PmKo7QvLy5GAAD+/v/E6P+Myu6rwtLy+f/h9f/Z7//S6vuI0Pqk1vab0/bg6/Sfz+6w1O2Cxu2+0uHc3d2HtdLKzc61tracqrV8kaBshJV8f4I+YnY5R081QUkOIiwfJiv3AADt7u/r7e6YzO1+vuR0vONmrtS8ydN0pcKtucGnsrqQqLeCordWjq1Ii6yjqaqQmqGOk5i3hYhUcIEyZX8ENUgYNkZGREM1PEEAKD1ovUZyAAAAGnRSTlMAzfLlmliSGtYv/v77v66IfFAH+Ozo4suIXxNuy1MAAADcSURBVBjTNY9VjkJBFERvyxMcxud2Pxfc3cfdffa/ESA09VeVk0oOqBicSo9osEuCTbrO+cDTVd8j78Wi4wRdTzEF2WhMfmU/GJDtkH8rPaBJpXPhbfhCPjMsDVFn2A/k+o/MRm6nfIvppPh4pWCwcSsM7Ur53rcsgRz4tNZ8cmO70vHPLMEMoL36FyLGdrwZMgDzKPo3T9C1H9MpK5kFWFy3f6iJbjjiR34OAMhz9W7+99lszQ72U4c6gLa8qUaX9dqY5IQ4PgUAffly1e5NWQKyylYji2/KDeW5AobCG0Lco88iAAAAAElFTkSuQmCC",
         },
         pixel: {
-            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAAQDAaMRAAMAAAfMjsRGyAeICARGyAQDgkNCQQIAAAyNjceLzYaHB0PGBw3Ojw3OjwrMTMdLDMDBAQdICAuMzYeISEAAAAMCAKksbZdmbMkMjghLjMgND10v+G5x81prMrO3uTJ3OOr0eOdv8+bu8s7SVCx0+N6weBmqMUeICERHCHxncC+AAAAHnRSTlMAMgQcz+bMzDk1IPv75+fPzv395+bl5Woz/f3l5c9e4GTZAAAAhklEQVQY041P2Q6DMAxry9lxwxjsSpoW2PX//ze2MAlpmjS/ObZsR/yG8jaeWh9kuAvlSuoLJCykeklREGldIlnCMp65b8Ac2z0mWUK4FfHM4eqGqWq6zNJdBAbSPB2dGyt2PADyrqmn4WLfGeyob4dTyy2cAeasNe9YWvz+s3TZIb+f+B9PPUYLBX8tpxIAAAAASUVORK5CYII=",
-            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAdVBMVEUAAAAPaoQMYXQ3iKQfgKMdfqEwhaIdeZceeZcRdJYQbIcNaYQIYHYad5UPc5UmgaADaIoRdJYuhKEigKERdZcAX3+kzt1dttp0yu+53OjO6fNowOSc0ejM6PKv3fJpwOU7j63J5/Km2vJ6zO+12eUeeZgRdZdMQvBCAAAAGHRSTlMAMhzPz/z75szMOTUg5+f95+bl5eVq/f1FNvSFAAAAgUlEQVQY05VP2Q6DMAxroOXqOAZjSw8Ku/j/T6QiIIGQkPCbY8t22AmCW7DjkMQJbCQIlVYhzFL6SKX0vPOXzHNusG/q5y/KI61ilnmO348dyqrNO/1nd4OiKK1zdnGMiEVbicG695xBDmFeTU0tlIE9l5J2UIvhsMxZd8DhiQuYAP0yCNbT1QIaAAAAAElFTkSuQmCC",
-            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAADBAUAAAAQGR4TGx4fMjsEAAAjLjMcLjY4PD65yM0dHyAjMTYaAAAJCgoFCAqksbZdmbMDAwQsMTQAAAB0wOFprMo4GxzL3eMdAwOr0eOYusrDAACewNCgrrM7SVAdGRqrAAB6weCwwMVmqMWerbIeICERHCEvGBolBgeUAAAsAADCmQM2AAAAFXRSTlMAMBvmzc/L/vvO/ebl5Tc3/f3n5Wh99QQQAAAAhElEQVQY05VP2Q7CMAxrmnbdYNykW1t2cR///39EeUBDSEjzmx3LdtQfaK2/OGSLDEYnMGEIRhQwaACKtjpUl2LJ3Hry5W59YqGezdWKOR1j07kHC/VVoaccXYox3Qdx3Ihwv3Vdk/pX33KGOPLzpsTwlBbJIG/hs0NaLIyWyo6fJybgDdPwCHDyGfzdAAAAAElFTkSuQmCC",
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEUAAAAAAAAAAABiam00WmxcZWlFTE4jQE1GTU8jQU4yV2g8QUIbNkE/WGRWYWY9WGUAAAAAAADg8vnY6fB5yOyA0fW95fi23fB+z/PQ4Od0weNoeYFWcoBSXmNFS00jP0wFxP2oAAAAEnRSTlMAIRHe3v3w8Nzc/ezs/u7u7EbfERAsAAAAcUlEQVQY05VP1wqAMAw0de82TYf7//9SOhBFELy3G1wuyQcYYw8OVVHBzYJUokzBW3VZg+MYFMhI0ThMMm9zlIXnVmmzbFy0iHtSkmq63mhtYuJQthO8X40OHSHR0DwO4UrsoAziDq84HudcO15P/MAJxpAGt0Xg7i0AAAAASUVORK5CYII=",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEUAAAAATHcAIGJii6I0gKFFepYjdJVGepYjdJUAXIFeiaEyf6A8dZIbcJJThZ8/f55WhZ89f58AY4YAM2ng8/p/0vbY6/R5zPC95vq23/TQ5O10xelolKxWj6tFepUjdJUJarSxAAAAFHRSTlMAIBHe3vDw3Nwj/f3s7P7+7u7sRkWW9w4AAAB4SURBVBjTlY/ZDoUwCERL3fcNSnsX/f+/tEpjNCYm8nZgMjOoh9FaXxiyJIPTCSKDJoL9lKc5bIx+U3iOmXjoP6asSzSJKjwTWfdrx6lGnFXKVDWds9a1oliImmns/s6Khygq/g69pAQPjiH0kBTPoc7R4/bEi1kBHCgHTIPhydUAAAAASUVORK5CYII=",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAAAV34AIDg0gKEkdJQjdJUUAAMAAEAyf6AbcJI7dZA/f55MAABAgaBEeZVljaVUhJ4AZIZpkKYAQmp5y/B+0fVrS0224PPf8vnP4uu85vqA0/fY6/NUIivtAABNHynjAAB0xelolKxWj6tNgZpFepUjdJVOTU9fREtAREvaAABiAADosgfnAAAAFHRSTlMAIBHe8NzcIP3s3v7x7u7e7uzeRqhOt1sAAACESURBVBjTlY9ZDoMwDERxCHvp6mASSKH7dv/71YWoAiEh4b83Ho3H3swIIUYchaswGqwgta1N4ccQyABgr4tjoTfA7KPCfKtrFsp63bGqDJ2vloXy5klUcZKRMfRsO8e9Uslhl12IXp8HZ/SOGE+5bN4NX3EZ6IPr0SvMrs6/x+SJBfMF/doItAPX5RIAAAAASUVORK5CYII=",
+        },
+        pixel_alt: {
+            base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAY1BMVEUAAAAATHcAIGJii6I0gKFFepYjdJVGepYjdJUAXIFeiaEyf6A8dZIbcJJThZ8/f55WhZ89f58AY4YAQmoAJGjg8/p/0vbY6/R5zPC95vq23/TQ5O10xelolKxWj6tFepUjdJUOfB3LAAAAFXRSTlMAIBHe3vDw3Nwj/f3s7P7+7u7sRkaqQLDYAAAAeUlEQVQY05WP6Q6EMAiES73vYxdKu4e+/1NapTEaExP598FkZlA3o7U+MWRJBocTRAZNBNspT3NYGf2m8Bwz8dB/TFmXaBJVeCay7teO7xpxUilT1XTOWteKYiZqXmP3d1Y8RFHxd+glJXhwDKGHpHgOdfYelycezAI9gweHH0yPzQAAAABJRU5ErkJggg==",
+            unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAAjR1sKChFJeZBBa4FAZ3tCbIEVFRYABA9IeI9OaXlReI1MTExSeo9WcYBxh5RjfYw4WGt0ipcdKTh7y+6A0vdqbm/f8fi85fl+0PTY6vK23fDt7OzP4OdVWFlOUlS44PPj4+NZdITR4+t3xefa2tpyj55jiZ1Ba4BgZ2tiYF9ATFKjqzLCAAAAFHRSTlMAIBHe8O3c3CD93v7x7u7e7uzeRvBdAgMAAACFSURBVBjTlY9ZDoMwDERxIKylqwOBlATo3t7/fjVpVIGQkPDfG4/GY29hGGMTjqNNFI9WkOpOpzAwhEEIcGyKc9HsgNhHgfn+UpNQ1lvLlZDtvdcklL0XoEh4pqRUr846nqLip0P2aNXnbSjj50jwmnNzM3TFZaAProdVBnZ1/j1mT6yYLxHCCNKMC/PDAAAAAElFTkSuQmCC",
+            notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAdVBMVEUAAAAkSFwKChFAaX9JeZAABBhCbIEVAABIeI9yiJVObnxReI1MAABSeo9WcYBjfYw4WGsdKTiA0vd7y+5rS0233/JSHiPf8vnP4um85fnY6/LtAABZdobjAAB3xedyj55jiZ1Ba4BOTU9gREtAREvaAABiAADFYUIqAAAAEnRSTlMAIRHv3iDc3P3e3v7x7u7u7EYDRb2ZAAAAgklEQVQY05WPWQ7CMAxE67jpSlnsOk1Kyw73PyJJFCEQUqX6741H43G2MEqpH9blptRfK2jMbBoIDAUWoGvbH3tbg+ecibudHb0wjNvIRE7Ok/HCMGXIVGErzsl9jo4rER727UXk8bqFjOio+NSheYYrKYNzSD2iEjjV+fT4e2LFvAFuzge5hY5wYgAAAABJRU5ErkJggg==",
         }
     };
     let currentStyle = "default";
@@ -112,6 +117,10 @@ const faviconManager = (() => {
 })();
 onReady(async function () {
     "use strict";
+    const divThreads = document.getElementById("divThreads");
+    const innerOP = document.querySelector(".innerOP");
+    const divPosts = document.querySelector(".divPosts");
+    const opHeadTitle = document.querySelector(".opHead.title");
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -131,6 +140,7 @@ onReady(async function () {
                         options: [
                             { value: "default", label: "Default" },
                             { value: "pixel", label: "Pixel" },
+                            { value: "pixel_alt", label: "Pixel Alt" },
                             { value: "eight", label: "Eight" },
                             { value: "eight_dark", label: "Eight Dark" }
                         ]
@@ -152,6 +162,17 @@ onReady(async function () {
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
+            enableThreadImageHover: { label: "Thread Image Hover", default: true },
+            blurSpoilers: {
+                label: "Blur Spoilers",
+                default: false,
+                subOptions: {
+                    removeSpoilers: {
+                        label: "Remove Spoilers",
+                        default: false
+                    }
+                }
+            },
             enableMediaViewer: {
                 label: "Enable Advanced Media Viewer",
                 default: false,
@@ -183,19 +204,6 @@ onReady(async function () {
                         default: "",
                         type: "text",
                         maxLength: 9
-                    }
-                }
-            },
-            _threadsMediaTitle: { type: "title", label: ":: Media" },
-            _threadsSection2: { type: "separator" },
-            enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            blurSpoilers: {
-                label: "Blur Spoilers",
-                default: false,
-                subOptions: {
-                    removeSpoilers: {
-                        label: "Remove Spoilers",
-                        default: false
                     }
                 }
             },
@@ -260,7 +268,7 @@ onReady(async function () {
             },
             threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
-            hideCheckboxes: { label: "Hide Checkboxes", default: false }
+            hideCheckboxes: { label: "Hide Post Checkbox", default: false }
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
@@ -429,10 +437,10 @@ onReady(async function () {
     let css = "";
 
     if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-you .innerOP:has(> .opHead.title > .youName),:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 3px}:root.highlight-you .innerPost:has(>.divMessage>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>:not(div)>.you){border-left:solid var(--subject-color) 3px}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}.imgExpanded,video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}";
+        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-you .innerOP:has(> .opHead.title > .youName),:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 2px}:root.highlight-you .innerPost:has(>.divMessage>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>:not(div)>.you){border-left:solid var(--subject-color) 2px}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:not(#media-viewer)>.imgExpanded,:not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}";
     }
     if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.deleted-span{color:red;font-weight:700}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}";
+        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}";
     }
     if (/\/catalog\.html$/.test(currentPath)) {
         css += "#postingForm{margin:2em auto}#divTools>div:nth-child(5){float:left!important;margin-top:9px!important;margin-right:8px}";
@@ -555,25 +563,26 @@ onReady(async function () {
         let unseenCount = 0;
         let tabTitleBase = null;
         let previousFaviconState = null;
+        const customFaviconEnabled = await getSetting("customFavicon");
+        
         async function updateTabTitle() {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
             const { style, state } = faviconManager.getCurrentFaviconState();
 
-            if (unseenCount > 0 && (await getSetting("customFavicon"))) {
+            if (unseenCount > 0 && customFaviconEnabled) {
                 if (state !== "unread") {
                     previousFaviconState = { style, state };
                 }
                 faviconManager.setFaviconStyle(style, "unread");
-            } else if (unseenCount == 0 && (await getSetting("customFavicon"))) {
+            } else if (unseenCount == 0 && customFaviconEnabled) {
                 if (state === "unread" && previousFaviconState) {
                     faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
                     previousFaviconState = null;
                 } else if (state === "unread") {
                     faviconManager.setFavicon("base");
                 }
-            } else {
             }
         }
         async function updateUnseenCountFromSaved() {
@@ -691,7 +700,6 @@ onReady(async function () {
         }
         async function addUnreadLineAtSavedScrollPosition(scrollPosition, centerAfter = false) {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-            const divPosts = getDivPosts();
             if (!divPosts) return;
             const posts = Array.from(divPosts.querySelectorAll(":scope > .postCell[id]"));
             let targetPost = null;
@@ -722,7 +730,6 @@ onReady(async function () {
             }
         }
         function observePostCount() {
-            const divPosts = getDivPosts();
             if (!divPosts) return;
             const observer = new MutationObserver(() => {
                 updateUnseenCountFromSaved();
@@ -922,15 +929,23 @@ onReady(async function () {
             }
         }
         function getFullMediaSrc(thumbNode, filemime) {
-            if (!thumbNode || !filemime) return null;
             const thumbnailSrc = thumbNode.getAttribute("src");
+            if (!filemime) {
+                if (
+                    thumbNode.closest('.catalogCell') ||
+                    /^\/\.media\/t?_[a-f0-9]{40,}$/i.test(thumbnailSrc.replace(/\\/g, ''))
+                ) {
+                    return thumbnailSrc;
+                }
+                return null;
+            }
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
             const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
             const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
             const isSmallImage = (fileWidth && fileWidth < 220) || (fileHeight && fileHeight < 220);
             if (
                 isSmallImage &&
-                filemime.toLowerCase() === "image/png" &&
+                filemime && filemime.toLowerCase() === "image/png" &&
                 !/\/t_/.test(thumbnailSrc) &&
                 !/\.[a-z0-9]+$/i.test(thumbnailSrc)
             ) {
@@ -942,11 +957,11 @@ onReady(async function () {
             if (/\/t_/.test(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
                 base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|mp3|m4a|wav)$/i, "");
-                if (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v") {
+                if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
                     return base;
                 }
 
-                const ext = getExtensionForMimeType(filemime);
+                const ext = filemime ? getExtensionForMimeType(filemime) : null;
                 if (!ext) return null;
                 return base + ext;
             }
@@ -954,12 +969,14 @@ onReady(async function () {
                 thumbnailSrc.match(/^\/\.media\/[a-f0-9]{40,}$/i) && 
                 !/\.[a-z0-9]+$/i.test(thumbnailSrc)
             ) {
-                if (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v") {
+                if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
                     return thumbnailSrc;
                 }
 
-                const ext = getExtensionForMimeType(filemime);
-                if (!ext) return null;
+                const ext = filemime ? getExtensionForMimeType(filemime) : null;
+                if (!ext) {
+                    return thumbnailSrc;
+                }
                 return thumbnailSrc + ext;
             }
 
@@ -1010,9 +1027,8 @@ onReady(async function () {
                 isVideo = filemime && filemime.startsWith("video/");
                 isAudio = filemime && filemime.startsWith("audio/");
             }
-
             fullSrc = sanitizeUrl(fullSrc);
-            if (!fullSrc || !filemime) return;
+            if (!fullSrc) return;
             let volume = 0.5;
             try {
                 if (typeof getSetting === "function") {
@@ -1121,7 +1137,6 @@ onReady(async function () {
             }
         }
         attachThumbListeners();
-        const divThreads = document.getElementById("divThreads");
         if (divThreads) {
             const observer = new MutationObserver((mutations) => {
                 const addedElements = [];
@@ -1189,7 +1204,15 @@ onReady(async function () {
                     } else {
                         return;
                     }
+                    const initialWidth = img.offsetWidth;
+                    const initialHeight = img.offsetHeight;
+                    img.style.width = initialWidth + "px";
+                    img.style.height = initialHeight + "px";
                     img.src = transformedSrc;
+                    img.onload = function () {
+                        img.style.width = img.naturalWidth + "px";
+                        img.style.height = img.naturalHeight + "px";
+                    };
                     if (await getSetting("blurSpoilers_removeSpoilers")) {
                         img.style.filter = "";
                         img.style.transition = "";
@@ -1212,7 +1235,7 @@ onReady(async function () {
         }
         revealSpoilers();
         const observer = new MutationObserver(revealSpoilers);
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(divThreads, { childList: true, subtree: true });
     };
     function autoHideHeaderOnScroll() {
         const header = document.getElementById('dynamicHeaderThread');
@@ -1542,7 +1565,7 @@ onReady(async function () {
                 }
             });
         }
-        const postsContainer = document.querySelector('.divPosts') || document.body;
+        const postsContainer = divPosts || document.body;
         postsContainer.addEventListener('click', function (e) {
             if (e.target.classList.contains('hash-link')) {
                 e.preventDefault();
@@ -1684,6 +1707,7 @@ onReady(async function () {
         await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
     }
     async function featureBeepOnYou() {
+        if (!divPosts) return;
         let audioContext = null;
         function createBeepSound() {
             if (!audioContext) {
@@ -1788,7 +1812,7 @@ onReady(async function () {
             }
         });
 
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(divPosts, { childList: true, subtree: false });
         window.addEventListener("8chanSS_settingChanged", async (e) => {
             if (e.detail && e.detail.key) {
                 const key = e.detail.key;
@@ -1830,16 +1854,23 @@ onReady(async function () {
             } catch (e) { }
             return null;
         }
-        function fetchYouTubeTitle(videoId) {
-            if (ytTitleCache[videoId]) {
-                return Promise.resolve(ytTitleCache[videoId]);
+        function sanitizeYouTubeId(videoId) {
+            if (!videoId) return null;
+            const match = videoId.match(/([a-zA-Z0-9_-]{11})/);
+            return match ? match[1] : null;
+        }
+        async function fetchYouTubeTitle(videoId) {
+            const cleanId = sanitizeYouTubeId(videoId);
+            if (!cleanId) return null;
+            if (ytTitleCache[cleanId]) {
+                return Promise.resolve(ytTitleCache[cleanId]);
             }
-            return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+            return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`)
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     const title = data ? data.title : null;
                     if (title) {
-                        ytTitleCache[videoId] = title;
+                        ytTitleCache[cleanId] = title;
                         saveCache();
                     }
                     return title;
@@ -1860,8 +1891,7 @@ onReady(async function () {
             });
         }
         processLinks(document);
-        const threads = document.querySelector('#divThreads') || document.body;
-        new MutationObserver(() => processLinks(threads)).observe(threads, { childList: true, subtree: true });
+        new MutationObserver(() => processLinks(divThreads)).observe(divThreads, { childList: true, subtree: true });
     }
     function featureLabelCreated12h() {
         function convertLabelCreatedTimes(root = document) {
@@ -1888,11 +1918,10 @@ onReady(async function () {
                 });
         }
         convertLabelCreatedTimes();
-        const threadsContainer = document.querySelector('.divPosts');
-        if (threadsContainer) {
+        if (divPosts) {
             new MutationObserver(() => {
-                convertLabelCreatedTimes(threadsContainer);
-            }).observe(threadsContainer, { childList: true, subtree: true });
+                convertLabelCreatedTimes(divPosts);
+            }).observe(divPosts, { childList: true, subtree: true });
         }
     }
     function truncateFilenames(filenameLength) {
@@ -1921,7 +1950,6 @@ onReady(async function () {
             });
         }
         processLinks(document);
-        const divThreads = document.querySelector('#divThreads');
         if (divThreads) {
             new MutationObserver(() => {
                 processLinks(divThreads);
@@ -1934,12 +1962,22 @@ onReady(async function () {
         const postCountEl = document.getElementById('postCount');
         const userCountEl = document.getElementById('userCountLabel');
         const fileCountEl = document.getElementById('fileCount');
-        if (!navHeader || !navOptionsSpan || !postCountEl || !userCountEl || !fileCountEl) {
-            if (retries > 0) {
-                setTimeout(() => threadInfoHeader(retries - 1, delay), delay);
+        function retryIfElementsMissing(checkFn, callback, retries, delay) {
+            if (!checkFn()) {
+                if (retries > 0) {
+                    setTimeout(() => retryIfElementsMissing(checkFn, callback, retries - 1, delay), delay);
+                }
+                return true;
             }
-            return;
+            return false;
         }
+
+        if (retryIfElementsMissing(
+            () => navHeader && navOptionsSpan && postCountEl && userCountEl && fileCountEl,
+            () => threadInfoHeader(retries - 1, delay),
+            retries,
+            delay
+        )) return;
         const postCount = postCountEl.textContent || '0';
         const userCount = userCountEl.textContent || '0';
         const fileCount = fileCountEl.textContent || '0';
@@ -1965,10 +2003,21 @@ onReady(async function () {
         }
         if (!threadInfoHeader._observerInitialized) {
             const statIds = ['postCount', 'userCountLabel', 'fileCount'];
+            function debounce(fn, wait) {
+                let timeout;
+                return function (...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => fn.apply(this, args), wait);
+                };
+            }
+
+            if (!threadInfoHeader._debouncedUpdate) {
+                threadInfoHeader._debouncedUpdate = debounce(() => threadInfoHeader(0, delay), 100);
+            }
             statIds.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    new MutationObserver(() => threadInfoHeader(0, delay)).observe(el, { childList: true, subtree: true, characterData: true });
+                    new MutationObserver(threadInfoHeader._debouncedUpdate).observe(el, { childList: true, subtree: false, characterData: true });
                 }
             });
             threadInfoHeader._observerInitialized = true;
@@ -2017,13 +2066,12 @@ onReady(async function () {
                     }
                 }
             });
-            observer.observe(document.body, { childList: true, subtree: true });
+            observer.observe(document.body, { childList: true, subtree: false });
         }
     }
     async function featureHighlightNewIds() {
-        const threads = document.querySelector('.divPosts');
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
-        if (!threads) return;
+        if (!divPosts) return;
         if (!document.querySelector('.spanId')) return;
         const styleClassMap = {
             moetext: "moeText",
@@ -2031,51 +2079,132 @@ onReady(async function () {
             dotted: "id-dotted"
         };
         const styleClass = styleClassMap[hlStyle] || "moeText"; 
-        const idFrequency = {};
-        const labelSpans = threads.querySelectorAll('.labelId');
-        labelSpans.forEach(span => {
-            const id = span.textContent.trim();
-            idFrequency[id] = (idFrequency[id] || 0) + 1;
-        });
-        const seen = {};
-        labelSpans.forEach(span => {
-            const id = span.textContent.trim();
-            span.classList.remove('moetext', 'id-glow', 'id-dotted');
-            if (!seen[id]) {
-                seen[id] = true;
-                span.classList.add(styleClass);
-                span.title = idFrequency[id] === 1
-                    ? "This ID appears only once."
-                    : "This was the first occurrence of this ID.";
-            } else {
-                span.title = "";
-            }
-        });
-    }
-    function featureQuoteThreading() {
-        const allPosts = document.querySelectorAll('.divPosts .postCell');
-
-        allPosts.forEach(post => {
-            const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
-
-            backlinks.forEach(backlink => {
-                const targetUri = backlink.getAttribute('data-target-uri');
-                const targetPostId = targetUri.split('#')[1];
-                const targetPost = document.getElementById(targetPostId);
-
-                if (targetPost) {
-                    let repliesContainer = post.nextElementSibling;
-                    if (!repliesContainer || !repliesContainer.classList.contains('threadedReplies')) {
-                        repliesContainer = document.createElement('div');
-                        repliesContainer.className = 'threadedReplies';
-                        post.parentNode.insertBefore(repliesContainer, post.nextSibling);
-                    }
-                    if (!repliesContainer.contains(targetPost)) {
-                        repliesContainer.appendChild(targetPost);
-                    }
+        function highlightIds(root = divPosts) {
+            const idFrequency = {};
+            const labelSpans = root.querySelectorAll('.labelId');
+            labelSpans.forEach(span => {
+                const id = span.textContent.trim();
+                idFrequency[id] = (idFrequency[id] || 0) + 1;
+            });
+            const seen = {};
+            labelSpans.forEach(span => {
+                const id = span.textContent.trim();
+                span.classList.remove('moetext', 'id-glow', 'id-dotted');
+                if (!seen[id]) {
+                    seen[id] = true;
+                    span.classList.add(styleClass);
+                    span.title = idFrequency[id] === 1
+                        ? "This ID appears only once."
+                        : "This was the first occurrence of this ID.";
+                } else {
+                    span.title = "";
                 }
             });
+        }
+        highlightIds();
+        const observer = new MutationObserver(mutations => {
+            let needsUpdate = false;
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === 1 && node.querySelector && node.querySelector('.labelId')) {
+                        needsUpdate = true;
+                        break;
+                    }
+                }
+                if (needsUpdate) break;
+            }
+            if (needsUpdate) {
+                highlightIds();
+            }
         });
+        observer.observe(divPosts, { childList: true, subtree: true });
+    }
+    async function featureQuoteThreading() {
+        const isEnabled = typeof getSetting === "function"
+            ? await getSetting("quoteThreading")
+            : true;
+
+        if (!isEnabled) {
+            document.querySelector('.quoteThreadingRefresh')?.remove();
+            return;
+        }
+        function processPosts(posts) {
+            posts.forEach(post => {
+                if (post.closest('.threadedReplies')) {
+                    return;
+                }
+
+                const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
+
+                backlinks.forEach(backlink => {
+                    const targetUri = backlink.getAttribute('data-target-uri');
+                    if (!targetUri) return;
+
+                    const targetPostId = targetUri.split('#')[1];
+                    const targetPost = document.getElementById(targetPostId);
+
+                    if (targetPost) {
+                        if (targetPost.closest('.threadedReplies')) {
+                            return;
+                        }
+
+                        let repliesContainer = post.nextElementSibling;
+                        if (!repliesContainer?.classList.contains('threadedReplies')) {
+                            repliesContainer = document.createElement('div');
+                            repliesContainer.className = 'threadedReplies';
+                            post.parentNode.insertBefore(repliesContainer, post.nextSibling);
+                        }
+                        if (!repliesContainer.contains(targetPost)) {
+                            repliesContainer.appendChild(targetPost);
+                        }
+                    }
+                });
+            });
+        }
+        function threadAllPosts() {
+            processPosts(document.querySelectorAll('.divPosts .postCell'));
+        }
+
+        function threadNewPosts() {
+            const allPosts = document.querySelectorAll('.divPosts .postCell');
+            processPosts(Array.from(allPosts).slice(-5));
+        }
+        function setupPostObserver() {
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    if (mutation.addedNodes.length) {
+                        setTimeout(threadNewPosts, 50);
+                    }
+                });
+            });
+
+            if (typeof divPosts !== 'undefined') {
+                observer.observe(divPosts, {
+                    childList: true,
+                    subtree: false
+                });
+            }
+        }
+        function addRefreshButton() {
+            const replyButton = document.querySelector('.threadBottom .innerUtility #replyButton');
+            if (!replyButton || replyButton.nextElementSibling?.classList.contains('quoteThreadingBtn')) return;
+
+            const refreshBtn = document.createElement('a');
+            refreshBtn.href = "#";
+            refreshBtn.className = "quoteThreadingBtn";
+            refreshBtn.title = "Refresh quote threading";
+            refreshBtn.textContent = "ReThread";
+
+            replyButton.after(' ', refreshBtn);
+
+            refreshBtn.addEventListener('click', e => {
+                e.preventDefault();
+                threadAllPosts();
+            });
+        }
+        threadAllPosts();  
+        addRefreshButton();
+        setupPostObserver();
     }
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
@@ -2339,7 +2468,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. 1.46.0</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. 1.47.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -2686,6 +2815,7 @@ onReady(async function () {
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
             { keys: ["Escape"], action: "Clear QR textarea and hide all dialogs" },
             { keys: ["ALT", "W"], action: "Watch Thread" },
+            { keys: ["SHIFT", "T"], action: "Toggle Quote Threading" },
             { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
             { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
             { keys: ["CTRL", "SHIFT", "UP/DOWN"], action: "Scroll between Replies to You" },
@@ -2928,6 +3058,39 @@ onReady(async function () {
                 return;
             }
         }
+        if (event.shiftKey && !event.ctrlKey && !event.altKey && (event.key === "t" || event.key === "T")) {
+            event.preventDefault();
+
+            const current = await getSetting("quoteThreading");
+            await setSetting("quoteThreading", !current);
+            try {
+                const msg = `Quote threading ${!current ? "enabled" : "disabled"}`;
+                if (window.showToast) {
+                    window.showToast(msg);
+                } else {
+                    const icon = document.getElementById("8chanSS-icon");
+                    if (icon) {
+                        let toast = document.createElement("span");
+                        toast.textContent = msg;
+                        toast.style.position = "absolute";
+                        toast.style.background = "#222";
+                        toast.style.color = "#fff";
+                        toast.style.padding = "2px 8px";
+                        toast.style.borderRadius = "4px";
+                        toast.style.fontSize = "13px";
+                        toast.style.zIndex = 99999;
+                        toast.style.left = (icon.offsetLeft - 50) + "px";
+                        toast.style.top = "27px";
+                        toast.style.transition = "opacity 0.3s";
+                        icon.parentNode.appendChild(toast);
+                        setTimeout(() => { toast.style.opacity = "0"; }, 900);
+                        setTimeout(() => { toast.remove(); }, 1200);
+                    }
+                }
+            } catch { }
+            setTimeout(() => window.location.reload(), 1400);
+            return;
+        }
         if (event.key === "Escape") {
             const textarea = document.getElementById("qrbody");
             if (textarea) textarea.value = "";
@@ -3121,7 +3284,7 @@ onReady(async function () {
             if (catalogContainer) {
                 catalogContainer.addEventListener("click", onCatalogCellClick, true);
                 const observer = new MutationObserver(applyHiddenThreads);
-                observer.observe(catalogContainer, { childList: true, subtree: true });
+                observer.observe(catalogContainer, { childList: true, subtree: false });
             }
         }
         hideThreadsOnRefresh();
@@ -3143,36 +3306,11 @@ onReady(async function () {
         }
     }
     function moveFileUploadsBelowOp() {
-        const opHeadTitle = document.querySelector('.opHead.title');
-        const innerOP = document.querySelector('.innerOP');
         if (opHeadTitle && innerOP) {
             innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
         }
     }
     moveFileUploadsBelowOp();
-    function styleDeletedSpans() {
-        const divThreads = document.getElementById('divThreads');
-        if (divThreads) {
-            const observer = new MutationObserver(mutations => {
-                for (const mutation of mutations) {
-                    for (const node of mutation.addedNodes) {
-                        if (node.nodeType === 1) {
-                            const containers = divThreads.querySelectorAll('.postInfo.title');
-                            containers.forEach(container => {
-                                container.querySelectorAll('span:not([class]):not([id])').forEach(span => {
-                                    if (span.textContent.trim() === '(Deleted)') {
-                                        span.classList.add('deleted-span');
-                                    }
-                                });
-                            });
-                        }
-                    }
-                }
-            });
-            observer.observe(divThreads, { childList: true, subtree: true });
-        }
-    }
-    styleDeletedSpans();
     document.addEventListener('click', function (e) {
         const a = e.target.closest('.panelBacklinks > a');
         if (a) {

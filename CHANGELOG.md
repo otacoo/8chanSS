@@ -1,3 +1,17 @@
+## v1.47.0
+*2025-05-18*
+
+- **New Option:** Quote Threading, `SHIFT` + `T` to toggle on/off after enabling it in the settings, will thread all posts on page load then thread any new posts up to 6 new posts
+- YT links will now be correctly sanitized before being parsed
+- Advanced Media Viewer will now correctly expand with the inner element
+- Pinned Advanced Media Viewer will only scroll zoom until reaching viewport to keep aspect ratio (set to Native if you don't like this behaviour)
+- Revealed spoilers will now get their correct thumbnail size
+- Add Alt Pixel favicon and update Pixel, Eight and Eight Dark favicon
+- Reorganized some options
+- Adjusted post margins and reduced (You) highlights border size
+- Newly added IDs will now be correctly styled
+- Various optimizations
+
 ## v1.46.0
 *2025-05-16*
 
