@@ -2615,38 +2615,99 @@ onReady(async function () {
     }
 
     // --- Feature: Quote Threading ---
-    function featureQuoteThreading() {
-        // Select all post cells in the document
-        const allPosts = document.querySelectorAll('.divPosts .postCell');
+    async function featureQuoteThreading() {
+        // Feature toggle check
+        const isEnabled = typeof getSetting === "function"
+            ? await getSetting("quoteThreading")
+            : true;
 
-        allPosts.forEach(post => {
-            // Find all backlinks in the post's panelBacklinks
-            const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
+        if (!isEnabled) {
+            document.querySelector('.quoteThreadingRefresh')?.remove();
+            return;
+        }
 
-            backlinks.forEach(backlink => {
-                // Extract target post ID from data-target-uri
-                const targetUri = backlink.getAttribute('data-target-uri');
-                const targetPostId = targetUri.split('#')[1];
-                const targetPost = document.getElementById(targetPostId);
+        // --- Core Threading Logic ---
+        function processPosts(posts) {
+            posts.forEach(post => {
+                const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
 
-                if (targetPost) {
-                    // Check if we need to create/move replies container
-                    let repliesContainer = post.nextElementSibling;
+                backlinks.forEach(backlink => {
+                    const targetUri = backlink.getAttribute('data-target-uri');
+                    if (!targetUri) return;
 
-                    // Verify if next sibling is a replies container
-                    if (!repliesContainer || !repliesContainer.classList.contains('threadedReplies')) {
-                        repliesContainer = document.createElement('div');
-                        repliesContainer.className = 'threadedReplies';
-                        post.parentNode.insertBefore(repliesContainer, post.nextSibling);
+                    const targetPostId = targetUri.split('#')[1];
+                    const targetPost = document.getElementById(targetPostId);
+
+                    if (targetPost) {
+                        let repliesContainer = post.nextElementSibling;
+
+                        // Create container if needed
+                        if (!repliesContainer?.classList.contains('threadedReplies')) {
+                            repliesContainer = document.createElement('div');
+                            repliesContainer.className = 'threadedReplies';
+                            post.parentNode.insertBefore(repliesContainer, post.nextSibling);
+                        }
+
+                        // Move post if not already in container
+                        if (!repliesContainer.contains(targetPost)) {
+                            repliesContainer.appendChild(targetPost);
+                        }
                     }
-
-                    // Move target post into container if not already there
-                    if (!repliesContainer.contains(targetPost)) {
-                        repliesContainer.appendChild(targetPost);
-                    }
-                }
+                });
             });
-        });
+        }
+
+        // --- Threading Handlers ---
+        function threadAllPosts() {
+            processPosts(document.querySelectorAll('.divPosts .postCell'));
+        }
+
+        function threadNewPosts() {
+            const allPosts = document.querySelectorAll('.divPosts .postCell');
+            processPosts(Array.from(allPosts).slice(-5));
+        }
+
+        // --- Post Observer ---
+        function setupPostObserver() {
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    if (mutation.addedNodes.length) {
+                        setTimeout(threadNewPosts, 50);
+                    }
+                });
+            });
+
+            if (typeof divPosts !== 'undefined') {
+                observer.observe(divPosts, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }
+
+        // --- Refresh Button ---
+        function addRefreshButton() {
+            const replyButton = document.querySelector('.threadBottom .innerUtility #replyButton');
+            if (!replyButton || replyButton.nextElementSibling?.classList.contains('quoteThreadingBtn')) return;
+
+            const refreshBtn = document.createElement('a');
+            refreshBtn.href = "#";
+            refreshBtn.className = "quoteThreadingBtn";
+            refreshBtn.title = "Refresh quote threading";
+            refreshBtn.textContent = "ReThread";
+
+            replyButton.after(' ', refreshBtn);
+
+            refreshBtn.addEventListener('click', e => {
+                e.preventDefault();
+                threadAllPosts();
+            });
+        }
+
+        // --- Initialization ---
+        threadAllPosts();  // Process all posts on initial load
+        addRefreshButton();
+        setupPostObserver();
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3349,6 +3410,7 @@ onReady(async function () {
             { keys: ["Ctrl", "Enter"], action: "Submit post" },
             { keys: ["Escape"], action: "Clear QR textarea and hide all dialogs" },
             { keys: ["ALT", "W"], action: "Watch Thread" },
+            { keys: ["SHIFT", "T"], action: "Toggle Quote Threading" },
             { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
             { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
             { keys: ["CTRL", "SHIFT", "UP/DOWN"], action: "Scroll between Replies to You" },
@@ -3658,6 +3720,45 @@ onReady(async function () {
                 }
                 return;
             }
+        }
+
+        // --- Shift+T to toggle quote threading ---
+        if (event.shiftKey && !event.ctrlKey && !event.altKey && (event.key === "t" || event.key === "T")) {
+            event.preventDefault();
+
+            const current = await getSetting("quoteThreading");
+            await setSetting("quoteThreading", !current);
+
+            // Show a quick notification
+            try {
+                const msg = `Quote threading ${!current ? "enabled" : "disabled"}`;
+                if (window.showToast) {
+                    window.showToast(msg);
+                } else {
+                    // fallback: flash a message near the settings icon
+                    const icon = document.getElementById("8chanSS-icon");
+                    if (icon) {
+                        let toast = document.createElement("span");
+                        toast.textContent = msg;
+                        toast.style.position = "absolute";
+                        toast.style.background = "#222";
+                        toast.style.color = "#fff";
+                        toast.style.padding = "2px 8px";
+                        toast.style.borderRadius = "4px";
+                        toast.style.fontSize = "13px";
+                        toast.style.zIndex = 99999;
+                        toast.style.left = (icon.offsetLeft - 50) + "px";
+                        toast.style.top = "27px";
+                        toast.style.transition = "opacity 0.3s";
+                        icon.parentNode.appendChild(toast);
+                        setTimeout(() => { toast.style.opacity = "0"; }, 900);
+                        setTimeout(() => { toast.remove(); }, 1200);
+                    }
+                }
+            } catch { }
+            // Reload to apply the change after 1.5 secs
+            setTimeout(() => window.location.reload(), 1500);
+            return;
         }
 
         // (ESC) Clear textarea and hide all dialogs
