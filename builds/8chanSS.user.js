@@ -564,7 +564,7 @@ onReady(async function () {
         let tabTitleBase = null;
         let previousFaviconState = null;
         const customFaviconEnabled = await getSetting("customFavicon");
-        
+
         async function updateTabTitle() {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
@@ -1709,25 +1709,59 @@ onReady(async function () {
     async function featureBeepOnYou() {
         if (!divPosts) return;
         let audioContext = null;
-        function createBeepSound() {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let audioContextReady = false;
+        let audioContextPromise = null;
+        function ensureAudioContextReady() {
+            if (audioContextReady) return Promise.resolve();
+            if (audioContextPromise) return audioContextPromise;
+
+            audioContextPromise = new Promise((resolve) => {
+                function resumeAudioContext() {
+                    if (!audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume().then(() => {
+                            audioContextReady = true;
+                            window.removeEventListener('click', resumeAudioContext);
+                            window.removeEventListener('keydown', resumeAudioContext);
+                            resolve();
+                        });
+                    } else {
+                        audioContextReady = true;
+                        window.removeEventListener('click', resumeAudioContext);
+                        window.removeEventListener('keydown', resumeAudioContext);
+                        resolve();
+                    }
+                }
+                window.addEventListener('click', resumeAudioContext);
+                window.addEventListener('keydown', resumeAudioContext);
+            });
+            return audioContextPromise;
+        }
+
+        async function createBeepSound() {
+            if (!(await getSetting("beepOnYou"))) {
+                return;
             }
+            await ensureAudioContextReady();
+
             return function playBeep() {
                 try {
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
 
                     oscillator.type = 'sine';
-                    oscillator.frequency.value = 550; 
-                    gainNode.gain.value = 0.1; 
+                    oscillator.frequency.value = 550;
+                    gainNode.gain.value = 0.1;
 
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
+
                     oscillator.start();
                     setTimeout(() => {
                         oscillator.stop();
-                    }, 100); 
+                    }, 100);
                 } catch (e) {
                     console.warn("Beep failed:", e);
                 }
@@ -1746,7 +1780,8 @@ onReady(async function () {
             if (customMsg) customMsgSetting = customMsg;
         }
         await initSettings();
-        const playBeep = createBeepSound();
+        let playBeep = null;
+        createBeepSound().then(fn => { playBeep = fn; });
         let scrollHandlerActive = false;
         async function notifyOnYou() {
             if (!window.isNotifying) {
@@ -1800,7 +1835,7 @@ onReady(async function () {
                         node.querySelector("a.quoteLink.you") &&
                         !node.closest('.innerPost')
                     ) {
-                        if (beepOnYouSetting) {
+                        if (beepOnYouSetting && playBeep) {
                             playBeep();
                         }
                         if (notifyOnYouSetting) {

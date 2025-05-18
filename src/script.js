@@ -622,7 +622,7 @@ onReady(async function () {
 
         // Helper: Update Tab title and favicon state
         const customFaviconEnabled = await getSetting("customFavicon");
-        
+
         async function updateTabTitle() {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
@@ -2078,12 +2078,51 @@ onReady(async function () {
     // --- Feature: Beep/Notify on (You) ---
     async function featureBeepOnYou() {
         if (!divPosts) return;
-        // Create Web Audio API beep
+
+        // Web Audio API beep
         let audioContext = null;
-        function createBeepSound() {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let audioContextReady = false;
+        let audioContextPromise = null;
+
+        // Helper to create/resume AudioContext after user gesture
+        function ensureAudioContextReady() {
+            if (audioContextReady) return Promise.resolve();
+            if (audioContextPromise) return audioContextPromise;
+
+            audioContextPromise = new Promise((resolve) => {
+                function resumeAudioContext() {
+                    if (!audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    // Resume if suspended
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume().then(() => {
+                            audioContextReady = true;
+                            window.removeEventListener('click', resumeAudioContext);
+                            window.removeEventListener('keydown', resumeAudioContext);
+                            resolve();
+                        });
+                    } else {
+                        audioContextReady = true;
+                        window.removeEventListener('click', resumeAudioContext);
+                        window.removeEventListener('keydown', resumeAudioContext);
+                        resolve();
+                    }
+                }
+                // Listen for first user gesture
+                window.addEventListener('click', resumeAudioContext);
+                window.addEventListener('keydown', resumeAudioContext);
+            });
+            return audioContextPromise;
+        }
+
+        async function createBeepSound() {
+            if (!(await getSetting("beepOnYou"))) {
+                return;
             }
+            // Wait for AudioContext to be ready (after user gesture)
+            await ensureAudioContextReady();
+
             return function playBeep() {
                 try {
                     // Create oscillator for the beep
@@ -2131,7 +2170,8 @@ onReady(async function () {
         await initSettings();
 
         // Store the beep
-        const playBeep = createBeepSound();
+        let playBeep = null;
+        createBeepSound().then(fn => { playBeep = fn; });
 
         // Function to notify on (You)
         let scrollHandlerActive = false;
@@ -2205,7 +2245,7 @@ onReady(async function () {
                         node.querySelector("a.quoteLink.you") &&
                         !node.closest('.innerPost')
                     ) {
-                        if (beepOnYouSetting) {
+                        if (beepOnYouSetting && playBeep) {
                             playBeep();
                         }
                         if (notifyOnYouSetting) {
@@ -2639,11 +2679,6 @@ onReady(async function () {
                     const targetPost = document.getElementById(targetPostId);
 
                     if (targetPost) {
-                        // Prevent moving posts already in threaded containers
-                        if (targetPost.closest('.threadedReplies')) {
-                            return;
-                        }
-
                         let repliesContainer = post.nextElementSibling;
 
                         // Create container if needed
