@@ -621,6 +621,8 @@ onReady(async function () {
         let previousFaviconState = null;
 
         // Helper: Update Tab title and favicon state
+        const customFaviconEnabled = await getSetting("customFavicon");
+        
         async function updateTabTitle() {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
@@ -629,13 +631,13 @@ onReady(async function () {
             // Get current favicon state
             const { style, state } = faviconManager.getCurrentFaviconState();
 
-            if (unseenCount > 0 && (await getSetting("customFavicon"))) {
+            if (unseenCount > 0 && customFaviconEnabled) {
                 if (state !== "unread") {
                     previousFaviconState = { style, state };
                 }
                 // Use setFaviconStyle to preserve current style but change state to "unread"
                 faviconManager.setFaviconStyle(style, "unread");
-            } else if (unseenCount == 0 && (await getSetting("customFavicon"))) {
+            } else if (unseenCount == 0 && customFaviconEnabled) {
                 // Restore previous favicon state
                 if (state === "unread" && previousFaviconState) {
                     faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
@@ -644,8 +646,6 @@ onReady(async function () {
                     // Fallback: reset to default if no previous state
                     faviconManager.setFavicon("base");
                 }
-            } else {
-                // Nothing
             }
         }
 
