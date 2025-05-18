@@ -1565,7 +1565,7 @@ onReady(async function () {
                 }
             });
         }
-        const postsContainer = divPosts || document.body;
+        const postsContainer = divThreads || document.body;
         postsContainer.addEventListener('click', function (e) {
             if (e.target.classList.contains('hash-link')) {
                 e.preventDefault();
@@ -1605,7 +1605,7 @@ onReady(async function () {
             });
             if (shouldUpdate) debouncedAddHashLinks();
         });
-        observer.observe(postsContainer, { childList: true, subtree: true });
+        observer.observe(divThreads, { childList: true, subtree: true });
     }
     function featureScrollArrows() {
         if (document.getElementById("scroll-arrow-up") || document.getElementById("scroll-arrow-down")) {
@@ -2130,10 +2130,6 @@ onReady(async function () {
         }
         function processPosts(posts) {
             posts.forEach(post => {
-                if (post.closest('.threadedReplies')) {
-                    return;
-                }
-
                 const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
 
                 backlinks.forEach(backlink => {
