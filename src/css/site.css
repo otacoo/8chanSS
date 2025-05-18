@@ -219,12 +219,16 @@ nav.navHeader>.nav-boards:hover {
     top: 26px !important;
     right: 0 !important;
     left: auto !important;
+    max-height: 96% !important;
+    max-width: fit-content !important;
 }
 
 #media-viewer.topleft {
     top: 26px !important;
     left: 0 !important;
     right: auto !important;
+    max-height: 96% !important;
+    max-width: fit-content !important;
 }
 
 #media-viewer.topright::after {
