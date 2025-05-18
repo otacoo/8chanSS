@@ -1900,7 +1900,7 @@ onReady(async function () {
         }
 
         // Observe for dynamically added quote/backlink links
-        const postsContainer = divPosts || document.body;
+        const postsContainer = divThreads || document.body;
 
         // Event delegation for hash link clicks
         postsContainer.addEventListener('click', function (e) {
@@ -1944,7 +1944,7 @@ onReady(async function () {
             });
             if (shouldUpdate) debouncedAddHashLinks();
         });
-        observer.observe(postsContainer, { childList: true, subtree: true });
+        observer.observe(divThreads, { childList: true, subtree: true });
     }
 
     // --- Feature: Scroll Arrows ---
@@ -2629,11 +2629,6 @@ onReady(async function () {
         // --- Core Threading Logic ---
         function processPosts(posts) {
             posts.forEach(post => {
-                // Prevent processing posts already in threaded containers
-                if (post.closest('.threadedReplies')) {
-                    return;
-                }
-
                 const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
 
                 backlinks.forEach(backlink => {
