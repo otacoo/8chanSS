@@ -162,6 +162,17 @@ onReady(async function () {
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
+            enableThreadImageHover: { label: "Thread Image Hover", default: true },
+            blurSpoilers: {
+                label: "Blur Spoilers",
+                default: false,
+                subOptions: {
+                    removeSpoilers: {
+                        label: "Remove Spoilers",
+                        default: false
+                    }
+                }
+            },
             enableMediaViewer: {
                 label: "Enable Advanced Media Viewer",
                 default: false,
@@ -193,19 +204,6 @@ onReady(async function () {
                         default: "",
                         type: "text",
                         maxLength: 9
-                    }
-                }
-            },
-            _threadsMediaTitle: { type: "title", label: ":: Media" },
-            _threadsSection2: { type: "separator" },
-            enableThreadImageHover: { label: "Thread Image Hover", default: true },
-            blurSpoilers: {
-                label: "Blur Spoilers",
-                default: false,
-                subOptions: {
-                    removeSpoilers: {
-                        label: "Remove Spoilers",
-                        default: false
                     }
                 }
             },
@@ -1411,7 +1409,20 @@ onReady(async function () {
                     } else {
                         return;
                     }
+                    // Temporarily lock rendered size to avoid layout shift
+                    const initialWidth = img.offsetWidth;
+                    const initialHeight = img.offsetHeight;
+                    img.style.width = initialWidth + "px";
+                    img.style.height = initialHeight + "px";
+
+                    // Change the src
                     img.src = transformedSrc;
+                    
+                    // Set width/height to its initial thumbnail size when loading img again
+                    img.onload = function () {
+                        img.style.width = img.naturalWidth + "px";
+                        img.style.height = img.naturalHeight + "px";
+                    };
 
                     // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
                     if (await getSetting("blurSpoilers_removeSpoilers")) {
@@ -1440,7 +1451,7 @@ onReady(async function () {
 
         // Observe for dynamically added spoilers
         const observer = new MutationObserver(revealSpoilers);
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(divThreads, { childList: true, subtree: true });
     };
 
     // --- Feature: Auto-hide Header on Scroll ---
@@ -3887,7 +3898,7 @@ onReady(async function () {
         }
     }
     moveFileUploadsBelowOp();
-    
+
     // Dashed underline for inlined reply backlinks and quotelinks
     document.addEventListener('click', function (e) {
         const a = e.target.closest('.panelBacklinks > a');
