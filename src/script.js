@@ -1417,7 +1417,7 @@ onReady(async function () {
 
                     // Change the src
                     img.src = transformedSrc;
-                    
+
                     // Set width/height to its initial thumbnail size when loading img again
                     img.onload = function () {
                         img.style.width = img.naturalWidth + "px";
@@ -1445,7 +1445,6 @@ onReady(async function () {
                 }
             });
         }
-
         // Initial run
         revealSpoilers();
 
@@ -2312,8 +2311,7 @@ onReady(async function () {
         // Initial run
         processLinks(document);
         // Observe for dynamically added links
-        const threads = divThreads || document.body;
-        new MutationObserver(() => processLinks(threads)).observe(threads, { childList: true, subtree: true });
+        new MutationObserver(() => processLinks(divThreads)).observe(divThreads, { childList: true, subtree: true });
     }
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
@@ -2345,7 +2343,7 @@ onReady(async function () {
         // Initial conversion on page load
         convertLabelCreatedTimes();
 
-        // Observe only #divThreads for added posts
+        // Observe only the global .divPosts for added posts after initial conversion
         if (divPosts) {
             new MutationObserver(() => {
                 convertLabelCreatedTimes(divPosts);
@@ -2403,13 +2401,23 @@ onReady(async function () {
         const userCountEl = document.getElementById('userCountLabel');
         const fileCountEl = document.getElementById('fileCount');
 
-        // If any required element is missing, retry after a delay (up to retries times)
-        if (!navHeader || !navOptionsSpan || !postCountEl || !userCountEl || !fileCountEl) {
-            if (retries > 0) {
-                setTimeout(() => threadInfoHeader(retries - 1, delay), delay);
+        // Retry utility function for modularity and readability
+        function retryIfElementsMissing(checkFn, callback, retries, delay) {
+            if (!checkFn()) {
+                if (retries > 0) {
+                    setTimeout(() => retryIfElementsMissing(checkFn, callback, retries - 1, delay), delay);
+                }
+                return true;
             }
-            return;
+            return false;
         }
+
+        if (retryIfElementsMissing(
+            () => navHeader && navOptionsSpan && postCountEl && userCountEl && fileCountEl,
+            () => threadInfoHeader(retries - 1, delay),
+            retries,
+            delay
+        )) return;
 
         // Get stats
         const postCount = postCountEl.textContent || '0';
@@ -2443,10 +2451,23 @@ onReady(async function () {
         // Observe changes to stats and update header accordingly (only once)
         if (!threadInfoHeader._observerInitialized) {
             const statIds = ['postCount', 'userCountLabel', 'fileCount'];
+
+            // Debounce utility
+            function debounce(fn, wait) {
+                let timeout;
+                return function (...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => fn.apply(this, args), wait);
+                };
+            }
+
+            if (!threadInfoHeader._debouncedUpdate) {
+                threadInfoHeader._debouncedUpdate = debounce(() => threadInfoHeader(0, delay), 100);
+            }
             statIds.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    new MutationObserver(() => threadInfoHeader(0, delay)).observe(el, { childList: true, subtree: false, characterData: true });
+                    new MutationObserver(threadInfoHeader._debouncedUpdate).observe(el, { childList: true, subtree: false, characterData: true });
                 }
             });
             threadInfoHeader._observerInitialized = true;
@@ -2521,10 +2542,9 @@ onReady(async function () {
 
     // --- Feature: Highlight New IDs ---
     async function featureHighlightNewIds() {
-        const threads = document.querySelector('.divPosts');
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
-        if (!threads) return;
-        // Return early if there are no .spanId elements
+        if (!divPosts) return;
+        // Return early if there are no .spanId elements on this board
         if (!document.querySelector('.spanId')) return;
 
         // Map option value to actual class name
@@ -2535,33 +2555,57 @@ onReady(async function () {
         };
         const styleClass = styleClassMap[hlStyle] || "moeText"; // fallback to 'moetext'
 
-        // Build frequency map
-        const idFrequency = {};
-        const labelSpans = threads.querySelectorAll('.labelId');
-        labelSpans.forEach(span => {
-            const id = span.textContent.trim();
-            idFrequency[id] = (idFrequency[id] || 0) + 1;
-        });
+        // Helper: Highlight IDs in a given root (default: threads)
+        function highlightIds(root = divPosts) {
+            // Build frequency map
+            const idFrequency = {};
+            const labelSpans = root.querySelectorAll('.labelId');
+            labelSpans.forEach(span => {
+                const id = span.textContent.trim();
+                idFrequency[id] = (idFrequency[id] || 0) + 1;
+            });
 
-        // Track first occurrence and apply class
-        const seen = {};
-        labelSpans.forEach(span => {
-            const id = span.textContent.trim();
-            // Remove all possible highlight classes in case of re-run
-            span.classList.remove('moetext', 'id-glow', 'id-dotted');
-            if (!seen[id]) {
-                seen[id] = true;
-                // Add class if first occurrence
-                span.classList.add(styleClass);
-                // Add a tooltip for clarity
-                span.title = idFrequency[id] === 1
-                    ? "This ID appears only once."
-                    : "This was the first occurrence of this ID.";
-            } else {
-                // Remove tooltip for subsequent occurrences
-                span.title = "";
+            // Track first occurrence and apply class
+            const seen = {};
+            labelSpans.forEach(span => {
+                const id = span.textContent.trim();
+                // Remove all possible highlight classes in case of re-run
+                span.classList.remove('moetext', 'id-glow', 'id-dotted');
+                if (!seen[id]) {
+                    seen[id] = true;
+                    // Add class if first occurrence
+                    span.classList.add(styleClass);
+                    // Add a tooltip for clarity
+                    span.title = idFrequency[id] === 1
+                        ? "This ID appears only once."
+                        : "This was the first occurrence of this ID.";
+                } else {
+                    // Remove tooltip for subsequent occurrences
+                    span.title = "";
+                }
+            });
+        }
+
+        // Initial run
+        highlightIds();
+
+        // Observe divPosts for newly added posts
+        const observer = new MutationObserver(mutations => {
+            let needsUpdate = false;
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === 1 && node.querySelector && node.querySelector('.labelId')) {
+                        needsUpdate = true;
+                        break;
+                    }
+                }
+                if (needsUpdate) break;
+            }
+            if (needsUpdate) {
+                highlightIds();
             }
         });
+        observer.observe(divPosts, { childList: true, subtree: true });
     }
 
     // --- Feature: Quote Threading ---
