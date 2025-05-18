@@ -2140,10 +2140,6 @@ onReady(async function () {
                     const targetPost = document.getElementById(targetPostId);
 
                     if (targetPost) {
-                        if (targetPost.closest('.threadedReplies')) {
-                            return;
-                        }
-
                         let repliesContainer = post.nextElementSibling;
                         if (!repliesContainer?.classList.contains('threadedReplies')) {
                             repliesContainer = document.createElement('div');
