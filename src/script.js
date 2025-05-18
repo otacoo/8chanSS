@@ -2629,6 +2629,11 @@ onReady(async function () {
         // --- Core Threading Logic ---
         function processPosts(posts) {
             posts.forEach(post => {
+                // Prevent processing posts already in threaded containers
+                if (post.closest('.threadedReplies')) {
+                    return;
+                }
+
                 const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
 
                 backlinks.forEach(backlink => {
@@ -2639,6 +2644,11 @@ onReady(async function () {
                     const targetPost = document.getElementById(targetPostId);
 
                     if (targetPost) {
+                        // Prevent moving posts already in threaded containers
+                        if (targetPost.closest('.threadedReplies')) {
+                            return;
+                        }
+
                         let repliesContainer = post.nextElementSibling;
 
                         // Create container if needed
@@ -2664,7 +2674,7 @@ onReady(async function () {
 
         function threadNewPosts() {
             const allPosts = document.querySelectorAll('.divPosts .postCell');
-            processPosts(Array.from(allPosts).slice(-5));
+            processPosts(Array.from(allPosts).slice(-6));
         }
 
         // --- Post Observer ---
@@ -2680,7 +2690,7 @@ onReady(async function () {
             if (typeof divPosts !== 'undefined') {
                 observer.observe(divPosts, {
                     childList: true,
-                    subtree: true
+                    subtree: false
                 });
             }
         }
@@ -3756,8 +3766,8 @@ onReady(async function () {
                     }
                 }
             } catch { }
-            // Reload to apply the change after 1.5 secs
-            setTimeout(() => window.location.reload(), 1500);
+            // Reload to apply the change after 1.4 secs
+            setTimeout(() => window.location.reload(), 1400);
             return;
         }
 
