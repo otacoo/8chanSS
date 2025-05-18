@@ -3887,31 +3887,7 @@ onReady(async function () {
         }
     }
     moveFileUploadsBelowOp();
-
-    // Style (Deleted) span here until it gets a class or id
-    function styleDeletedSpans() {
-        if (divPosts) {
-            const observer = new MutationObserver(mutations => {
-                for (const mutation of mutations) {
-                    for (const node of mutation.addedNodes) {
-                        if (node.nodeType === 1) {
-                            const containers = divPosts.querySelectorAll('.postInfo.title');
-                            containers.forEach(container => {
-                                container.querySelectorAll('span:not([class]):not([id])').forEach(span => {
-                                    if (span.textContent.trim() === '(Deleted)') {
-                                        span.classList.add('deleted-span');
-                                    }
-                                });
-                            });
-                        }
-                    }
-                }
-            });
-            observer.observe(divPosts, { childList: true, subtree: false });
-        }
-    }
-    styleDeletedSpans();
-
+    
     // Dashed underline for inlined reply backlinks and quotelinks
     document.addEventListener('click', function (e) {
         const a = e.target.closest('.panelBacklinks > a');
