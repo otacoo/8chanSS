@@ -7,6 +7,14 @@ function onReady(fn) {
         fn();
     }
 }
+// Debouncer
+const debounce = (fn, delay) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn.apply(this, args), delay);
+    };
+};
 // Favicon Manager
 const faviconManager = (() => {
     // Map available styles
@@ -119,7 +127,6 @@ const faviconManager = (() => {
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     "use strict";
-
     //////// GLOBAL SELECTORS ///////////////////////
     const divThreads = document.getElementById("divThreads");
     const innerOP = document.querySelector(".innerOP");
@@ -876,15 +883,6 @@ onReady(async function () {
 
     // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
-        // Debounce utility to avoid excessive calls during rapid DOM mutations
-        function debounce(fn, delay) {
-            let timeout;
-            return function (...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => fn.apply(this, args), delay);
-            };
-        }
-
         async function appendCatalogToLinks() {
             const navboardsSpan = document.getElementById("navBoardsSpan");
             if (navboardsSpan) {
@@ -1753,15 +1751,6 @@ onReady(async function () {
             }, 100);
         }
 
-        // Debounce helper
-        function debounce(fn, delay) {
-            let timeout;
-            return function (...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => fn.apply(this, args), delay);
-            };
-        }
-
         // Observe the watchedMenu for changes to enable/disable the button dynamically
         const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
         let observer = null;
@@ -1850,15 +1839,6 @@ onReady(async function () {
                 link.insertAdjacentElement('afterend', wrapper);
                 processedLinks.add(link);
             });
-        }
-
-        // Simple debounce utility
-        function debounce(fn, delay) {
-            let timer;
-            return function (...args) {
-                clearTimeout(timer);
-                timer = setTimeout(() => fn.apply(this, args), delay);
-            };
         }
 
         // Initial run
@@ -2497,15 +2477,6 @@ onReady(async function () {
         // Observe changes to stats and update header accordingly (only once)
         if (!threadInfoHeader._observerInitialized) {
             const statIds = ['postCount', 'userCountLabel', 'fileCount'];
-
-            // Debounce utility
-            function debounce(fn, wait) {
-                let timeout;
-                return function (...args) {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => fn.apply(this, args), wait);
-                };
-            }
 
             if (!threadInfoHeader._debouncedUpdate) {
                 threadInfoHeader._debouncedUpdate = debounce(() => threadInfoHeader(0, delay), 100);

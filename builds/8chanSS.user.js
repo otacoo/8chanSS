@@ -28,6 +28,13 @@ function onReady(fn) {
         fn();
     }
 }
+const debounce = (fn, delay) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn.apply(this, args), delay);
+    };
+};
 const faviconManager = (() => {
     const STYLES = [
         "default",
@@ -771,14 +778,6 @@ onReady(async function () {
         observePostCount();
     }
     async function featureHeaderCatalogLinks() {
-        function debounce(fn, delay) {
-            let timeout;
-            return function (...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => fn.apply(this, args), delay);
-            };
-        }
-
         async function appendCatalogToLinks() {
             const navboardsSpan = document.getElementById("navBoardsSpan");
             if (navboardsSpan) {
@@ -1458,13 +1457,6 @@ onReady(async function () {
                 }
             }, 100);
         }
-        function debounce(fn, delay) {
-            let timeout;
-            return function (...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => fn.apply(this, args), delay);
-            };
-        }
         const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
         let observer = null;
         if (watchedMenu) {
@@ -1525,13 +1517,6 @@ onReady(async function () {
                 link.insertAdjacentElement('afterend', wrapper);
                 processedLinks.add(link);
             });
-        }
-        function debounce(fn, delay) {
-            let timer;
-            return function (...args) {
-                clearTimeout(timer);
-                timer = setTimeout(() => fn.apply(this, args), delay);
-            };
         }
         addHashLinks();
         if (window.tooltips) {
@@ -1752,16 +1737,15 @@ onReady(async function () {
                     const gainNode = audioContext.createGain();
 
                     oscillator.type = 'sine';
-                    oscillator.frequency.value = 550;
-                    gainNode.gain.value = 0.1;
+                    oscillator.frequency.value = 550; 
+                    gainNode.gain.value = 0.1; 
 
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
-
                     oscillator.start();
                     setTimeout(() => {
                         oscillator.stop();
-                    }, 100);
+                    }, 100); 
                 } catch (e) {
                     console.warn("Beep failed:", e);
                 }
@@ -2038,13 +2022,6 @@ onReady(async function () {
         }
         if (!threadInfoHeader._observerInitialized) {
             const statIds = ['postCount', 'userCountLabel', 'fileCount'];
-            function debounce(fn, wait) {
-                let timeout;
-                return function (...args) {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => fn.apply(this, args), wait);
-                };
-            }
 
             if (!threadInfoHeader._debouncedUpdate) {
                 threadInfoHeader._debouncedUpdate = debounce(() => threadInfoHeader(0, delay), 100);
