@@ -57,35 +57,45 @@ const faviconManager = (() => {
     // Internal state tracking
     let currentStyle = "default";
     let currentState = "base";
+    let cachedUserStyle = null;
 
-    // Helper: Remove all previous favicon <link> tags
+    // Remove all favicon links from <head>
     function removeFavicons() {
-        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
+        const head = document.head;
+        if (!head) return;
+        // Only remove if present
+        head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
     }
 
-    // Helper: Insert new favicon
+    // Insert favicon link into <head>
     function insertFavicon(href) {
+        const head = document.head;
+        if (!head) return;
         const link = document.createElement('link');
         link.rel = 'icon';
         link.type = 'image/png';
         link.href = href;
-        document.head.appendChild(link);
+        head.appendChild(link);
     }
 
     // Get user-selected style from settings ('faviconStyle', fallback: "default")
     async function getUserFaviconStyle() {
+        if (cachedUserStyle) return cachedUserStyle;
         let style = "default";
         try {
             style = await getSetting("customFavicon_faviconStyle");
-        } catch { }
+        } catch {}
         if (!STYLES.includes(style)) style = "default";
+        cachedUserStyle = style;
         return style;
     }
 
-    // Set favicon style forcibly
+    // Only update favicon if style/state changed
     async function setFaviconStyle(style, state = "base") {
         if (!STYLES.includes(style)) style = "default";
         if (!STATES.includes(state)) state = "base";
+        if (currentStyle === style && currentState === state) return; // No change
+
         const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
         removeFavicons();
         insertFavicon(url);
@@ -104,12 +114,10 @@ const faviconManager = (() => {
         const style = await getUserFaviconStyle();
         await setFaviconStyle(style, state);
     }
-
     // Reset to base state (default)
     async function resetFavicon() {
         await setFavicon("base");
     }
-
     // Getter for current state (for state managers)
     function getCurrentFaviconState() {
         return { style: currentStyle, state: currentState };
