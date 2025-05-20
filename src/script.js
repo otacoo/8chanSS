@@ -2238,7 +2238,7 @@ onReady(async function () {
 
         // In-memory cache and order tracker (order is stored as a special property)
         const ytTitleCache = {};
-        const MAX_CACHE_SIZE = 150;
+        const MAX_CACHE_SIZE = 350;
         const ORDER_KEY = "_order";
 
         // Try to load cache and order from localStorage
