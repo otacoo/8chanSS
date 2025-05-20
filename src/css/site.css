@@ -34,7 +34,7 @@
     display: block !important;
 }
 
-footer {
+:root.is-thread footer {
     visibility: hidden;
     height: 0;
 }
