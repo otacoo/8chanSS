@@ -23,7 +23,7 @@ window.pageType = (() => {
 
     return {
         isCatalog: /\/catalog\.html$/i.test(path),
-        isThread: /\/res\/[^/]+\.html$/i.test(path),
+        isThread: /\/(res|last)\/[^/]+\.html$/i.test(path),
         isIndex: /\/[^/]+\/$/i.test(path),
         is8chan: /^8chan\.(se|moe)$/.test(currentHost),
         host: currentHost,
@@ -601,19 +601,16 @@ onReady(async function () {
 
     // --- Feature: Save Scroll Position ---
     async function featureSaveScroll() {
-        if (pageType.isCatalog || pageType.isIndex) return;
+        if (!pageType.isThread) return;
 
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
-        const MAX_THREADS = 150;
-        const threadPagePattern = /^\/[^/]+\/res\/[^/]+\.html$/i;
-        // Early return if page not a thread
-        if (!threadPagePattern.test(window.location.pathname)) return;
+        const MAX_THREADS = 200;
 
         // Helper functions
         // Get board name and thread number
         function getBoardAndThread() {
-            const match = window.location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i);
+            const match = pageType.isThread;
             if (!match) return null;
             return { board: match[1], thread: match[2] };
         }
@@ -4013,7 +4010,7 @@ onReady(async function () {
         // Attach event listeners and apply hidden threads on catalog load
         function hideThreadsOnRefresh() {
             // Only run on catalog pages
-            if (!/\/catalog\.html$/.test(window.location.pathname)) return;
+            if (!pageType.isCatalog) return;
 
             // Add the Show Hidden button
             onReady(addShowHiddenButton);
