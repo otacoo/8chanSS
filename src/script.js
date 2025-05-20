@@ -2285,16 +2285,29 @@ onReady(async function () {
     function enhanceYouTubeLinks() {
         if (pageType.isCatalog) return;
 
-        // In-memory cache
+        // In-memory cache and order tracker (order is stored as a special property)
         const ytTitleCache = {};
-        // Try to load cache from localStorage
+        const MAX_CACHE_SIZE = 150;
+        const ORDER_KEY = "_order";
+
+        // Try to load cache and order from localStorage
         function loadCache() {
             try {
                 const data = localStorage.getItem('ytTitleCache');
-                if (data) Object.assign(ytTitleCache, JSON.parse(data));
-            } catch (e) { }
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    Object.assign(ytTitleCache, parsed);
+                    if (!Array.isArray(ytTitleCache[ORDER_KEY])) {
+                        ytTitleCache[ORDER_KEY] = [];
+                    }
+                } else {
+                    ytTitleCache[ORDER_KEY] = [];
+                }
+            } catch (e) {
+                ytTitleCache[ORDER_KEY] = [];
+            }
         }
-        // Save cache to localStorage
+        // Save cache and order to localStorage
         function saveCache() {
             try {
                 localStorage.setItem('ytTitleCache', JSON.stringify(ytTitleCache));
@@ -2330,7 +2343,14 @@ onReady(async function () {
             const cleanId = sanitizeYouTubeId(videoId);
             if (!cleanId) return null;
             // Check cache first
-            if (ytTitleCache[cleanId]) {
+            if (ytTitleCache.hasOwnProperty(cleanId)) {
+                // Move to end to mark as recently used
+                const idx = ytTitleCache[ORDER_KEY].indexOf(cleanId);
+                if (idx !== -1) {
+                    ytTitleCache[ORDER_KEY].splice(idx, 1);
+                }
+                ytTitleCache[ORDER_KEY].push(cleanId);
+                saveCache();
                 return Promise.resolve(ytTitleCache[cleanId]);
             }
             return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`)
@@ -2339,6 +2359,12 @@ onReady(async function () {
                     const title = data ? data.title : null;
                     if (title) {
                         ytTitleCache[cleanId] = title;
+                        ytTitleCache[ORDER_KEY].push(cleanId);
+                        // Evict oldest if over limit
+                        while (ytTitleCache[ORDER_KEY].length > MAX_CACHE_SIZE) {
+                            const oldest = ytTitleCache[ORDER_KEY].shift();
+                            delete ytTitleCache[oldest];
+                        }
                         saveCache();
                     }
                     return title;
