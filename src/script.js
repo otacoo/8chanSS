@@ -15,6 +15,21 @@ const debounce = (fn, delay) => {
         timeout = setTimeout(() => fn.apply(this, args), delay);
     };
 };
+// URL-based location helper (catalog, thread, index) 
+// Usage: e.g. pageType.isCatalog, or to get the raw values: pageType.host or pageType.path
+window.pageType = (() => {
+    const path = window.location.pathname.toLowerCase();
+    const currentHost = window.location.hostname.toLowerCase();
+
+    return {
+        isCatalog: /\/catalog\.html$/i.test(path),
+        isThread: /\/res\/[^/]+\.html$/i.test(path),
+        isIndex: /\/[^/]+\/$/i.test(path),
+        is8chan: /^8chan\.(se|moe)$/.test(currentHost),
+        host: currentHost,
+        path: path
+    };
+})();
 // Favicon Manager
 const faviconManager = (() => {
     // Map available styles
@@ -84,7 +99,7 @@ const faviconManager = (() => {
         let style = "default";
         try {
             style = await getSetting("customFavicon_faviconStyle");
-        } catch {}
+        } catch { }
         if (!STYLES.includes(style)) style = "default";
         cachedUserStyle = style;
         return style;
@@ -432,20 +447,21 @@ onReady(async function () {
         });
 
         // URL-based class toggling
-        const path = window.location.pathname.toLowerCase();
-        const urlClassMap = [
-            { pattern: /\/catalog\.html$/i, className: "is-catalog" },
-            { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
-            { pattern: /\/[^/]+\/$/i, className: "is-index" },
-        ];
-
-        urlClassMap.forEach(({ pattern, className }) => {
-            if (pattern.test(path)) {
-                document.documentElement.classList.add(className);
-            } else {
-                document.documentElement.classList.remove(className);
-            }
-        });
+        if (pageType.isCatalog) {
+            document.documentElement.classList.add("is-catalog");
+        } else {
+            document.documentElement.classList.remove("is-catalog");
+        }
+        if (pageType.isThread) {
+            document.documentElement.classList.add("is-thread");
+        } else {
+            document.documentElement.classList.remove("is-thread");
+        }
+        if (pageType.isIndex) {
+            document.documentElement.classList.add("is-index");
+        } else {
+            document.documentElement.classList.remove("is-index");
+        }
     }
     // Init
     featureCssClassToggles();
@@ -475,27 +491,28 @@ onReady(async function () {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Custom CSS injection
-    const currentPath = window.location.pathname.toLowerCase();
-    const currentHost = window.location.hostname.toLowerCase();
+    (function injectCustomCss() {
+        let css = "";
 
-    let css = "";
+        // Always inject site CSS for 8chan domains
+        if (pageType.is8chan) {
+            css += "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
+        }
+        // Inject CSS based on page type
+        if (pageType.isThread) {
+            css += "<%= grunt.file.read('tmp/thread.min.css').replace(/\\(^\")/g, '') %>";
+        } else if (pageType.isCatalog) {
+            css += "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
+        }
 
-    if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
-    }
-    if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += "<%= grunt.file.read('tmp/thread.min.css').replace(/\\(^\")/g, '') %>";
-    }
-    if (/\/catalog\.html$/.test(currentPath)) {
-        css += "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
-    }
-
-    if (!document.getElementById('8chSS')) {
-        const style = document.createElement('style');
-        style.id = '8chSS';
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
+        // Only inject if not already present and if there's CSS to inject
+        if (css && !document.getElementById('8chSS')) {
+            const style = document.createElement('style');
+            style.id = '8chSS';
+            style.textContent = css;
+            document.head.appendChild(style);
+        }
+    })();
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -567,10 +584,9 @@ onReady(async function () {
     }
 
     // Image Hover - Check if we should enable hover based on the current page
-    const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
     let imageHoverEnabled = false;
     try {
-        if (isCatalogPage) {
+        if (pageType.isCatalog) {
             imageHoverEnabled = await getSetting("enableCatalogImageHover");
         } else {
             imageHoverEnabled = await getSetting("enableThreadImageHover");
@@ -587,9 +603,8 @@ onReady(async function () {
 
     // --- Feature: Save Scroll Position ---
     async function featureSaveScroll() {
-        function getDivPosts() {
-            return document.querySelector(".divPosts");
-        }
+        if (pageType.isCatalog || pageType.isIndex) return;
+
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
         const MAX_THREADS = 150;
@@ -615,7 +630,6 @@ onReady(async function () {
         }
         // Get current post count
         function getCurrentPostCount() {
-            const divPosts = getDivPosts();
             if (!divPosts) return 0;
             return divPosts.querySelectorAll(":scope > .postCell[id]").length;
         }
@@ -939,8 +953,7 @@ onReady(async function () {
 
     // --- Feature: Always Open Catalog Threads in New Tab ---
     function catalogThreadsInNewTab() {
-        const catalogDiv = document.querySelector('.catalogDiv');
-        if (!catalogDiv) return;
+        if (!pageType.isCatalog) return;
 
         // Set target="_blank" for existing cells
         catalogDiv.querySelectorAll('.catalogCell a.linkThumb').forEach(link => {
@@ -1359,6 +1372,7 @@ onReady(async function () {
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
     function featureBlurSpoilers() {
+        if (pageType.isCatalog) return;
         // Utility: MIME type to extension mapping
         function getExtensionForMimeType(mime) {
             const map = {
@@ -1624,6 +1638,8 @@ onReady(async function () {
 
     // --- Feature: Watch Thread on Reply ---
     async function featureWatchThreadOnReply() {
+        if (pageType.isCatalog || pageType.isIndex) return;
+
         // --- Helpers ---
         const getWatchButton = () => document.querySelector(".watchButton");
 
@@ -1815,8 +1831,8 @@ onReady(async function () {
     // MIT License
     // https://greasyfork.org/en/scripts/533173-8chan-lightweight-extended-suite
     function hashNavigation() {
-        // Only proceed if the page has the is-thread class
-        if (!document.documentElement.classList.contains("is-thread")) return;
+        // Only proceed if the page is a thread
+        if (!pageType.isThread) return;
 
         // Use a WeakSet to track processed links
         const processedLinks = new WeakSet();
@@ -1969,6 +1985,7 @@ onReady(async function () {
     // --- Feature: Delete (Save) Name Checkbox ---
     // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
     function featureDeleteNameCheckbox() {
+        if (pageType.isCatalog) return;
         // Check if the #qr-name-row exists and has the 'hidden' class
         const nameExists = document.getElementById("qr-name-row");
         if (nameExists && nameExists.classList.contains("hidden")) {
@@ -2061,7 +2078,6 @@ onReady(async function () {
 
         await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
     }
-
 
     // --- Feature: Beep/Notify on (You) ---
     async function featureBeepOnYou() {
@@ -2267,6 +2283,8 @@ onReady(async function () {
 
     // --- Feature: Enhanced Youtube links ---
     function enhanceYouTubeLinks() {
+        if (pageType.isCatalog) return;
+
         // In-memory cache
         const ytTitleCache = {};
         // Try to load cache from localStorage
@@ -2387,6 +2405,8 @@ onReady(async function () {
 
     // --- Feature: Truncate Filenames and Show Only Extension ---
     function truncateFilenames(filenameLength) {
+        if (pageType.isCatalog) return;
+
         function processLinks(root = document) {
             root.querySelectorAll('a.originalNameLink').forEach(link => {
                 // Skip if already processed
@@ -3716,8 +3736,8 @@ onReady(async function () {
 
         // (R key): refresh thread page with 5 sec cooldown
         if (event.key === "r" || event.key === "R") {
-            const isThread = document.documentElement.classList.contains("is-thread");
-            const isCatalog = document.documentElement.classList.contains("is-catalog");
+            const isThread = pageType.isThread;
+            const isCatalog = pageType.isCatalog;
             const threadRefreshBtn = document.getElementById("refreshButton");
             const catalogRefreshBtn = document.getElementById("catalogRefreshButton");
             const now = Date.now();
