@@ -259,8 +259,7 @@ onReady(async function () {
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
-            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
-            deleteSavedName: { label: "Delete Name Checkbox", default: false }
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true }
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
@@ -524,7 +523,6 @@ onReady(async function () {
         { key: "blurSpoilers", fn: featureBlurSpoilers },
         { key: "enableHeaderCatalogLinks", fn: featureHeaderCatalogLinks },
         { key: "openCatalogThreadNewTab", fn: catalogThreadsInNewTab },
-        { key: "deleteSavedName", fn: featureDeleteNameCheckbox },
         { key: "enableScrollArrows", fn: featureScrollArrows },
         { key: "alwaysShowTW", fn: featureAlwaysShowTW },
         { key: "scrollToBottom", fn: preventFooterScrollIntoView },
@@ -1980,53 +1978,6 @@ onReady(async function () {
 
         document.body.appendChild(upBtn);
         document.body.appendChild(downBtn);
-    }
-
-    // --- Feature: Delete (Save) Name Checkbox ---
-    // Pay attention that it needs to work on localStorage for the name key (not GM Storage)
-    function featureDeleteNameCheckbox() {
-        if (pageType.isCatalog) return;
-        // Check if the #qr-name-row exists and has the 'hidden' class
-        const nameExists = document.getElementById("qr-name-row");
-        if (nameExists && nameExists.classList.contains("hidden")) {
-            return;
-        }
-
-        const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
-        if (!alwaysUseBypassCheckbox) {
-            return;
-        }
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = "saveNameCheckbox";
-        checkbox.classList.add("postingCheckbox");
-
-        const label = document.createElement("label");
-        label.htmlFor = "saveNameCheckbox";
-        label.textContent = "Delete Name";
-        label.title = "Delete Name on refresh";
-
-        alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
-        alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
-
-        // Restore checkbox state
-        const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
-        checkbox.checked = savedCheckboxState;
-
-        const nameInput = document.getElementById("qrname");
-        if (nameInput) {
-            // If the checkbox is checked on load, clear the input and remove the name from storage
-            if (checkbox.checked) {
-                nameInput.value = "";
-                localStorage.removeItem("name");
-            }
-
-            // Save checkbox state
-            checkbox.addEventListener("change", function () {
-                localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
-            });
-        }
     }
 
     // --- Feature: Hide Announcement and unhide if message changes ---
