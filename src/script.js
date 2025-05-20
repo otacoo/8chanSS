@@ -8,6 +8,7 @@ function onReady(fn) {
     }
 }
 // Debouncer
+// Usage: debounce(fn, delay);
 const debounce = (fn, delay) => {
     let timeout;
     return (...args) => {
@@ -24,6 +25,7 @@ window.pageType = (() => {
     return {
         isCatalog: /\/catalog\.html$/i.test(path),
         isThread: /\/(res|last)\/[^/]+\.html$/i.test(path),
+        isLast: /\/last\/[^/]+\.html$/i.test(path),
         isIndex: /\/[^/]+\/$/i.test(path),
         is8chan: /^8chan\.(se|moe)$/.test(currentHost),
         host: currentHost,
@@ -264,7 +266,8 @@ onReady(async function () {
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
             enableThreadHiding: { label: "Enable Thread Hiding", default: false },
-            openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false }
+            openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false },
+            enableLastFifty: { label: "Show Last 50 Posts button", default: false }
         },
         styling: {
             _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
@@ -538,6 +541,7 @@ onReady(async function () {
         { key: "customFavicon", fn: enableFavicon },
         { key: "highlightNewIds", fn: featureHighlightNewIds },
         { key: "quoteThreading", fn: featureQuoteThreading },
+        { key: "enableLastFifty", fn: featureLastFifty },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -610,7 +614,7 @@ onReady(async function () {
         // Helper functions
         // Get board name and thread number
         function getBoardAndThread() {
-            const match = pageType.isThread;
+            const match = window.location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i); // don't run on /last/ threads
             if (!match) return null;
             return { board: match[1], thread: match[2] };
         }
@@ -2561,6 +2565,8 @@ onReady(async function () {
 
     // --- Feature: Highlight New IDs ---
     async function featureHighlightNewIds() {
+        if (pageType.isLast) return;
+
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
         if (!divPosts) return;
         // Return early if there are no .spanId elements on this board
@@ -2721,6 +2727,61 @@ onReady(async function () {
         threadAllPosts();  // Process all posts on initial load
         addRefreshButton();
         setupPostObserver();
+    }
+
+    // --- Feature: Last 50 Button ---
+    function featureLastFifty() {
+        if (!pageType.isCatalog) return;
+
+        // Add the [L] button to catalog cell
+        function addLastLinkButtons(root = document) {
+            root.querySelectorAll('.catalogCell').forEach(cell => {
+                const linkThumb = cell.querySelector('.linkThumb');
+                const threadStats = cell.querySelector('.threadStats');
+                if (!linkThumb || !threadStats) return;
+
+                const href = linkThumb.getAttribute('href');
+                if (!href || !/\/res\//.test(href)) return;
+
+                // Create the /last/ href
+                const lastHref = href.replace('/res/', '/last/');
+
+                // Remove any existing button to avoid duplicates (robustness)
+                threadStats.querySelectorAll('.last-link-btn').forEach(btn => btn.remove());
+
+                // Create the [L] button
+                const span = document.createElement('span');
+                span.className = 'last-link-btn';
+                span.style.marginLeft = '0.5em';
+                const a = document.createElement('a');
+                a.href = lastHref;
+                a.textContent = '[L]';
+                a.title = 'Go to last 50 posts of this thread';
+                a.style.textDecoration = 'none';
+                a.style.fontWeight = 'bold';
+                span.appendChild(a);
+
+                // Insert after .labelPage if present, else as last child of .threadStats
+                const labelPage = threadStats.querySelector('.labelPage');
+                if (labelPage && labelPage.parentNode) {
+                    labelPage.parentNode.insertBefore(span, labelPage.nextSibling);
+                } else {
+                    threadStats.appendChild(span);
+                }
+            });
+        }
+
+        // Initial run on page load
+        addLastLinkButtons(document);
+
+        // Set up MutationObserver for dynamic updates
+        if (!divThreads) return;
+
+        // Debounce to avoid excessive calls
+        const debouncedUpdate = debounce(() => addLastLinkButtons(document), 50);
+        const observer = new MutationObserver(debouncedUpdate);
+
+        observer.observe(divThreads, { childList: true, subtree: false });
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4057,7 +4118,9 @@ onReady(async function () {
 
     // Move file uploads below OP title
     function moveFileUploadsBelowOp() {
-        if (opHeadTitle && innerOP) {
+        if (pageType.isCatalog) {
+            return;
+        } else if (opHeadTitle && innerOP) {
             innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
         }
     }
@@ -4082,6 +4145,8 @@ onReady(async function () {
 
     // --- Feature: Show all posts by ID ---
     function enableIdFiltering() {
+        if (!pageType.isThread) return;
+
         const postCellSelector = ".postCell";
         const labelIdSelector = ".labelId";
         const hiddenClassName = "is-hidden-by-filter";
