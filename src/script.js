@@ -785,7 +785,6 @@ onReady(async function () {
             if (!saved || typeof saved.position !== "number") return;
 
             const anchor = window.location.hash ? window.location.hash.replace(/^#/, "") : null;
-
             // If anchor, scroll to the postCell with that id (sanitized)
             const safeAnchor = anchor && /^[a-zA-Z0-9_-]+$/.test(anchor) ? anchor : null;
 
@@ -800,12 +799,13 @@ onReady(async function () {
                 }, 25);
                 return;
             }
-
-            // No anchor: restore scroll and add unread-line, then center unread-line
+            // No anchor: restore scroll and add unread-line
             saved.timestamp = Date.now();
             await setAllSavedScrollData(allData);
-
-            setTimeout(() => addUnreadLineAtSavedScrollPosition(saved.position, true), 100);
+            // Restore scroll position directly
+            window.scrollTo({ top: saved.position, behavior: "auto" });
+            // Only insert unread-line, do not scroll to it (set to true to scroll to unread-line)
+            setTimeout(() => addUnreadLineAtSavedScrollPosition(saved.position, false), 80);
         }
 
         // Add an unread-line marker after the .postCell <div> at a specific scroll position
@@ -2334,7 +2334,7 @@ onReady(async function () {
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
     function featureLabelCreated12h() {
-        if (!pageType.isThread) return;
+        if (!pageType.isCatalog) return;
 
         function convertLabelCreatedSpan(span) {
             if (span.dataset.timeConverted === "1") return;
@@ -2342,7 +2342,7 @@ onReady(async function () {
             const text = span.textContent;
             const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
             if (!match) return;
-    
+
             const [_, datePart, hourStr, minStr, secStr] = match;
             let hour = parseInt(hourStr, 10);
             const min = minStr;
