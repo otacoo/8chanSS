@@ -813,6 +813,13 @@ onReady(async function () {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
             if (!divPosts) return;
 
+            // Don't insert unread-line if scrollPosition is at (or near) the bottom ---
+            const margin = 5; // px, same as in removeUnreadLineIfAtBottom
+            const docHeight = document.body.offsetHeight;
+            if ((scrollPosition + window.innerHeight) >= (docHeight - margin)) {
+                return;
+            }
+
             // Find the postCell whose top is just below or equal to the scrollPosition
             const posts = Array.from(divPosts.querySelectorAll(":scope > .postCell[id]"));
             let targetPost = null;
