@@ -61,8 +61,8 @@
       grunt.registerTask('minor', ['bump-only:minor', 'updcl:2']);
       grunt.registerTask('major', ['bump-only:major', 'updcl:1']);
       return grunt.registerTask('updcl', 'Update the changelog', function(i) {
-        var version;
-        version = [];
+        var pkg = grunt.file.readJSON('package.json');
+        var version = [];
         version.length = +i + 1;
         version = version.join('#') + ' v' + pkg.version + '\n*' + grunt.template.today('yyyy-mm-dd') + '*\n';
         grunt.file.write('CHANGELOG.md', version + '\n' + grunt.file.read('CHANGELOG.md'));
