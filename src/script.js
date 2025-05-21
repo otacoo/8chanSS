@@ -2359,7 +2359,7 @@ onReady(async function () {
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
     function featureLabelCreated12h() {
-        if (!pageType.isCatalog) return;
+        if (pageType.isCatalog) return;
 
         function convertLabelCreatedSpan(span) {
             if (span.dataset.timeConverted === "1") return;
@@ -2610,7 +2610,7 @@ onReady(async function () {
 
     // --- Feature: Highlight New IDs ---
     async function featureHighlightNewIds() {
-        if (pageType.isLast) return;
+        if (pageType.isLast || pageType.isCatalog) return;
 
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
         if (!divPosts) return;
