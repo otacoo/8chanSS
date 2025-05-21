@@ -640,14 +640,13 @@ onReady(async function () {
             }
         }
 
-        // --- Unseen post count logic ---
+        // Unseen post count logic
         let lastSeenPostCount = 0;
         let unseenCount = 0;
         let tabTitleBase = null;
 
         // Store previous favicon state so we can restore it
         let previousFaviconState = null;
-
         // Helper: Update Tab title and favicon state
         const customFaviconEnabled = await getSetting("customFavicon");
 
@@ -1983,52 +1982,41 @@ onReady(async function () {
 
     // --- Feature: Hide Announcement and unhide if message changes ---
     async function featureHideAnnouncement() {
-        // Utility for hashing content
-        function getContentHash(str) {
-            let hash = 5381;
-            for (let i = 0; i < str.length; i++) {
-                hash = ((hash << 5) + hash) + str.charCodeAt(i);
-            }
-            return hash >>> 0;
-        }
-
         // Helper to process the dynamic announcement element
-        async function processElement(selector, settingKey, hashKey) {
+        async function processElement(selector, settingKey, contentKey) {
             const el = document.querySelector(selector);
             if (!el) return;
 
-            const content = el.textContent || "";
-            const sanitizedContent = content.replace(/[^\w\s.,!?-]/g, ""); // Basic sanitization
-            const hash = getContentHash(sanitizedContent);
+            const content = (el.textContent || "").replace(/[^\w\s.,!?-]/g, ""); // Basic sanitization
 
-            // Get setting and stored hash from GM storage
+            // Get setting and stored content from GM storage
             const shouldHide = await GM.getValue(`8chanSS_${settingKey}`, "false") === "true";
-            const storedHash = await GM.getValue(`8chanSS_${hashKey}`, null);
+            const storedContent = await GM.getValue(`8chanSS_${contentKey}`, null);
 
             // Reference to the root element for toggling the class
             const root = document.documentElement;
 
             if (shouldHide) {
-                if (storedHash !== null && String(storedHash) !== String(hash)) {
+                if (storedContent !== null && storedContent !== content) {
                     // Announcement content changed: disable the setting
                     if (typeof window.setSetting === "function") {
                         await window.setSetting("hideAnnouncement", false);
                     }
                     await GM.setValue(`8chanSS_${settingKey}`, "false");
-                    await GM.deleteValue(`8chanSS_${hashKey}`);
+                    await GM.deleteValue(`8chanSS_${contentKey}`);
                     // No need to remove class; on reload, class won't be present
                     return;
                 }
-                // Hash is equal to stored hash or first time: hide announcement and store hash
+                // Content is equal to stored content or first time: hide announcement and store content
                 root.classList.add("hide-announcement");
-                await GM.setValue(`8chanSS_${hashKey}`, hash);
+                await GM.setValue(`8chanSS_${contentKey}`, content);
             } else {
                 root.classList.remove("hide-announcement");
-                await GM.deleteValue(`8chanSS_${hashKey}`);
+                await GM.deleteValue(`8chanSS_${contentKey}`);
             }
         }
 
-        await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
+        await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementContent");
     }
 
     // --- Feature: Beep/Notify on (You) ---
@@ -2346,37 +2334,52 @@ onReady(async function () {
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
     function featureLabelCreated12h() {
-        function convertLabelCreatedTimes(root = document) {
-            (root.querySelectorAll
-                ? root.querySelectorAll('.labelCreated')
-                : []).forEach(span => {
-                    if (span.dataset.timeConverted === "1") return;
+        if (!pageType.isThread) return;
 
-                    const text = span.textContent;
-                    const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
-                    if (!match) return;
+        function convertLabelCreatedSpan(span) {
+            if (span.dataset.timeConverted === "1") return;
 
-                    const [_, datePart, hourStr, minStr, secStr] = match;
-                    let hour = parseInt(hourStr, 10);
-                    const min = minStr;
-                    const sec = secStr;
-                    const ampm = hour >= 12 ? 'PM' : 'AM';
-                    let hour12 = hour % 12;
-                    if (hour12 === 0) hour12 = 12;
+            const text = span.textContent;
+            const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
+            if (!match) return;
+    
+            const [_, datePart, hourStr, minStr, secStr] = match;
+            let hour = parseInt(hourStr, 10);
+            const min = minStr;
+            const sec = secStr;
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            let hour12 = hour % 12;
+            if (hour12 === 0) hour12 = 12;
 
-                    const newText = `${datePart} ${hour12}:${min}:${sec} ${ampm}`;
-                    span.textContent = newText;
-                    span.dataset.timeConverted = "1";
-                });
+            const newText = `${datePart} ${hour12}:${min}:${sec} ${ampm}`;
+            span.textContent = newText;
+            span.dataset.timeConverted = "1";
         }
 
         // Initial conversion on page load
-        convertLabelCreatedTimes();
+        function convertAllLabelCreated(root = document) {
+            const spans = root.querySelectorAll
+                ? root.querySelectorAll('.labelCreated')
+                : [];
+            spans.forEach(convertLabelCreatedSpan);
+        }
 
-        // Observe only the global .divPosts for added posts after initial conversion
-        if (divPosts) {
-            new MutationObserver(() => {
-                convertLabelCreatedTimes(divPosts);
+        convertAllLabelCreated();
+
+        // Process only new .labelCreated spans on mutation
+        if (typeof divPosts !== "undefined" && divPosts) {
+            new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType !== 1) return; // Only process element nodes
+                        if (node.classList && node.classList.contains('labelCreated')) {
+                            convertLabelCreatedSpan(node);
+                        } else if (node.querySelectorAll) {
+                            // If the node is an element, check for .labelCreated descendants
+                            node.querySelectorAll('.labelCreated').forEach(convertLabelCreatedSpan);
+                        }
+                    });
+                });
             }).observe(divPosts, { childList: true, subtree: true });
         }
     }
