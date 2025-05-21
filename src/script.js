@@ -862,7 +862,7 @@ onReady(async function () {
         // Remove unread line at the bottom
         async function removeUnreadLineIfAtBottom() {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-            const margin = 10; // px
+            const margin = 5; // px
             if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
                 removeUnreadLineMarker();
             }
