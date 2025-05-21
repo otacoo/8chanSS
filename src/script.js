@@ -1386,96 +1386,114 @@ onReady(async function () {
             };
             return map[mime.toLowerCase()] || "";
         }
-        function revealSpoilers() {
-            const spoilerLinks = document.querySelectorAll("a.imgLink");
-            spoilerLinks.forEach(async (link) => {
-                const img = link.querySelector("img");
-                if (!img) return;
-                // Skip if src is already a full media file (not t_ and has extension)
-                if (
-                    /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) && // has extension
-                    !/\/\.media\/t_[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) // not a thumbnail
-                ) {
+
+        async function processImgLink(link, idx = null) {
+            const img = link.querySelector("img");
+            if (!img) {
+                return;
+            }
+            // Skip if src is already a full media file (not t_ and has extension)
+            if (
+                /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) && // has extension
+                !/\/\.media\/t_[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) // not a thumbnail
+            ) {
+                return;
+            }
+            // Check if this is a custom spoiler image
+            const isCustomSpoiler = img.src.includes("/custom.spoiler")
+                || img.src.includes("/*/custom.spoiler")
+                || img.src.includes("/spoiler.png");
+            // Check if this is NOT already a thumbnail
+            const isNotThumbnail = !img.src.includes("/.media/t_");
+            const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
+
+            if (isNotThumbnail || isCustomSpoiler) {
+                let href = link.getAttribute("href");
+                if (!href) {
                     return;
                 }
-                // Check if this is a custom spoiler image
-                const isCustomSpoiler = img.src.includes("/custom.spoiler")
-                    || img.src.includes("/*/custom.spoiler")
-                    || img.src.includes("/spoiler.png");
-                // Check if this is NOT already a thumbnail
-                const isNotThumbnail = !img.src.includes("/.media/t_");
-                const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
-
-                if (isNotThumbnail || isCustomSpoiler) {
-                    let href = link.getAttribute("href");
-                    if (!href) return;
-                    // Extract filename without extension
-                    const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
-                    if (!match) return;
-
-                    // Get file extension from data-filemime
-                    const fileMime = link.getAttribute("data-filemime") || "";
-                    const ext = getExtensionForMimeType(fileMime);
-
-                    // Check for data-filewidth attribute
-                    const fileWidthAttr = link.getAttribute("data-filewidth");
-                    const fileHeightAttr = link.getAttribute("data-fileheight");
-                    let transformedSrc;
-                    if (
-                        (fileWidthAttr && Number(fileWidthAttr) < 250) ||
-                        (fileHeightAttr && Number(fileHeightAttr) < 250)
-                    ) {
-                        // Use the full image, not the thumbnail, and append extension
-                        transformedSrc = `/.media/${match[1]}${ext}`;
-                    } else if (!hasFilenameExtension && isCustomSpoiler) {
-                        // Use the thumbnail path (t_filename) and append extension
-                        transformedSrc = `/.media/t_${match[1]}`;
-                    } else {
-                        return;
-                    }
-                    // Temporarily lock rendered size to avoid layout shift
-                    const initialWidth = img.offsetWidth;
-                    const initialHeight = img.offsetHeight;
-                    img.style.width = initialWidth + "px";
-                    img.style.height = initialHeight + "px";
-
-                    // Change the src
-                    img.src = transformedSrc;
-
-                    // Set width/height to its initial thumbnail size when loading img again
-                    img.onload = function () {
-                        img.style.width = img.naturalWidth + "px";
-                        img.style.height = img.naturalHeight + "px";
-                    };
-
-                    // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                    if (await getSetting("blurSpoilers_removeSpoilers")) {
-                        img.style.filter = "";
-                        img.style.transition = "";
-                        img.style.border = "1px dotted var(--border-color)";
-                        img.onmouseover = null;
-                        img.onmouseout = null;
-                        return;
-                    } else {
-                        img.style.filter = "blur(5px)";
-                        img.style.transition = "filter 0.3s ease";
-                        img.addEventListener("mouseover", () => {
-                            img.style.filter = "none";
-                        });
-                        img.addEventListener("mouseout", () => {
-                            img.style.filter = "blur(5px)";
-                        });
-                    }
+                // Extract filename without extension
+                const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
+                if (!match) {
+                    return;
                 }
-            });
-        }
-        // Initial run
-        revealSpoilers();
 
-        // Observe for dynamically added spoilers
-        const observer = new MutationObserver(revealSpoilers);
+                // Get file extension from data-filemime
+                const fileMime = link.getAttribute("data-filemime") || "";
+                const ext = getExtensionForMimeType(fileMime);
+
+                // Check for data-filewidth attribute
+                const fileWidthAttr = link.getAttribute("data-filewidth");
+                const fileHeightAttr = link.getAttribute("data-fileheight");
+                let transformedSrc;
+                if (
+                    (fileWidthAttr && Number(fileWidthAttr) < 250) ||
+                    (fileHeightAttr && Number(fileHeightAttr) < 250)
+                ) {
+                    // Use the full image, not the thumbnail, and append extension
+                    transformedSrc = `/.media/${match[1]}${ext}`;
+                } else if (!hasFilenameExtension && isCustomSpoiler) {
+                    // Use the thumbnail path (t_filename) and append extension
+                    transformedSrc = `/.media/t_${match[1]}`;
+                } else {
+                    return;
+                }
+                // Temporarily lock rendered size to avoid layout shift
+                const initialWidth = img.offsetWidth;
+                const initialHeight = img.offsetHeight;
+                img.style.width = initialWidth + "px";
+                img.style.height = initialHeight + "px";
+
+                // Change the src
+                img.src = transformedSrc;
+
+                // Set width/height to its initial thumbnail size when loading img again
+                img.onload = function () {
+                    img.style.width = img.naturalWidth + "px";
+                    img.style.height = img.naturalHeight + "px";
+                };
+
+                // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
+                if (await getSetting("blurSpoilers_removeSpoilers")) {
+                    img.style.filter = "";
+                    img.style.transition = "";
+                    img.style.border = "1px dotted var(--border-color)";
+                    img.onmouseover = null;
+                    img.onmouseout = null;
+                    return;
+                } else {
+                    img.style.filter = "blur(5px)";
+                    img.style.transition = "filter 0.3s ease";
+                    img.addEventListener("mouseover", () => {
+                        img.style.filter = "none";
+                    });
+                    img.addEventListener("mouseout", () => {
+                        img.style.filter = "blur(5px)";
+                    });
+                }
+            }
+        }
+
+        // Initial run: process all existing spoiler links
+        const spoilerLinks = document.querySelectorAll("a.imgLink");
+        spoilerLinks.forEach((link, idx) => processImgLink(link, idx));
+
+        // Efficiently process only new .imgLink anchors on mutation
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType !== 1) return; // Only process element nodes
+                    if (node.classList && node.classList.contains('imgLink')) {
+                        processImgLink(node);
+                    } else if (node.querySelectorAll) {
+                        // If the node is an element, check for .imgLink descendants
+                        node.querySelectorAll('.imgLink').forEach(link => processImgLink(link));
+                    }
+                });
+            });
+        });
         observer.observe(divThreads, { childList: true, subtree: true });
-    };
+    }
 
     // --- Feature: Auto-hide Header on Scroll ---
     function autoHideHeaderOnScroll() {
