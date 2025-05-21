@@ -2406,14 +2406,19 @@ onReady(async function () {
     function truncateFilenames(filenameLength) {
         if (pageType.isCatalog) return;
 
-        function processLinks(root = document) {
-            root.querySelectorAll('a.originalNameLink').forEach(link => {
+        function processLinks(root = document, fromObserver = false) {
+            const links = root.querySelectorAll('a.originalNameLink');
+            links.forEach(link => {
                 // Skip if already processed
                 if (link.dataset.truncated === "1") return;
                 const fullFilename = link.getAttribute('download');
-                if (!fullFilename) return;
+                if (!fullFilename) {
+                    return;
+                }
                 const lastDot = fullFilename.lastIndexOf('.');
-                if (lastDot === -1) return; // No extension found
+                if (lastDot === -1) {
+                    return; // No extension found
+                }
                 const name = fullFilename.slice(0, lastDot);
                 const ext = fullFilename.slice(lastDot);
                 // Only truncate if needed
@@ -2437,11 +2442,23 @@ onReady(async function () {
             });
         }
         // Initial processing
-        processLinks(document);
+        processLinks(document, false);
         // Set up observer for dynamically added links in #divThreads
         if (divThreads) {
-            new MutationObserver(() => {
-                processLinks(divThreads);
+            new MutationObserver((mutations) => {
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1) { // ELEMENT_NODE
+                            // If the node itself is a link, process it directly
+                            if (node.matches && node.matches('a.originalNameLink')) {
+                                processLinks(node, true);
+                            } else {
+                                // Otherwise, process any links within the subtree
+                                processLinks(node, true);
+                            }
+                        }
+                    });
+                });
             }).observe(divThreads, { childList: true, subtree: true });
         }
     }
