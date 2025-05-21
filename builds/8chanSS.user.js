@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.47.0
+// @version      1.48.0
 // @namespace    8chanss
 // @description  Userscript to style 8chan
 // @author       otakudude
@@ -35,6 +35,20 @@ const debounce = (fn, delay) => {
         timeout = setTimeout(() => fn.apply(this, args), delay);
     };
 };
+window.pageType = (() => {
+    const path = window.location.pathname.toLowerCase();
+    const currentHost = window.location.hostname.toLowerCase();
+
+    return {
+        isCatalog: /\/catalog\.html$/i.test(path),
+        isThread: /\/(res|last)\/[^/]+\.html$/i.test(path),
+        isLast: /\/last\/[^/]+\.html$/i.test(path),
+        isIndex: /\/[^/]+\/$/i.test(path),
+        is8chan: /^8chan\.(se|moe)$/.test(currentHost),
+        host: currentHost,
+        path: path
+    };
+})();
 const faviconManager = (() => {
     const STYLES = [
         "default",
@@ -71,27 +85,36 @@ const faviconManager = (() => {
     };
     let currentStyle = "default";
     let currentState = "base";
+    let cachedUserStyle = null;
     function removeFavicons() {
-        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
+        const head = document.head;
+        if (!head) return;
+        head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
     }
     function insertFavicon(href) {
+        const head = document.head;
+        if (!head) return;
         const link = document.createElement('link');
         link.rel = 'icon';
         link.type = 'image/png';
         link.href = href;
-        document.head.appendChild(link);
+        head.appendChild(link);
     }
     async function getUserFaviconStyle() {
+        if (cachedUserStyle) return cachedUserStyle;
         let style = "default";
         try {
             style = await getSetting("customFavicon_faviconStyle");
         } catch { }
         if (!STYLES.includes(style)) style = "default";
+        cachedUserStyle = style;
         return style;
     }
     async function setFaviconStyle(style, state = "base") {
         if (!STYLES.includes(style)) style = "default";
         if (!STATES.includes(state)) state = "base";
+        if (currentStyle === style && currentState === state) return; 
+
         const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
         removeFavicons();
         insertFavicon(url);
@@ -230,13 +253,13 @@ onReady(async function () {
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
-            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
-            deleteSavedName: { label: "Delete Name Checkbox", default: false }
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true }
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
             enableThreadHiding: { label: "Enable Thread Hiding", default: false },
-            openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false }
+            openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false },
+            enableLastFifty: { label: "Show Last 50 Posts button", default: false }
         },
         styling: {
             _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
@@ -403,20 +426,21 @@ onReady(async function () {
                 document.documentElement.classList.remove(className);
             }
         });
-        const path = window.location.pathname.toLowerCase();
-        const urlClassMap = [
-            { pattern: /\/catalog\.html$/i, className: "is-catalog" },
-            { pattern: /\/res\/[^/]+\.html$/i, className: "is-thread" },
-            { pattern: /\/[^/]+\/$/i, className: "is-index" },
-        ];
-
-        urlClassMap.forEach(({ pattern, className }) => {
-            if (pattern.test(path)) {
-                document.documentElement.classList.add(className);
-            } else {
-                document.documentElement.classList.remove(className);
-            }
-        });
+        if (pageType.isCatalog) {
+            document.documentElement.classList.add("is-catalog");
+        } else {
+            document.documentElement.classList.remove("is-catalog");
+        }
+        if (pageType.isThread) {
+            document.documentElement.classList.add("is-thread");
+        } else {
+            document.documentElement.classList.remove("is-thread");
+        }
+        if (pageType.isIndex) {
+            document.documentElement.classList.add("is-index");
+        } else {
+            document.documentElement.classList.remove("is-index");
+        }
     }
     featureCssClassToggles();
     async function featureSidebar() {
@@ -438,34 +462,29 @@ onReady(async function () {
         }
     }
     featureSidebar();
-    const currentPath = window.location.pathname.toLowerCase();
-    const currentHost = window.location.hostname.toLowerCase();
-
-    let css = "";
-
-    if (/^8chan\.(se|moe)$/.test(currentHost)) {
-        css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}footer{visibility:hidden;height:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-you .innerOP:has(> .opHead.title > .youName),:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 2px}:root.highlight-you .innerPost:has(>.divMessage>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>:not(div)>.you){border-left:solid var(--subject-color) 2px}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:not(#media-viewer)>.imgExpanded,:not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}";
-    }
-    if (/\/res\/[^/]+\.html$/.test(currentPath)) {
-        css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto 0 auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}";
-    }
-    if (/\/catalog\.html$/.test(currentPath)) {
-        css += "#postingForm{margin:2em auto}#divTools>div:nth-child(5){float:left!important;margin-top:9px!important;margin-right:8px}";
-    }
-
-    if (!document.getElementById('8chSS')) {
-        const style = document.createElement('style');
-        style.id = '8chSS';
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
+    (function injectCustomCss() {
+        let css = "";
+        if (pageType.is8chan) {
+            css += ":not(.is-catalog) body{margin:0}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}:root.is-thread footer{visibility:hidden;height:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-you .innerOP:has(> .opHead.title > .youName),:root.highlight-you .innerPost:has(> .postInfo.title > .youName){border-left:dashed #68b723 2px}:root.highlight-you .innerPost:has(>.divMessage>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-you .innerPost:has(>.divMessage>:not(div)>:not(div)>.you){border-left:solid var(--subject-color) 2px}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:not(#media-viewer)>.imgExpanded,:not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.innerUtility.top{margin-top:2em;background-color:transparent!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}";
+        }
+        if (pageType.isThread) {
+            css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto -3px auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}";
+        } else if (pageType.isCatalog) {
+            css += "#postingForm{margin:2em auto}#divTools>div:nth-child(5){float:left!important;margin-top:9px!important;margin-right:8px}";
+        }
+        if (css && !document.getElementById('8chSS')) {
+            const style = document.createElement('style');
+            style.id = '8chSS';
+            style.textContent = css;
+            document.head.appendChild(style);
+        }
+    })();
     const featureMap = [
         { key: "enableScrollSave", fn: featureSaveScroll },
         { key: "watchThreadOnReply", fn: featureWatchThreadOnReply },
         { key: "blurSpoilers", fn: featureBlurSpoilers },
         { key: "enableHeaderCatalogLinks", fn: featureHeaderCatalogLinks },
         { key: "openCatalogThreadNewTab", fn: catalogThreadsInNewTab },
-        { key: "deleteSavedName", fn: featureDeleteNameCheckbox },
         { key: "enableScrollArrows", fn: featureScrollArrows },
         { key: "alwaysShowTW", fn: featureAlwaysShowTW },
         { key: "scrollToBottom", fn: preventFooterScrollIntoView },
@@ -481,6 +500,7 @@ onReady(async function () {
         { key: "customFavicon", fn: enableFavicon },
         { key: "highlightNewIds", fn: featureHighlightNewIds },
         { key: "quoteThreading", fn: featureQuoteThreading },
+        { key: "enableLastFifty", fn: featureLastFifty },
     ];
     for (const { key, fn } of featureMap) {
         try {
@@ -518,10 +538,9 @@ onReady(async function () {
             console.error("Error updating favicon:", e);
         }
     }
-    const isCatalogPage = /\/catalog\.html$/.test(window.location.pathname.toLowerCase());
     let imageHoverEnabled = false;
     try {
-        if (isCatalogPage) {
+        if (pageType.isCatalog) {
             imageHoverEnabled = await getSetting("enableCatalogImageHover");
         } else {
             imageHoverEnabled = await getSetting("enableThreadImageHover");
@@ -534,16 +553,13 @@ onReady(async function () {
         console.error("featureImageHover failed:", e);
     }
     async function featureSaveScroll() {
-        function getDivPosts() {
-            return document.querySelector(".divPosts");
-        }
+        if (!pageType.isThread) return;
+
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
-        const MAX_THREADS = 150;
-        const threadPagePattern = /^\/[^/]+\/res\/[^/]+\.html$/i;
-        if (!threadPagePattern.test(window.location.pathname)) return;
+        const MAX_THREADS = 200;
         function getBoardAndThread() {
-            const match = window.location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i);
+            const match = window.location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i); 
             if (!match) return null;
             return { board: match[1], thread: match[2] };
         }
@@ -556,7 +572,6 @@ onReady(async function () {
             await GM.setValue(STORAGE_KEY, JSON.stringify(data));
         }
         function getCurrentPostCount() {
-            const divPosts = getDivPosts();
             if (!divPosts) return 0;
             return divPosts.querySelectorAll(":scope > .postCell[id]").length;
         }
@@ -702,12 +717,17 @@ onReady(async function () {
             }
             saved.timestamp = Date.now();
             await setAllSavedScrollData(allData);
-
-            setTimeout(() => addUnreadLineAtSavedScrollPosition(saved.position, true), 100);
+            window.scrollTo({ top: saved.position, behavior: "auto" });
+            setTimeout(() => addUnreadLineAtSavedScrollPosition(saved.position, false), 80);
         }
         async function addUnreadLineAtSavedScrollPosition(scrollPosition, centerAfter = false) {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
             if (!divPosts) return;
+            const margin = 5; 
+            const docHeight = document.body.offsetHeight;
+            if ((scrollPosition + window.innerHeight) >= (docHeight - margin)) {
+                return;
+            }
             const posts = Array.from(divPosts.querySelectorAll(":scope > .postCell[id]"));
             let targetPost = null;
             for (let i = 0; i < posts.length; ++i) {
@@ -745,7 +765,7 @@ onReady(async function () {
         }
         async function removeUnreadLineIfAtBottom() {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-            const margin = 10; 
+            const margin = 5; 
             if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
                 removeUnreadLineMarker();
             }
@@ -816,8 +836,7 @@ onReady(async function () {
         }
     }
     function catalogThreadsInNewTab() {
-        const catalogDiv = document.querySelector('.catalogDiv');
-        if (!catalogDiv) return;
+        if (!pageType.isCatalog) return;
         catalogDiv.querySelectorAll('.catalogCell a.linkThumb').forEach(link => {
             if (link.getAttribute('target') !== '_blank') {
                 link.setAttribute('target', '_blank');
@@ -1152,6 +1171,7 @@ onReady(async function () {
         }
     }
     function featureBlurSpoilers() {
+        if (pageType.isCatalog) return;
         function getExtensionForMimeType(mime) {
             const map = {
                 "image/jpeg": ".jpg",
@@ -1166,76 +1186,92 @@ onReady(async function () {
             };
             return map[mime.toLowerCase()] || "";
         }
-        function revealSpoilers() {
-            const spoilerLinks = document.querySelectorAll("a.imgLink");
-            spoilerLinks.forEach(async (link) => {
-                const img = link.querySelector("img");
-                if (!img) return;
-                if (
-                    /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) && 
-                    !/\/\.media\/t_[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) 
-                ) {
+
+        async function processImgLink(link, idx = null) {
+            const img = link.querySelector("img");
+            if (!img) {
+                return;
+            }
+            if (
+                /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) && 
+                !/\/\.media\/t_[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) 
+            ) {
+                return;
+            }
+            const isCustomSpoiler = img.src.includes("/custom.spoiler")
+                || img.src.includes("/*/custom.spoiler")
+                || img.src.includes("/spoiler.png");
+            const isNotThumbnail = !img.src.includes("/.media/t_");
+            const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
+
+            if (isNotThumbnail || isCustomSpoiler) {
+                let href = link.getAttribute("href");
+                if (!href) {
                     return;
                 }
-                const isCustomSpoiler = img.src.includes("/custom.spoiler")
-                    || img.src.includes("/*/custom.spoiler")
-                    || img.src.includes("/spoiler.png");
-                const isNotThumbnail = !img.src.includes("/.media/t_");
-                const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
-
-                if (isNotThumbnail || isCustomSpoiler) {
-                    let href = link.getAttribute("href");
-                    if (!href) return;
-                    const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
-                    if (!match) return;
-                    const fileMime = link.getAttribute("data-filemime") || "";
-                    const ext = getExtensionForMimeType(fileMime);
-                    const fileWidthAttr = link.getAttribute("data-filewidth");
-                    const fileHeightAttr = link.getAttribute("data-fileheight");
-                    let transformedSrc;
-                    if (
-                        (fileWidthAttr && Number(fileWidthAttr) < 250) ||
-                        (fileHeightAttr && Number(fileHeightAttr) < 250)
-                    ) {
-                        transformedSrc = `/.media/${match[1]}${ext}`;
-                    } else if (!hasFilenameExtension && isCustomSpoiler) {
-                        transformedSrc = `/.media/t_${match[1]}`;
-                    } else {
-                        return;
-                    }
-                    const initialWidth = img.offsetWidth;
-                    const initialHeight = img.offsetHeight;
-                    img.style.width = initialWidth + "px";
-                    img.style.height = initialHeight + "px";
-                    img.src = transformedSrc;
-                    img.onload = function () {
-                        img.style.width = img.naturalWidth + "px";
-                        img.style.height = img.naturalHeight + "px";
-                    };
-                    if (await getSetting("blurSpoilers_removeSpoilers")) {
-                        img.style.filter = "";
-                        img.style.transition = "";
-                        img.style.border = "1px dotted var(--border-color)";
-                        img.onmouseover = null;
-                        img.onmouseout = null;
-                        return;
-                    } else {
-                        img.style.filter = "blur(5px)";
-                        img.style.transition = "filter 0.3s ease";
-                        img.addEventListener("mouseover", () => {
-                            img.style.filter = "none";
-                        });
-                        img.addEventListener("mouseout", () => {
-                            img.style.filter = "blur(5px)";
-                        });
-                    }
+                const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
+                if (!match) {
+                    return;
                 }
-            });
+                const fileMime = link.getAttribute("data-filemime") || "";
+                const ext = getExtensionForMimeType(fileMime);
+                const fileWidthAttr = link.getAttribute("data-filewidth");
+                const fileHeightAttr = link.getAttribute("data-fileheight");
+                let transformedSrc;
+                if (
+                    (fileWidthAttr && Number(fileWidthAttr) < 250) ||
+                    (fileHeightAttr && Number(fileHeightAttr) < 250)
+                ) {
+                    transformedSrc = `/.media/${match[1]}${ext}`;
+                } else if (!hasFilenameExtension && isCustomSpoiler) {
+                    transformedSrc = `/.media/t_${match[1]}`;
+                } else {
+                    return;
+                }
+                const initialWidth = img.offsetWidth;
+                const initialHeight = img.offsetHeight;
+                img.style.width = initialWidth + "px";
+                img.style.height = initialHeight + "px";
+                img.src = transformedSrc;
+                img.onload = function () {
+                    img.style.width = img.naturalWidth + "px";
+                    img.style.height = img.naturalHeight + "px";
+                };
+                if (await getSetting("blurSpoilers_removeSpoilers")) {
+                    img.style.filter = "";
+                    img.style.transition = "";
+                    img.style.border = "1px dotted var(--border-color)";
+                    img.onmouseover = null;
+                    img.onmouseout = null;
+                    return;
+                } else {
+                    img.style.filter = "blur(5px)";
+                    img.style.transition = "filter 0.3s ease";
+                    img.addEventListener("mouseover", () => {
+                        img.style.filter = "none";
+                    });
+                    img.addEventListener("mouseout", () => {
+                        img.style.filter = "blur(5px)";
+                    });
+                }
+            }
         }
-        revealSpoilers();
-        const observer = new MutationObserver(revealSpoilers);
+        const spoilerLinks = document.querySelectorAll("a.imgLink");
+        spoilerLinks.forEach((link, idx) => processImgLink(link, idx));
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType !== 1) return; 
+                    if (node.classList && node.classList.contains('imgLink')) {
+                        processImgLink(node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll('.imgLink').forEach(link => processImgLink(link));
+                    }
+                });
+            });
+        });
         observer.observe(divThreads, { childList: true, subtree: true });
-    };
+    }
     function autoHideHeaderOnScroll() {
         const header = document.getElementById('dynamicHeaderThread');
         if (!header) return;
@@ -1352,6 +1388,7 @@ onReady(async function () {
         observer.observe(watchedMenu, { childList: true, subtree: true });
     }
     async function featureWatchThreadOnReply() {
+        if (pageType.isCatalog || pageType.isIndex) return;
         const getWatchButton = () => document.querySelector(".watchButton");
         function watchThreadIfNotWatched() {
             const btn = getWatchButton();
@@ -1495,7 +1532,7 @@ onReady(async function () {
     }
     markAllThreadsAsRead();
     function hashNavigation() {
-        if (!document.documentElement.classList.contains("is-thread")) return;
+        if (!pageType.isThread) return;
         const processedLinks = new WeakSet();
         function addHashLinks(container = document) {
             const links = container.querySelectorAll('.panelBacklinks a, .altBacklinks a, .divMessage .quoteLink');
@@ -1616,80 +1653,34 @@ onReady(async function () {
         document.body.appendChild(upBtn);
         document.body.appendChild(downBtn);
     }
-    function featureDeleteNameCheckbox() {
-        const nameExists = document.getElementById("qr-name-row");
-        if (nameExists && nameExists.classList.contains("hidden")) {
-            return;
-        }
-
-        const alwaysUseBypassCheckbox = document.getElementById("qralwaysUseBypassCheckBox");
-        if (!alwaysUseBypassCheckbox) {
-            return;
-        }
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = "saveNameCheckbox";
-        checkbox.classList.add("postingCheckbox");
-
-        const label = document.createElement("label");
-        label.htmlFor = "saveNameCheckbox";
-        label.textContent = "Delete Name";
-        label.title = "Delete Name on refresh";
-
-        alwaysUseBypassCheckbox.parentNode.insertBefore(checkbox, alwaysUseBypassCheckbox);
-        alwaysUseBypassCheckbox.parentNode.insertBefore(label, checkbox.nextSibling);
-        const savedCheckboxState = localStorage.getItem("8chanSS_deleteNameCheckbox") === "true";
-        checkbox.checked = savedCheckboxState;
-
-        const nameInput = document.getElementById("qrname");
-        if (nameInput) {
-            if (checkbox.checked) {
-                nameInput.value = "";
-                localStorage.removeItem("name");
-            }
-            checkbox.addEventListener("change", function () {
-                localStorage.setItem("8chanSS_deleteNameCheckbox", checkbox.checked);
-            });
-        }
-    }
     async function featureHideAnnouncement() {
-        function getContentHash(str) {
-            let hash = 5381;
-            for (let i = 0; i < str.length; i++) {
-                hash = ((hash << 5) + hash) + str.charCodeAt(i);
-            }
-            return hash >>> 0;
-        }
-        async function processElement(selector, settingKey, hashKey) {
+        async function processElement(selector, settingKey, contentKey) {
             const el = document.querySelector(selector);
             if (!el) return;
 
-            const content = el.textContent || "";
-            const sanitizedContent = content.replace(/[^\w\s.,!?-]/g, ""); 
-            const hash = getContentHash(sanitizedContent);
+            const content = (el.textContent || "").replace(/[^\w\s.,!?-]/g, ""); 
             const shouldHide = await GM.getValue(`8chanSS_${settingKey}`, "false") === "true";
-            const storedHash = await GM.getValue(`8chanSS_${hashKey}`, null);
+            const storedContent = await GM.getValue(`8chanSS_${contentKey}`, null);
             const root = document.documentElement;
 
             if (shouldHide) {
-                if (storedHash !== null && String(storedHash) !== String(hash)) {
+                if (storedContent !== null && storedContent !== content) {
                     if (typeof window.setSetting === "function") {
                         await window.setSetting("hideAnnouncement", false);
                     }
                     await GM.setValue(`8chanSS_${settingKey}`, "false");
-                    await GM.deleteValue(`8chanSS_${hashKey}`);
+                    await GM.deleteValue(`8chanSS_${contentKey}`);
                     return;
                 }
                 root.classList.add("hide-announcement");
-                await GM.setValue(`8chanSS_${hashKey}`, hash);
+                await GM.setValue(`8chanSS_${contentKey}`, content);
             } else {
                 root.classList.remove("hide-announcement");
-                await GM.deleteValue(`8chanSS_${hashKey}`);
+                await GM.deleteValue(`8chanSS_${contentKey}`);
             }
         }
 
-        await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementHash");
+        await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementContent");
     }
     async function featureBeepOnYou() {
         if (!divPosts) return;
@@ -1848,12 +1839,25 @@ onReady(async function () {
     }
     featureBeepOnYou();
     function enhanceYouTubeLinks() {
+        if (pageType.isCatalog) return;
         const ytTitleCache = {};
+        const MAX_CACHE_SIZE = 350;
+        const ORDER_KEY = "_order";
         function loadCache() {
             try {
                 const data = localStorage.getItem('ytTitleCache');
-                if (data) Object.assign(ytTitleCache, JSON.parse(data));
-            } catch (e) { }
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    Object.assign(ytTitleCache, parsed);
+                    if (!Array.isArray(ytTitleCache[ORDER_KEY])) {
+                        ytTitleCache[ORDER_KEY] = [];
+                    }
+                } else {
+                    ytTitleCache[ORDER_KEY] = [];
+                }
+            } catch (e) {
+                ytTitleCache[ORDER_KEY] = [];
+            }
         }
         function saveCache() {
             try {
@@ -1881,7 +1885,13 @@ onReady(async function () {
         async function fetchYouTubeTitle(videoId) {
             const cleanId = sanitizeYouTubeId(videoId);
             if (!cleanId) return null;
-            if (ytTitleCache[cleanId]) {
+            if (ytTitleCache.hasOwnProperty(cleanId)) {
+                const idx = ytTitleCache[ORDER_KEY].indexOf(cleanId);
+                if (idx !== -1) {
+                    ytTitleCache[ORDER_KEY].splice(idx, 1);
+                }
+                ytTitleCache[ORDER_KEY].push(cleanId);
+                saveCache();
                 return Promise.resolve(ytTitleCache[cleanId]);
             }
             return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`)
@@ -1890,6 +1900,11 @@ onReady(async function () {
                     const title = data ? data.title : null;
                     if (title) {
                         ytTitleCache[cleanId] = title;
+                        ytTitleCache[ORDER_KEY].push(cleanId);
+                        while (ytTitleCache[ORDER_KEY].length > MAX_CACHE_SIZE) {
+                            const oldest = ytTitleCache[ORDER_KEY].shift();
+                            delete ytTitleCache[oldest];
+                        }
                         saveCache();
                     }
                     return title;
@@ -1913,44 +1928,65 @@ onReady(async function () {
         new MutationObserver(() => processLinks(divThreads)).observe(divThreads, { childList: true, subtree: true });
     }
     function featureLabelCreated12h() {
-        function convertLabelCreatedTimes(root = document) {
-            (root.querySelectorAll
-                ? root.querySelectorAll('.labelCreated')
-                : []).forEach(span => {
-                    if (span.dataset.timeConverted === "1") return;
+        if (pageType.isCatalog) return;
 
-                    const text = span.textContent;
-                    const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
-                    if (!match) return;
+        function convertLabelCreatedSpan(span) {
+            if (span.dataset.timeConverted === "1") return;
 
-                    const [_, datePart, hourStr, minStr, secStr] = match;
-                    let hour = parseInt(hourStr, 10);
-                    const min = minStr;
-                    const sec = secStr;
-                    const ampm = hour >= 12 ? 'PM' : 'AM';
-                    let hour12 = hour % 12;
-                    if (hour12 === 0) hour12 = 12;
+            const text = span.textContent;
+            const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
+            if (!match) return;
 
-                    const newText = `${datePart} ${hour12}:${min}:${sec} ${ampm}`;
-                    span.textContent = newText;
-                    span.dataset.timeConverted = "1";
-                });
+            const [_, datePart, hourStr, minStr, secStr] = match;
+            let hour = parseInt(hourStr, 10);
+            const min = minStr;
+            const sec = secStr;
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            let hour12 = hour % 12;
+            if (hour12 === 0) hour12 = 12;
+
+            const newText = `${datePart} ${hour12}:${min}:${sec} ${ampm}`;
+            span.textContent = newText;
+            span.dataset.timeConverted = "1";
         }
-        convertLabelCreatedTimes();
-        if (divPosts) {
-            new MutationObserver(() => {
-                convertLabelCreatedTimes(divPosts);
+        function convertAllLabelCreated(root = document) {
+            const spans = root.querySelectorAll
+                ? root.querySelectorAll('.labelCreated')
+                : [];
+            spans.forEach(convertLabelCreatedSpan);
+        }
+
+        convertAllLabelCreated();
+        if (typeof divPosts !== "undefined" && divPosts) {
+            new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType !== 1) return; 
+                        if (node.classList && node.classList.contains('labelCreated')) {
+                            convertLabelCreatedSpan(node);
+                        } else if (node.querySelectorAll) {
+                            node.querySelectorAll('.labelCreated').forEach(convertLabelCreatedSpan);
+                        }
+                    });
+                });
             }).observe(divPosts, { childList: true, subtree: true });
         }
     }
     function truncateFilenames(filenameLength) {
-        function processLinks(root = document) {
-            root.querySelectorAll('a.originalNameLink').forEach(link => {
+        if (pageType.isCatalog) return;
+
+        function processLinks(root = document, fromObserver = false) {
+            const links = root.querySelectorAll('a.originalNameLink');
+            links.forEach(link => {
                 if (link.dataset.truncated === "1") return;
                 const fullFilename = link.getAttribute('download');
-                if (!fullFilename) return;
+                if (!fullFilename) {
+                    return;
+                }
                 const lastDot = fullFilename.lastIndexOf('.');
-                if (lastDot === -1) return; 
+                if (lastDot === -1) {
+                    return; 
+                }
                 const name = fullFilename.slice(0, lastDot);
                 const ext = fullFilename.slice(lastDot);
                 let truncated = fullFilename;
@@ -1968,10 +2004,20 @@ onReady(async function () {
                 link.title = fullFilename;
             });
         }
-        processLinks(document);
+        processLinks(document, false);
         if (divThreads) {
-            new MutationObserver(() => {
-                processLinks(divThreads);
+            new MutationObserver((mutations) => {
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1) { 
+                            if (node.matches && node.matches('a.originalNameLink')) {
+                                processLinks(node, true);
+                            } else {
+                                processLinks(node, true);
+                            }
+                        }
+                    });
+                });
             }).observe(divThreads, { childList: true, subtree: true });
         }
     }
@@ -2082,6 +2128,8 @@ onReady(async function () {
         }
     }
     async function featureHighlightNewIds() {
+        if (pageType.isLast || pageType.isCatalog) return;
+
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
         if (!divPosts) return;
         if (!document.querySelector('.spanId')) return;
@@ -2209,6 +2257,43 @@ onReady(async function () {
         threadAllPosts();  
         addRefreshButton();
         setupPostObserver();
+    }
+    function featureLastFifty() {
+        if (!pageType.isCatalog) return;
+        function addLastLinkButtons(root = document) {
+            root.querySelectorAll('.catalogCell').forEach(cell => {
+                const linkThumb = cell.querySelector('.linkThumb');
+                const threadStats = cell.querySelector('.threadStats');
+                if (!linkThumb || !threadStats) return;
+
+                const href = linkThumb.getAttribute('href');
+                if (!href || !/\/res\//.test(href)) return;
+                const lastHref = href.replace('/res/', '/last/');
+                threadStats.querySelectorAll('.last-link-btn').forEach(btn => btn.remove());
+                const span = document.createElement('span');
+                span.className = 'last-link-btn';
+                span.style.marginLeft = '0.5em';
+                const a = document.createElement('a');
+                a.href = lastHref;
+                a.textContent = '[L]';
+                a.title = 'Go to last 50 posts of this thread';
+                a.style.textDecoration = 'none';
+                a.style.fontWeight = 'bold';
+                span.appendChild(a);
+                const labelPage = threadStats.querySelector('.labelPage');
+                if (labelPage && labelPage.parentNode) {
+                    labelPage.parentNode.insertBefore(span, labelPage.nextSibling);
+                } else {
+                    threadStats.appendChild(span);
+                }
+            });
+        }
+        addLastLinkButtons(document);
+        if (!divThreads) return;
+        const debouncedUpdate = debounce(() => addLastLinkButtons(document), 50);
+        const observer = new MutationObserver(debouncedUpdate);
+
+        observer.observe(divThreads, { childList: true, subtree: false });
     }
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
@@ -2472,7 +2557,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. 1.47.0</a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. 1.48.0</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -3038,8 +3123,8 @@ onReady(async function () {
             return;
         }
         if (event.key === "r" || event.key === "R") {
-            const isThread = document.documentElement.classList.contains("is-thread");
-            const isCatalog = document.documentElement.classList.contains("is-catalog");
+            const isThread = pageType.isThread;
+            const isCatalog = pageType.isCatalog;
             const threadRefreshBtn = document.getElementById("refreshButton");
             const catalogRefreshBtn = document.getElementById("catalogRefreshButton");
             const now = Date.now();
@@ -3281,7 +3366,7 @@ onReady(async function () {
             refreshBtn.parentNode.insertBefore(btn, refreshBtn);
         }
         function hideThreadsOnRefresh() {
-            if (!/\/catalog\.html$/.test(window.location.pathname)) return;
+            if (!pageType.isCatalog) return;
             onReady(addShowHiddenButton);
             onReady(applyHiddenThreads);
             const catalogContainer = document.querySelector(".catalogWrapper, .catalogDiv");
@@ -3310,7 +3395,9 @@ onReady(async function () {
         }
     }
     function moveFileUploadsBelowOp() {
-        if (opHeadTitle && innerOP) {
+        if (pageType.isCatalog) {
+            return;
+        } else if (opHeadTitle && innerOP) {
             innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
         }
     }
@@ -3331,6 +3418,8 @@ onReady(async function () {
         }
     });
     function enableIdFiltering() {
+        if (!pageType.isThread) return;
+
         const postCellSelector = ".postCell";
         const labelIdSelector = ".labelId";
         const hiddenClassName = "is-hidden-by-filter";

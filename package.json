@@ -1,6 +1,6 @@
 {
   "name": "8chanss",
-  "version": "1.47.0",
+  "version": "1.48.0",
   "description": "Userscript to style 8chan",
   "meta": {
     "name": "8chanSS",
@@ -43,7 +43,7 @@
   },
   "author": "otakudude",
   "contributors": [
-    "Anonymous"
+    "bapao1"
   ],
   "license": "MIT",
   "readmeFilename": "README.md",

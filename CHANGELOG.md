@@ -1,3 +1,17 @@
+## v1.48.0
+*2025-05-21*
+
+- **New Option:** Show Last 50 Posts button for the catalog
+- Removed: Delete Name Checkbox, will no longer be necessary after site update
+- Updated Beep on (You) to only fire if the setting is enabled and prevent WebAudio warnings in the console
+- Bug fix for Hash Navigation not working correctly for links in OP
+- Bug fix for Quote Threading not threading correctly
+- Improved caching of YT titles and cap it at 350 entries
+- Improved the dynamic Announcement hiding with a much simpler and faster implementation
+- Footer (copyright stuff) will only be hidden in threads
+- Adjusted Save Scroll position and Unread line, unread line will no longer appear if the page is loaded at its end
+- Various optimizations, reduced redundancy and optimized observers
+
 ## v1.47.0
 *2025-05-18*
 
