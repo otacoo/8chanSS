@@ -47,33 +47,39 @@ More incoming...
 
 ### Keyboard Shortcuts:
 
-`CTRL` + `F1` : Open 8chanSS settings menu
+<kbd>CTRL</kbd> + <kbd>F1</kbd> : Open 8chanSS settings menu
 
-`CTRL` + `Enter` : Submit post
+<kbd>CTRL</kbd> + <kbd>Enter</kbd> : Submit post
 
-`Tab` : Target Quick Reply text area
+<kbd>Tab</kbd> : Target Quick Reply text area
 
-`R` : Refresh Thread (5 sec. cooldown)
+<kbd>R</kbd> : Refresh Thread (5 sec. cooldown)
 
-`Esc` : Clear and close the Quick Reply
+<kbd>Esc</kbd> : Clear and close the Quick Reply
 
-`CTRL` + `Q` : Toggle Quick Reply on/off
+<kbd>CTRL</kbd> + <kbd>Q</kbd> : Toggle Quick Reply on/off
 
-`ALT` + `W` : Watch thread
+<kbd>SHIFT</kbd> + <kbd>T</kbd> : Toggle Quote Threading
 
-`CTRL` + `S` : Add spoiler tags
+<kbd>ALT</kbd> + <kbd>W</kbd> : Watch thread
 
-`ALT` + `C` : Add code tags
+<kbd>CTRL</kbd> + <kbd>UP/DOWN Arrow</kbd> : Scroll between Your replies
 
-`CTRL` + `B` : Add **bold** tags
+<kbd>CTRL</kbd> + <kbd>SHIFT</kbd> + <kbd>UP/DOWN Arrow</kbd> : Scroll between replies to (You)
 
-`CTRL` + `U` : Add underline tags
+<kbd>CTRL</kbd> + <kbd>S</kbd> : Add spoiler tags
 
-`CTRL` + `I` : Add *italics* tags
+<kbd>ALT</kbd> + <kbd>C</kbd> : Add code tags
 
-`CTRL` + `D` : Add Srz Bizniz tags
+<kbd>CTRL</kbd> + <kbd>B</kbd> : Add **bold** tags
 
-`CTRL` + `M` : Add moe tags
+<kbd>CTRL</kbd> + <kbd>U</kbd> : Add underline tags
+
+<kbd>CTRL</kbd> + <kbd>I</kbd> : Add *italics* tags
+
+<kbd>CTRL</kbd> + <kbd>D</kbd> : Add Srz Bizniz tags
+
+<kbd>CTRL</kbd> + <kbd>M</kbd> : Add moe tags
 
 ### How to add boards to your header:
 
@@ -81,7 +87,7 @@ More incoming...
 
 ### How to block custom themes:
 
-**Note:** Userscripts CANNOT block network requests directly. I have tried to block the custom theme from loading on page load to avoid flashing of unstyled content (FOUC), it minimizes the issue but doesn't fix it.
+**Note:** Userscripts CANNOT block network requests directly.\
 If you use uBlock Origin you can more directly prevent the custom CSS from loading altogether with the following:
 
 Add this to uBlock's *My Filters* page and press Save Changes, then restart your browser.
