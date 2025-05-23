@@ -2,15 +2,13 @@
 // @name         8chanSS
 // @version      1.48.0
 // @namespace    8chanss
-// @description  Userscript to style 8chan
+// @description  A userscript to add functionality to 8chan.
 // @author       otakudude
 // @minGMVer     4.3
 // @minFFVer     121
 // @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
-// @match        *://8chan.moe/*
-// @match        *://8chan.se/*
-// @exclude      *://8chan.moe/login.html
-// @exclude      *://8chan.se/login.html
+// @match        *://dev.8ch.moe/*
+// @exclude      *://dev.8ch.moe/login.html
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.deleteValue
@@ -44,7 +42,7 @@ window.pageType = (() => {
         isThread: /\/(res|last)\/[^/]+\.html$/i.test(path),
         isLast: /\/last\/[^/]+\.html$/i.test(path),
         isIndex: /\/[^/]+\/$/i.test(path),
-        is8chan: /^8chan\.(se|moe)$/.test(currentHost),
+        is8chan: /^dev\.8ch\.(se|moe)$/.test(currentHost),
         host: currentHost,
         path: path
     };
@@ -960,7 +958,7 @@ onReady(async function () {
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
             const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
             const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
-            const isSmallImage = (fileWidth && fileWidth < 220) || (fileHeight && fileHeight < 220);
+            const isSmallImage = (fileWidth && fileWidth <= 220) || (fileHeight && fileHeight <= 220);
             if (
                 isSmallImage &&
                 filemime && filemime.toLowerCase() === "image/png" &&
