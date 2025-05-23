@@ -14,7 +14,6 @@
   "update_url": "<%= meta.downloads %>updates.xml",
   "permissions": [
     "storage",
-    "*://8chan.moe/*",
-    "*://8chan.se/*"
+    "*://dev.8ch.moe/*",
   ]
 }

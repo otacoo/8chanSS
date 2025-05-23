@@ -27,7 +27,7 @@ window.pageType = (() => {
         isThread: /\/(res|last)\/[^/]+\.html$/i.test(path),
         isLast: /\/last\/[^/]+\.html$/i.test(path),
         isIndex: /\/[^/]+\/$/i.test(path),
-        is8chan: /^8chan\.(se|moe)$/.test(currentHost),
+        is8chan: /^dev\.8ch\.(se|moe)$/.test(currentHost),
         host: currentHost,
         path: path
     };

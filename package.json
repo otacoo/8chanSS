@@ -10,12 +10,10 @@
     "buildsPath": "builds/",
     "mainBranch": "main",
     "matches": [
-      "*://8chan.moe/*",
-      "*://8chan.se/*"
+      "*://dev.8ch.moe/*"
     ],
     "exclude_matches": [
-      "*://8chan.moe/login.html",
-      "*://8chan.se/login.html"
+      "*://dev.8ch.moe/login.html"
     ],
     "files": {
       "metajs": "8chanSS.meta.js",
