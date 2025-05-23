@@ -1,9 +1,9 @@
 {
-  "name": "8chanss",
+  "name": "8chanssdev",
   "version": "1.48.0",
   "description": "A userscript to add functionality to 8chan.",
   "meta": {
-    "name": "8chanSS",
+    "name": "8chanSS DEV",
     "repo": "https://github.com/otacoo/8chanSS/",
     "page": "https://github.com/otacoo/8chanSS/",
     "downloads": "https://github.com/otacoo/8chanSS/releases/latest/download/",
