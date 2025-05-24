@@ -457,29 +457,23 @@ onReady(async function () {
     Object.freeze(scriptSettings); // Prevent accidental mutation of original settings
 
     // Flatten settings for backward compatibility with existing functions
-    let flatSettings = null;
     function flattenSettings() {
-        if (flatSettings !== null) return flatSettings; // Return cached if already flattened
         const result = {};
         Object.keys(scriptSettings).forEach((category) => {
             Object.keys(scriptSettings[category]).forEach((key) => {
                 if (key.startsWith('_')) return;
-                // Also flatten any sub-options
                 result[key] = scriptSettings[category][key];
-                if (!scriptSettings[category][key].subOptions) return;
-                Object.keys(scriptSettings[category][key].subOptions).forEach(
-                    (subKey) => {
-                        const fullKey = `${key}_${subKey}`;
-                        result[fullKey] =
-                            scriptSettings[category][key].subOptions[subKey];
-                    }
-                );
+                const subOptions = scriptSettings[category][key].subOptions;
+                if (!subOptions || typeof subOptions !== "object") return;
+                Object.keys(subOptions).forEach((subKey) => {
+                    const fullKey = `${key}_${subKey}`;
+                    result[fullKey] = subOptions[subKey];
+                });
             });
         });
-        flatSettings = Object.freeze(result);
-        return flatSettings;
+        return Object.freeze(result);
     }
-    flattenSettings();
+    let flatSettings = flattenSettings();
 
     // --- GM storage wrappers ---
     async function getSetting(key) {
@@ -495,11 +489,17 @@ onReady(async function () {
             return flatSettings[key]?.default ?? false;
         }
         if (val === null) return flatSettings[key].default;
-        if (flatSettings[key].type === "number") return Number(val);
-        if (flatSettings[key].type === "text") return String(val).replace(/[<>"']/g, "").slice(0, flatSettings[key].maxLength || 32);
-        if (flatSettings[key].type === "textarea") return String(val);
-        if (flatSettings[key].type === "select") return String(val);
-        return val === "true";
+        switch (flatSettings[key].type) {
+          case "number":
+            return Number(val);
+          case "text":
+            return String(val).replace(/[<>"']/g, "").slice(0, flatSettings[key].maxLength || 32);
+          case "textarea":
+          case "select":
+            return String(val);
+          default:
+            return val === "true";
+        }
     }
 
     async function setSetting(key, value) {
@@ -1138,8 +1138,6 @@ onReady(async function () {
         let cleanupFns = [];
         let currentAudioIndicator = null;
         let lastMouseEvent = null; // Store last mouse event for initial placement
-        const docElement = document.documentElement;
-        const SCROLLBAR_WIDTH = window.innerWidth - docElement.clientWidth; // Calculate scrollbar width once
 
         // --- Utility: Clamp value between min and max ---
         function clamp(val, min, max) {
@@ -1154,13 +1152,15 @@ onReady(async function () {
             const mw = floatingMedia.offsetWidth || 0;
             const mh = floatingMedia.offsetHeight || 0;
 
-            const MEDIA_BOTTOM_MARGIN_PX = window.innerHeight * (MEDIA_BOTTOM_MARGIN / 100); // Calculate scrollbar width
+            const docElement = document.documentElement;
+            const SCROLLBAR_WIDTH = window.innerWidth - docElement.clientWidth; // Calculate scrollbar width once
+            const MEDIA_BOTTOM_MARGIN_PX = vh * (MEDIA_BOTTOM_MARGIN / 100);
 
             let x, y;
 
             // Try to show on the right of the cursor first
-            let rightX = event.clientX + MEDIA_OFFSET;
-            let leftX = event.clientX - MEDIA_OFFSET - mw;
+            const rightX = event.clientX + MEDIA_OFFSET;
+            const leftX = event.clientX - MEDIA_OFFSET - mw;
 
             // If there's enough space on the right, use it
             if (rightX + mw <= vw - SCROLLBAR_WIDTH) {
@@ -1323,6 +1323,15 @@ onReady(async function () {
             return null;
         }
 
+        // --- Event Handlers (defined once for reuse) ---
+        function leaveHandler() { 
+            cleanupFloatingMedia(); 
+        }
+        function mouseMoveHandler(ev) {
+            lastMouseEvent = ev;
+            positionFloatingMedia(ev);
+        }
+
         // --- Main hover handler ---
         async function onThumbEnter(e) {
             cleanupFloatingMedia();
@@ -1381,7 +1390,7 @@ onReady(async function () {
             if (isAudio) {
                 // Audio: show indicator, play audio (hidden)
                 // Always append indicator to the nearest .imgLink or .linkThumb
-                let container = thumb.closest("a.linkThumb, a.imgLink");
+                const container = thumb.closest("a.linkThumb, a.imgLink");
                 if (container && !container.style.position) {
                     container.style.position = "relative";
                 }
@@ -1403,13 +1412,12 @@ onReady(async function () {
                 currentAudioIndicator = indicator;
 
                 // Cleanup on leave/click/scroll
-                const cleanup = () => cleanupFloatingMedia();
-                thumb.addEventListener("mouseleave", cleanup, { once: true });
-                if (container) container.addEventListener("click", cleanup, { once: true });
-                window.addEventListener("scroll", cleanup, { passive: true, once: true });
-                cleanupFns.push(() => thumb.removeEventListener("mouseleave", cleanup));
-                if (container) cleanupFns.push(() => container.removeEventListener("click", cleanup));
-                cleanupFns.push(() => window.removeEventListener("scroll", cleanup));
+                thumb.addEventListener("mouseleave", leaveHandler, { once: true });
+                if (container) container.addEventListener("click", leaveHandler, { once: true });
+                window.addEventListener("scroll", leaveHandler, { passive: true, once: true });
+                cleanupFns.push(() => thumb.removeEventListener("mouseleave", leaveHandler));
+                if (container) cleanupFns.push(() => container.removeEventListener("click", leaveHandler));
+                cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
                 return;
             }
 
@@ -1438,10 +1446,6 @@ onReady(async function () {
 
             // Placement of the image
             // --- Always follow the cursor, even while loading ---
-            function mouseMoveHandler(ev) {
-                lastMouseEvent = ev;
-                positionFloatingMedia(ev);
-            }
             document.addEventListener("mousemove", mouseMoveHandler, { passive: true });
             thumb.addEventListener("mouseleave", leaveHandler, { passive: true, once: true });
             cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
@@ -1471,7 +1475,6 @@ onReady(async function () {
             floatingMedia.onerror = cleanupFloatingMedia;
 
             // Cleanup on leave/scroll
-            function leaveHandler() { cleanupFloatingMedia(); }
             thumb.addEventListener("mouseleave", leaveHandler, { once: true });
             window.addEventListener("scroll", leaveHandler, { passive: true, once: true });
             cleanupFns.push(() => thumb.removeEventListener("mouseleave", leaveHandler));
@@ -1503,56 +1506,59 @@ onReady(async function () {
         attachThumbListeners();
 
         // Observe for any new nodes under #divThreads
-        if (divThreads) {
+        if (typeof divThreads !== "undefined" && divThreads) {
             const observer = new MutationObserver((mutations) => {
-                // Flatten all added nodes from all mutations into a single array
-                const addedElements = [];
                 for (const mutation of mutations) {
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType === 1) {
-                            addedElements.push(node);
+                            attachThumbListeners(node);
                         }
                     }
                 }
-                // Attach listeners for each added element
-                addedElements.forEach(node => attachThumbListeners(node));
             });
             observer.observe(divThreads, { childList: true, subtree: true });
         }
     }
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
-    function featureBlurSpoilers() {
+    // Utility: MIME type to extension mapping
+    function getExtensionForMimeType(mime) {
+        const map = {
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/jxl": ".jxl",
+            "image/png": ".png",
+            "image/apng": ".png",
+            "image/gif": ".gif",
+            "image/avif": ".avif",
+            "image/webp": ".webp",
+            "image/bmp": ".bmp",
+        };
+        return map[mime.toLowerCase()] || "";
+    }
+
+    async function featureBlurSpoilers() {
         // Only run on thread or index pages
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
             return;
         }
-        // Utility: MIME type to extension mapping
-        function getExtensionForMimeType(mime) {
-            const map = {
-                "image/jpeg": ".jpg",
-                "image/jpg": ".jpg",
-                "image/jxl": ".jxl",
-                "image/png": ".png",
-                "image/apng": ".png",
-                "image/gif": ".gif",
-                "image/avif": ".avif",
-                "image/webp": ".webp",
-                "image/bmp": ".bmp",
-            };
-            return map[mime.toLowerCase()] || "";
-        }
 
-        async function processImgLink(link, idx = null) {
+        const removeSpoilers = await getSetting("blurSpoilers_removeSpoilers");
+
+        function processImgLink(link) {
+            if (link.dataset.blurSpoilerProcessed === "1") {
+                return;
+            }
             const img = link.querySelector("img");
             if (!img) {
                 return;
             }
             // Skip if src is already a full media file (not t_ and has extension)
             if (
-                /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) && // has extension
-                !/\/\.media\/t_[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) // not a thumbnail
+                /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) &&
+                !/\/\.media\/t_[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src)
             ) {
+                link.dataset.blurSpoilerProcessed = "1";
                 return;
             }
             // Check if this is a custom spoiler image
@@ -1566,11 +1572,13 @@ onReady(async function () {
             if (isNotThumbnail || isCustomSpoiler) {
                 let href = link.getAttribute("href");
                 if (!href) {
+                    link.dataset.blurSpoilerProcessed = "1";
                     return;
                 }
                 // Extract filename without extension
                 const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
                 if (!match) {
+                    link.dataset.blurSpoilerProcessed = "1";
                     return;
                 }
 
@@ -1592,6 +1600,7 @@ onReady(async function () {
                     // Use the thumbnail path (t_filename) and append extension
                     transformedSrc = `/.media/t_${match[1]}`;
                 } else {
+                    link.dataset.blurSpoilerProcessed = "1";
                     return;
                 }
                 // Temporarily lock rendered size to avoid layout shift
@@ -1610,45 +1619,64 @@ onReady(async function () {
                 };
 
                 // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                if (await getSetting("blurSpoilers_removeSpoilers")) {
+                if (removeSpoilers) {
                     img.style.filter = "";
                     img.style.transition = "";
                     img.style.border = "1px dotted var(--border-color)";
                     img.onmouseover = null;
                     img.onmouseout = null;
+                    link.dataset.blurSpoilerProcessed = "1";
                     return;
                 } else {
+                    // Set initial blur style only
                     img.style.filter = "blur(5px)";
                     img.style.transition = "filter 0.3s ease";
-                    img.addEventListener("mouseover", () => {
-                        img.style.filter = "none";
-                    });
-                    img.addEventListener("mouseout", () => {
-                        img.style.filter = "blur(5px)";
-                    });
+                    // Event delegation for blur toggling is set up outside this function
                 }
             }
+            link.dataset.blurSpoilerProcessed = "1";
         }
 
         // Initial run: process all existing spoiler links
         const spoilerLinks = document.querySelectorAll("a.imgLink");
-        spoilerLinks.forEach((link, idx) => processImgLink(link, idx));
+        spoilerLinks.forEach(link => processImgLink(link));
 
-        // Efficiently process only new .imgLink anchors on mutation
+        // Debounce/batch processing for MutationObserver
+        let pendingImgLinks = new Set();
+        let debounceTimeout = null;
+        function processPendingImgLinks() {
+            pendingImgLinks.forEach(link => processImgLink(link));
+            pendingImgLinks.clear();
+            debounceTimeout = null;
+        }
         const observer = new MutationObserver(mutations => {
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
-                    if (node.nodeType !== 1) return; // Only process element nodes
+                    if (node.nodeType !== 1) return;
                     if (node.classList && node.classList.contains('imgLink')) {
-                        processImgLink(node);
+                        pendingImgLinks.add(node);
                     } else if (node.querySelectorAll) {
-                        // If the node is an element, check for .imgLink descendants
-                        node.querySelectorAll('.imgLink').forEach(link => processImgLink(link));
+                        node.querySelectorAll('.imgLink').forEach(link => pendingImgLinks.add(link));
                     }
                 });
             });
+            if (!debounceTimeout) {
+                debounceTimeout = setTimeout(processPendingImgLinks, 50);
+            }
         });
         observer.observe(divThreads, { childList: true, subtree: true });
+
+        // Use event delegation once, outside processImgLink:
+        document.body.addEventListener("mouseover", function(e) {
+            if (e.target.matches("a.imgLink img[style*='blur(5px)']")) {
+                e.target.style.filter = "none";
+            }
+        });
+        document.body.addEventListener("mouseout", function(e) {
+            if (e.target.matches("a.imgLink img[style*='transition']")) {
+                e.target.style.filter = "blur(5px)";
+            }
+        });
     }
 
     // --- Feature: Auto-hide Header on Scroll ---
