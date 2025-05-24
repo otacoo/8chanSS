@@ -343,6 +343,7 @@ onReady(async function () {
                 }
             },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
+            enableIdToggle: { label: "Add menu button to toggle IDs as Yours", type: "checkbox", default: false },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
         }
     };
@@ -544,6 +545,7 @@ onReady(async function () {
         { key: "highlightNewIds", fn: featureHighlightNewIds },
         { key: "quoteThreading", fn: featureQuoteThreading },
         { key: "enableLastFifty", fn: featureLastFifty },
+        { key: "enableIdToggle", fn: featureToggleIdAsYours },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -4231,5 +4233,212 @@ onReady(async function () {
             }
         }
         document.body.addEventListener("click", handleClick);
+    }
+
+    // --- Feature: Mark Posts as Yours ---
+    function featureToggleIdAsYours() {
+        // Early return if not on thread page
+        if (!pageType.isThread) return;
+        // Early return if no .spanId exists on the page
+        if (!document.querySelector('.spanId')) return;
+
+        // --- Board Key Detection ---
+        function getBoardName() {
+            const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
+            if (postCell) return postCell.getAttribute('data-boarduri');
+            const match = location.pathname.match(/^\/([^\/]+)\//);
+            return match ? match[1] : 'unknown';
+        }
+        const BOARD_NAME = getBoardName();
+        const T_YOUS_KEY = `${BOARD_NAME}-yous`;
+        const MENU_ENTRY_CLASS = "toggleIdAsYoursMenuEntry";
+        const MENU_SELECTOR = ".floatingList.extraMenu";
+
+        // --- Storage Helpers (post numbers as numbers) ---
+        function getYourPostNumbers() {
+            try {
+                const val = localStorage.getItem(T_YOUS_KEY);
+                return val ? JSON.parse(val).map(Number) : [];
+            } catch {
+                return [];
+            }
+        }
+        function setYourPostNumbers(arr) {
+            // Store as array of numbers (not strings)
+            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
+        }
+
+        // --- Menu/Post Association ---
+        document.body.addEventListener('click', function (e) {
+            if (e.target.matches('.extraMenuButton')) {
+                // Support both .postCell and .opCell
+                const postCell = e.target.closest('.postCell, .opCell');
+                if (!postCell) return;
+                setTimeout(() => {
+                    let menu = e.target.parentNode.querySelector('.floatingList.extraMenu');
+                    if (!menu) {
+                        const menus = Array.from(document.querySelectorAll('.floatingList.extraMenu'));
+                        menu = menus[menus.length - 1];
+                    }
+                    if (menu) {
+                        menu.setAttribute('data-post-id', postCell.id);
+                        // Store the post's ID string for the menu
+                        const labelIdSpan = postCell.querySelector('.labelId');
+                        if (labelIdSpan) {
+                            menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                        }
+                    }
+                }, 0);
+            }
+        });
+
+        function getLabelIdFromMenu(menu) {
+            return menu.getAttribute('data-label-id') || null;
+        }
+
+        // --- Toggle all posts with a given ID ---
+        function toggleYouNameClassForId(labelId, add) {
+            // Find all posts with this labelId and toggle "youName" on their .linkName
+            document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                const labelIdSpan = postCell.querySelector('.labelId');
+                if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
+                    const nameLink = postCell.querySelector(".linkName.noEmailName");
+                    if (nameLink) {
+                        nameLink.classList.toggle("youName", add);
+                    }
+                }
+            });
+        }
+
+        // --- Get all post numbers for a given ID ---
+        function getAllPostNumbersForId(labelId) {
+            const postNumbers = [];
+            document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
+                const labelIdSpan = postCell.querySelector('.labelId');
+                if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
+                    const num = Number(postCell.id);
+                    if (!isNaN(num)) postNumbers.push(num);
+                }
+            });
+            return postNumbers;
+        }
+
+        // --- Menu Entry Logic ---
+        function addMenuEntries(root = document) {
+            root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                // Only proceed if the menu is a descendant of an .extraMenuButton
+                if (!menu.closest('.extraMenuButton')) return;
+                const ul = menu.querySelector("ul");
+                if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
+
+                // Get the labelId for this menu
+                const labelId = getLabelIdFromMenu(menu);
+                if (!labelId) return;
+
+                // Check if any post with this ID is marked as "yours"
+                const yourPostNumbers = getYourPostNumbers();
+                const postNumbersForId = getAllPostNumbersForId(labelId);
+                const isMarked = postNumbersForId.length > 0 && postNumbersForId.every(num => yourPostNumbers.includes(num));
+
+                const li = document.createElement("li");
+                li.className = MENU_ENTRY_CLASS;
+                li.style.cursor = "pointer";
+                li.textContent = "Toggle ID as Yours";
+
+                // Always append as the last <li> in the <ul>
+                ul.appendChild(li);
+
+                li.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    const labelId = getLabelIdFromMenu(menu);
+                    if (!labelId) return;
+                    let yourPostNumbers = getYourPostNumbers();
+                    const postNumbersForId = getAllPostNumbersForId(labelId);
+
+                    if (postNumbersForId.length === 0) return;
+
+                    const allMarked = postNumbersForId.every(num => yourPostNumbers.includes(num));
+                    if (!allMarked) {
+                        // Add all post numbers for this ID
+                        postNumbersForId.forEach(num => {
+                            if (!yourPostNumbers.includes(num)) yourPostNumbers.push(num);
+                        });
+                        setYourPostNumbers(yourPostNumbers);
+                        toggleYouNameClassForId(labelId, true);
+                    } else {
+                        // Remove all post numbers for this ID
+                        yourPostNumbers = yourPostNumbers.filter(num => !postNumbersForId.includes(num));
+                        setYourPostNumbers(yourPostNumbers);
+                        toggleYouNameClassForId(labelId, false);
+                    }
+                });
+
+                // On menu open, update all posts with this ID to reflect current state
+                toggleYouNameClassForId(labelId, isMarked);
+            });
+        }
+
+        // Listen for storage changes
+        window.addEventListener("storage", function (event) {
+            if (event.key === T_YOUS_KEY) {
+                const yourPostNumbers = getYourPostNumbers();
+                // Update all posts for all marked post numbers
+                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                    const nameLink = postCell.querySelector(".linkName.noEmailName");
+                    if (nameLink) {
+                        const postNum = Number(postCell.id);
+                        nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
+                    }
+                });
+            }
+        });
+
+        // --- Observe for Dynamic Menus ---
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.matches && node.matches(MENU_SELECTOR)) {
+                        // Set data-label-id if not present
+                        if (!node.hasAttribute('data-label-id')) {
+                            const btn = node.closest('.extraMenuButton');
+                            const postCell = btn && btn.closest('.postCell, .opCell');
+                            if (postCell) {
+                                const labelIdSpan = postCell.querySelector('.labelId');
+                                if (labelIdSpan) {
+                                    node.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                }
+                            }
+                        }
+                        addMenuEntries(node.parentNode || node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                            if (!menu.hasAttribute('data-label-id')) {
+                                const btn = menu.closest('.extraMenuButton');
+                                const postCell = btn && btn.closest('.postCell, .opCell');
+                                if (postCell) {
+                                    const labelIdSpan = postCell.querySelector('.labelId');
+                                    if (labelIdSpan) {
+                                        menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                    }
+                                }
+                            }
+                            addMenuEntries(menu.parentNode || menu);
+                        });
+                    }
+                }
+            }
+        });
+        observer.observe(divThreads, { childList: true, subtree: true });
+
+        // Initial marking on page load for all marked post numbers
+        const yourPostNumbers = getYourPostNumbers();
+        document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+            const nameLink = postCell.querySelector(".linkName.noEmailName");
+            if (nameLink) {
+                const postNum = Number(postCell.id);
+                nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
+            }
+        });
     }
 });
