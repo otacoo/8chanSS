@@ -324,6 +324,24 @@ onReady(async function () {
                     }
                 }
             },
+            enableTheSauce: {
+                label: "Sauce Links",
+                default: false,
+                subOptions: {
+                    iqdb: {
+                        label: "IQDB",
+                        default: false,
+                    },
+                    saucenao: {
+                        label: "Saucenao",
+                        default: false,
+                    },
+                    pixiv: {
+                        label: "Pixiv (only added if filename matches Pixiv ID)",
+                        default: false,
+                    }
+                }
+            },
             _miscelFilterTitle: { type: "title", label: ":: IDs & Filtering" },
             _miscelSection1: { type: "separator" },
             highlightNewIds: {
@@ -424,7 +442,7 @@ onReady(async function () {
             hidePostingForm_showCatalogForm: "show-catalog-form",
             hideDefaultBL: "hide-defaultBL",
             hidePanelMessage: "hide-panelmessage",
-            highlightOnYou: "highlight-you",
+            highlightOnYou: "highlight-yous",
             threadHideCloseBtn: "hide-close-btn",
             hideCheckboxes: "hide-checkboxes",
             hideNoCookieLink: "hide-nocookie",
@@ -452,17 +470,17 @@ onReady(async function () {
         });
 
         // URL-based class toggling
-        if (pageType.isCatalog) {
+        if (window.pageType?.isCatalog) {
             document.documentElement.classList.add("is-catalog");
         } else {
             document.documentElement.classList.remove("is-catalog");
         }
-        if (pageType.isThread) {
+        if (window.pageType?.isThread) {
             document.documentElement.classList.add("is-thread");
         } else {
             document.documentElement.classList.remove("is-thread");
         }
-        if (pageType.isIndex) {
+        if (window.pageType?.isIndex) {
             document.documentElement.classList.add("is-index");
         } else {
             document.documentElement.classList.remove("is-index");
@@ -500,13 +518,13 @@ onReady(async function () {
         let css = "";
 
         // Always inject site CSS for 8chan domains
-        if (pageType.is8chan) {
+        if (window.pageType?.is8chan) {
             css += "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
         }
         // Inject CSS based on page type
-        if (pageType.isThread) {
+        if (window.pageType?.isThread) {
             css += "<%= grunt.file.read('tmp/thread.min.css').replace(/\\(^\")/g, '') %>";
-        } else if (pageType.isCatalog) {
+        } else if (window.pageType?.isCatalog) {
             css += "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
         }
 
@@ -546,6 +564,7 @@ onReady(async function () {
         { key: "quoteThreading", fn: featureQuoteThreading },
         { key: "enableLastFifty", fn: featureLastFifty },
         { key: "enableIdToggle", fn: featureToggleIdAsYours },
+        { key: "enableTheSauce", fn: featureSauceLinks },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -592,7 +611,7 @@ onReady(async function () {
     // Image Hover - Check if we should enable hover based on the current page
     let imageHoverEnabled = false;
     try {
-        if (pageType.isCatalog) {
+        if (window.pageType?.isCatalog) {
             imageHoverEnabled = await getSetting("enableCatalogImageHover");
         } else {
             imageHoverEnabled = await getSetting("enableThreadImageHover");
@@ -609,7 +628,7 @@ onReady(async function () {
 
     // --- Feature: Save Scroll Position ---
     async function featureSaveScroll() {
-        if (!pageType.isThread) return;
+        if (!window.pageType?.isThread) return;
 
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
@@ -962,7 +981,7 @@ onReady(async function () {
 
     // --- Feature: Always Open Catalog Threads in New Tab ---
     function catalogThreadsInNewTab() {
-        if (!pageType.isCatalog) return;
+        if (!window.pageType?.isCatalog) return;
 
         // Set target="_blank" for existing cells
         catalogDiv.querySelectorAll('.catalogCell a.linkThumb').forEach(link => {
@@ -1416,7 +1435,10 @@ onReady(async function () {
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
     function featureBlurSpoilers() {
-        if (pageType.isCatalog) return;
+        // Only run on thread or index pages
+        if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
+            return;
+        }
         // Utility: MIME type to extension mapping
         function getExtensionForMimeType(mime) {
             const map = {
@@ -1700,7 +1722,9 @@ onReady(async function () {
 
     // --- Feature: Watch Thread on Reply ---
     async function featureWatchThreadOnReply() {
-        if (pageType.isCatalog || pageType.isIndex) return;
+        if ((window.pageType?.isIndex || window.pageType?.isCatalog)) {
+            return;
+        }
 
         // --- Helpers ---
         const getWatchButton = () => document.querySelector(".watchButton");
@@ -1894,7 +1918,7 @@ onReady(async function () {
     // https://greasyfork.org/en/scripts/533173-8chan-lightweight-extended-suite
     function hashNavigation() {
         // Only proceed if the page is a thread
-        if (!pageType.isThread) return;
+        if (!window.pageType?.isThread) return;
 
         // Use a WeakSet to track processed links
         const processedLinks = new WeakSet();
@@ -2287,7 +2311,10 @@ onReady(async function () {
 
     // --- Feature: Enhanced Youtube links ---
     function enhanceYouTubeLinks() {
-        if (pageType.isCatalog) return;
+        // Only run on thread or index pages
+        if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
+            return;
+        }
 
         // In-memory cache and order tracker (order is stored as a special property)
         const ytTitleCache = {};
@@ -2398,7 +2425,9 @@ onReady(async function () {
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
     function featureLabelCreated12h() {
-        if (pageType.isCatalog) return;
+        if ((window.pageType?.isCatalog)) {
+            return;
+        }
 
         function convertLabelCreatedSpan(span) {
             if (span.dataset.timeConverted === "1") return;
@@ -2450,7 +2479,7 @@ onReady(async function () {
 
     // --- Feature: Truncate Filenames and Show Only Extension ---
     function truncateFilenames(filenameLength) {
-        if (pageType.isCatalog) return;
+        if (window.pageType?.isCatalog) return;
 
         function processLinks(root = document, fromObserver = false) {
             const links = root.querySelectorAll('a.originalNameLink');
@@ -2649,7 +2678,9 @@ onReady(async function () {
 
     // --- Feature: Highlight New IDs ---
     async function featureHighlightNewIds() {
-        if (pageType.isLast || pageType.isCatalog) return;
+        if ((window.pageType?.isLast || window.pageType?.isCatalog)) {
+            return;
+        }
 
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
         if (!divPosts) return;
@@ -2815,7 +2846,7 @@ onReady(async function () {
 
     // --- Feature: Last 50 Button ---
     function featureLastFifty() {
-        if (!pageType.isCatalog) return;
+        if (!window.pageType?.isCatalog) return;
 
         // Add the [L] button to catalog cell
         function addLastLinkButtons(root = document) {
@@ -2866,6 +2897,451 @@ onReady(async function () {
         const observer = new MutationObserver(debouncedUpdate);
 
         observer.observe(divThreads, { childList: true, subtree: false });
+    }
+
+    // --- Feature: Toggle ID as Yours ---
+    function featureToggleIdAsYours() {
+        // Early return if not on thread page
+        if (!window.pageType?.isThread) return;
+        // Early return if no .spanId exists on the page
+        if (!document.querySelector('.spanId')) return;
+
+        // --- Board Key Detection ---
+        function getBoardName() {
+            const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
+            if (postCell) return postCell.getAttribute('data-boarduri');
+            const match = location.pathname.match(/^\/([^\/]+)\//);
+            return match ? match[1] : 'unknown';
+        }
+        const BOARD_NAME = getBoardName();
+        const T_YOUS_KEY = `${BOARD_NAME}-yous`;
+        const MENU_ENTRY_CLASS = "toggleIdAsYoursMenuEntry";
+        const MENU_SELECTOR = ".floatingList.extraMenu";
+
+        // --- Storage Helpers (post numbers as numbers) ---
+        function getYourPostNumbers() {
+            try {
+                const val = localStorage.getItem(T_YOUS_KEY);
+                return val ? JSON.parse(val).map(Number) : [];
+            } catch {
+                return [];
+            }
+        }
+        function setYourPostNumbers(arr) {
+            // Store as array of numbers (not strings)
+            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
+        }
+
+        // --- Menu/Post Association ---
+        document.body.addEventListener('click', function (e) {
+            if (e.target.matches('.extraMenuButton')) {
+                // Support both .postCell and .opCell
+                const postCell = e.target.closest('.postCell, .opCell');
+                if (!postCell) return;
+                setTimeout(() => {
+                    let menu = e.target.parentNode.querySelector('.floatingList.extraMenu');
+                    if (!menu) {
+                        const menus = Array.from(document.querySelectorAll('.floatingList.extraMenu'));
+                        menu = menus[menus.length - 1];
+                    }
+                    if (menu) {
+                        menu.setAttribute('data-post-id', postCell.id);
+                        // Store the post's ID string for the menu
+                        const labelIdSpan = postCell.querySelector('.labelId');
+                        if (labelIdSpan) {
+                            menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                        }
+                    }
+                }, 0);
+            }
+        });
+
+        function getLabelIdFromMenu(menu) {
+            return menu.getAttribute('data-label-id') || null;
+        }
+
+        // --- Toggle all posts with a given ID ---
+        function toggleYouNameClassForId(labelId, add) {
+            // Find all posts with this labelId and toggle "youName" on their .linkName
+            document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                const labelIdSpan = postCell.querySelector('.labelId');
+                if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
+                    const nameLink = postCell.querySelector(".linkName.noEmailName");
+                    if (nameLink) {
+                        nameLink.classList.toggle("youName", add);
+                    }
+                }
+            });
+        }
+
+        // --- Get all post numbers for a given ID ---
+        function getAllPostNumbersForId(labelId) {
+            const postNumbers = [];
+            document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
+                const labelIdSpan = postCell.querySelector('.labelId');
+                if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
+                    const num = Number(postCell.id);
+                    if (!isNaN(num)) postNumbers.push(num);
+                }
+            });
+            return postNumbers;
+        }
+
+        // --- Menu Entry Logic ---
+        function addMenuEntries(root = document) {
+            root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                // Only proceed if the menu is a descendant of an .extraMenuButton
+                if (!menu.closest('.extraMenuButton')) return;
+                const ul = menu.querySelector("ul");
+                if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
+
+                // Get the labelId for this menu
+                const labelId = getLabelIdFromMenu(menu);
+                if (!labelId) return;
+
+                // Check if any post with this ID is marked as "yours"
+                const yourPostNumbers = getYourPostNumbers();
+                const postNumbersForId = getAllPostNumbersForId(labelId);
+                const isMarked = postNumbersForId.length > 0 && postNumbersForId.every(num => yourPostNumbers.includes(num));
+
+                const li = document.createElement("li");
+                li.className = MENU_ENTRY_CLASS;
+                li.style.cursor = "pointer";
+                li.textContent = "Toggle ID as Yours";
+
+                // Always append as the last <li> in the <ul>
+                ul.appendChild(li);
+
+                li.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    const labelId = getLabelIdFromMenu(menu);
+                    if (!labelId) return;
+                    let yourPostNumbers = getYourPostNumbers();
+                    const postNumbersForId = getAllPostNumbersForId(labelId);
+
+                    if (postNumbersForId.length === 0) return;
+
+                    const allMarked = postNumbersForId.every(num => yourPostNumbers.includes(num));
+                    if (!allMarked) {
+                        // Add all post numbers for this ID
+                        postNumbersForId.forEach(num => {
+                            if (!yourPostNumbers.includes(num)) yourPostNumbers.push(num);
+                        });
+                        setYourPostNumbers(yourPostNumbers);
+                        toggleYouNameClassForId(labelId, true);
+                    } else {
+                        // Remove all post numbers for this ID
+                        yourPostNumbers = yourPostNumbers.filter(num => !postNumbersForId.includes(num));
+                        setYourPostNumbers(yourPostNumbers);
+                        toggleYouNameClassForId(labelId, false);
+                    }
+                });
+
+                // On menu open, update all posts with this ID to reflect current state
+                toggleYouNameClassForId(labelId, isMarked);
+            });
+        }
+
+        // Listen for storage changes
+        window.addEventListener("storage", function (event) {
+            if (event.key === T_YOUS_KEY) {
+                const yourPostNumbers = getYourPostNumbers();
+                // Update all posts for all marked post numbers
+                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                    const nameLink = postCell.querySelector(".linkName.noEmailName");
+                    if (nameLink) {
+                        const postNum = Number(postCell.id);
+                        nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
+                    }
+                });
+            }
+        });
+
+        // --- Observe for Dynamic Menus ---
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    if (node.matches && node.matches(MENU_SELECTOR)) {
+                        // Set data-label-id if not present
+                        if (!node.hasAttribute('data-label-id')) {
+                            const btn = node.closest('.extraMenuButton');
+                            const postCell = btn && btn.closest('.postCell, .opCell');
+                            if (postCell) {
+                                const labelIdSpan = postCell.querySelector('.labelId');
+                                if (labelIdSpan) {
+                                    node.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                }
+                            }
+                        }
+                        addMenuEntries(node.parentNode || node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                            if (!menu.hasAttribute('data-label-id')) {
+                                const btn = menu.closest('.extraMenuButton');
+                                const postCell = btn && btn.closest('.postCell, .opCell');
+                                if (postCell) {
+                                    const labelIdSpan = postCell.querySelector('.labelId');
+                                    if (labelIdSpan) {
+                                        menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                    }
+                                }
+                            }
+                            addMenuEntries(menu.parentNode || menu);
+                        });
+                    }
+                }
+            }
+        });
+        observer.observe(divThreads, { childList: true, subtree: true });
+
+        // Initial marking on page load for all marked post numbers
+        const yourPostNumbers = getYourPostNumbers();
+        document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+            const nameLink = postCell.querySelector(".linkName.noEmailName");
+            if (nameLink) {
+                const postNum = Number(postCell.id);
+                nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
+            }
+        });
+    }
+
+    // --- Feature: Sauce Links, appended to .uploadDetails
+    async function featureSauceLinks() {
+        // Only enable for index or thread
+        if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
+            console.log("[SauceLinks] Not a thread or index page, exiting.");
+            return;
+        }
+
+        // Check if the Sauce Links feature is enabled
+        const enabled = await getSetting("enableTheSauce");
+        if (!enabled) return;
+
+        // Define supported services
+        const services = [
+            {
+                key: "iqdb",
+                label: "iqdb",
+                enabled: await getSetting("enableTheSauce_iqdb"),
+                method: "post",
+                url: "https://iqdb.org/",
+                fileField: "file",
+            },
+            {
+                key: "saucenao",
+                label: "sauce",
+                enabled: await getSetting("enableTheSauce_saucenao"),
+                method: "post",
+                url: "https://saucenao.com/search.php",
+                fileField: "file",
+            },
+            {
+                key: "pixiv",
+                label: "pixiv",
+                enabled: await getSetting("enableTheSauce_pixiv"),
+                method: "pixiv",
+            },
+        ];
+
+        // Helper: Get the image URL from a .uploadDetails div
+        function getImageUrl(detailDiv) {
+            const parentCell = detailDiv.closest('.postCell') || detailDiv.closest('.opCell');
+            const imgLink = parentCell?.querySelector('.imgLink');
+            const img = imgLink ? imgLink.querySelector('img') : null;
+            if (!img) {
+                return null;
+            }
+
+            let imgSrc = img.getAttribute('src');
+            let origin = window.location.origin;
+
+            // Normalize the image URL
+            if (imgSrc.startsWith("//")) {
+                return window.location.protocol + imgSrc;
+            } else if (imgSrc.startsWith("/")) {
+                return origin + imgSrc;
+            } else if (/^https?:\/\//.test(imgSrc)) {
+                return imgSrc;
+            } else {
+                return origin + "/" + imgSrc;
+            }
+        }
+
+        // Helper: Fetch the image as a Blob
+        async function fetchImageBlob(url) {
+            console.log("[SauceLinks] Fetching image blob from:", url);
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Failed to fetch image");
+            return await response.blob();
+        }
+
+        // Helper: Extract Pixiv ID from filename
+        function getPixivId(detailDiv) {
+            const origNameLink = detailDiv.querySelector('.originalNameLink');
+            if (!origNameLink) return null;
+            const filename = origNameLink.getAttribute('download') || origNameLink.textContent;
+            const match = filename && filename.match(/^(\d+)_p\d+\./);
+            return match ? match[1] : null;
+        }
+
+        // Main: Add sauce links to a single .uploadDetails element
+        function addSauceLinksToElement(detailDiv) {
+            // Prevent duplicate processing
+            if (detailDiv.classList.contains('sauceLinksProcessed')) {
+                // Already processed
+                return;
+            }
+
+            // Remove any existing sauce links first
+            detailDiv.querySelectorAll('.sauceLinksContainer').forEach(el => el.remove());
+
+            const imgUrl = getImageUrl(detailDiv);
+            if (!imgUrl) {
+                return;
+            }
+
+            const container = document.createElement('div');
+            container.className = 'sauceLinksContainer';
+            container.style.marginTop = '4px';
+            container.style.display = 'flex';
+            container.style.flexWrap = 'wrap';
+            container.style.gap = '6px';
+
+            let anyLink = false;
+
+            services.forEach(service => {
+                if (!service.enabled) {
+                    return;
+                }
+
+                const a = document.createElement('a');
+                a.className = 'sauceLink';
+                a.target = '_blank';
+                a.style.fontSize = '90%';
+                a.textContent = service.label;
+
+                if (service.method === "post") {
+                    a.href = "#";
+                    a.title = `Upload thumbnail to ${service.label}`;
+                    a.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        try {
+                            console.log(`[SauceLinks] Uploading to ${service.label}...`);
+                            const blob = await fetchImageBlob(imgUrl);
+                            const file = new File([blob], "image.png", { type: blob.type || "image/png" });
+
+                            // Create a form to submit the file
+                            const form = document.createElement("form");
+                            form.action = service.url;
+                            form.method = "POST";
+                            form.enctype = "multipart/form-data";
+                            form.target = "_blank";
+                            form.style.display = "none";
+
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.name = service.fileField;
+                            form.appendChild(input);
+
+                            // Use DataTransfer to set the file input
+                            const dt = new DataTransfer();
+                            dt.items.add(file);
+                            input.files = dt.files;
+
+                            document.body.appendChild(form);
+                            form.submit();
+                            setTimeout(() => form.remove(), 10000);
+                            console.log(`[SauceLinks] Submitted form to ${service.url}`);
+                        } catch (err) {
+                            console.error(`[SauceLinks] Failed to upload thumbnail to ${service.label}:`, err);
+                            alert("Failed to upload thumbnail: " + err);
+                        }
+                    });
+                } else if (service.method === "pixiv") {
+                    const pixivId = getPixivId(detailDiv);
+                    if (pixivId) {
+                        a.href = `https://www.pixiv.net/artworks/${pixivId}`;
+                        a.title = "Open Pixiv artwork";
+                    } else {
+                        return;
+                    }
+                }
+
+                container.appendChild(a);
+                anyLink = true;
+            });
+
+            if (anyLink) {
+                detailDiv.classList.add('sauceLinksProcessed');
+                detailDiv.appendChild(container);
+            }
+        }
+
+        // Keep a reference to the observer so we can disconnect if needed
+        let intersectionObserver = null;
+
+        function observeUploadDetails(element) {
+            if (!intersectionObserver) return;
+            intersectionObserver.observe(element);
+        }
+
+        // Create the IntersectionObserver
+        intersectionObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const detailDiv = entry.target;
+                    addSauceLinksToElement(detailDiv);
+                    observer.unobserve(detailDiv);
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: "0px",
+            threshold: 0.1 // Only when at least 10% is visible
+        });
+
+        // Process all .uploadDetails in a given container (but only observe, not process immediately)
+        function observeAllUploadDetails(container = document) {
+            const details = container.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)');
+            details.forEach(detailDiv => observeUploadDetails(detailDiv));
+        }
+
+        // Helper: process a single node if it's .uploadDetails
+        function observeIfUploadDetails(node) {
+            if (node.nodeType === 1
+                && node.classList.contains('uploadDetails')
+                && !node.classList.contains('sauceLinksProcessed')) {
+                observeUploadDetails(node);
+            }
+        }
+
+        // Initial observation
+        observeAllUploadDetails();
+
+        // Observe for new posts and attribute changes
+        if (divPosts) {
+            const mutationObserver = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    // Process new .uploadDetails nodes
+                    if (mutation.type === "childList") {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) {
+                                // If the node itself is .uploadDetails
+                                observeIfUploadDetails(node);
+                                // Or any descendants like tooltips or inline
+                                node.querySelectorAll?.('.uploadDetails:not(.sauceLinksProcessed)').forEach(observeUploadDetails);
+                            }
+                        });
+                    }
+                });
+            });
+
+            mutationObserver.observe(divPosts, {
+                childList: true,
+                subtree: true,
+            });
+        }
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3855,8 +4331,8 @@ onReady(async function () {
 
         // (R key): refresh thread page with 5 sec cooldown
         if (event.key === "r" || event.key === "R") {
-            const isThread = pageType.isThread;
-            const isCatalog = pageType.isCatalog;
+            const isThread = window.pageType?.isThread;
+            const isCatalog = window.pageType?.isCatalog;
             const threadRefreshBtn = document.getElementById("refreshButton");
             const catalogRefreshBtn = document.getElementById("catalogRefreshButton");
             const now = Date.now();
@@ -4155,7 +4631,7 @@ onReady(async function () {
         // Attach event listeners and apply hidden threads on catalog load
         function hideThreadsOnRefresh() {
             // Only run on catalog pages
-            if (!pageType.isCatalog) return;
+            if (!window.pageType?.isCatalog) return;
 
             // Add the Show Hidden button
             onReady(addShowHiddenButton);
@@ -4202,7 +4678,7 @@ onReady(async function () {
 
     // Move file uploads below OP title
     function moveFileUploadsBelowOp() {
-        if (pageType.isCatalog) {
+        if (window.pageType?.isCatalog) {
             return;
         } else if (opHeadTitle && innerOP) {
             innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
@@ -4229,7 +4705,7 @@ onReady(async function () {
 
     // --- Feature: Show all posts by ID ---
     function enableIdFiltering() {
-        if (!pageType.isThread) return;
+        if (!window.pageType?.isThread) return;
 
         const postCellSelector = ".postCell";
         const labelIdSelector = ".labelId";
@@ -4268,212 +4744,5 @@ onReady(async function () {
             }
         }
         document.body.addEventListener("click", handleClick);
-    }
-
-    // --- Feature: Mark Posts as Yours ---
-    function featureToggleIdAsYours() {
-        // Early return if not on thread page
-        if (!pageType.isThread) return;
-        // Early return if no .spanId exists on the page
-        if (!document.querySelector('.spanId')) return;
-
-        // --- Board Key Detection ---
-        function getBoardName() {
-            const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
-            if (postCell) return postCell.getAttribute('data-boarduri');
-            const match = location.pathname.match(/^\/([^\/]+)\//);
-            return match ? match[1] : 'unknown';
-        }
-        const BOARD_NAME = getBoardName();
-        const T_YOUS_KEY = `${BOARD_NAME}-yous`;
-        const MENU_ENTRY_CLASS = "toggleIdAsYoursMenuEntry";
-        const MENU_SELECTOR = ".floatingList.extraMenu";
-
-        // --- Storage Helpers (post numbers as numbers) ---
-        function getYourPostNumbers() {
-            try {
-                const val = localStorage.getItem(T_YOUS_KEY);
-                return val ? JSON.parse(val).map(Number) : [];
-            } catch {
-                return [];
-            }
-        }
-        function setYourPostNumbers(arr) {
-            // Store as array of numbers (not strings)
-            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
-        }
-
-        // --- Menu/Post Association ---
-        document.body.addEventListener('click', function (e) {
-            if (e.target.matches('.extraMenuButton')) {
-                // Support both .postCell and .opCell
-                const postCell = e.target.closest('.postCell, .opCell');
-                if (!postCell) return;
-                setTimeout(() => {
-                    let menu = e.target.parentNode.querySelector('.floatingList.extraMenu');
-                    if (!menu) {
-                        const menus = Array.from(document.querySelectorAll('.floatingList.extraMenu'));
-                        menu = menus[menus.length - 1];
-                    }
-                    if (menu) {
-                        menu.setAttribute('data-post-id', postCell.id);
-                        // Store the post's ID string for the menu
-                        const labelIdSpan = postCell.querySelector('.labelId');
-                        if (labelIdSpan) {
-                            menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
-                        }
-                    }
-                }, 0);
-            }
-        });
-
-        function getLabelIdFromMenu(menu) {
-            return menu.getAttribute('data-label-id') || null;
-        }
-
-        // --- Toggle all posts with a given ID ---
-        function toggleYouNameClassForId(labelId, add) {
-            // Find all posts with this labelId and toggle "youName" on their .linkName
-            document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-                const labelIdSpan = postCell.querySelector('.labelId');
-                if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
-                    const nameLink = postCell.querySelector(".linkName.noEmailName");
-                    if (nameLink) {
-                        nameLink.classList.toggle("youName", add);
-                    }
-                }
-            });
-        }
-
-        // --- Get all post numbers for a given ID ---
-        function getAllPostNumbersForId(labelId) {
-            const postNumbers = [];
-            document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
-                const labelIdSpan = postCell.querySelector('.labelId');
-                if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
-                    const num = Number(postCell.id);
-                    if (!isNaN(num)) postNumbers.push(num);
-                }
-            });
-            return postNumbers;
-        }
-
-        // --- Menu Entry Logic ---
-        function addMenuEntries(root = document) {
-            root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
-                // Only proceed if the menu is a descendant of an .extraMenuButton
-                if (!menu.closest('.extraMenuButton')) return;
-                const ul = menu.querySelector("ul");
-                if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
-
-                // Get the labelId for this menu
-                const labelId = getLabelIdFromMenu(menu);
-                if (!labelId) return;
-
-                // Check if any post with this ID is marked as "yours"
-                const yourPostNumbers = getYourPostNumbers();
-                const postNumbersForId = getAllPostNumbersForId(labelId);
-                const isMarked = postNumbersForId.length > 0 && postNumbersForId.every(num => yourPostNumbers.includes(num));
-
-                const li = document.createElement("li");
-                li.className = MENU_ENTRY_CLASS;
-                li.style.cursor = "pointer";
-                li.textContent = "Toggle ID as Yours";
-
-                // Always append as the last <li> in the <ul>
-                ul.appendChild(li);
-
-                li.addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    const labelId = getLabelIdFromMenu(menu);
-                    if (!labelId) return;
-                    let yourPostNumbers = getYourPostNumbers();
-                    const postNumbersForId = getAllPostNumbersForId(labelId);
-
-                    if (postNumbersForId.length === 0) return;
-
-                    const allMarked = postNumbersForId.every(num => yourPostNumbers.includes(num));
-                    if (!allMarked) {
-                        // Add all post numbers for this ID
-                        postNumbersForId.forEach(num => {
-                            if (!yourPostNumbers.includes(num)) yourPostNumbers.push(num);
-                        });
-                        setYourPostNumbers(yourPostNumbers);
-                        toggleYouNameClassForId(labelId, true);
-                    } else {
-                        // Remove all post numbers for this ID
-                        yourPostNumbers = yourPostNumbers.filter(num => !postNumbersForId.includes(num));
-                        setYourPostNumbers(yourPostNumbers);
-                        toggleYouNameClassForId(labelId, false);
-                    }
-                });
-
-                // On menu open, update all posts with this ID to reflect current state
-                toggleYouNameClassForId(labelId, isMarked);
-            });
-        }
-
-        // Listen for storage changes
-        window.addEventListener("storage", function (event) {
-            if (event.key === T_YOUS_KEY) {
-                const yourPostNumbers = getYourPostNumbers();
-                // Update all posts for all marked post numbers
-                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-                    const nameLink = postCell.querySelector(".linkName.noEmailName");
-                    if (nameLink) {
-                        const postNum = Number(postCell.id);
-                        nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
-                    }
-                });
-            }
-        });
-
-        // --- Observe for Dynamic Menus ---
-        const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue;
-                    if (node.matches && node.matches(MENU_SELECTOR)) {
-                        // Set data-label-id if not present
-                        if (!node.hasAttribute('data-label-id')) {
-                            const btn = node.closest('.extraMenuButton');
-                            const postCell = btn && btn.closest('.postCell, .opCell');
-                            if (postCell) {
-                                const labelIdSpan = postCell.querySelector('.labelId');
-                                if (labelIdSpan) {
-                                    node.setAttribute('data-label-id', labelIdSpan.textContent.trim());
-                                }
-                            }
-                        }
-                        addMenuEntries(node.parentNode || node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
-                            if (!menu.hasAttribute('data-label-id')) {
-                                const btn = menu.closest('.extraMenuButton');
-                                const postCell = btn && btn.closest('.postCell, .opCell');
-                                if (postCell) {
-                                    const labelIdSpan = postCell.querySelector('.labelId');
-                                    if (labelIdSpan) {
-                                        menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
-                                    }
-                                }
-                            }
-                            addMenuEntries(menu.parentNode || menu);
-                        });
-                    }
-                }
-            }
-        });
-        observer.observe(divThreads, { childList: true, subtree: true });
-
-        // Initial marking on page load for all marked post numbers
-        const yourPostNumbers = getYourPostNumbers();
-        document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-            const nameLink = postCell.querySelector(".linkName.noEmailName");
-            if (nameLink) {
-                const postNum = Number(postCell.id);
-                nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
-            }
-        });
     }
 });
