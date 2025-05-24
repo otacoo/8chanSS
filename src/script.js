@@ -149,6 +149,92 @@ const faviconManager = (() => {
         STATES
     };
 })();
+//////// NOTIFICATION HANDLER ///////////////////
+(function () {
+    // Strip all tags except <a>, <b>, <i>, <u>, <strong>, <em>
+    // Only allows href, target, rel on <a>
+    function sanitizeToastHTML(html) {
+        // Remove all tags except allowed ones
+        html = html.replace(/<(\/?)(?!a\b|b\b|i\b|u\b|strong\b|em\b)[^>]*>/gi, '');
+        // Remove all attributes from allowed tags except for <a>
+        html = html.replace(/<(b|i|u|strong|em)[^>]*>/gi, '<$1>');
+
+        // For <a>, only allow href, target, rel attributes
+        html = html.replace(/<a\s+([^>]+)>/gi, function (match, attrs) {
+            let allowed = '';
+            attrs.replace(/(\w+)\s*=\s*(['"])(.*?)\2/gi, function (_, name, q, value) {
+                name = name.toLowerCase();
+                if (['href', 'target', 'rel'].includes(name)) {
+                    // Prevent javascript: and data: URIs in href
+                    if (name === 'href' && (/^\s*javascript:/i.test(value) || /^\s*data:/i.test(value))) return;
+                    allowed += ` ${name}=${q}${value}${q}`;
+                }
+            });
+            return `<a${allowed}>`;
+        });
+
+        return html;
+    }
+
+    const script = document.createElement('script');
+    script.textContent = '(' + function (sanitizeToastHTML) {
+        window.showGlobalToast = function (htmlMessage, color = "black", duration = 1200) {
+            // Prevent multiple notifications at once
+            if (document.querySelector('.global-toast-notification')) {
+                return;
+            }
+
+            const colorMap = {
+                black: "#222",
+                orange: "#cc7a00",
+                green: "#339933",
+                blue: "#1976d2",
+                red: "#c62828"
+            };
+            const bgColor = colorMap[color] || color;
+
+            const icon = document.getElementById("8chanSS-icon");
+            let toast = document.createElement("span");
+            toast.className = "global-toast-notification";
+            toast.innerHTML = sanitizeToastHTML(htmlMessage);
+            toast.style.position = "absolute";
+            toast.style.background = bgColor;
+            toast.style.color = "#fff";
+            toast.style.padding = "2px 12px";
+            toast.style.borderRadius = "4px";
+            toast.style.fontSize = "13px";
+            toast.style.zIndex = 99999;
+            toast.style.opacity = "1";
+            toast.style.transition = "opacity 0.3s";
+            toast.style.pointerEvents = "auto";
+            toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.18)";
+
+            if (icon && icon.parentNode) {
+                toast.style.left = (icon.offsetLeft - 50) + "px";
+                toast.style.top = "28px";
+                icon.parentNode.appendChild(toast);
+            } else {
+                toast.style.right = "25px";
+                toast.style.top = "25px";
+                toast.style.position = "fixed";
+                document.body.appendChild(toast);
+            }
+
+            setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
+            setTimeout(() => { toast.remove(); }, duration);
+        };
+    } + ')(' + sanitizeToastHTML.toString() + ');';
+    document.documentElement.appendChild(script);
+    script.remove();
+
+    // Helper for userscript context to call the global notification handler
+    window.callPageToast = function (msg, color = 'black', duration = 1200) {
+        const script = document.createElement('script');
+        script.textContent = `window.showGlobalToast && window.showGlobalToast(${JSON.stringify(msg)}, ${JSON.stringify(color)}, ${duration});`;
+        document.documentElement.appendChild(script);
+        script.remove();
+    };
+})();
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     "use strict";
@@ -157,6 +243,8 @@ onReady(async function () {
     const innerOP = document.querySelector(".innerOP");
     const divPosts = document.querySelector(".divPosts");
     const opHeadTitle = document.querySelector(".opHead.title");
+    // Version
+    const VERSION = "<%= version %>";
 
     /////// Default Settings ////////////////////////
     const scriptSettings = {
@@ -361,7 +449,7 @@ onReady(async function () {
                 }
             },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
-            enableIdToggle: { label: "Add menu button to toggle IDs as Yours", type: "checkbox", default: false },
+            enableIdToggle: { label: "Add menu entry to toggle IDs as Yours", type: "checkbox", default: false },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
         }
     };
@@ -3203,7 +3291,7 @@ onReady(async function () {
 
             const container = document.createElement('div');
             container.className = 'sauceLinksContainer';
-            container.style.marginTop = '4px';
+            container.style.marginTop = '3px';
             container.style.display = 'flex';
             container.style.flexWrap = 'wrap';
             container.style.gap = '6px';
@@ -3649,7 +3737,7 @@ onReady(async function () {
         info.style.padding = "0 18px 12px";
         info.style.opacity = "0.7";
         info.style.textAlign = "center";
-        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. <%= version %></a>';
+        info.innerHTML = 'Press Save to apply changes. Page will reload. - <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" title="Check the changelog." style="color: var(--link-color); text-decoration: underline dashed;">Ver. ' + VERSION + '</a>';
         menu.appendChild(info);
 
         document.body.appendChild(menu);
@@ -4361,34 +4449,14 @@ onReady(async function () {
             event.preventDefault();
 
             const current = await getSetting("quoteThreading");
-            await setSetting("quoteThreading", !current);
+            const newValue = !current;
+            await setSetting("quoteThreading", newValue);
 
             // Show a quick notification
             try {
-                const msg = `Quote threading ${!current ? "enabled" : "disabled"}`;
-                if (window.showToast) {
-                    window.showToast(msg);
-                } else {
-                    // fallback: flash a message near the settings icon
-                    const icon = document.getElementById("8chanSS-icon");
-                    if (icon) {
-                        let toast = document.createElement("span");
-                        toast.textContent = msg;
-                        toast.style.position = "absolute";
-                        toast.style.background = "#222";
-                        toast.style.color = "#fff";
-                        toast.style.padding = "2px 8px";
-                        toast.style.borderRadius = "4px";
-                        toast.style.fontSize = "13px";
-                        toast.style.zIndex = 99999;
-                        toast.style.left = (icon.offsetLeft - 50) + "px";
-                        toast.style.top = "27px";
-                        toast.style.transition = "opacity 0.3s";
-                        icon.parentNode.appendChild(toast);
-                        setTimeout(() => { toast.style.opacity = "0"; }, 900);
-                        setTimeout(() => { toast.remove(); }, 1200);
-                    }
-                }
+                const msg = `Quote threading <b>${newValue ? "enabled" : "disabled"}</b>`;
+                const color = newValue ? 'blue' : 'black';
+                callPageToast(msg, color, 1300);
             } catch { }
             // Reload to apply the change after 1.4 secs
             setTimeout(() => window.location.reload(), 1400);
@@ -4745,4 +4813,38 @@ onReady(async function () {
         }
         document.body.addEventListener("click", handleClick);
     }
+
+    // --- Version notification ---
+    (async function updateNotif() {
+        const VERSION_KEY = "8chanSS_version";
+        let storedVersion = null;
+        try {
+            storedVersion = await GM.getValue(VERSION_KEY, null);
+        } catch (err) {
+            console.error("[8chanSS] Failed to get stored script version:", err);
+        }
+
+        if (storedVersion !== VERSION) {
+            // Only notify if this isn't the first install (i.e., storedVersion is not null)
+            if (storedVersion !== null) {
+                let tries = 0;
+                while (typeof window.callPageToast !== "function" && tries < 20) {
+                    await new Promise(res => setTimeout(res, 100));
+                    tries++;
+                }
+                if (typeof window.callPageToast === "function") {
+                    window.callPageToast(
+                        `8chanSS has updated to v${VERSION}. Check out the <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank">changelog</a>.`,
+                        "blue",
+                        12000
+                    );
+                }
+            }
+            try {
+                await GM.setValue(VERSION_KEY, VERSION);
+            } catch (err) {
+                console.error("[8chanSS] Failed to store script version:", err);
+            }
+        }
+    })();
 });
