@@ -305,12 +305,27 @@ onReady(async function () {
                 }
             },
             threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
             hideCheckboxes: { label: "Hide Post Checkbox", default: false }
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
             enhanceYoutube: { label: "Enhanced Youtube Links", type: "checkbox", default: true },
+            switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
+            truncFilenames: {
+                label: "Truncate filenames",
+                default: false,
+                subOptions: {
+                    customTrunc: {
+                        label: "Max filename length (min: 5, max: 50)",
+                        default: 15,
+                        type: "number",
+                        min: 5,
+                        max: 50
+                    }
+                }
+            },
+            _miscelFilterTitle: { type: "title", label: ":: IDs & Filtering" },
+            _miscelSection1: { type: "separator" },
             highlightNewIds: {
                 label: "Highlight New IDs",
                 default: false,
@@ -328,20 +343,7 @@ onReady(async function () {
                 }
             },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
-            switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
-            truncFilenames: {
-                label: "Truncate filenames",
-                default: false,
-                subOptions: {
-                    customTrunc: {
-                        label: "Max filename length (min: 5, max: 50)",
-                        default: 15,
-                        type: "number",
-                        min: 5,
-                        max: 50
-                    }
-                }
-            }
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
         }
     };
 
