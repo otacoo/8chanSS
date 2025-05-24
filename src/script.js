@@ -1102,8 +1102,57 @@ onReady(async function () {
         // --- Helper: Get full media URL from thumbnail and MIME type ---
         function getFullMediaSrc(thumbNode, filemime) {
             const thumbnailSrc = thumbNode.getAttribute("src");
+            const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
+            const href = parentA ? parentA.getAttribute("href") : "";
+            const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
+            const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
 
-            // If filemime is missing, fallback: use src as-is if in catalogCell or matches extensionless pattern
+            // Helper: does a string have an extension?
+            function hasExtension(str) {
+                return /\.[a-z0-9]+$/i.test(str);
+            }
+            // Helper: is a t_ thumbnail?
+            function isTThumb(str) {
+                return /\/t_/.test(str);
+            }
+            // Helper: is a direct hash (no extension)?
+            function isDirectHash(str) {
+                return /^\/\.media\/[a-f0-9]{40,}$/i.test(str) && !hasExtension(str);
+            }
+            // Helper: is a small image?
+            function isSmallImage() {
+                return (fileWidth && fileWidth <= 220) || (fileHeight && fileHeight <= 220);
+            }
+            // Helper: is a PNG with no t_ and no extension?
+            function isBarePngNoThumb() {
+                return (
+                    filemime &&
+                    filemime.toLowerCase() === "image/png" &&
+                    parentA &&
+                    !isTThumb(href) &&
+                    !hasExtension(href)
+                );
+            }
+            // Helper: is a small PNG with no t_ and no extension in src?
+            function isSmallBarePngSrc() {
+                return (
+                    isSmallImage() &&
+                    filemime &&
+                    filemime.toLowerCase() === "image/png" &&
+                    !isTThumb(thumbnailSrc) &&
+                    !hasExtension(thumbnailSrc)
+                );
+            }
+            // Helper: is a generic fallback thumbnail?
+            function isGenericThumb() {
+                return (
+                    /\/spoiler\.png$/i.test(thumbnailSrc) ||
+                    /\/custom\.spoiler$/i.test(thumbnailSrc) ||
+                    /\/audioGenericThumb\.png$/i.test(thumbnailSrc)
+                );
+            }
+
+            // 1. If filemime is missing, fallback: use src as-is if in catalogCell or matches extensionless pattern
             if (!filemime) {
                 if (
                     thumbNode.closest('.catalogCell') ||
@@ -1114,29 +1163,23 @@ onReady(async function () {
                 return null;
             }
 
-            // Get parent link to check for small image dimensions
-            const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
-            const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
-            const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
-            const isSmallImage = (fileWidth && fileWidth <= 220) || (fileHeight && fileHeight <= 220);
-
-            // Special case: small PNG, no t_, no extension: leave src alone
-            if (
-                isSmallImage &&
-                filemime && filemime.toLowerCase() === "image/png" &&
-                !/\/t_/.test(thumbnailSrc) &&
-                !/\.[a-z0-9]+$/i.test(thumbnailSrc)
-            ) {
+            // 2. PNG with no t_ and no extension in href: show as-is
+            if (isBarePngNoThumb()) {
                 return thumbnailSrc;
             }
 
-            // For small images, use the original src directly without transformation
-            if (isSmallImage && thumbnailSrc.match(/\/\.media\/[^\/]+\.[a-zA-Z0-9]+$/)) {
+            // 3. Small PNG with no t_ and no extension in src: show as-is
+            if (isSmallBarePngSrc()) {
                 return thumbnailSrc;
             }
 
-            // If "t_" thumbnail
-            if (/\/t_/.test(thumbnailSrc)) {
+            // 4. For small images with extension, use original src directly
+            if (isSmallImage() && hasExtension(thumbnailSrc)) {
+                return thumbnailSrc;
+            }
+
+            // 5. If "t_" thumbnail, transform to full image
+            if (isTThumb(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
                 base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|mp3|m4a|wav)$/i, "");
 
@@ -1150,34 +1193,26 @@ onReady(async function () {
                 return base + ext;
             }
 
-            // If src is a direct hash (no t_) and has no extension, append extension unless APNG or m4v
-            if (
-                thumbnailSrc.match(/^\/\.media\/[a-f0-9]{40,}$/i) && // hash only, no extension
-                !/\.[a-z0-9]+$/i.test(thumbnailSrc)
-            ) {
-                // Special cases: APNG and m4v - do not append extension
+            // 6. If src is a direct hash (no t_) and has no extension, append extension unless APNG or m4v
+            if (isDirectHash(thumbnailSrc)) {
                 if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
                     return thumbnailSrc;
                 }
-
                 const ext = filemime ? getExtensionForMimeType(filemime) : null;
                 if (!ext) {
-                    // Fallback: load as-is
                     return thumbnailSrc;
                 }
                 return thumbnailSrc + ext;
             }
 
-            if (
-                /\/spoiler\.png$/i.test(thumbnailSrc) ||
-                /\/custom\.spoiler$/i.test(thumbnailSrc) ||
-                /\/audioGenericThumb\.png$/i.test(thumbnailSrc)
-            ) {
+            // 7. If generic fallback thumbnail, use href if available
+            if (isGenericThumb()) {
                 if (parentA && parentA.getAttribute("href")) {
                     return sanitizeUrl(parentA.getAttribute("href"));
                 }
                 return null;
             }
+
             return null;
         }
 
