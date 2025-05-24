@@ -2,7 +2,8 @@
     margin: 2em auto;
 }
 
-#divTools>div:nth-child(5) {
+#divTools>div:nth-child(5),
+#divTools>div:nth-child(6) {
     float: left !important;
     margin-top: 9px !important;
     margin-right: 8px;
