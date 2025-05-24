@@ -243,6 +243,8 @@ onReady(async function () {
     const innerOP = document.querySelector(".innerOP");
     const divPosts = document.querySelector(".divPosts");
     const opHeadTitle = document.querySelector(".opHead.title");
+    const catalogDiv = document.querySelector(".catalogDiv");
+
     // Version
     const VERSION = "<%= version %>";
 
@@ -490,15 +492,15 @@ onReady(async function () {
         }
         if (val === null) return flatSettings[key].default;
         switch (flatSettings[key].type) {
-          case "number":
-            return Number(val);
-          case "text":
-            return String(val).replace(/[<>"']/g, "").slice(0, flatSettings[key].maxLength || 32);
-          case "textarea":
-          case "select":
-            return String(val);
-          default:
-            return val === "true";
+            case "number":
+                return Number(val);
+            case "text":
+                return String(val).replace(/[<>"']/g, "").slice(0, flatSettings[key].maxLength || 32);
+            case "textarea":
+            case "select":
+                return String(val);
+            default:
+                return val === "true";
         }
     }
 
@@ -1324,8 +1326,8 @@ onReady(async function () {
         }
 
         // --- Event Handlers (defined once for reuse) ---
-        function leaveHandler() { 
-            cleanupFloatingMedia(); 
+        function leaveHandler() {
+            cleanupFloatingMedia();
         }
         function mouseMoveHandler(ev) {
             lastMouseEvent = ev;
@@ -1613,10 +1615,10 @@ onReady(async function () {
                 img.src = transformedSrc;
 
                 // Set width/height to its initial thumbnail size when loading img again
-                img.onload = function () {
+                img.addEventListener('load', function () {
                     img.style.width = img.naturalWidth + "px";
                     img.style.height = img.naturalHeight + "px";
-                };
+                });
 
                 // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
                 if (removeSpoilers) {
@@ -1637,16 +1639,19 @@ onReady(async function () {
             link.dataset.blurSpoilerProcessed = "1";
         }
 
-        // Initial run: process all existing spoiler links
+        // Cache NodeList to avoid repeated DOM queries
         const spoilerLinks = document.querySelectorAll("a.imgLink");
-        spoilerLinks.forEach(link => processImgLink(link));
+        for (const link of spoilerLinks) {
+            processImgLink(link);
+        }
 
         // Debounce/batch processing for MutationObserver
-        let pendingImgLinks = new Set();
+        let pendingImgLinks = new WeakSet();
         let debounceTimeout = null;
         function processPendingImgLinks() {
-            pendingImgLinks.forEach(link => processImgLink(link));
-            pendingImgLinks.clear();
+            const linksToProcess = Array.from(document.querySelectorAll("a.imgLink")).filter(link => pendingImgLinks.has(link));
+            linksToProcess.forEach(link => processImgLink(link));
+            pendingImgLinks = new WeakSet(); // Reset the WeakSet
             debounceTimeout = null;
         }
         const observer = new MutationObserver(mutations => {
@@ -1664,15 +1669,17 @@ onReady(async function () {
                 debounceTimeout = setTimeout(processPendingImgLinks, 50);
             }
         });
-        observer.observe(divThreads, { childList: true, subtree: true });
+        if (divThreads) {
+            observer.observe(divThreads, { childList: true, subtree: true });
+        }
 
         // Use event delegation once, outside processImgLink:
-        document.body.addEventListener("mouseover", function(e) {
+        document.body.addEventListener("mouseover", function (e) {
             if (e.target.matches("a.imgLink img[style*='blur(5px)']")) {
                 e.target.style.filter = "none";
             }
         });
-        document.body.addEventListener("mouseout", function(e) {
+        document.body.addEventListener("mouseout", function (e) {
             if (e.target.matches("a.imgLink img[style*='transition']")) {
                 e.target.style.filter = "blur(5px)";
             }
@@ -2811,7 +2818,7 @@ onReady(async function () {
         };
         const styleClass = styleClassMap[hlStyle] || "moeText"; // fallback to 'moetext'
 
-        // Helper: Highlight IDs in a given root (default: threads)
+        // Helper: Highlight IDs
         function highlightIds(root = divPosts) {
             // Build frequency map
             const idFrequency = {};
@@ -2845,12 +2852,18 @@ onReady(async function () {
         // Initial run
         highlightIds();
 
+        // Debounced update for observer
+        const debouncedHighlightIds = debounce(() => highlightIds(), 50);
+
         // Observe divPosts for newly added posts
         const observer = new MutationObserver(mutations => {
             let needsUpdate = false;
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
-                    if (node.nodeType === 1 && node.querySelector && node.querySelector('.labelId')) {
+                    if (
+                        node.nodeType === 1 &&
+                        (node.matches?.('.labelId') || node.querySelector?.('.labelId'))
+                    ) {
                         needsUpdate = true;
                         break;
                     }
@@ -2858,10 +2871,12 @@ onReady(async function () {
                 if (needsUpdate) break;
             }
             if (needsUpdate) {
-                highlightIds();
+                debouncedHighlightIds();
             }
         });
         observer.observe(divPosts, { childList: true, subtree: true });
+        // Cleanup observer on navigation/unload
+        window.addEventListener('beforeunload', () => observer.disconnect());
     }
 
     // --- Feature: Quote Threading ---
@@ -2963,6 +2978,7 @@ onReady(async function () {
     // --- Feature: Last 50 Button ---
     function featureLastFifty() {
         if (!window.pageType?.isCatalog) return;
+        if (!catalogDiv) return;
 
         // Add the [L] button to catalog cell
         function addLastLinkButtons(root = document) {
@@ -3005,14 +3021,13 @@ onReady(async function () {
         // Initial run on page load
         addLastLinkButtons(document);
 
-        // Set up MutationObserver for dynamic updates
-        if (!divThreads) return;
-
         // Debounce to avoid excessive calls
         const debouncedUpdate = debounce(() => addLastLinkButtons(document), 50);
         const observer = new MutationObserver(debouncedUpdate);
 
-        observer.observe(divThreads, { childList: true, subtree: false });
+        observer.observe(catalogDiv, { childList: true, subtree: false });
+        // Cleanup
+        window.addEventListener('beforeunload', () => observer.disconnect());
     }
 
     // --- Feature: Toggle ID as Yours ---
@@ -3226,7 +3241,6 @@ onReady(async function () {
     async function featureSauceLinks() {
         // Only enable for index or thread
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
-            console.log("[SauceLinks] Not a thread or index page, exiting.");
             return;
         }
 
@@ -3286,7 +3300,6 @@ onReady(async function () {
 
         // Helper: Fetch the image as a Blob
         async function fetchImageBlob(url) {
-            console.log("[SauceLinks] Fetching image blob from:", url);
             const response = await fetch(url);
             if (!response.ok) throw new Error("Failed to fetch image");
             return await response.blob();
@@ -3343,7 +3356,6 @@ onReady(async function () {
                     a.addEventListener('click', async (e) => {
                         e.preventDefault();
                         try {
-                            console.log(`[SauceLinks] Uploading to ${service.label}...`);
                             const blob = await fetchImageBlob(imgUrl);
                             const file = new File([blob], "image.png", { type: blob.type || "image/png" });
 
@@ -3368,9 +3380,7 @@ onReady(async function () {
                             document.body.appendChild(form);
                             form.submit();
                             setTimeout(() => form.remove(), 10000);
-                            console.log(`[SauceLinks] Submitted form to ${service.url}`);
                         } catch (err) {
-                            console.error(`[SauceLinks] Failed to upload thumbnail to ${service.label}:`, err);
                             alert("Failed to upload thumbnail: " + err);
                         }
                     });
@@ -3396,13 +3406,14 @@ onReady(async function () {
 
         // Keep a reference to the observer so we can disconnect if needed
         let intersectionObserver = null;
+        let mutationObserver = null;
 
         function observeUploadDetails(element) {
             if (!intersectionObserver) return;
             intersectionObserver.observe(element);
         }
 
-        // Create the IntersectionObserver
+        // Create the IntersectionObserver (for lazy processing)
         intersectionObserver = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -3425,9 +3436,11 @@ onReady(async function () {
 
         // Helper: process a single node if it's .uploadDetails
         function observeIfUploadDetails(node) {
-            if (node.nodeType === 1
-                && node.classList.contains('uploadDetails')
-                && !node.classList.contains('sauceLinksProcessed')) {
+            if (
+                node.nodeType === 1 &&
+                node.classList.contains('uploadDetails') &&
+                !node.classList.contains('sauceLinksProcessed')
+            ) {
                 observeUploadDetails(node);
             }
         }
@@ -3435,29 +3448,42 @@ onReady(async function () {
         // Initial observation
         observeAllUploadDetails();
 
-        // Observe for new posts and attribute changes
-        if (divPosts) {
-            const mutationObserver = new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    // Process new .uploadDetails nodes
-                    if (mutation.type === "childList") {
-                        mutation.addedNodes.forEach(node => {
-                            if (node.nodeType === 1) {
-                                // If the node itself is .uploadDetails
-                                observeIfUploadDetails(node);
-                                // Or any descendants like tooltips or inline
-                                node.querySelectorAll?.('.uploadDetails:not(.sauceLinksProcessed)').forEach(observeUploadDetails);
-                            }
-                        });
-                    }
-                });
+        // Debounced observer callback for performance
+        const debouncedMutationHandler = debounce((mutations) => {
+            mutations.forEach(mutation => {
+                // Process new .uploadDetails nodes
+                if (mutation.type === "childList") {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1) {
+                            // If the node itself is .uploadDetails
+                            observeIfUploadDetails(node);
+                            // Or any descendants like tooltips or inline
+                            node.querySelectorAll?.('.uploadDetails:not(.sauceLinksProcessed)').forEach(observeUploadDetails);
+                        }
+                    });
+                }
             });
+        }, 100);
 
+        // Ensure divPosts exists
+        if (divPosts) {
+            mutationObserver = new MutationObserver(debouncedMutationHandler);
             mutationObserver.observe(divPosts, {
                 childList: true,
                 subtree: true,
             });
         }
+
+        // Cleanup on navigation/unload
+        function cleanupObservers() {
+            if (intersectionObserver) {
+                intersectionObserver.disconnect();
+            }
+            if (mutationObserver) {
+                mutationObserver.disconnect();
+            }
+        }
+        window.addEventListener('beforeunload', cleanupObservers);
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
