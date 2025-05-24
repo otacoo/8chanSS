@@ -61,15 +61,17 @@ nav.navHeader>.nav-boards:hover {
 }
 
 /* (You) Replies */
-:root.highlight-you .innerPost:has(> .postInfo.title > .youName),
-:root.highlight-you .innerOP:has(> .opHead.title > .youName)  {
-    border-left: dashed #68b723 2px;
+:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),
+:root.highlight-yous .innerOP:has(> .opHead.title > .youName),
+:root.highlight-yous .yourPost {
+    border-left: dashed #68b723 2px !important;
 }
 
-:root.highlight-you .innerPost:has(>.divMessage>.you),
-:root.highlight-you .innerPost:has(>.divMessage>*:not(div)>.you),
-:root.highlight-you .innerPost:has(>.divMessage>*:not(div)>*:not(div)>.you) {
-    border-left: solid var(--subject-color) 2px;
+:root.highlight-yous .innerPost:has(>.divMessage>.you),
+:root.highlight-yous .innerPost:has(>.divMessage>*:not(div)>.you),
+:root.highlight-yous .innerPost:has(>.divMessage>*:not(div)>*:not(div)>.you),
+:root.highlight-yous .quotesYou {
+    border-left: solid var(--subject-color) 2px !important;
 }
 
 /* Fit Replies */
