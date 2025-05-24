@@ -2604,61 +2604,56 @@ onReady(async function () {
     function truncateFilenames(filenameLength) {
         if (window.pageType?.isCatalog) return;
 
-        function processLinks(root = document, fromObserver = false) {
+        const divThreads = document.getElementById('divThreads');
+        if (!divThreads) return;
+
+        // Store full and truncated filenames in dataset for quick access
+        function processLinks(root = document) {
             const links = root.querySelectorAll('a.originalNameLink');
             links.forEach(link => {
                 // Skip if already processed
                 if (link.dataset.truncated === "1") return;
                 const fullFilename = link.getAttribute('download');
-                if (!fullFilename) {
-                    return;
-                }
+                if (!fullFilename) return;
                 const lastDot = fullFilename.lastIndexOf('.');
-                if (lastDot === -1) {
-                    return; // No extension found
-                }
+                if (lastDot === -1) return; // No extension found
                 const name = fullFilename.slice(0, lastDot);
                 const ext = fullFilename.slice(lastDot);
-                // Only truncate if needed
                 let truncated = fullFilename;
                 if (name.length > filenameLength) {
                     truncated = name.slice(0, filenameLength) + '(...)' + ext;
                 }
-                // Set initial truncated text
                 link.textContent = truncated;
-                // Mark as processed to avoid reprocessing
                 link.dataset.truncated = "1";
-                // Show full filename on hover, revert on mouseout
-                link.addEventListener('mouseenter', function () {
-                    link.textContent = fullFilename;
-                });
-                link.addEventListener('mouseleave', function () {
-                    link.textContent = truncated;
-                });
-                // Optional: set title attribute for accessibility
+                link.dataset.fullFilename = fullFilename;
+                link.dataset.truncatedFilename = truncated;
                 link.title = fullFilename;
             });
         }
+
         // Initial processing
-        processLinks(document, false);
-        // Set up observer for dynamically added links in #divThreads
-        if (divThreads) {
-            new MutationObserver((mutations) => {
-                mutations.forEach(mutation => {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === 1) { // ELEMENT_NODE
-                            // If the node itself is a link, process it directly
-                            if (node.matches && node.matches('a.originalNameLink')) {
-                                processLinks(node, true);
-                            } else {
-                                // Otherwise, process any links within the subtree
-                                processLinks(node, true);
-                            }
-                        }
-                    });
-                });
-            }).observe(divThreads, { childList: true, subtree: true });
-        }
+        processLinks(document);
+
+        // Event delegation for hover: show full filename on mouseenter, truncated on mouseleave
+        divThreads.addEventListener('mouseover', function (e) {
+            const link = e.target.closest('a.originalNameLink');
+            if (link && link.dataset.fullFilename) {
+                link.textContent = link.dataset.fullFilename;
+            }
+        });
+        divThreads.addEventListener('mouseout', function (e) {
+            const link = e.target.closest('a.originalNameLink');
+            if (link && link.dataset.truncatedFilename) {
+                link.textContent = link.dataset.truncatedFilename;
+            }
+        });
+        // Debounced observer callback for performance
+        const debouncedProcess = debounce(() => processLinks(divThreads), 100);
+        // Observe for dynamically added links in #divThreads
+        const observer = new MutationObserver(debouncedProcess);
+        observer.observe(divThreads, { childList: true, subtree: true });
+        // Cleanup observer on unload/navigation
+        window.addEventListener('beforeunload', () => observer.disconnect());
     }
 
     // --- Feature: Show Thread Stats in Header ---
