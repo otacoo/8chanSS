@@ -3,6 +3,17 @@
     margin: 0;
 }
 
+/* Links at top of page */
+.innerUtility.top {
+    margin-top: 2em;
+    background: none !important;
+    color: var(--link-color) !important;
+}
+
+.innerUtility.top a {
+    color: var(--link-color) !important;
+}
+
 /* Side Catalog */
 #sideCatalogDiv {
     z-index: 200;
@@ -185,17 +196,6 @@ nav.navHeader>.nav-boards:hover {
 
 #scroll-arrow-down {
     bottom: 32px;
-}
-
-/* Links at top of page */
-.innerUtility.top {
-    margin-top: 2em;
-    background-color: transparent !important;
-    color: var(--link-color) !important;
-}
-
-.innerUtility.top a {
-    color: var(--link-color) !important;
 }
 
 /* Smol padding fix for the anchor */
