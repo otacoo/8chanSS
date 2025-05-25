@@ -1,3 +1,30 @@
+## v1.49.0
+*2025-05-24*
+
+### **New Feature: Notification API**
+This API allows any script to call a notification, set a color (black, green, orange, red, blue) and duration in ms (default 1200 ms).\
+It allows the passing of certain HTML code as well, all tag attributes are stripped except for <a>'s href, target and rel.\
+Allowed tags: <a>, <b>, <i>, <u>, <strong>, <em>.
+
+#### How to call:
+
+`window.showGlobalToast('Message', 'color', duration)`
+
+Examples:
+```
+window.showGlobalToast('A new XYZ version is <b>available</b>!', 'blue');
+window.showGlobalToast('Something went <a href="#">wrong</a>.', 'red', 7000);
+window.showGlobalToast('Test from console!', 'black, 3000); // 3 seconds
+```
+
+- **New Options:**
+  - Sauce Links (IQDB, Saucenao, Pixiv)
+  - Add menu entry to toggle ID as yours
+- Fix for APNG images not being hoverable if added in a new post
+- Fix for images with exactly 220px width/height not being hoverable
+- Rearranged some of the menu
+- Various code optimizations
+
 ## v1.48.0
 *2025-05-21*
 
