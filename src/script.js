@@ -32,123 +32,6 @@ window.pageType = (() => {
         path: path
     };
 })();
-// Favicon Manager
-const faviconManager = (() => {
-    // Map available styles
-    const STYLES = [
-        "default",
-        "eight", "eight_dark",
-        "pixel", "pixel_alt"
-    ];
-    const STATES = ["base", "unread", "notif"];
-
-    // Favicons
-    const FAVICON_DATA = {
-        default: {
-            base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_base.png', {encoding: 'base64'}) %>",
-            unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_unread.png', {encoding: 'base64'}) %>",
-            notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_notif.png', {encoding: 'base64'}) %>",
-        },
-        eight: {
-            base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_base.png', {encoding: 'base64'}) %>",
-            unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_unread.png', {encoding: 'base64'}) %>",
-            notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_notif.png', {encoding: 'base64'}) %>",
-        },
-        eight_dark: {
-            base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_base.png', {encoding: 'base64'}) %>",
-            unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_unread.png', {encoding: 'base64'}) %>",
-            notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_notif.png', {encoding: 'base64'}) %>",
-        },
-        pixel: {
-            base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_base.png', {encoding: 'base64'}) %>",
-            unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_unread.png', {encoding: 'base64'}) %>",
-            notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_notif.png', {encoding: 'base64'}) %>",
-        },
-        pixel_alt: {
-            base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_base.png', {encoding: 'base64'}) %>",
-            unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_unread.png', {encoding: 'base64'}) %>",
-            notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_notif.png', {encoding: 'base64'}) %>",
-        }
-    };
-
-    // Internal state tracking
-    let currentStyle = "default";
-    let currentState = "base";
-    let cachedUserStyle = null;
-
-    // Remove all favicon links from <head>
-    function removeFavicons() {
-        const head = document.head;
-        if (!head) return;
-        // Only remove if present
-        head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
-    }
-
-    // Insert favicon link into <head>
-    function insertFavicon(href) {
-        const head = document.head;
-        if (!head) return;
-        const link = document.createElement('link');
-        link.rel = 'icon';
-        link.type = 'image/png';
-        link.href = href;
-        head.appendChild(link);
-    }
-
-    // Get user-selected style from settings ('faviconStyle', fallback: "default")
-    async function getUserFaviconStyle() {
-        if (cachedUserStyle) return cachedUserStyle;
-        let style = "default";
-        try {
-            style = await getSetting("customFavicon_faviconStyle");
-        } catch { }
-        if (!STYLES.includes(style)) style = "default";
-        cachedUserStyle = style;
-        return style;
-    }
-
-    // Only update favicon if style/state changed
-    async function setFaviconStyle(style, state = "base") {
-        if (!STYLES.includes(style)) style = "default";
-        if (!STATES.includes(state)) state = "base";
-        if (currentStyle === style && currentState === state) return; // No change
-
-        const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
-        removeFavicons();
-        insertFavicon(url);
-        // Track state
-        currentStyle = style;
-        currentState = state;
-        // Dispatch event for listeners
-        document.dispatchEvent(new CustomEvent("faviconStateChanged", {
-            detail: { style, state }
-        }));
-    }
-
-    // Set favicon based on state ("base", "unread", "notif") and user style
-    async function setFavicon(state = "base") {
-        if (!STATES.includes(state)) state = "base";
-        const style = await getUserFaviconStyle();
-        await setFaviconStyle(style, state);
-    }
-    // Reset to base state (default)
-    async function resetFavicon() {
-        await setFavicon("base");
-    }
-    // Getter for current state (for state managers)
-    function getCurrentFaviconState() {
-        return { style: currentStyle, state: currentState };
-    }
-
-    return {
-        setFavicon,
-        setFaviconStyle,
-        resetFavicon,
-        getCurrentFaviconState,
-        STYLES,
-        STATES
-    };
-})();
 //////// NOTIFICATION HANDLER ///////////////////
 (function () {
     // Strip all tags except <a>, <b>, <i>, <u>, <strong>, <em>
@@ -239,11 +122,11 @@ const faviconManager = (() => {
 onReady(async function () {
     "use strict";
     //////// GLOBAL SELECTORS ///////////////////////
-    const divThreads = document.getElementById("divThreads");
-    const innerOP = document.querySelector(".innerOP");
-    const divPosts = document.querySelector(".divPosts");
-    const opHeadTitle = document.querySelector(".opHead.title");
-    const catalogDiv = document.querySelector(".catalogDiv");
+    const divThreads = document.getElementById('divThreads');
+    const innerOP = document.querySelector('.innerOP');
+    const divPosts = document.querySelector('.divPosts');
+    const opHeadTitle = document.querySelector('.opHead.title');
+    const catalogDiv = document.querySelector('.catalogDiv');
 
     // Version
     const VERSION = "<%= version %>";
@@ -514,7 +397,7 @@ onReady(async function () {
     }
 
     // --- Root CSS Class Toggles ---
-    async function featureCssClassToggles() {
+    (async function featureCssClassToggles() {
         document.documentElement.classList.add("8chanSS");
         const enableSidebar = await getSetting("enableSidebar");
         const enableSidebar_leftSidebar = await getSetting("enableSidebar_leftSidebar");
@@ -575,12 +458,10 @@ onReady(async function () {
         } else {
             document.documentElement.classList.remove("is-index");
         }
-    }
-    // Init
-    featureCssClassToggles();
+    })();
 
     // Sidebar Right/Left
-    async function featureSidebar() {
+    (async function featureSidebar() {
         const enableSidebar = await getSetting("enableSidebar");
         const enableSidebar_leftSidebar = await getSetting("enableSidebar_leftSidebar");
 
@@ -597,16 +478,16 @@ onReady(async function () {
             mainPanel.style.marginRight = "0";
             mainPanel.style.marginLeft = "0";
         }
-    }
-    // Init
-    featureSidebar();
+    })();
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Custom CSS injection
     (function injectCustomCss() {
-        let css = "";
+        // Only inject if not already present
+        if (document.getElementById('8chSS')) return;
 
+        let css = "";
         // Always inject site CSS for 8chan domains
         if (window.pageType?.is8chan) {
             css += "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
@@ -618,13 +499,130 @@ onReady(async function () {
             css += "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
         }
 
-        // Only inject if not already present and if there's CSS to inject
-        if (css && !document.getElementById('8chSS')) {
-            const style = document.createElement('style');
-            style.id = '8chSS';
-            style.textContent = css;
-            document.head.appendChild(style);
+        if (!css) return;
+
+        const style = document.createElement('style');
+        style.id = '8chSS';
+        style.textContent = css;
+        document.head.appendChild(style);
+    })();
+
+    // Favicon Manager
+    const faviconManager = (() => {
+        // Map available styles
+        const STYLES = [
+            "default",
+            "eight", "eight_dark",
+            "pixel", "pixel_alt"
+        ];
+        const STATES = ["base", "unread", "notif"];
+
+        // Favicons
+        const FAVICON_DATA = {
+            default: {
+                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_base.png', {encoding: 'base64'}) %>",
+                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_unread.png', {encoding: 'base64'}) %>",
+                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_notif.png', {encoding: 'base64'}) %>",
+            },
+            eight: {
+                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_base.png', {encoding: 'base64'}) %>",
+                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_unread.png', {encoding: 'base64'}) %>",
+                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_notif.png', {encoding: 'base64'}) %>",
+            },
+            eight_dark: {
+                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_base.png', {encoding: 'base64'}) %>",
+                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_unread.png', {encoding: 'base64'}) %>",
+                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_notif.png', {encoding: 'base64'}) %>",
+            },
+            pixel: {
+                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_base.png', {encoding: 'base64'}) %>",
+                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_unread.png', {encoding: 'base64'}) %>",
+                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_notif.png', {encoding: 'base64'}) %>",
+            },
+            pixel_alt: {
+                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_base.png', {encoding: 'base64'}) %>",
+                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_unread.png', {encoding: 'base64'}) %>",
+                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_notif.png', {encoding: 'base64'}) %>",
+            }
+        };
+
+        // Internal state tracking
+        let currentStyle = "default";
+        let currentState = "base";
+        let cachedUserStyle = null;
+
+        // Remove all favicon links from <head>
+        function removeFavicons() {
+            const head = document.head;
+            if (!head) return;
+            // Only remove if present
+            head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
         }
+
+        // Insert favicon link into <head>
+        function insertFavicon(href) {
+            const head = document.head;
+            if (!head) return;
+            const link = document.createElement('link');
+            link.rel = 'icon';
+            link.type = 'image/png';
+            link.href = href;
+            head.appendChild(link);
+        }
+
+        // Get user-selected style from settings ('faviconStyle', fallback: "default")
+        async function getUserFaviconStyle() {
+            if (cachedUserStyle) return cachedUserStyle;
+            let style = "default";
+            try {
+                style = await getSetting("customFavicon_faviconStyle");
+            } catch { }
+            if (!STYLES.includes(style)) style = "default";
+            cachedUserStyle = style;
+            return style;
+        }
+
+        // Only update favicon if style/state changed
+        async function setFaviconStyle(style, state = "base") {
+            if (!STYLES.includes(style)) style = "default";
+            if (!STATES.includes(state)) state = "base";
+            if (currentStyle === style && currentState === state) return; // No change
+
+            const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
+            removeFavicons();
+            insertFavicon(url);
+            // Track state
+            currentStyle = style;
+            currentState = state;
+            // Dispatch event for listeners
+            document.dispatchEvent(new CustomEvent("faviconStateChanged", {
+                detail: { style, state }
+            }));
+        }
+
+        // Set favicon based on state ("base", "unread", "notif") and user style
+        async function setFavicon(state = "base") {
+            if (!STATES.includes(state)) state = "base";
+            const style = await getUserFaviconStyle();
+            await setFaviconStyle(style, state);
+        }
+        // Reset to base state (default)
+        async function resetFavicon() {
+            await setFavicon("base");
+        }
+        // Getter for current state (for state managers)
+        function getCurrentFaviconState() {
+            return { style: currentStyle, state: currentState };
+        }
+
+        return {
+            setFavicon,
+            setFaviconStyle,
+            resetFavicon,
+            getCurrentFaviconState,
+            STYLES,
+            STATES
+        };
     })();
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2603,8 +2601,6 @@ onReady(async function () {
     // --- Feature: Truncate Filenames and Show Only Extension ---
     function truncateFilenames(filenameLength) {
         if (window.pageType?.isCatalog) return;
-
-        const divThreads = document.getElementById('divThreads');
         if (!divThreads) return;
 
         // Store full and truncated filenames in dataset for quick access
@@ -3054,14 +3050,12 @@ onReady(async function () {
             }
         }
         function setYourPostNumbers(arr) {
-            // Store as array of numbers (not strings)
             localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
         }
 
-        // --- Menu/Post Association ---
+        // Menu/Post Association
         document.body.addEventListener('click', function (e) {
             if (e.target.matches('.extraMenuButton')) {
-                // Support both .postCell and .opCell
                 const postCell = e.target.closest('.postCell, .opCell');
                 if (!postCell) return;
                 setTimeout(() => {
@@ -3072,7 +3066,6 @@ onReady(async function () {
                     }
                     if (menu) {
                         menu.setAttribute('data-post-id', postCell.id);
-                        // Store the post's ID string for the menu
                         const labelIdSpan = postCell.querySelector('.labelId');
                         if (labelIdSpan) {
                             menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
@@ -3086,9 +3079,8 @@ onReady(async function () {
             return menu.getAttribute('data-label-id') || null;
         }
 
-        // --- Toggle all posts with a given ID ---
+        // Toggle all posts with a given ID
         function toggleYouNameClassForId(labelId, add) {
-            // Find all posts with this labelId and toggle "youName" on their .linkName
             document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
                 if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
@@ -3100,7 +3092,7 @@ onReady(async function () {
             });
         }
 
-        // --- Get all post numbers for a given ID ---
+        // Get all post numbers for a given ID
         function getAllPostNumbersForId(labelId) {
             const postNumbers = [];
             document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
@@ -3113,7 +3105,7 @@ onReady(async function () {
             return postNumbers;
         }
 
-        // --- Menu Entry Logic ---
+        // Menu Entry Logic
         function addMenuEntries(root = document) {
             root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
                 // Only proceed if the menu is a descendant of an .extraMenuButton
@@ -3135,7 +3127,6 @@ onReady(async function () {
                 li.style.cursor = "pointer";
                 li.textContent = "Toggle ID as Yours";
 
-                // Always append as the last <li> in the <ul>
                 ul.appendChild(li);
 
                 li.addEventListener("click", function (e) {
@@ -3149,14 +3140,12 @@ onReady(async function () {
 
                     const allMarked = postNumbersForId.every(num => yourPostNumbers.includes(num));
                     if (!allMarked) {
-                        // Add all post numbers for this ID
                         postNumbersForId.forEach(num => {
                             if (!yourPostNumbers.includes(num)) yourPostNumbers.push(num);
                         });
                         setYourPostNumbers(yourPostNumbers);
                         toggleYouNameClassForId(labelId, true);
                     } else {
-                        // Remove all post numbers for this ID
                         yourPostNumbers = yourPostNumbers.filter(num => !postNumbersForId.includes(num));
                         setYourPostNumbers(yourPostNumbers);
                         toggleYouNameClassForId(labelId, false);
@@ -3172,7 +3161,6 @@ onReady(async function () {
         window.addEventListener("storage", function (event) {
             if (event.key === T_YOUS_KEY) {
                 const yourPostNumbers = getYourPostNumbers();
-                // Update all posts for all marked post numbers
                 document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                     const nameLink = postCell.querySelector(".linkName.noEmailName");
                     if (nameLink) {
@@ -3183,13 +3171,13 @@ onReady(async function () {
             }
         });
 
-        // --- Observe for Dynamic Menus ---
-        const observer = new MutationObserver(mutations => {
+        // Observe for Dynamic Menus
+        // Use global debounce helper for observer callback
+        const debouncedObserverCallback = debounce((mutations) => {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType !== 1) continue;
                     if (node.matches && node.matches(MENU_SELECTOR)) {
-                        // Set data-label-id if not present
                         if (!node.hasAttribute('data-label-id')) {
                             const btn = node.closest('.extraMenuButton');
                             const postCell = btn && btn.closest('.postCell, .opCell');
@@ -3218,8 +3206,15 @@ onReady(async function () {
                     }
                 }
             }
-        });
-        observer.observe(divThreads, { childList: true, subtree: true });
+        }, 100);
+
+        if (divThreads) {
+            const observer = new MutationObserver(debouncedObserverCallback);
+            observer.observe(divThreads, { childList: true, subtree: true });
+
+            // Cleanup observer on unload/navigation
+            window.addEventListener('beforeunload', () => observer.disconnect());
+        }
 
         // Initial marking on page load for all marked post numbers
         const yourPostNumbers = getYourPostNumbers();
@@ -3232,7 +3227,7 @@ onReady(async function () {
         });
     }
 
-    // --- Feature: Sauce Links, appended to .uploadDetails
+    // --- Feature: Sauce Links, appended to .uploadDetails ---
     async function featureSauceLinks() {
         // Only enable for index or thread
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
@@ -4774,13 +4769,12 @@ onReady(async function () {
     // --- Misc Fixes ---
 
     // Captcha input no history
-    function noCaptchaHistory() {
+    (function noCaptchaHistory() {
         const captchaInput = document.getElementById("QRfieldCaptcha");
         if (captchaInput) {
             captchaInput.autocomplete = "off";
         }
-    }
-    noCaptchaHistory();
+    })();
 
     // Don't scroll to bottom on post
     function preventFooterScrollIntoView() {
@@ -4794,14 +4788,13 @@ onReady(async function () {
     }
 
     // Move file uploads below OP title
-    function moveFileUploadsBelowOp() {
+    (function moveFileUploadsBelowOp() {
         if (window.pageType?.isCatalog) {
             return;
         } else if (opHeadTitle && innerOP) {
             innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
         }
-    }
-    moveFileUploadsBelowOp();
+    })();
 
     // Dashed underline for inlined reply backlinks and quotelinks
     document.addEventListener('click', function (e) {
