@@ -97,6 +97,24 @@ Add this to uBlock's *My Filters* page and press Save Changes, then restart your
 ||8chan.*/*/custom.css$css
 ```
 
+### Notification API
+
+8chanSS makes available a small API to call toast notifications on the page.
+The API allows any script to call a notification, set a color (black, green, orange, red, blue) and duration in ms (default 1200 ms).\
+It allows the passing of certain HTML code as well, all tag attributes are stripped except for `<a>`'s href, target and rel.\
+Allowed tags: `<a>`, `<b>`, `<i>`, `<u>`, `<strong>`, `<em>`.
+
+**How to call:**
+
+`window.showGlobalToast('Message', 'color', duration)`
+
+Examples:
+```
+window.showGlobalToast('A new XYZ version is <b>available</b>!', 'blue');
+window.showGlobalToast('Something went <a href="#">wrong</a>.', 'red', 7000);
+window.showGlobalToast('Test from console!', 'black, 3000); // 3 seconds
+```
+
 ## Contributing
 Read [Contributing](https://github.com/otacoo/8chanSS/blob/main/CONTRIBUTING.md#development--contribution) first to set up, fork the repo, then do a pull request to here.
 
