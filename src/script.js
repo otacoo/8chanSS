@@ -4876,7 +4876,7 @@ onReady(async function () {
                 }
                 if (typeof window.callPageToast === "function") {
                     window.callPageToast(
-                        `8chanSS has updated to v${VERSION}. Check out the <a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank">changelog</a>.`,
+                        `8chanSS has updated to v${VERSION}. Check out the <b><a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank">changelog</a></b>.`,
                         "blue",
                         12000
                     );
