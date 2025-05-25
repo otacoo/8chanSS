@@ -3,8 +3,8 @@
 
 ### **New Feature: Notification API**
 This API allows any script to call a notification, set a color (black, green, orange, red, blue) and duration in ms (default 1200 ms).\
-It allows the passing of certain HTML code as well, all tag attributes are stripped except for <a>'s href, target and rel.\
-Allowed tags: <a>, <b>, <i>, <u>, <strong>, <em>.
+It allows the passing of certain HTML code as well, all tag attributes are stripped except for `<a>`'s href, target and rel.\
+Allowed tags: `<a>`, `<b>`, `<i>`, `<u>`, `<strong`, `<em>`.
 
 #### How to call:
 
