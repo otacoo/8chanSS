@@ -3308,7 +3308,6 @@ onReady(async function () {
         function addSauceLinksToElement(detailDiv) {
             // Prevent duplicate processing
             if (detailDiv.classList.contains('sauceLinksProcessed')) {
-                // Already processed
                 return;
             }
 
@@ -3396,14 +3395,11 @@ onReady(async function () {
 
         // Keep a reference to the observer so we can disconnect if needed
         let intersectionObserver = null;
-        let mutationObserver = null;
-
         function observeUploadDetails(element) {
             if (!intersectionObserver) return;
             intersectionObserver.observe(element);
         }
-
-        // Create the IntersectionObserver (for lazy processing)
+        // Create the IntersectionObserver
         intersectionObserver = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -3417,47 +3413,38 @@ onReady(async function () {
             rootMargin: "0px",
             threshold: 0.1 // Only when at least 10% is visible
         });
-
         // Process all .uploadDetails in a given container (but only observe, not process immediately)
         function observeAllUploadDetails(container = document) {
             const details = container.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)');
             details.forEach(detailDiv => observeUploadDetails(detailDiv));
         }
-
         // Helper: process a single node if it's .uploadDetails
         function observeIfUploadDetails(node) {
-            if (
-                node.nodeType === 1 &&
-                node.classList.contains('uploadDetails') &&
-                !node.classList.contains('sauceLinksProcessed')
-            ) {
+            if (node.nodeType === 1
+                && node.classList.contains('uploadDetails')
+                && !node.classList.contains('sauceLinksProcessed')) {
                 observeUploadDetails(node);
             }
         }
-
         // Initial observation
         observeAllUploadDetails();
-
-        // Debounced observer callback for performance
-        const debouncedMutationHandler = debounce((mutations) => {
-            mutations.forEach(mutation => {
-                // Process new .uploadDetails nodes
-                if (mutation.type === "childList") {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === 1) {
-                            // If the node itself is .uploadDetails
-                            observeIfUploadDetails(node);
-                            // Or any descendants like tooltips or inline
-                            node.querySelectorAll?.('.uploadDetails:not(.sauceLinksProcessed)').forEach(observeUploadDetails);
-                        }
-                    });
-                }
-            });
-        }, 100);
-
-        // Ensure divPosts exists
+        // Observe for new posts and attribute changes
         if (divPosts) {
-            mutationObserver = new MutationObserver(debouncedMutationHandler);
+            const mutationObserver = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    // Process new .uploadDetails nodes
+                    if (mutation.type === "childList") {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) {
+                                // If the node itself is .uploadDetails
+                                observeIfUploadDetails(node);
+                                // Or any descendants like tooltips or inline
+                                node.querySelectorAll?.('.uploadDetails:not(.sauceLinksProcessed)').forEach(observeUploadDetails);
+                            }
+                        });
+                    }
+                });
+            });
             mutationObserver.observe(divPosts, {
                 childList: true,
                 subtree: true,
