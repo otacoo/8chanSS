@@ -125,3 +125,9 @@ Open a [new issue](https://github.com/otacoo/8chanSS/issues) and request a featu
 
 Read [Reporting Bugs](https://github.com/otacoo/8chanSS/blob/main/CONTRIBUTING.md#reporting-bugs-and-suggestions) first if you have an issue and want to report a bug.
 
+#### Credits
+
+- bapao1, for help and insight
+- vfyxe, for FullchanX and discussion
+- impregnator, for Hash Navigation code
+- All the Anons who contributed with code, help, feature requests and bug reports
