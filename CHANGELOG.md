@@ -1,3 +1,12 @@
+## v1.50.0
+*2025-05-26*
+
+- **New Option:** Styling > OP Background
+- Added a settings toggle for 8chanSS update notifications
+- Fix for new posts not getting Sauce links when enabled
+- Fix for Tab shortcut key not checking for modifier keys
+
+
 ## v1.49.0
 *2025-05-24*
 
