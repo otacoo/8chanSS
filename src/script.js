@@ -4426,7 +4426,12 @@ onReady(async function () {
         }
 
         // Tab key: focus #qrbody if not already focused, else focus #QRfieldCaptcha
-        if (event.key === "Tab") {
+        if (
+            event.key === "Tab" &&
+            !event.ctrlKey &&
+            !event.altKey &&
+            !event.metaKey
+        ) {
             const qrbody = document.getElementById("qrbody");
             const captcha = document.getElementById("QRfieldCaptcha");
 
@@ -4537,7 +4542,10 @@ onReady(async function () {
 
     // (CTRL + Enter) and BBCodes - Only for QR textarea
     const replyTextarea = document.getElementById("qrbody");
-    if (replyTextarea) {
+    // Check if global toggle is enabled first
+    if (!(await shortcutsGloballyEnabled())) {
+        return;
+    } else if (replyTextarea) {
         replyTextarea.addEventListener("keydown", async function (event) {
             if (event.ctrlKey && event.key === "Enter") {
                 event.preventDefault();
