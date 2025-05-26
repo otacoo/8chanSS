@@ -1,24 +1,10 @@
-/* Margins */
-:not(.is-catalog) body {
-    margin: 0;
+/* Unhide on DOM loaded */
+#dynamicAnnouncement,
+#panelMessage,
+#postingForm {
+    visibility: visible;
 }
 
-/* Links at top of page */
-.innerUtility.top {
-    margin-top: 2em;
-    background: none !important;
-    color: var(--link-color) !important;
-}
-
-.innerUtility.top a {
-    color: var(--link-color) !important;
-}
-
-/* Side Catalog */
-#sideCatalogDiv {
-    z-index: 200;
-    background: var(--background-gradient);
-}
 
 /* Cleanup */
 :root.hide-posting-form #postingForm,
@@ -36,6 +22,12 @@
     display: none;
 }
 
+/* Side Catalog */
+#sideCatalogDiv {
+    z-index: 200;
+    background: var(--background-gradient);
+}
+
 /* Deal with FchX */
 :root.hide-defaultBL #navTopBoardsSpan {
     display: none !important;
@@ -48,6 +40,16 @@
 :root.is-thread footer {
     visibility: hidden;
     height: 0;
+}
+
+/* OP */
+:root.op-background .opCell > .innerOP {
+    padding-top: 0.25em;
+    width: 100%;
+    background: var(--contrast-color);
+    border: 1px solid var(--horizon-sep-color);
+    border-top-width: 0;
+    border-left-width: 0;
 }
 
 /* Header */

@@ -1,3 +1,11 @@
+///////// CSS Shim Inject ASAP ////////////
+(function injectCssAsap() {
+    if (document.getElementById('8chSShim')) return;
+    const style = document.createElement('style');
+    style.id = '8chSShim';
+    style.textContent = "<%= grunt.file.read('tmp/shim.min.css').replace(/\\(^\")/g, '') %>";
+    document.head.appendChild(style);
+})();
 ////////// HELPERS ///////////////////////
 // DOM onReady Helper
 function onReady(fn) {
@@ -264,6 +272,7 @@ onReady(async function () {
             _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
             highlightOnYou: { label: "Style (You) posts", default: true },
+            opBackground: { label: "OP background", default: false },
             enableStickyQR: { label: "Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             enableFitReplies: { label: "Fit Replies", default: false },
@@ -421,7 +430,8 @@ onReady(async function () {
             hideCheckboxes: "hide-checkboxes",
             hideNoCookieLink: "hide-nocookie",
             autoExpandTW: "auto-expand-tw",
-            hideJannyTools: "hide-jannytools"
+            hideJannyTools: "hide-jannytools",
+            opBackground: "op-background"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
@@ -508,7 +518,7 @@ onReady(async function () {
         document.head.appendChild(style);
     })();
 
-    // Favicon Manager
+    ////// Favicon Manager /////////////////////////////////////////////////////////////////////////////////////////////////////////
     const faviconManager = (() => {
         // Map available styles
         const STYLES = [
