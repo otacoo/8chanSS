@@ -230,7 +230,7 @@ onReady(async function () {
                     }
                 }
             },
-            quoteThreading: { label: "Enable Quote Threading", default: false },
+            quoteThreading: { label: "Quote Threading", default: false },
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -264,7 +264,7 @@ onReady(async function () {
             _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
             highlightOnYou: { label: "Style (You) posts", default: true },
-            enableStickyQR: { label: "Enable Sticky Quick Reply", default: false },
+            enableStickyQR: { label: "Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             enableFitReplies: { label: "Fit Replies", default: false },
             enableSidebar: {
@@ -282,6 +282,7 @@ onReady(async function () {
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
+            enableUpdateNotif: { label: "8chanSS update notifications", default: true },
             enhanceYoutube: { label: "Enhanced Youtube Links", type: "checkbox", default: true },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
@@ -653,6 +654,7 @@ onReady(async function () {
         { key: "enableLastFifty", fn: featureLastFifty },
         { key: "enableIdToggle", fn: featureToggleIdAsYours },
         { key: "enableTheSauce", fn: featureSauceLinks },
+        { key: "enableUpdateNotif", fn: updateNotif },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -4852,7 +4854,7 @@ onReady(async function () {
     }
 
     // --- Version notification ---
-    (async function updateNotif() {
+    async function updateNotif() {
         const VERSION_KEY = "8chanSS_version";
         let storedVersion = null;
         try {
@@ -4883,5 +4885,5 @@ onReady(async function () {
                 console.error("[8chanSS] Failed to store script version:", err);
             }
         }
-    })();
+    }
 });
