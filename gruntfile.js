@@ -30,7 +30,8 @@
             files: { //workaround cssmin bug by directly specifying files
               'tmp/catalog.min.css': ['src/css/catalog.css'],
               'tmp/site.min.css': ['src/css/site.css'],
-              'tmp/thread.min.css': ['src/css/thread.css']
+              'tmp/thread.min.css': ['src/css/thread.css'],
+              'tmp/shim.min.css': ['src/css/shim.css']
             }
           }
         },
