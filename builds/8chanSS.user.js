@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.50.0
+// @version      1.50.1
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -21,13 +21,6 @@
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAZlBMVEUAAABdlloAhl758AH58AH58AcAhl758ADj4CYAh14AhV4AhV0Ahl748AcChl4Chl0Ab2H58AIAhl758AD58AAAhl757wL48AD47wL78QL47wcAh1748AF3oFfs5yEAh1/68QDz7BM5qSu8AAAAH3RSTlMA/lg/OYtM8g/onXtoXzAaCdzBsIFzczMeaCXXyrmp9ddA3QAAANpJREFUSMft0tkOgjAQheFjtVCQVVxwnfr+L+kWM5FOC73TxP/6fBedFJwpyx5CtSpqSHXWpns4qYxo1cDtkNp7GoOW9KgSwM4+09KeEhmw4H0IuGJDAbCw79a8nwJYFDQCuO1gT8oLWCiKAXavKA5cZ78I5n/wBx7wfb+1TwOggpD2gxxSpvWBrIbY3AcUPK1lkMNbJ4FV4wd964KsQqBF6oAEwcoh2GAk/QlyjNYx4AeHMicGxxoTOrRvIB5IPtULJJhY+QIFJrd9gCUi0tdZjqgu5yYOGAO5G/kyc3TkciPeAAAAAElFTkSuQmCC
 // ==/UserScript==
 
-(function injectCssAsap() {
-    if (document.getElementById('8chSShim')) return;
-    const style = document.createElement('style');
-    style.id = '8chSShim';
-    style.textContent = "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:hidden}:not(.is-catalog) body{margin:0}.innerUtility.top{margin-top:2em;background:0 0!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}";
-    document.head.appendChild(style);
-})();
 function onReady(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
@@ -131,6 +124,20 @@ window.pageType = (() => {
         script.remove();
     };
 })();
+(function injectCssAsap() {
+    function doInject() {
+        if (document.getElementById('8chSShim')) return;
+        if (!document.head) {
+            setTimeout(doInject, 1);
+            return;
+        }
+        const style = document.createElement('style');
+        style.id = '8chSShim';
+        style.textContent = "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:hidden}:not(.is-catalog) body{margin:0}.innerUtility.top{margin-top:2em;background:0 0!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}";
+        document.head.appendChild(style);
+    }
+    doInject();
+})();
 onReady(async function () {
     "use strict";
     const divThreads = document.getElementById('divThreads');
@@ -138,7 +145,7 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.50.0";
+    const VERSION = "1.50.1";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },

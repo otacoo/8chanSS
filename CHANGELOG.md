@@ -1,3 +1,8 @@
+### v1.50.1 (Patch)
+*2025-05-27*
+
+- Fix for the script not loading when document.head isn't immediately available
+
 ## v1.50.0
 *2025-05-26*
 
