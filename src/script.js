@@ -2501,11 +2501,23 @@ onReady(async function () {
         function getYouTubeId(url) {
             try {
                 const u = new URL(url);
-                if (u.hostname.endsWith('youtube.com')) {
-                    return u.searchParams.get('v');
-                }
+
+                // youtu.be short links
                 if (u.hostname === 'youtu.be') {
                     return u.pathname.slice(1);
+                }
+
+                // youtube.com/watch?v=VIDEOID
+                if (u.hostname.endsWith('youtube.com')) {
+                    // Standard watch links
+                    if (u.pathname === '/watch') {
+                        return u.searchParams.get('v');
+                    }
+                    // /live/VIDEOID or /embed/VIDEOID
+                    const liveMatch = u.pathname.match(/^\/(live|embed)\/([a-zA-Z0-9_-]{11})/);
+                    if (liveMatch) {
+                        return liveMatch[2];
+                    }
                 }
             } catch (e) { }
             return null;
@@ -2563,7 +2575,7 @@ onReady(async function () {
                 // Replace link text with favicon, [Youtube], and video title
                 fetchYouTubeTitle(videoId).then(title => {
                     if (title) {
-                        link.innerHTML = `<img class="yt-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAABIklEQVQoz53LvUrDUBjG8bOoOammSf1IoBSvoCB4JeIqOHgBLt6AIMRBBQelWurQ2kERnMRBsBUcIp5FJSBI5oQsJVkkUHh8W0o5nhaFHvjBgef/Mq+Q46RJBMkI/vE+aOus956tnEswIZe1LV0QyJ5sE2GzgZfVMtRNIdiDpccEssdlB1mW4bvTwdvWJtRdErM7U+8S/FJykCRJX5qm+KpVce8UMNLRLbulz4iSjTAMh6Iowsd5BeNadp3nUF0VlxAEwZBotXC0Usa4ll3meZdA1iguwvf9vpvDA2wvmKgYGtSud8suDB4TyGr2PF49D/vra9jRZ1BVdknMzgwuCGSnZEObwu6sBnVTCHZiaC7BhFx2PKdxUidiAH/4lLo9Mv0DELVs9qsOHXwAAAAASUVORK5CYII="><span>[Youtube]</span> ${title}`;
+                        link.innerHTML = `<img class="yt-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAABIklEQVQoz53LvUrDUBjG8bOoOammSf1IoBSvoCB4JeIqOHgBLt6AIMRBBQelWurQ2kERnMRBsBUcIp5FJSBI5oQsJVkkUHh8W0o5nhaFHvjBgef/Mq+Q46RJBMkI/vE+aOus956tnEswIZe1LV0QyJ5sE2GzgZfVMtRNIdiDpccEssdlB1mW4bvTwdvWJtRdErM7U+8S/FJykCRJX5qm+KpVce8UMNLRLbulz4iSjTAMh6Iowsd5BeNadp3nUF0VlxAEwZBotXC0Usa4ll3meZdA1iguwvf9vpvDA2wvmKgYGtSud8suDB4TyGr2PF49D/vra9jRZ1BVdknMzgwuCGSnZEObwu6sBnVTCHZiaC7BhFx2PKdxUidiAH/4lLo9Mv0DELVs9qsOHXwAAAAASUVORK5CYII="><span></span> ${title}`;
                     }
                 });
             });
