@@ -65,7 +65,16 @@ onReady(async function () {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
             _siteSection1: { type: "separator" },
-            alwaysShowTW: { label: "Pin Thread Watcher", default: false },
+            alwaysShowTW: {
+                label: "Pin Thread Watcher",
+                default: false,
+                subOptions: {
+                    noPinInCatalog: {
+                        label: "Don't pin in catalog",
+                        default: false,
+                    }
+                }
+            },
             autoExpandTW: { label: "Auto Expand Thread Watcher", default: false },
             _siteSiteTitle: { type: "title", label: ":: Site" },
             _siteSection2: { type: "separator" },
@@ -1922,6 +1931,7 @@ onReady(async function () {
     // --- Feature: Pin Thread Watcher ---
     async function featureAlwaysShowTW() {
         if (!(await getSetting("alwaysShowTW"))) return;
+        if ((await getSetting("alwaysShowTW_noPinInCatalog")) && window.pageType.isCatalog) return;
 
         function showThreadWatcher() {
             const watchedMenu = document.getElementById("watchedMenu");
@@ -3611,7 +3621,7 @@ onReady(async function () {
         // Tab content container
         const tabContent = document.createElement("div");
         tabContent.style.padding = "15px 16px";
-        tabContent.style.maxHeight = "65vh";
+        tabContent.style.maxHeight = "70vh";
         tabContent.style.overflowY = "auto";
         tabContent.style.scrollbarWidth = "thin";
         tabContent.style.fontSize = "smaller";
