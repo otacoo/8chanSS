@@ -1,3 +1,9 @@
+### v1.50.3 (Patch)
+*2025-05-27*
+
+- **New Option:** Pin Thread Watcher > Don't pin in Catalog
+- Fix for 8chanSS menu colors not working on older browsers
+
 ### v1.50.2 (Patch)
 *2025-05-27*
 

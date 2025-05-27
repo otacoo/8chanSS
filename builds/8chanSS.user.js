@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.50.2
+// @version      1.50.3
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -70,12 +70,21 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.50.2";
+    const VERSION = "1.50.3";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
             _siteSection1: { type: "separator" },
-            alwaysShowTW: { label: "Pin Thread Watcher", default: false },
+            alwaysShowTW: {
+                label: "Pin Thread Watcher",
+                default: false,
+                subOptions: {
+                    noPinInCatalog: {
+                        label: "Don't pin in Catalog",
+                        default: false,
+                    }
+                }
+            },
             autoExpandTW: { label: "Auto Expand Thread Watcher", default: false },
             _siteSiteTitle: { type: "title", label: ":: Site" },
             _siteSection2: { type: "separator" },
@@ -1609,6 +1618,7 @@ onReady(async function () {
     }
     async function featureAlwaysShowTW() {
         if (!(await getSetting("alwaysShowTW"))) return;
+        if ((await getSetting("alwaysShowTW_noPinInCatalog")) && window.pageType.isCatalog) return;
 
         function showThreadWatcher() {
             const watchedMenu = document.getElementById("watchedMenu");
@@ -2864,7 +2874,7 @@ onReady(async function () {
         menu.style.top = "3rem"; 
         menu.style.left = "20rem"; 
         menu.style.zIndex = "99999";
-        menu.style.background = "rgb(from var(--menu-color) r g b / 1)";
+        menu.style.background = "var(--menu-color)";
         menu.style.color = "var(--text-color)";
         menu.style.borderColor = "1px solid var(--border-color)";
         menu.style.padding = "0";
@@ -2885,7 +2895,7 @@ onReady(async function () {
         header.style.marginBottom = "0";
         header.style.cursor = "move";
         header.style.color = "var(--subject-color)";
-        header.style.background = "rgb(from var(--contrast-color) r g b / 1)";
+        header.style.background = "var(--contrast-color)";
         header.style.padding = "1px 18px 1px";
         header.addEventListener("mousedown", function (e) {
             isDragging = true;
@@ -2964,7 +2974,7 @@ onReady(async function () {
         tabNav.style.background = "rgb(from var(--menu-color) r g b / 1)";
         const tabContent = document.createElement("div");
         tabContent.style.padding = "15px 16px";
-        tabContent.style.maxHeight = "65vh";
+        tabContent.style.maxHeight = "70vh";
         tabContent.style.overflowY = "auto";
         tabContent.style.scrollbarWidth = "thin";
         tabContent.style.fontSize = "smaller";
