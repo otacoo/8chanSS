@@ -1,7 +1,8 @@
-### v1.50.1 (Patch)
+### v1.50.2 (Patch)
 *2025-05-27*
 
 - Fix for the script not loading when document.head isn't immediately available
+- Fix for notifications firing too soon on page load
 
 ## v1.50.0
 *2025-05-26*
