@@ -1,11 +1,3 @@
-///////// CSS Shim Inject ASAP ////////////
-(function injectCssAsap() {
-    if (document.getElementById('8chSShim')) return;
-    const style = document.createElement('style');
-    style.id = '8chSShim';
-    style.textContent = "<%= grunt.file.read('tmp/shim.min.css').replace(/\\(^\")/g, '') %>";
-    document.head.appendChild(style);
-})();
 ////////// HELPERS ///////////////////////
 // DOM onReady Helper
 function onReady(fn) {
@@ -125,6 +117,21 @@ window.pageType = (() => {
         document.documentElement.appendChild(script);
         script.remove();
     };
+})();
+///////// CSS Shim Inject ASAP ////////////
+(function injectCssAsap() {
+    function doInject() {
+        if (document.getElementById('8chSShim')) return;
+        if (!document.head) {
+            setTimeout(doInject, 1);
+            return;
+        }
+        const style = document.createElement('style');
+        style.id = '8chSShim';
+        style.textContent = "<%= grunt.file.read('tmp/shim.min.css').replace(/\\(^\")/g, '') %>";
+        document.head.appendChild(style);
+    }
+    doInject();
 })();
 //////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
