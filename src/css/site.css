@@ -5,7 +5,6 @@
     visibility: visible;
 }
 
-
 /* Cleanup */
 :root.hide-posting-form #postingForm,
 :root.hide-announcement #dynamicAnnouncement,
@@ -43,11 +42,10 @@
 }
 
 /* OP */
-:root.op-background .opCell > .innerOP {
+:root.op-background .opCell>.innerOP {
     padding-top: 0.25em;
     width: 100%;
-    background: var(--contrast-color);
-    border: 1px solid var(--horizon-sep-color);
+    background: var(--menu-color);
     border-top-width: 0;
     border-left-width: 0;
 }
@@ -109,8 +107,8 @@ nav.navHeader>.nav-boards:hover {
 }
 
 /* Inline Expanded, not Hover */
-:not(#media-viewer) > .imgExpanded,
-:not(#media-viewer) > video {
+:not(#media-viewer)>.imgExpanded,
+:not(#media-viewer)>video {
     max-height: 90vh !important;
     object-fit: contain;
     width: auto !important;
