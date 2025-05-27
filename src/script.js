@@ -70,7 +70,7 @@ onReady(async function () {
                 default: false,
                 subOptions: {
                     noPinInCatalog: {
-                        label: "Don't pin in catalog",
+                        label: "Don't pin in Catalog",
                         default: false,
                     }
                 }
@@ -3505,7 +3505,7 @@ onReady(async function () {
         menu.style.top = "3rem"; // Position of menu
         menu.style.left = "20rem"; // Position of menu
         menu.style.zIndex = "99999";
-        menu.style.background = "rgb(from var(--menu-color) r g b / 1)";
+        menu.style.background = "var(--menu-color)";
         menu.style.color = "var(--text-color)";
         menu.style.borderColor = "1px solid var(--border-color)";
         menu.style.padding = "0";
@@ -3528,7 +3528,7 @@ onReady(async function () {
         header.style.marginBottom = "0";
         header.style.cursor = "move";
         header.style.color = "var(--subject-color)";
-        header.style.background = "rgb(from var(--contrast-color) r g b / 1)";
+        header.style.background = "var(--contrast-color)";
         header.style.padding = "1px 18px 1px";
         header.addEventListener("mousedown", function (e) {
             isDragging = true;
