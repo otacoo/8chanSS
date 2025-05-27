@@ -2,8 +2,6 @@
 *2025-05-27*
 
 - Fix for the script not loading when document.head isn't immediately available
-- Fix for notifications firing too soon on page load
-- Change OP background option to use menu color instead or regular post color
 
 ## v1.50.0
 *2025-05-26*
