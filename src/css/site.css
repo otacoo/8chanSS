@@ -45,7 +45,7 @@
 :root.op-background .opCell>.innerOP {
     padding-top: 0.25em;
     width: 100%;
-    background: var(--menu-color);
+    background: var(--contrast-color);
     border: 1px solid var(--horizon-sep-color);
     border-top-width: 0;
     border-left-width: 0;
