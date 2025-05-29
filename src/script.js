@@ -222,7 +222,16 @@ onReady(async function () {
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
             enableUpdateNotif: { label: "8chanSS update notifications", default: true },
-            enhanceYoutube: { label: "Enhanced Youtube Links", type: "checkbox", default: true },
+            enhanceYoutube: {
+                label: "Enhanced Youtube Links",
+                default: true,
+                subOptions: {
+                    ytThumbs: {
+                        label: "Show Thumbnails on Hover",
+                        default: true,
+                    }
+                }
+            },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
                 label: "Truncate filenames",
@@ -257,6 +266,8 @@ onReady(async function () {
             },
             _miscelFilterTitle: { type: "title", label: ":: IDs & Filtering" },
             _miscelSection1: { type: "separator" },
+            enableHidingMenu: { label: "Enable 8chanSS post hiding menu & features", default: false },
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
             highlightNewIds: {
                 label: "Highlight New IDs",
                 default: false,
@@ -274,8 +285,7 @@ onReady(async function () {
                 }
             },
             enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
-            enableIdToggle: { label: "Add menu entry to toggle IDs as Yours", type: "checkbox", default: false },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
+            enableIdToggle: { label: "Add menu entry to toggle IDs as Yours", type: "checkbox", default: false }
         }
     };
 
@@ -595,6 +605,7 @@ onReady(async function () {
         { key: "enableIdToggle", fn: featureToggleIdAsYours },
         { key: "enableTheSauce", fn: featureSauceLinks },
         { key: "enableUpdateNotif", fn: updateNotif },
+        { key: "enableHidingMenu", fn: featureCustomPostHideMenu },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -2461,16 +2472,24 @@ onReady(async function () {
     featureBeepOnYou();
 
     // --- Feature: Enhanced Youtube links ---
-    function enhanceYouTubeLinks() {
+    async function enhanceYouTubeLinks() {
         // Only run on thread or index pages
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
             return;
         }
-
-        // In-memory cache and order tracker (order is stored as a special property)
+        // Check if thumbnail hover is enabled
+        const ytThumbsEnabled = await getSetting("enhanceYoutube_ytThumbs");
+        // Title cache
         const ytTitleCache = {};
         const MAX_CACHE_SIZE = 350;
         const ORDER_KEY = "_order";
+        const TRACKING_PARAMS = [
+            "si", "feature", "ref", "fsi", "source",
+            "utm_source", "utm_medium", "utm_campaign", "gclid", "gclsrc", "fbclid"
+        ];
+
+        // Thumbnail cache (videoId -> dataURL or null)
+        const ytThumbCache = {};
 
         // Try to load cache and order from localStorage
         function loadCache() {
@@ -2489,7 +2508,6 @@ onReady(async function () {
                 ytTitleCache[ORDER_KEY] = [];
             }
         }
-        // Save cache and order to localStorage
         function saveCache() {
             try {
                 localStorage.setItem('ytTitleCache', JSON.stringify(ytTitleCache));
@@ -2500,21 +2518,18 @@ onReady(async function () {
         // Helper to extract YouTube video ID from URL
         function getYouTubeId(url) {
             try {
-                const u = new URL(url);
-
                 // youtu.be short links
+                const u = new URL(url);
                 if (u.hostname === 'youtu.be') {
                     return u.pathname.slice(1);
                 }
-
-                // youtube.com/watch?v=VIDEOID
+                // Standard watch links
                 if (u.hostname.endsWith('youtube.com')) {
-                    // Standard watch links
                     if (u.pathname === '/watch') {
                         return u.searchParams.get('v');
                     }
-                    // /live/VIDEOID or /embed/VIDEOID
-                    const liveMatch = u.pathname.match(/^\/(live|embed)\/([a-zA-Z0-9_-]{11})/);
+                    // /live/VIDEOID or /embed/VIDEOID or /shorts/VIDEOID
+                    const liveMatch = u.pathname.match(/^\/(live|embed|shorts)\/([a-zA-Z0-9_-]{11})/);
                     if (liveMatch) {
                         return liveMatch[2];
                     }
@@ -2530,60 +2545,229 @@ onReady(async function () {
             const match = videoId.match(/([a-zA-Z0-9_-]{11})/);
             return match ? match[1] : null;
         }
+        // Strip tracking params
+        function stripTrackingParams(url) {
+            try {
+                const u = new URL(url);
+                let changed = false;
+                TRACKING_PARAMS.forEach(param => {
+                    if (u.searchParams.has(param)) {
+                        u.searchParams.delete(param);
+                        changed = true;
+                    }
+                });
+                if (u.hash && u.hash.includes('?')) {
+                    const [hashPath, hashQuery] = u.hash.split('?');
+                    const hashParams = new URLSearchParams(hashQuery);
+                    let hashChanged = false;
+                    TRACKING_PARAMS.forEach(param => {
+                        if (hashParams.has(param)) {
+                            hashParams.delete(param);
+                            hashChanged = true;
+                        }
+                    });
+                    if (hashChanged) {
+                        u.hash = hashParams.toString()
+                            ? `${hashPath}?${hashParams.toString()}`
+                            : hashPath;
+                        changed = true;
+                    }
+                }
+                return changed ? u.toString() : url;
+            } catch (e) {
+                return url;
+            }
+        }
 
-        // Fetch video title using YouTube oEmbed (no API key needed)
         async function fetchYouTubeTitle(videoId) {
-            // Sanitize the videoId before using it
             const cleanId = sanitizeYouTubeId(videoId);
             if (!cleanId) return null;
-            // Check cache first
             if (ytTitleCache.hasOwnProperty(cleanId)) {
-                // Move to end to mark as recently used
                 const idx = ytTitleCache[ORDER_KEY].indexOf(cleanId);
                 if (idx !== -1) {
                     ytTitleCache[ORDER_KEY].splice(idx, 1);
                 }
                 ytTitleCache[ORDER_KEY].push(cleanId);
                 saveCache();
-                return Promise.resolve(ytTitleCache[cleanId]);
+                return ytTitleCache[cleanId];
             }
-            return fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`)
-                .then(r => r.ok ? r.json() : null)
-                .then(data => {
-                    const title = data ? data.title : null;
-                    if (title) {
-                        ytTitleCache[cleanId] = title;
-                        ytTitleCache[ORDER_KEY].push(cleanId);
-                        // Evict oldest if over limit
-                        while (ytTitleCache[ORDER_KEY].length > MAX_CACHE_SIZE) {
-                            const oldest = ytTitleCache[ORDER_KEY].shift();
-                            delete ytTitleCache[oldest];
-                        }
-                        saveCache();
+            try {
+                const r = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`);
+                if (!r.ok) return null;
+                const data = await r.json();
+                const title = data ? data.title : null;
+                if (title) {
+                    ytTitleCache[cleanId] = title;
+                    ytTitleCache[ORDER_KEY].push(cleanId);
+                    while (ytTitleCache[ORDER_KEY].length > MAX_CACHE_SIZE) {
+                        const oldest = ytTitleCache[ORDER_KEY].shift();
+                        delete ytTitleCache[oldest];
                     }
-                    return title;
-                })
-                .catch(() => null);
+                    saveCache();
+                }
+                return title;
+            } catch {
+                return null;
+            }
         }
-        // Process all YouTube links
+
+        // Fetch as data URL using GM.xmlHttpRequest
+        async function fetchAsDataURL(url) {
+            return new Promise((resolve) => {
+                GM.xmlHttpRequest({
+                    method: "GET",
+                    url: url,
+                    responseType: "blob",
+                    timeout: 8000,
+                    onload: (response) => {
+                        if (response.status === 200 && response.response) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.onerror = () => resolve(null);
+                            reader.readAsDataURL(response.response);
+                        } else {
+                            resolve(null);
+                        }
+                    },
+                    onerror: () => resolve(null),
+                    ontimeout: () => resolve(null)
+                });
+            });
+        }
+
+        // Thumbnail fetch with per-videoId cache and DOM safety
+        async function fetchYouTubeThumbnailAsDataURL(videoId) {
+            if (ytThumbCache.hasOwnProperty(videoId)) {
+                return ytThumbCache[videoId];
+            }
+            const webpUrl = `https://i.ytimg.com/vi_webp/${videoId}/hqdefault.webp`;
+            const jpgUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+            let dataUrl = await fetchAsDataURL(webpUrl);
+            if (!dataUrl) {
+                dataUrl = await fetchAsDataURL(jpgUrl);
+            }
+            ytThumbCache[videoId] = dataUrl;
+            return dataUrl;
+        }
+
+        // Show thumbnail on hover (CSP-safe, webp/jpg fallback)
+        function addThumbnailHover(link, videoId) {
+            if (link.dataset.ytThumbHover) return;
+            link.dataset.ytThumbHover = "1";
+            let thumbDiv = null;
+            let lastImg = null;
+            let lastHoverToken = 0;
+
+            function showThumb(e) {
+                if (!thumbDiv) {
+                    thumbDiv = document.createElement('div');
+                    thumbDiv.style.position = 'fixed';
+                    thumbDiv.style.zIndex = 9999;
+                    thumbDiv.style.pointerEvents = 'none';
+                    thumbDiv.style.background = '#222';
+                    thumbDiv.style.border = '1px solid #444';
+                    thumbDiv.style.padding = '2px';
+                    thumbDiv.style.borderRadius = '4px';
+                    thumbDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+                    thumbDiv.style.transition = 'opacity 0.1s';
+                    thumbDiv.style.opacity = '0';
+                    thumbDiv.style.maxWidth = '280px';
+                    thumbDiv.style.maxHeight = '200px';
+
+                    const img = document.createElement('img');
+                    img.style.display = 'block';
+                    img.style.maxWidth = '280px';
+                    img.style.maxHeight = '200px';
+                    img.style.borderRadius = '3px';
+                    img.alt = "YouTube thumbnail";
+                    img.src = "data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQv///wAAACH5BAEAAAMALAAAAAAQABAAAAIgjI+py+0Po5yUFQA7"; // spinner
+
+                    lastImg = img;
+                    const hoverToken = ++lastHoverToken;
+
+                    fetchYouTubeThumbnailAsDataURL(videoId).then(dataUrl => {
+                        if (lastImg === img && hoverToken === lastHoverToken) {
+                            if (dataUrl) {
+                                img.src = dataUrl;
+                            } else {
+                                img.alt = "Failed to load thumbnail";
+                            }
+                        }
+                    });
+
+                    thumbDiv.appendChild(img);
+                    document.body.appendChild(thumbDiv);
+
+                    setTimeout(() => {
+                        if (thumbDiv) thumbDiv.style.opacity = '1';
+                    }, 10);
+                }
+                // Position near mouse
+                const top = Math.min(window.innerHeight - 130, e.clientY + 12);
+                const left = Math.min(window.innerWidth - 290, e.clientX + 12);
+                thumbDiv.style.top = `${top}px`;
+                thumbDiv.style.left = `${left}px`;
+            }
+
+            function moveThumb(e) {
+                if (thumbDiv) {
+                    const top = Math.min(window.innerHeight - 130, e.clientY + 12);
+                    const left = Math.min(window.innerWidth - 290, e.clientX + 12);
+                    thumbDiv.style.top = `${top}px`;
+                    thumbDiv.style.left = `${left}px`;
+                }
+            }
+
+            function hideThumb() {
+                lastHoverToken++;
+                if (thumbDiv && thumbDiv.parentNode) {
+                    thumbDiv.parentNode.removeChild(thumbDiv);
+                    thumbDiv = null;
+                }
+                lastImg = null;
+            }
+
+            link.addEventListener('mouseenter', showThumb);
+            link.addEventListener('mousemove', moveThumb);
+            link.addEventListener('mouseleave', hideThumb);
+        }
+
         function processLinks(root = document) {
             root.querySelectorAll('a[href*="youtu"]').forEach(link => {
                 if (link.dataset.ytEnhanced) return;
                 const videoId = getYouTubeId(link.href);
-                if (!videoId) return;
+                const cleanId = sanitizeYouTubeId(videoId);
+                if (!cleanId) return;
                 link.dataset.ytEnhanced = "1";
+
+                // Strip tracking params from href
+                const cleanUrl = stripTrackingParams(link.href);
+                if (cleanUrl !== link.href) {
+                    link.href = cleanUrl;
+                }
+
                 // Replace link text with favicon, [Youtube], and video title
-                fetchYouTubeTitle(videoId).then(title => {
+                fetchYouTubeTitle(cleanId).then(title => {
                     if (title) {
-                        link.innerHTML = `<img class="yt-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAABIklEQVQoz53LvUrDUBjG8bOoOammSf1IoBSvoCB4JeIqOHgBLt6AIMRBBQelWurQ2kERnMRBsBUcIp5FJSBI5oQsJVkkUHh8W0o5nhaFHvjBgef/Mq+Q46RJBMkI/vE+aOus956tnEswIZe1LV0QyJ5sE2GzgZfVMtRNIdiDpccEssdlB1mW4bvTwdvWJtRdErM7U+8S/FJykCRJX5qm+KpVce8UMNLRLbulz4iSjTAMh6Iowsd5BeNadp3nUF0VlxAEwZBotXC0Usa4ll3meZdA1iguwvf9vpvDA2wvmKgYGtSud8suDB4TyGr2PF49D/vra9jRZ1BVdknMzgwuCGSnZEObwu6sBnVTCHZiaC7BhFx2PKdxUidiAH/4lLo9Mv0DELVs9qsOHXwAAAAASUVORK5CYII="><span></span> ${title}`;
+                        link.innerHTML = `<img class="yt-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAABIklEQVQoz53LvUrDUBjG8bOoOammSf1IoBSvoCB4JeIqOHgBLt6AIMRBBQelWurQ2kERnMRBsBUcIp5FJSBI5oQsJVkkUHh8W0o5nhaFHvjBgef/Mq+Q46RJBMkI/vE+aOus956tnEswIZe1LV0QyJ5sE2GzgZfVMtRNIdiDpccEssdlB1mW4bvTwdvWJtRdErM7U+8S/FJykCRJX5qm+KpVce8UMNLRLbulz4iSjTAMh6Iowsd5BeNadp3nUF0VlxAEwZBotXC0Usa4ll3meZdA1iguwvf9vpvDA2wvmKgYGtSud8suDB4TyGr2PF49D/vra9jRZ1BVdknMzgwuCGSnZEObwu6sBnVTCHZiaC7BhFx2PKdxUidiAH/4lLo9Mv0DELVs9qsOHXwAAAAASUVORK5CYII=" style="vertical-align:middle;margin-right:2px;"><span></span> ${title}`;
                     }
                 });
+
+                // Add thumbnail hover only if enabled
+                if (ytThumbsEnabled) {
+                    addThumbnailHover(link, cleanId);
+                }
             });
         }
         // Initial run
         processLinks(document);
         // Observe for dynamically added links
-        new MutationObserver(() => processLinks(divThreads)).observe(divThreads, { childList: true, subtree: true });
+        if (typeof divThreads !== "undefined" && divThreads) {
+            new MutationObserver(() => processLinks(divThreads)).observe(divThreads, { childList: true, subtree: true });
+        } else {
+            new MutationObserver(() => processLinks(document)).observe(document.body, { childList: true, subtree: true });
+        }
     }
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
@@ -3503,6 +3687,890 @@ onReady(async function () {
             }
         }
         window.addEventListener('beforeunload', cleanupObservers);
+    }
+
+    // --- Feature: Custom Post Hide Menu ---
+    function featureCustomPostHideMenu() {
+        // Storage keys
+        const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
+        const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
+        const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
+
+        // --- Storage helpers ---
+        async function getStoredObject(key) {
+            let obj = {};
+            if (typeof GM !== 'undefined' && GM.getValue) {
+                obj = await GM.getValue(key, {});
+            }
+            return typeof obj === 'object' && obj !== null ? obj : {};
+        }
+        async function setStoredObject(key, obj) {
+            if (typeof GM !== 'undefined' && GM.setValue) {
+                await GM.setValue(key, obj);
+            }
+        }
+
+        // --- DOM helpers ---
+        function getAllHideButtons(root = document) {
+            return Array.from(root.querySelectorAll('label.hideButton'));
+        }
+        function getPostCellFromButton(btn) {
+            return btn.closest('.postCell, .opCell');
+        }
+        function getInnerPostElem(cell) {
+            return cell.querySelector('.innerPost') || cell.querySelector('.innerOP');
+        }
+        function getThreadIdFromInnerPost(inner) {
+            if (!inner) return null;
+            const dataUri = inner.getAttribute('data-uri');
+            if (!dataUri) return null;
+            const parts = dataUri.split('/');
+            if (parts.length < 2) return null;
+            return parts[1].split('#')[0];
+        }
+        function getPostId(cell) {
+            return cell.id ? cell.id.replace(/\D/g, '') : '';
+        }
+        function getBoardUri(cell) {
+            return cell.getAttribute('data-boarduri') || '';
+        }
+
+        // --- Hide/unhide logic ---
+        function hidePostCellWithStub(cell, boardUri, postId, onUnhide, reason) {
+            if (!cell) return;
+            const inner = getInnerPostElem(cell);
+            if (!inner) return;
+            inner.classList.add('hidden');
+            // Remove any existing stub for this post
+            const oldStub = cell.querySelector('.unhideButton');
+            if (oldStub) oldStub.remove();
+            const unhideBtn = document.createElement('span');
+            unhideBtn.className = 'unhideButton glowOnHover';
+            let stubText = `[Unhide post /${boardUri}/${postId}]`;
+            if (reason === 'filteredID') stubText += ' (filtered ID)';
+            else if (reason === 'filteredIDPlus') stubText += ' (reply to filtered ID)';
+            else if (reason === 'filteredName') stubText += ' (filtered name)';
+            else if (reason === 'filteredNamePlus') stubText += ' (reply to filtered name)';
+            else if (reason === 'hidePostPlus') stubText += ' (reply to hidden post)';
+            unhideBtn.textContent = stubText;
+            unhideBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                inner.classList.remove('hidden');
+                unhideBtn.remove();
+                if (typeof onUnhide === 'function') onUnhide();
+                updateAllQuoteLinksFiltered();
+            });
+            inner.parentNode.insertBefore(unhideBtn, inner.nextSibling);
+        }
+        function unhidePostCell(cell, boardUri, postId) {
+            const inner = getInnerPostElem(cell);
+            if (inner) inner.classList.remove('hidden');
+            const unhideBtn = cell.querySelector('.unhideButton');
+            if (unhideBtn) unhideBtn.remove();
+            updateAllQuoteLinksFiltered();
+        }
+        function getAllRepliesRecursive(rootPostId) {
+            const hidden = new Set();
+            function recurse(pid) {
+                if (hidden.has(pid)) return;
+                hidden.add(pid);
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                    for (const link of quoteLinks) {
+                        const targetUri = link.getAttribute('data-target-uri');
+                        const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                        if (match && match[2] === pid) {
+                            const replyPostId = getPostId(cell);
+                            recurse(replyPostId);
+                            break;
+                        }
+                    }
+                });
+            }
+            recurse(rootPostId);
+            return hidden;
+        }
+
+        function hideRepliesRecursive(rootPostId, reason = 'hidePostPlus') {
+            const allToHide = getAllRepliesRecursive(rootPostId);
+            allToHide.forEach(pid => {
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (getPostId(cell) === pid) {
+                        hidePostCellWithStub(cell, getBoardUri(cell), pid, null, reason);
+                    }
+                });
+            });
+        }
+            
+        function unhideRepliesRecursive(rootPostId) {
+            const allToUnhide = getAllRepliesRecursive(rootPostId);
+            allToUnhide.forEach(pid => {
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (getPostId(cell) === pid) {
+                        unhidePostCell(cell, getBoardUri(cell), pid);
+                    }
+                });
+            });
+        }
+        async function setPostHidden(boardUri, postId, hide = true, plus = false) {
+            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                if (getPostId(cell) === postId) {
+                    if (hide) {
+                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'hidePostPlus' : undefined);
+                    } else {
+                        unhidePostCell(cell, boardUri, postId);
+                    }
+                }
+            });
+            if (plus) {
+                // Only hide direct replies, not recursively
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                    for (const link of quoteLinks) {
+                        const targetUri = link.getAttribute('data-target-uri');
+                        const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
+                        if (match && match[2] === postId) {
+                            if (hide) {
+                                hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
+                            } else {
+                                unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
+                            }
+                            break;
+                        }
+                    }
+                });
+            }
+            updateAllQuoteLinksFiltered();
+        }
+
+        // --- Hide/unhide by name (simple/plus) ---
+        async function setPostsWithNameHidden(name, hide = true, plus = false) {
+            // Find all posts with this name
+            const postIdsWithName = new Set();
+            document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                // Never hide OP
+                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                const nameElem = cell.querySelector('.linkName');
+                if (nameElem && nameElem.textContent.trim() === name) {
+                    const boardUri = getBoardUri(cell);
+                    const postId = getPostId(cell);
+                    postIdsWithName.add(postId);
+                    if (hide) {
+                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'filteredNamePlus' : 'filteredName');
+                    } else {
+                        unhidePostCell(cell, boardUri, postId);
+                    }
+                }
+            });
+            // For plus: only hide direct replies to these posts
+            if (plus && postIdsWithName.size > 0) {
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                    for (const link of quoteLinks) {
+                        const targetUri = link.getAttribute('data-target-uri');
+                        const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
+                        if (match && postIdsWithName.has(match[2])) {
+                            if (hide) {
+                                hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'filteredNamePlus');
+                            } else {
+                                unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
+                            }
+                            break;
+                        }
+                    }
+                });
+            }
+            updateAllQuoteLinksFiltered();
+        }
+
+        // --- Hide/unhide by ID (simple/plus) --- (unchanged)
+        async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
+            // 1. Hide/unhide all posts with this ID in this thread
+            const postIdsWithId = new Set();
+            if (!/^[a-z0-9]+$/i.test(id)) return;
+            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                const inner = getInnerPostElem(cell);
+                const cellThreadId = getThreadIdFromInnerPost(inner);
+                const idElem = cell.querySelector('.labelId');
+                if (
+                    cellThreadId === threadId &&
+                    idElem &&
+                    idElem.textContent.trim() === id
+                ) {
+                    const postId = getPostId(cell);
+                    postIdsWithId.add(postId);
+                    if (hide) {
+                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'filteredIDPlus' : 'filteredID');
+                    } else {
+                        unhidePostCell(cell, boardUri, postId);
+                    }
+                }
+            });
+
+            // 2. For plus: hide/unhide all posts that directly reply to a post with this ID (via .quoteLink or .panelBacklinks .backLink)
+            if (plus && postIdsWithId.size > 0) {
+                // Hide all posts that have a .quoteLink or .backLink to any of the postIdsWithId
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                    let isDirectReply = false;
+                    // Check .quoteLink
+                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                    for (const link of quoteLinks) {
+                        const targetUri = link.getAttribute('data-target-uri');
+                        const match = targetUri && targetUri.match(/^([^#]+)#([a-z0-9]+)$/i);
+                        if (match && postIdsWithId.has(match[2])) {
+                            isDirectReply = true;
+                            break;
+                        }
+                    }
+                    // Check .panelBacklinks .backLink
+                    if (!isDirectReply) {
+                        const panelBacklinks = cell.querySelector('.panelBacklinks');
+                        if (panelBacklinks) {
+                            const backLinks = panelBacklinks.querySelectorAll('.backLink[data-target-uri]');
+                            for (const link of backLinks) {
+                                const targetUri = link.getAttribute('data-target-uri');
+                                const match = targetUri && targetUri.match(/^([^#]+)#([a-z0-9]+)$/i);
+                                if (match && postIdsWithId.has(match[2])) {
+                                    isDirectReply = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (isDirectReply) {
+                        const replyBoardUri = getBoardUri(cell);
+                        const replyPostId = getPostId(cell);
+                        if (hide) {
+                            hidePostCellWithStub(cell, replyBoardUri, replyPostId, null, 'filteredIDPlus');
+                        } else {
+                            unhidePostCell(cell, replyBoardUri, replyPostId);
+                        }
+                    }
+                });
+            }
+            updateAllQuoteLinksFiltered();
+        }
+
+        // --- QuoteLink filtering --- (unchanged)
+        async function updateAllQuoteLinksFiltered() {
+            // Gather all hidden post IDs, filtered IDs, and filtered names
+            const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
+            let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
+
+            // Support both old array and new object for filtered names
+            if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
+                filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
+            }
+            if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
+            if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
+
+            // Build a set of all hidden/filtered post targets (boardUri#postId)
+            const filteredTargets = new Set();
+
+            // Hidden posts (simple and plus, recursively for plus)
+            for (const boardUri in hiddenPostsObj) {
+                for (const postId of (hiddenPostsObj[boardUri]?.simple || [])) {
+                    filteredTargets.add(`${boardUri}#${postId}`);
+                }
+                for (const postId of (hiddenPostsObj[boardUri]?.plus || [])) {
+                    filteredTargets.add(`${boardUri}#${postId}`);
+                    getAllRepliesRecursive(String(postId)).forEach(pid => {
+                        filteredTargets.add(`${boardUri}#${pid}`);
+                    });
+                }
+            }
+            // Filtered IDs (simple and plus)
+            const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
+            for (const boardUri in filteredIdsObj) {
+                for (const threadId in filteredIdsObj[boardUri]) {
+                    let threadObj = filteredIdsObj[boardUri][threadId];
+                    // Migrate old array to new object if needed
+                    if (Array.isArray(threadObj)) {
+                        threadObj = { simple: threadObj, plus: [] };
+                        filteredIdsObj[boardUri][threadId] = threadObj;
+                    }
+                    // Simple
+                    for (const id of threadObj.simple || []) {
+                        document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+                            const idElem = cell.querySelector('.labelId');
+                            if (idElem && idElem.textContent.trim() === id) {
+                                const postId = getPostId(cell);
+                                filteredTargets.add(`${boardUri}#${postId}`);
+                            }
+                        });
+                    }
+                    // Plus: posts with this ID and direct replies via .panelBacklinks
+                    for (const id of threadObj.plus || []) {
+                        // Posts with this ID
+                        const postIdsWithId = new Set();
+                        document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+                            const idElem = cell.querySelector('.labelId');
+                            if (idElem && idElem.textContent.trim() === id) {
+                                const postId = getPostId(cell);
+                                filteredTargets.add(`${boardUri}#${postId}`);
+                                postIdsWithId.add(postId);
+                            }
+                        });
+                        // Direct replies via .panelBacklinks
+                        if (postIdsWithId.size > 0) {
+                            document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                                const panelBacklinks = cell.querySelector('.panelBacklinks');
+                                if (!panelBacklinks) return;
+                                const backLinks = panelBacklinks.querySelectorAll('.backLink[data-target-uri]');
+                                let isDirectReply = false;
+                                for (const link of backLinks) {
+                                    const targetUri = link.getAttribute('data-target-uri');
+                                    const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                                    if (match && postIdsWithId.has(match[2])) {
+                                        isDirectReply = true;
+                                        break;
+                                    }
+                                }
+                                if (isDirectReply) {
+                                    const replyBoardUri = getBoardUri(cell);
+                                    const replyPostId = getPostId(cell);
+                                    filteredTargets.add(`${replyBoardUri}#${replyPostId}`);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+            // Filtered names (simple and plus)
+            // Simple
+            for (const name of filteredNamesObj.simple) {
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    const nameElem = cell.querySelector('.linkName');
+                    if (nameElem && nameElem.textContent.trim() === name) {
+                        const boardUri = getBoardUri(cell);
+                        const postId = getPostId(cell);
+                        filteredTargets.add(`${boardUri}#${postId}`);
+                    }
+                });
+            }
+            // Plus: posts with this name and all their replies (recursively)
+            for (const name of filteredNamesObj.plus) {
+                const postIdsWithName = new Set();
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    const nameElem = cell.querySelector('.linkName');
+                    if (nameElem && nameElem.textContent.trim() === name) {
+                        const boardUri = getBoardUri(cell);
+                        const postId = getPostId(cell);
+                        filteredTargets.add(`${boardUri}#${postId}`);
+                        postIdsWithName.add(postId);
+                    }
+                });
+                // Recursively add all replies to these posts
+                postIdsWithName.forEach(pid => {
+                    getAllRepliesRecursive(pid).forEach(replyPid => {
+                        document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                            if (getPostId(cell) === replyPid) {
+                                const boardUri = getBoardUri(cell);
+                                filteredTargets.add(`${boardUri}#${replyPid}`);
+                            }
+                        });
+                    });
+                });
+            }
+
+            // Now update all quoteLinks
+            document.querySelectorAll('.quoteLink').forEach(link => {
+                let isFiltered = false;
+                const targetUri = link.getAttribute('data-target-uri');
+                if (targetUri && filteredTargets.has(targetUri)) {
+                    isFiltered = true;
+                } else {
+                    const href = link.getAttribute('href');
+                    if (href) {
+                        const match = href.match(/\/([^\/]+)\/res\/\d+\.html#(\d+)$/);
+                        if (match) {
+                            const boardUri = match[1];
+                            const postId = match[2];
+                            if (filteredTargets.has(`${boardUri}#${postId}`)) {
+                                isFiltered = true;
+                            }
+                        }
+                    }
+                }
+                if (isFiltered) link.classList.add('filtered');
+                else link.classList.remove('filtered');
+            });
+        }
+
+        // --- Menu logic ---
+        async function showCustomMenu(hideButton, postCell) {
+            removeExistingMenu();
+            const extraMenu = document.createElement('div');
+            extraMenu.className = 'floatingList extraMenu';
+            extraMenu.setAttribute('data-custom', '1');
+            const rect = hideButton.getBoundingClientRect();
+            extraMenu.style.position = 'absolute';
+            extraMenu.style.left = `${rect.left + window.scrollX}px`;
+            extraMenu.style.top = `${rect.bottom + window.scrollY}px`;
+            extraMenu.style.zIndex = 9999;
+            extraMenu.style.fontSize = "10pt";
+            const list = document.createElement('ul');
+            extraMenu.appendChild(list);
+
+            const boardUri = getBoardUri(postCell);
+            const postId = getPostId(postCell);
+            const inner = getInnerPostElem(postCell);
+            const threadId = getThreadIdFromInnerPost(inner);
+            const idElem = postCell.querySelector('.labelId');
+            const id = idElem ? idElem.textContent.trim() : null;
+            const nameElem = postCell.querySelector('.linkName');
+            const name = nameElem ? nameElem.textContent.trim() : null;
+            const isOP = postCell.classList.contains('opCell') || postCell.classList.contains('innerOP');
+
+            // Get storage state
+            const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
+            if (!hiddenPostsObj[boardUri]) hiddenPostsObj[boardUri] = { simple: [], plus: [] };
+            if (!Array.isArray(hiddenPostsObj[boardUri].simple)) hiddenPostsObj[boardUri].simple = [];
+            if (!Array.isArray(hiddenPostsObj[boardUri].plus)) hiddenPostsObj[boardUri].plus = [];
+            const isHiddenSimple = hiddenPostsObj[boardUri].simple.includes(Number(postId));
+            const isHiddenPlus = hiddenPostsObj[boardUri].plus.includes(Number(postId));
+            const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
+            // Ensure correct structure for filteredIdsObj[boardUri][threadId]
+            let threadObj = filteredIdsObj[boardUri] && filteredIdsObj[boardUri][threadId];
+            if (Array.isArray(threadObj)) {
+                threadObj = { simple: threadObj, plus: [] };
+                filteredIdsObj[boardUri][threadId] = threadObj;
+            } else if (!threadObj) {
+                threadObj = { simple: [], plus: [] };
+                if (!filteredIdsObj[boardUri]) filteredIdsObj[boardUri] = {};
+                filteredIdsObj[boardUri][threadId] = threadObj;
+            }
+            if (!Array.isArray(threadObj.simple)) threadObj.simple = [];
+            if (!Array.isArray(threadObj.plus)) threadObj.plus = [];
+            const isFilteredId = id && threadObj.simple.includes(id);
+            const isFilteredIdPlus = id && threadObj.plus.includes(id);
+
+            // Filtered names: support both old array and new object
+            let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
+            if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
+                filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
+            }
+            if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
+            if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
+            const isNameFiltered = name && filteredNamesObj.simple.includes(name);
+            const isNameFilteredPlus = name && filteredNamesObj.plus.includes(name);
+
+            // Menu entries
+            const options = [];
+
+            if (!isOP) {
+                options.push(
+                    {
+                        name: isHiddenSimple ? 'Unhide post' : 'Hide post',
+                        callback: async () => {
+                            let obj = await getStoredObject(HIDDEN_POSTS_KEY);
+                            if (!obj[boardUri]) obj[boardUri] = { simple: [], plus: [] };
+                            let arr = obj[boardUri].simple;
+                            const idx = arr.indexOf(Number(postId));
+                            if (idx !== -1) {
+                                arr.splice(idx, 1);
+                                obj[boardUri].simple = arr;
+                                await setStoredObject(HIDDEN_POSTS_KEY, obj);
+                                setPostHidden(boardUri, postId, false, false);
+                            } else {
+                                arr.push(Number(postId));
+                                obj[boardUri].simple = arr;
+                                await setStoredObject(HIDDEN_POSTS_KEY, obj);
+                                setPostHidden(boardUri, postId, true, false);
+                            }
+                            removeExistingMenu();
+                        }
+                    },
+                    {
+                        name: isHiddenPlus ? 'Unhide post+' : 'Hide post+',
+                        callback: async () => {
+                            let obj = await getStoredObject(HIDDEN_POSTS_KEY);
+                            if (!obj[boardUri]) obj[boardUri] = { simple: [], plus: [] };
+                            let arr = obj[boardUri].plus;
+                            const idx = arr.indexOf(Number(postId));
+                            if (idx !== -1) {
+                                arr.splice(idx, 1);
+                                obj[boardUri].plus = arr;
+                                await setStoredObject(HIDDEN_POSTS_KEY, obj);
+                                setPostHidden(boardUri, postId, false, true);
+                            } else {
+                                arr.push(Number(postId));
+                                obj[boardUri].plus = arr;
+                                await setStoredObject(HIDDEN_POSTS_KEY, obj);
+                                setPostHidden(boardUri, postId, true, true);
+                            }
+                            removeExistingMenu();
+                        }
+                    }
+                );
+            }
+
+            options.push(
+                {
+                    name: isNameFiltered ? 'Unfilter name' : 'Filter name',
+                    callback: async () => {
+                        let obj = await getStoredObject(FILTERED_NAMES_KEY);
+                        if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+                            obj = { simple: Array.isArray(obj) ? obj : [], plus: [] };
+                        }
+                        if (!Array.isArray(obj.simple)) obj.simple = [];
+                        const idx = obj.simple.indexOf(name);
+                        if (idx !== -1) {
+                            obj.simple.splice(idx, 1);
+                            await setStoredObject(FILTERED_NAMES_KEY, obj);
+                            setPostsWithNameHidden(name, false, false);
+                        } else {
+                            obj.simple.push(name);
+                            await setStoredObject(FILTERED_NAMES_KEY, obj);
+                            setPostsWithNameHidden(name, true, false);
+                        }
+                        removeExistingMenu();
+                    }
+                },
+                {
+                    name: isNameFilteredPlus ? 'Unfilter name+' : 'Filter name+',
+                    callback: async () => {
+                        let obj = await getStoredObject(FILTERED_NAMES_KEY);
+                        if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+                            obj = { simple: Array.isArray(obj) ? obj : [], plus: [] };
+                        }
+                        if (!Array.isArray(obj.plus)) obj.plus = [];
+                        const idx = obj.plus.indexOf(name);
+                        if (idx !== -1) {
+                            obj.plus.splice(idx, 1);
+                            await setStoredObject(FILTERED_NAMES_KEY, obj);
+                            setPostsWithNameHidden(name, false, true);
+                        } else {
+                            obj.plus.push(name);
+                            await setStoredObject(FILTERED_NAMES_KEY, obj);
+                            setPostsWithNameHidden(name, true, true);
+                        }
+                        removeExistingMenu();
+                    }
+                },
+                {
+                    name: isFilteredId ? 'Unfilter ID' : 'Filter ID',
+                    callback: async () => {
+                        let obj = await getStoredObject(FILTERED_IDS_KEY);
+                        if (!obj[boardUri]) obj[boardUri] = {};
+                        let threadObj = obj[boardUri][threadId];
+                        if (Array.isArray(threadObj)) {
+                            threadObj = { simple: threadObj, plus: [] };
+                            obj[boardUri][threadId] = threadObj;
+                        } else if (!threadObj) {
+                            threadObj = { simple: [], plus: [] };
+                            obj[boardUri][threadId] = threadObj;
+                        }
+                        if (!Array.isArray(threadObj.simple)) threadObj.simple = [];
+                        let arr = threadObj.simple;
+                        const idx = arr.indexOf(id);
+                        if (idx !== -1) {
+                            arr.splice(idx, 1);
+                            threadObj.simple = arr;
+                            await setStoredObject(FILTERED_IDS_KEY, obj);
+                            setPostsWithIdHidden(boardUri, threadId, id, false, false);
+                        } else {
+                            arr.push(id);
+                            threadObj.simple = arr;
+                            await setStoredObject(FILTERED_IDS_KEY, obj);
+                            setPostsWithIdHidden(boardUri, threadId, id, true, false);
+                        }
+                        removeExistingMenu();
+                    }
+                },
+                {
+                    name: isFilteredIdPlus ? 'Unfilter ID+' : 'Filter ID+',
+                    callback: async () => {
+                        let obj = await getStoredObject(FILTERED_IDS_KEY);
+                        if (!obj[boardUri]) obj[boardUri] = {};
+                        let threadObj = obj[boardUri][threadId];
+                        if (Array.isArray(threadObj)) {
+                            threadObj = { simple: threadObj, plus: [] };
+                            obj[boardUri][threadId] = threadObj;
+                        } else if (!threadObj) {
+                            threadObj = { simple: [], plus: [] };
+                            obj[boardUri][threadId] = threadObj;
+                        }
+                        if (!Array.isArray(threadObj.plus)) threadObj.plus = [];
+                        let arr = threadObj.plus;
+                        const idx = arr.indexOf(id);
+                        if (idx !== -1) {
+                            arr.splice(idx, 1);
+                            threadObj.plus = arr;
+                            await setStoredObject(FILTERED_IDS_KEY, obj);
+                            setPostsWithIdHidden(boardUri, threadId, id, false, true);
+                        } else {
+                            arr.push(id);
+                            threadObj.plus = arr;
+                            await setStoredObject(FILTERED_IDS_KEY, obj);
+                            setPostsWithIdHidden(boardUri, threadId, id, true, true);
+                        }
+                        removeExistingMenu();
+                    }
+                }
+            );
+
+            options.forEach(opt => {
+                const li = document.createElement('li');
+                li.textContent = opt.name;
+                li.onclick = opt.callback;
+                list.appendChild(li);
+            });
+
+            document.body.appendChild(extraMenu);
+
+            function handleOutsideClick(e) {
+                if (!extraMenu.contains(e.target)) {
+                    removeExistingMenu();
+                    document.removeEventListener('mousedown', handleOutsideClick);
+                }
+            }
+            setTimeout(() => {
+                document.addEventListener('mousedown', handleOutsideClick);
+            }, 0);
+        }
+
+        function removeExistingMenu() {
+            document.querySelectorAll('.floatingList.extraMenu[data-custom]').forEach(menu => menu.remove());
+        }
+
+        function hijackHideButtons(root = document) {
+            getAllHideButtons(root).forEach(hideButton => {
+                if (hideButton.dataset.customMenuHijacked) return;
+                hideButton.dataset.customMenuHijacked = "1";
+                hideButton.onclick = null;
+                hideButton.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showCustomMenu(hideButton, getPostCellFromButton(hideButton));
+                }, true);
+            });
+        }
+
+        // --- Initial page load: apply all hiding/filtering ---
+        async function autoHideAll() {
+            // Hide posts
+            const obj = await getStoredObject(HIDDEN_POSTS_KEY);
+            for (const boardUri in obj) {
+                const arrSimple = obj[boardUri]?.simple || [];
+                const arrPlus = obj[boardUri]?.plus || [];
+                arrSimple.forEach(postId => setPostHidden(boardUri, String(postId), true, false));
+                arrPlus.forEach(postId => setPostHidden(boardUri, String(postId), true, true));
+            }
+            // Hide filtered IDs
+            const idsObj = await getStoredObject(FILTERED_IDS_KEY);
+            for (const boardUri in idsObj) {
+                for (const threadId in idsObj[boardUri]) {
+                    let threadObj = idsObj[boardUri][threadId];
+                    if (Array.isArray(threadObj)) {
+                        threadObj = { simple: threadObj, plus: [] };
+                        idsObj[boardUri][threadId] = threadObj;
+                    }
+                    (threadObj.simple || []).forEach(id => setPostsWithIdHidden(boardUri, threadId, id, true, false));
+                    (threadObj.plus || []).forEach(id => setPostsWithIdHidden(boardUri, threadId, id, true, true));
+                }
+            }
+            // Hide filtered names (simple and plus)
+            let namesObj = await getStoredObject(FILTERED_NAMES_KEY);
+            if (!namesObj || typeof namesObj !== "object" || Array.isArray(namesObj)) {
+                namesObj = { simple: Array.isArray(namesObj) ? namesObj : [], plus: [] };
+            }
+            (namesObj.simple || []).forEach(name => setPostsWithNameHidden(name, true, false));
+            (namesObj.plus || []).forEach(name => setPostsWithNameHidden(name, true, true));
+            // Update all quoteLinks after initial hiding
+            updateAllQuoteLinksFiltered();
+        }
+
+        // --- Mutation observer for new posts --- (unchanged)
+        const divPosts = document.querySelector('.divPosts');
+        if (divPosts) {
+            const observer = new MutationObserver(async mutations => {
+                // Gather all plus-hidden post IDs for all boards
+                const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
+                const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
+                let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
+                if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
+                    filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
+                }
+                if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
+                if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
+
+                // Map: boardUri -> Set of plus-hidden post IDs (as strings)
+                const plusHiddenMap = {};
+                for (const boardUri in hiddenPostsObj) {
+                    plusHiddenMap[boardUri] = new Set((hiddenPostsObj[boardUri]?.plus || []).map(String));
+                }
+
+                // Build a map of boardUri+threadId => Set of postIds with plus-filtered IDs
+                const plusFilteredIdPostIds = {};
+                for (const boardUri in filteredIdsObj) {
+                    for (const threadId in filteredIdsObj[boardUri]) {
+                        let threadObj = filteredIdsObj[boardUri][threadId];
+                        if (Array.isArray(threadObj)) {
+                            threadObj = { simple: threadObj, plus: [] };
+                            filteredIdsObj[boardUri][threadId] = threadObj;
+                        }
+                        if (!plusFilteredIdPostIds[boardUri]) plusFilteredIdPostIds[boardUri] = {};
+                        plusFilteredIdPostIds[boardUri][threadId] = new Set();
+                        for (const id of threadObj.plus || []) {
+                            // Find all postIds in this thread with this ID
+                            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+                                const inner = getInnerPostElem(cell);
+                                const cellThreadId = getThreadIdFromInnerPost(inner);
+                                const idElem = cell.querySelector('.labelId');
+                                if (
+                                    cellThreadId === threadId &&
+                                    idElem &&
+                                    idElem.textContent.trim() === id
+                                ) {
+                                    plusFilteredIdPostIds[boardUri][threadId].add(getPostId(cell));
+                                }
+                            });
+                        }
+                    }
+                }
+
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType !== 1) continue;
+                        let postCells = [];
+                        if (node.classList && (node.classList.contains('postCell') || node.classList.contains('opCell'))) {
+                            postCells.push(node);
+                        }
+                        if (node.querySelectorAll) {
+                            postCells = postCells.concat(Array.from(node.querySelectorAll('.postCell, .opCell')));
+                        }
+                        for (const cell of postCells) {
+                            hijackHideButtons(cell);
+                            const boardUri = getBoardUri(cell);
+                            const postId = getPostId(cell);
+                            const inner = getInnerPostElem(cell);
+                            const threadId = getThreadIdFromInnerPost(inner);
+                            const idElem = cell.querySelector('.labelId');
+                            const id = idElem ? idElem.textContent.trim() : null;
+                            const nameElem = cell.querySelector('.linkName');
+                            const name = nameElem ? nameElem.textContent.trim() : null;
+
+                            // Hide post (simple/plus)
+                            if (hiddenPostsObj[boardUri]?.simple?.includes(Number(postId))) {
+                                setPostHidden(boardUri, postId, true, false);
+                            }
+                            if (hiddenPostsObj[boardUri]?.plus?.includes(Number(postId))) {
+                                setPostHidden(boardUri, postId, true, true);
+                            }
+
+                            // Hide by filtered ID (simple and plus)
+                            let threadObj = filteredIdsObj[boardUri] && filteredIdsObj[boardUri][threadId];
+                            if (Array.isArray(threadObj)) {
+                                threadObj = { simple: threadObj, plus: [] };
+                                filteredIdsObj[boardUri][threadId] = threadObj;
+                            } else if (!threadObj) {
+                                threadObj = { simple: [], plus: [] };
+                                if (!filteredIdsObj[boardUri]) filteredIdsObj[boardUri] = {};
+                                filteredIdsObj[boardUri][threadId] = threadObj;
+                            }
+                            if (id && threadObj.simple.includes(id)) {
+                                setPostsWithIdHidden(boardUri, threadId, id, true, false);
+                            }
+                            if (id && threadObj.plus.includes(id)) {
+                                setPostsWithIdHidden(boardUri, threadId, id, true, true);
+                            }
+
+                            // Hide by filtered name (simple and plus)
+                            if (name && filteredNamesObj.simple.includes(name)) {
+                                setPostsWithNameHidden(name, true, false);
+                            }
+                            if (name && filteredNamesObj.plus.includes(name)) {
+                                setPostsWithNameHidden(name, true, true);
+                            }
+
+                            // --- Hide if replying (directly or indirectly) to a plus-hidden post ---
+                            let shouldHidePlus = false;
+                            const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                            for (const link of quoteLinks) {
+                                const targetUri = link.getAttribute('data-target-uri');
+                                const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                                if (match && plusHiddenMap[boardUri] && plusHiddenMap[boardUri].has(match[2])) {
+                                    shouldHidePlus = true;
+                                    break;
+                                }
+                            }
+                            // If not a direct reply, check recursively if any ancestor is plus-hidden
+                            if (!shouldHidePlus && plusHiddenMap[boardUri] && plusHiddenMap[boardUri].size > 0) {
+                                const visited = new Set();
+                                function isDescendantOfPlusHidden(pid) {
+                                    if (visited.has(pid)) return false;
+                                    visited.add(pid);
+                                    for (const link of quoteLinks) {
+                                        const targetUri = link.getAttribute('data-target-uri');
+                                        const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                                        if (match) {
+                                            if (plusHiddenMap[boardUri].has(match[2])) return true;
+                                            if (isDescendantOfPlusHidden(match[2])) return true;
+                                        }
+                                    }
+                                    return false;
+                                }
+                                if (isDescendantOfPlusHidden(postId)) {
+                                    shouldHidePlus = true;
+                                }
+                            }
+                            if (shouldHidePlus) {
+                                setPostHidden(boardUri, postId, true, true);
+                            }
+
+                            // --- Hide if replying to a plus-filtered ID (Filter ID+) ---
+                            // Only direct replies (not recursive)
+                            if (
+                                plusFilteredIdPostIds[boardUri] &&
+                                plusFilteredIdPostIds[boardUri][threadId] &&
+                                plusFilteredIdPostIds[boardUri][threadId].size > 0
+                            ) {
+                                // Check .panelBacklinks .backLink
+                                const panelBacklinks = cell.querySelector('.panelBacklinks');
+                                let isDirectReplyToFilteredId = false;
+                                if (panelBacklinks) {
+                                    const backLinks = panelBacklinks.querySelectorAll('.backLink[data-target-uri]');
+                                    for (const link of backLinks) {
+                                        const targetUri = link.getAttribute('data-target-uri');
+                                        const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                                        if (match && plusFilteredIdPostIds[boardUri][threadId].has(match[2])) {
+                                            isDirectReplyToFilteredId = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                // Also check .quoteLink (for completeness)
+                                if (!isDirectReplyToFilteredId) {
+                                    for (const link of quoteLinks) {
+                                        const targetUri = link.getAttribute('data-target-uri');
+                                        const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                                        if (match && plusFilteredIdPostIds[boardUri][threadId].has(match[2])) {
+                                            isDirectReplyToFilteredId = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (isDirectReplyToFilteredId) {
+                                    hidePostCellWithStub(cell, boardUri, postId, null, 'filteredIDPlus');
+                                }
+                            }
+                        }
+                    }
+                }
+                updateAllQuoteLinksFiltered();
+            });
+            observer.observe(divPosts, { childList: true, subtree: false });
+        }
+
+        // --- Initial setup ---
+        hijackHideButtons();
+        autoHideAll();
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
