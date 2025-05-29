@@ -4269,7 +4269,7 @@ onReady(async function () {
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
             divPostsObs.addHandler(async function customPostHideMenuHandler(mutations) {
-                // Gather all plus-hidden post IDs for all boards, etc. (unchanged logic)
+                // Gather all plus-hidden post IDs for all boards, etc.
                 const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
                 const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
                 let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
