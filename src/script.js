@@ -16,8 +16,41 @@ const debounce = (fn, delay) => {
         timeout = setTimeout(() => fn.apply(this, args), delay);
     };
 };
+// Observer registry helper
+const observerRegistry = {};
+
+function observeSelector(selector, options = { childList: true, subtree: false }) {
+    if (observerRegistry[selector]) return observerRegistry[selector];
+
+    const node = document.querySelector(selector);
+    if (!node) return null;
+
+    const handlers = [];
+    const observer = new MutationObserver(mutations => {
+        for (const handler of handlers) {
+            try {
+                handler(mutations, node);
+            } catch (e) {
+                console.error(`Observer handler error for ${selector}:`, e);
+            }
+        }
+    });
+
+    observer.observe(node, options);
+
+    // Disconnect on unload
+    window.addEventListener('beforeunload', () => observer.disconnect());
+
+    observerRegistry[selector] = {
+        node,
+        observer,
+        handlers,
+        addHandler: fn => handlers.push(fn)
+    };
+    return observerRegistry[selector];
+}
 // URL-based location helper (catalog, thread, index) 
-// Usage: e.g. pageType.isCatalog, or to get the raw values: pageType.host or pageType.path
+// Usage: e.g. window.pageType.isCatalog, or to get the raw values: window.pageType.host or pageType.path
 window.pageType = (() => {
     const path = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
@@ -1009,12 +1042,11 @@ onReady(async function () {
         }
 
         // Watch for changes in .divPosts (new posts)
-        function observePostCount() {
-            if (!divPosts) return;
-            const observer = new MutationObserver(() => {
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
+        if (divPostsObs) {
+            divPostsObs.addHandler(function saveScrollPostCountHandler() {
                 updateUnseenCountFromSaved();
             });
-            observer.observe(divPosts, { childList: true, subtree: false });
         }
 
         // Remove unread line at the bottom
@@ -1040,7 +1072,6 @@ onReady(async function () {
         window.addEventListener("load", async () => {
             await restoreScrollPosition();
             await updateUnseenCountFromSaved();
-            observePostCount();
         });
 
         let scrollTimeout = null;
@@ -1056,7 +1087,6 @@ onReady(async function () {
         // Initial restore and unseen count update (in case load event already fired)
         await restoreScrollPosition();
         await updateUnseenCountFromSaved();
-        observePostCount();
     }
 
     // --- Feature: Header Catalog Links ---
@@ -1065,9 +1095,7 @@ onReady(async function () {
             const navboardsSpan = document.getElementById("navBoardsSpan");
             if (navboardsSpan) {
                 const links = navboardsSpan.getElementsByTagName("a");
-                const openInNewTab = await getSetting(
-                    "enableHeaderCatalogLinks_openInNewTab"
-                );
+                const openInNewTab = await getSetting("enableHeaderCatalogLinks_openInNewTab");
 
                 for (let link of links) {
                     // Prevent duplicate appends and only process once
@@ -1095,15 +1123,15 @@ onReady(async function () {
         // Initial run
         appendCatalogToLinks();
 
-        // Debounced observer callback for performance
+        // Debounced handler for observer
         const debouncedAppend = debounce(appendCatalogToLinks, 100);
-        const config = { childList: true, subtree: true };
-        const navboardsSpan = document.getElementById("navBoardsSpan");
-        // Prevent multiple observers
-        if (navboardsSpan && !navboardsSpan._catalogLinksObserverAttached) {
-            const observer = new MutationObserver(debouncedAppend);
-            observer.observe(navboardsSpan, config);
-            navboardsSpan._catalogLinksObserverAttached = true;
+
+        // Use the observer registry for #navBoardsSpan
+        const navboardsObs = observeSelector('#navBoardsSpan', { childList: true, subtree: true });
+        if (navboardsObs) {
+            navboardsObs.addHandler(function headerCatalogLinksHandler() {
+                debouncedAppend();
+            });
         }
     }
 
@@ -1118,7 +1146,7 @@ onReady(async function () {
             }
         });
 
-        // Use event delegation for future clicks (no MutationObserver needed)
+        // Use event delegation for future clicks
         catalogDiv.addEventListener('click', function (e) {
             const link = e.target.closest('.catalogCell a.linkThumb');
             if (link && link.getAttribute('target') !== '_blank') {
@@ -1545,18 +1573,18 @@ onReady(async function () {
         // Attach to all existing thumbs at startup
         attachThumbListeners();
 
-        // Observe for any new nodes under #divThreads
-        if (typeof divThreads !== "undefined" && divThreads) {
-            const observer = new MutationObserver((mutations) => {
+        // Use the observer registry for #divThreads
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            divThreadsObs.addHandler(function imageHoverHandler(mutations, node) {
                 for (const mutation of mutations) {
-                    for (const node of mutation.addedNodes) {
-                        if (node.nodeType === 1) {
-                            attachThumbListeners(node);
+                    for (const addedNode of mutation.addedNodes) {
+                        if (addedNode.nodeType === 1) {
+                            attachThumbListeners(addedNode);
                         }
                     }
                 }
             });
-            observer.observe(divThreads, { childList: true, subtree: true });
         }
     }
 
@@ -1671,19 +1699,15 @@ onReady(async function () {
                     // Set initial blur style only
                     img.style.filter = "blur(5px)";
                     img.style.transition = "filter 0.3s ease";
-                    // Event delegation for blur toggling is set up outside this function
                 }
             }
             link.dataset.blurSpoilerProcessed = "1";
         }
 
-        // Cache NodeList to avoid repeated DOM queries
-        const spoilerLinks = document.querySelectorAll("a.imgLink");
-        for (const link of spoilerLinks) {
-            processImgLink(link);
-        }
+        // Initial processing for all existing links
+        document.querySelectorAll("a.imgLink").forEach(link => processImgLink(link));
 
-        // Debounce/batch processing for MutationObserver
+        // Debounced batch processing for observer
         let pendingImgLinks = new WeakSet();
         let debounceTimeout = null;
         function processPendingImgLinks() {
@@ -1692,26 +1716,28 @@ onReady(async function () {
             pendingImgLinks = new WeakSet(); // Reset the WeakSet
             debounceTimeout = null;
         }
-        const observer = new MutationObserver(mutations => {
-            mutations.forEach(mutation => {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType !== 1) return;
-                    if (node.classList && node.classList.contains('imgLink')) {
-                        pendingImgLinks.add(node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll('.imgLink').forEach(link => pendingImgLinks.add(link));
+
+        // Use the observer registry for #divThreads
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            divThreadsObs.addHandler(function blurSpoilersHandler(mutations) {
+                for (const mutation of mutations) {
+                    for (const addedNode of mutation.addedNodes) {
+                        if (addedNode.nodeType !== 1) continue;
+                        if (addedNode.classList && addedNode.classList.contains('imgLink')) {
+                            pendingImgLinks.add(addedNode);
+                        } else if (addedNode.querySelectorAll) {
+                            addedNode.querySelectorAll('.imgLink').forEach(link => pendingImgLinks.add(link));
+                        }
                     }
-                });
+                }
+                if (!debounceTimeout) {
+                    debounceTimeout = setTimeout(processPendingImgLinks, 50);
+                }
             });
-            if (!debounceTimeout) {
-                debounceTimeout = setTimeout(processPendingImgLinks, 50);
-            }
-        });
-        if (divThreads) {
-            observer.observe(divThreads, { childList: true, subtree: true });
         }
 
-        // Use event delegation once, outside processImgLink:
+        // Use event delegation for blur toggling
         document.body.addEventListener("mouseover", function (e) {
             if (e.target.matches("a.imgLink img[style*='blur(5px)']")) {
                 e.target.style.filter = "none";
@@ -1869,17 +1895,16 @@ onReady(async function () {
         });
     }
 
-    // Initial highlight on page load
-    highlightMentions();
-
-    // Observe #watchedMenu for changes to update highlights dynamically
-    const watchedMenu = document.getElementById("watchedMenu");
-    if (watchedMenu) {
-        const observer = new MutationObserver(() => {
+    // Use the observer registry for #watchedMenu
+    const watchedMenuObs = observeSelector('#watchedMenu', { childList: true, subtree: true });
+    if (watchedMenuObs) {
+        watchedMenuObs.addHandler(function highlightMentionsHandler() {
             highlightMentions();
         });
-        observer.observe(watchedMenu, { childList: true, subtree: true });
     }
+
+    // Initial highlight on page load
+    highlightMentions();
 
     // --- Feature: Watch Thread on Reply ---
     async function featureWatchThreadOnReply() {
@@ -1955,7 +1980,7 @@ onReady(async function () {
     }
 
     // --- Feature: Mark All Threads as Read Button ---
-    function markAllThreadsAsRead() {
+    (function markAllThreadsAsRead() {
         const handleDiv = document.querySelector('#watchedMenu > div.handle');
         if (!handleDiv) return;
         // Check if the button already exists to avoid duplicates
@@ -2023,22 +2048,13 @@ onReady(async function () {
             }, 100);
         }
 
-        // Observe the watchedMenu for changes to enable/disable the button dynamically
-        const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
-        let observer = null;
-        if (watchedMenu) {
+        // Use the observer registry for #watchedMenu > div.floatingContainer
+        const watchedMenuObs = observeSelector('#watchedMenu > div.floatingContainer', { childList: true, subtree: true });
+        if (watchedMenuObs) {
             const debouncedUpdate = debounce(updateButtonState, 100);
-            observer = new MutationObserver(debouncedUpdate);
-            observer.observe(watchedMenu, { childList: true, subtree: true });
-
-            // Disconnect observer when watchedMenu is removed or hidden
-            const removalObserver = new MutationObserver(() => {
-                if (!document.body.contains(watchedMenu) || watchedMenu.style.display === "none") {
-                    observer.disconnect();
-                    removalObserver.disconnect();
-                }
+            watchedMenuObs.addHandler(function markAllThreadsAsReadHandler() {
+                debouncedUpdate();
             });
-            removalObserver.observe(document.body, { childList: true, subtree: true });
         }
 
         // Set initial state
@@ -2069,8 +2085,7 @@ onReady(async function () {
                 });
             }
         });
-    }
-    markAllThreadsAsRead();
+    })();
 
     ///////// THREAD WATCHER END ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2115,46 +2130,18 @@ onReady(async function () {
 
         // Initial run
         addHashLinks();
-        // Patch tooltips if present
-        if (window.tooltips) {
-            // Patch loadTooltip and addLoadedTooltip to always call addHashLinks
-            ['loadTooltip', 'addLoadedTooltip'].forEach(fn => {
-                if (typeof tooltips[fn] === 'function') {
-                    const orig = tooltips[fn];
-                    tooltips[fn] = function (...args) {
-                        const result = orig.apply(this, args);
-                        // Try to find the container to apply hash links
-                        let container = args[0];
-                        if (container && container.nodeType === Node.ELEMENT_NODE) {
-                            addHashLinks(container);
-                        }
-                        return result;
-                    };
-                }
-            });
-            // Patch addInlineClick and processQuote to skip hash links
-            ['addInlineClick', 'processQuote'].forEach(fn => {
-                if (typeof tooltips[fn] === 'function') {
-                    const orig = tooltips[fn];
-                    tooltips[fn] = function (quote, ...rest) {
-                        if (
-                            !quote.href ||
-                            quote.classList.contains('hash-link') ||
-                            quote.closest('.hash-link-container') ||
-                            quote.href.includes('#q')
-                        ) {
-                            return;
-                        }
-                        return orig.apply(this, [quote, ...rest]);
-                    };
-                }
+
+        // Use the observer registry for #divThreads
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            const debouncedAddHashLinks = debounce(() => addHashLinks(), 25);
+            divThreadsObs.addHandler(function hashNavigationHandler() {
+                debouncedAddHashLinks();
             });
         }
 
-        // Observe for dynamically added quote/backlink links
-        const postsContainer = divThreads || document.body;
-
         // Event delegation for hash link clicks
+        const postsContainer = document.getElementById('divThreads') || document.body;
         postsContainer.addEventListener('click', function (e) {
             if (e.target.classList.contains('hash-link')) {
                 e.preventDefault();
@@ -2182,21 +2169,6 @@ onReady(async function () {
                 }
             }
         }, true);
-
-        const debouncedAddHashLinks = debounce(addHashLinks, 25);
-
-        const observer = new MutationObserver(mutations => {
-            let shouldUpdate = false;
-            mutations.forEach(mutation => {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        shouldUpdate = true;
-                    }
-                });
-            });
-            if (shouldUpdate) debouncedAddHashLinks();
-        });
-        observer.observe(divThreads, { childList: true, subtree: true });
     }
 
     // --- Feature: Scroll Arrows ---
@@ -2270,7 +2242,7 @@ onReady(async function () {
     }
 
     // --- Feature: Beep/Notify on (You) ---
-    async function featureBeepOnYou() {
+    (async function featureBeepOnYou() {
         if (!divPosts) return;
 
         // Web Audio API beep
@@ -2428,30 +2400,31 @@ onReady(async function () {
             }
         });
 
-        // Create MutationObserver to detect when you are quoted
-        const observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (
-                        node.nodeType === 1 &&
-                        typeof node.matches === "function" &&
-                        (node.matches('.postCell') || node.matches('.opCell')) &&
-                        node.querySelector("a.quoteLink.you") &&
-                        !node.closest('.innerPost')
-                    ) {
-                        if (beepOnYouSetting && playBeep) {
-                            playBeep();
-                        }
-                        if (notifyOnYouSetting) {
-                            notifyOnYou();
-                            setupNotificationScrollHandler();
+        // Use the observer registry for .divPosts
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
+        if (divPostsObs) {
+            divPostsObs.addHandler(function beepOnYouHandler(mutations) {
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (
+                            node.nodeType === 1 &&
+                            typeof node.matches === "function" &&
+                            (node.matches('.postCell') || node.matches('.opCell')) &&
+                            node.querySelector("a.quoteLink.you") &&
+                            !node.closest('.innerPost')
+                        ) {
+                            if (beepOnYouSetting && playBeep) {
+                                playBeep();
+                            }
+                            if (notifyOnYouSetting) {
+                                notifyOnYou();
+                                setupNotificationScrollHandler();
+                            }
                         }
                     }
                 }
-            }
-        });
-
-        observer.observe(divPosts, { childList: true, subtree: false });
+            });
+        }
 
         // Listen for settings changes
         window.addEventListener("8chanSS_settingChanged", async (e) => {
@@ -2459,6 +2432,8 @@ onReady(async function () {
                 const key = e.detail.key;
                 if (key === "beepOnYou") {
                     beepOnYouSetting = await getSetting("beepOnYou");
+                    // Recreate beep function if setting changes
+                    createBeepSound().then(fn => { playBeep = fn; });
                 } else if (key === "notifyOnYou") {
                     notifyOnYouSetting = await getSetting("notifyOnYou");
                 } else if (key === "notifyOnYou_customMessage") {
@@ -2467,9 +2442,7 @@ onReady(async function () {
                 }
             }
         });
-    }
-    // Init
-    featureBeepOnYou();
+    })();
 
     // --- Feature: Enhanced Youtube links ---
     async function enhanceYouTubeLinks() {
@@ -2747,10 +2720,10 @@ onReady(async function () {
                     link.href = cleanUrl;
                 }
 
-                // Replace link text with favicon, [Youtube], and video title
+                // Replace link text with SVG icon and video title
                 fetchYouTubeTitle(cleanId).then(title => {
                     if (title) {
-                        link.innerHTML = `<img class="yt-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAABIklEQVQoz53LvUrDUBjG8bOoOammSf1IoBSvoCB4JeIqOHgBLt6AIMRBBQelWurQ2kERnMRBsBUcIp5FJSBI5oQsJVkkUHh8W0o5nhaFHvjBgef/Mq+Q46RJBMkI/vE+aOus956tnEswIZe1LV0QyJ5sE2GzgZfVMtRNIdiDpccEssdlB1mW4bvTwdvWJtRdErM7U+8S/FJykCRJX5qm+KpVce8UMNLRLbulz4iSjTAMh6Iowsd5BeNadp3nUF0VlxAEwZBotXC0Usa4ll3meZdA1iguwvf9vpvDA2wvmKgYGtSud8suDB4TyGr2PF49D/vra9jRZ1BVdknMzgwuCGSnZEObwu6sBnVTCHZiaC7BhFx2PKdxUidiAH/4lLo9Mv0DELVs9qsOHXwAAAAASUVORK5CYII=" style="vertical-align:middle;margin-right:2px;"><span></span> ${title}`;
+                        link.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#FF0000" d="M549.7 124.1c-6.3-23.7-24.9-42.4-48.6-48.6C456.5 64 288 64 288 64s-168.5 0-213.1 11.5c-23.7 6.3-42.4 24.9-48.6 48.6C16 168.5 16 256 16 256s0 87.5 10.3 131.9c6.3 23.7 24.9 42.4 48.6 48.6C119.5 448 288 448 288 448s168.5 0 213.1-11.5c23.7-6.3 42.4-24.9 48.6-48.6 10.3-44.4 10.3-131.9 10.3-131.9s0-87.5-10.3-131.9zM232 334.1V177.9L361 256 232 334.1z"/></svg><span></span> ${title}`;
                     }
                 });
 
@@ -2760,19 +2733,28 @@ onReady(async function () {
                 }
             });
         }
+
         // Initial run
         processLinks(document);
-        // Observe for dynamically added links
-        if (typeof divThreads !== "undefined" && divThreads) {
-            new MutationObserver(() => processLinks(divThreads)).observe(divThreads, { childList: true, subtree: true });
-        } else {
-            new MutationObserver(() => processLinks(document)).observe(document.body, { childList: true, subtree: true });
+
+        // Use the observer registry for #divThreads
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            divThreadsObs.addHandler(function enhanceYoutubeLinksHandler(mutations) {
+                for (const mutation of mutations) {
+                    for (const addedNode of mutation.addedNodes) {
+                        if (addedNode.nodeType === 1) {
+                            processLinks(addedNode);
+                        }
+                    }
+                }
+            });
         }
     }
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
     function featureLabelCreated12h() {
-        if ((window.pageType?.isCatalog)) {
+        if (window.pageType?.isCatalog) {
             return;
         }
 
@@ -2806,21 +2788,21 @@ onReady(async function () {
 
         convertAllLabelCreated();
 
-        // Process only new .labelCreated spans on mutation
-        if (typeof divPosts !== "undefined" && divPosts) {
-            new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType !== 1) return; // Only process element nodes
-                        if (node.classList && node.classList.contains('labelCreated')) {
-                            convertLabelCreatedSpan(node);
-                        } else if (node.querySelectorAll) {
-                            // If the node is an element, check for .labelCreated descendants
-                            node.querySelectorAll('.labelCreated').forEach(convertLabelCreatedSpan);
+        // Use the observer registry for .divPosts
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
+        if (divPostsObs) {
+            divPostsObs.addHandler(function labelCreated12hHandler(mutations) {
+                for (const mutation of mutations) {
+                    for (const addedNode of mutation.addedNodes) {
+                        if (addedNode.nodeType !== 1) continue;
+                        if (addedNode.classList && addedNode.classList.contains('labelCreated')) {
+                            convertLabelCreatedSpan(addedNode);
+                        } else if (addedNode.querySelectorAll) {
+                            addedNode.querySelectorAll('.labelCreated').forEach(convertLabelCreatedSpan);
                         }
-                    });
-                });
-            }).observe(divPosts, { childList: true, subtree: true });
+                    }
+                }
+            });
         }
     }
 
@@ -2869,55 +2851,41 @@ onReady(async function () {
                 link.textContent = link.dataset.truncatedFilename;
             }
         });
-        // Debounced observer callback for performance
-        const debouncedProcess = debounce(() => processLinks(divThreads), 100);
-        // Observe for dynamically added links in #divThreads
-        const observer = new MutationObserver(debouncedProcess);
-        observer.observe(divThreads, { childList: true, subtree: true });
-        // Cleanup observer on unload/navigation
-        window.addEventListener('beforeunload', () => observer.disconnect());
+
+        // Use the observer registry for #divThreads
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            const debouncedProcess = debounce(() => processLinks(divThreads), 100);
+            divThreadsObs.addHandler(function truncateFilenamesHandler() {
+                debouncedProcess();
+            });
+        }
     }
 
     // --- Feature: Show Thread Stats in Header ---
-    function threadInfoHeader(retries = 10, delay = 200) {
+    function threadInfoHeader() {
         const navHeader = document.querySelector('.navHeader');
         const navOptionsSpan = document.getElementById('navOptionsSpan');
         const postCountEl = document.getElementById('postCount');
         const userCountEl = document.getElementById('userCountLabel');
         const fileCountEl = document.getElementById('fileCount');
 
-        // Retry utility function for modularity and readability
-        function retryIfElementsMissing(checkFn, callback, retries, delay) {
-            if (!checkFn()) {
-                if (retries > 0) {
-                    setTimeout(() => retryIfElementsMissing(checkFn, callback, retries - 1, delay), delay);
-                }
-                return true;
+        if (!(navHeader && navOptionsSpan && postCountEl && userCountEl && fileCountEl)) return;
+
+        function updateHeader() {
+            const postCount = postCountEl.textContent || '0';
+            const userCount = userCountEl.textContent || '0';
+            const fileCount = fileCountEl.textContent || '0';
+
+            // Find or create display element
+            let statsDisplay = navHeader.querySelector('.thread-stats-display');
+            if (!statsDisplay) {
+                statsDisplay = document.createElement('span');
+                statsDisplay.className = 'thread-stats-display';
+                statsDisplay.style.marginRight = '1px';
             }
-            return false;
-        }
 
-        if (retryIfElementsMissing(
-            () => navHeader && navOptionsSpan && postCountEl && userCountEl && fileCountEl,
-            () => threadInfoHeader(retries - 1, delay),
-            retries,
-            delay
-        )) return;
-
-        // Get stats
-        const postCount = postCountEl.textContent || '0';
-        const userCount = userCountEl.textContent || '0';
-        const fileCount = fileCountEl.textContent || '0';
-
-        // Find or create display element
-        let statsDisplay = navHeader.querySelector('.thread-stats-display');
-        if (!statsDisplay) {
-            statsDisplay = document.createElement('span');
-            statsDisplay.className = 'thread-stats-display';
-            statsDisplay.style.marginRight = '1px';
-        }
-
-        statsDisplay.innerHTML = `
+            statsDisplay.innerHTML = `
         [ 
         <span class="statLabel">Posts: </span><span class="statNumb">${postCount}</span> | 
         <span class="statLabel">Users: </span><span class="statNumb">${userCount}</span> | 
@@ -2925,29 +2893,29 @@ onReady(async function () {
         ]
         `;
 
-        // Prepend statsDisplay to #navOptionsSpan if it exists
-        if (statsDisplay.parentNode && statsDisplay.parentNode !== navOptionsSpan) {
-            statsDisplay.parentNode.removeChild(statsDisplay);
-        }
-        if (navOptionsSpan.firstChild !== statsDisplay) {
-            navOptionsSpan.insertBefore(statsDisplay, navOptionsSpan.firstChild);
-        }
-
-        // Observe changes to stats and update header accordingly (only once)
-        if (!threadInfoHeader._observerInitialized) {
-            const statIds = ['postCount', 'userCountLabel', 'fileCount'];
-
-            if (!threadInfoHeader._debouncedUpdate) {
-                threadInfoHeader._debouncedUpdate = debounce(() => threadInfoHeader(0, delay), 100);
+            // Prepend statsDisplay to #navOptionsSpan if it exists
+            if (statsDisplay.parentNode && statsDisplay.parentNode !== navOptionsSpan) {
+                statsDisplay.parentNode.removeChild(statsDisplay);
             }
-            statIds.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    new MutationObserver(threadInfoHeader._debouncedUpdate).observe(el, { childList: true, subtree: false, characterData: true });
-                }
-            });
-            threadInfoHeader._observerInitialized = true;
+            if (navOptionsSpan.firstChild !== statsDisplay) {
+                navOptionsSpan.insertBefore(statsDisplay, navOptionsSpan.firstChild);
+            }
         }
+
+        // Initial update
+        updateHeader();
+
+        // Use the observer registry for each stat element
+        const statSelectors = ['#postCount', '#userCountLabel', '#fileCount'];
+        statSelectors.forEach(selector => {
+            const statObs = observeSelector(selector, { childList: true, subtree: false, characterData: true });
+            if (statObs) {
+                const debouncedUpdate = debounce(updateHeader, 100);
+                statObs.addHandler(function threadInfoHeaderHandler() {
+                    debouncedUpdate();
+                });
+            }
+        });
     }
 
     // --- Feature: Advanced Media Viewer ---
@@ -2955,7 +2923,6 @@ onReady(async function () {
         // Set native 8chan setting
         localStorage.setItem("mediaViewer", "true");
 
-        // Apply the appropriate class based on settings
         async function updateMediaViewerClass() {
             const mediaViewer = document.getElementById('media-viewer');
             if (!mediaViewer) return;
@@ -2975,50 +2942,39 @@ onReady(async function () {
             // Apply the appropriate class based on setting
             if (viewerStyle === 'topright' || viewerStyle === 'topleft') {
                 mediaViewer.classList.add(viewerStyle);
-            } else {
-                // For 'native', we don't add any class
             }
+            // For 'native', we don't add any class
         }
 
-        // Check if media viewer exists and set up if needed
-        function setupIfMediaViewerExists() {
-            const mediaViewer = document.getElementById('media-viewer');
-            if (mediaViewer) {
-                // Media viewer already exists, apply class immediately
+        // Initial setup if media viewer already exists
+        updateMediaViewerClass();
+
+        // Use the observer registry for #media-viewer
+        const mediaViewerObs = observeSelector('#media-viewer', { childList: false, subtree: false });
+        if (mediaViewerObs) {
+            mediaViewerObs.addHandler(function mediaViewerPositioningHandler() {
                 updateMediaViewerClass();
-                return true;
-            }
-            return false;
+            });
         }
 
-        // Try to set up immediately if media viewer already exists
-        if (setupIfMediaViewerExists()) {
-            // Media viewer already exists, no need for observer
-        } else {
-            // Set up a one-time observer to detect when the media viewer first appears
-            const observer = new MutationObserver((mutations) => {
+        // If #media-viewer is not present, observe the body for its addition
+        const bodyObs = observeSelector('body', { childList: true, subtree: false });
+        if (bodyObs) {
+            bodyObs.addHandler(function bodyMediaViewerHandler(mutations) {
                 for (const mutation of mutations) {
-                    if (mutation.addedNodes.length) {
-                        for (const node of mutation.addedNodes) {
-                            if (node.id === 'media-viewer' ||
-                                (node.nodeType === 1 && node.querySelector('#media-viewer'))) {
-                                updateMediaViewerClass();
-                                // Disconnect observer since we only need to detect first appearance
-                                observer.disconnect();
-                                return;
-                            }
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1 && node.id === 'media-viewer') {
+                            updateMediaViewerClass();
                         }
                     }
                 }
             });
-            // Observe only until media viewer is found
-            observer.observe(document.body, { childList: true, subtree: false });
         }
     }
 
     // --- Feature: Highlight New IDs ---
     async function featureHighlightNewIds() {
-        if ((window.pageType?.isLast || window.pageType?.isCatalog)) {
+        if (window.pageType?.isLast || window.pageType?.isCatalog) {
             return;
         }
 
@@ -3069,31 +3025,29 @@ onReady(async function () {
         // Initial run
         highlightIds();
 
-        // Debounced update for observer
-        const debouncedHighlightIds = debounce(() => highlightIds(), 50);
-
-        // Observe divPosts for newly added posts
-        const observer = new MutationObserver(mutations => {
-            let needsUpdate = false;
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (
-                        node.nodeType === 1 &&
-                        (node.matches?.('.labelId') || node.querySelector?.('.labelId'))
-                    ) {
-                        needsUpdate = true;
-                        break;
+        // Use the observer registry for .divPosts
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
+        if (divPostsObs) {
+            const debouncedHighlightIds = debounce(() => highlightIds(), 50);
+            divPostsObs.addHandler(function highlightNewIdsHandler(mutations) {
+                let needsUpdate = false;
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (
+                            node.nodeType === 1 &&
+                            (node.matches?.('.labelId') || node.querySelector?.('.labelId'))
+                        ) {
+                            needsUpdate = true;
+                            break;
+                        }
                     }
+                    if (needsUpdate) break;
                 }
-                if (needsUpdate) break;
-            }
-            if (needsUpdate) {
-                debouncedHighlightIds();
-            }
-        });
-        observer.observe(divPosts, { childList: true, subtree: true });
-        // Cleanup observer on navigation/unload
-        window.addEventListener('beforeunload', () => observer.disconnect());
+                if (needsUpdate) {
+                    debouncedHighlightIds();
+                }
+            });
+        }
     }
 
     // --- Feature: Quote Threading ---
@@ -3149,22 +3103,16 @@ onReady(async function () {
             processPosts(Array.from(allPosts).slice(-5));
         }
 
-        // --- Post Observer ---
-        function setupPostObserver() {
-            const observer = new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
+        // --- Use the observer registry for .divPosts ---
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
+        if (divPostsObs) {
+            divPostsObs.addHandler(function quoteThreadingHandler(mutations) {
+                for (const mutation of mutations) {
                     if (mutation.addedNodes.length) {
                         setTimeout(threadNewPosts, 50);
                     }
-                });
+                }
             });
-
-            if (typeof divPosts !== 'undefined') {
-                observer.observe(divPosts, {
-                    childList: true,
-                    subtree: false
-                });
-            }
         }
 
         // --- Refresh Button ---
@@ -3189,7 +3137,6 @@ onReady(async function () {
         // --- Initialization ---
         threadAllPosts();  // Process all posts on initial load
         addRefreshButton();
-        setupPostObserver();
     }
 
     // --- Feature: Last 50 Button ---
@@ -3238,13 +3185,14 @@ onReady(async function () {
         // Initial run on page load
         addLastLinkButtons(document);
 
-        // Debounce to avoid excessive calls
-        const debouncedUpdate = debounce(() => addLastLinkButtons(document), 50);
-        const observer = new MutationObserver(debouncedUpdate);
-
-        observer.observe(catalogDiv, { childList: true, subtree: false });
-        // Cleanup
-        window.addEventListener('beforeunload', () => observer.disconnect());
+        // Use the observer registry for .catalogDiv
+        const catalogDivObs = observeSelector('.catalogDiv', { childList: true, subtree: false });
+        if (catalogDivObs) {
+            const debouncedUpdate = debounce(() => addLastLinkButtons(document), 50);
+            catalogDivObs.addHandler(function lastFiftyHandler() {
+                debouncedUpdate();
+            });
+        }
     }
 
     // --- Feature: Toggle ID as Yours ---
@@ -3397,49 +3345,44 @@ onReady(async function () {
             }
         });
 
-        // Observe for Dynamic Menus
-        // Use global debounce helper for observer callback
-        const debouncedObserverCallback = debounce((mutations) => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== 1) continue;
-                    if (node.matches && node.matches(MENU_SELECTOR)) {
-                        if (!node.hasAttribute('data-label-id')) {
-                            const btn = node.closest('.extraMenuButton');
-                            const postCell = btn && btn.closest('.postCell, .opCell');
-                            if (postCell) {
-                                const labelIdSpan = postCell.querySelector('.labelId');
-                                if (labelIdSpan) {
-                                    node.setAttribute('data-label-id', labelIdSpan.textContent.trim());
-                                }
-                            }
-                        }
-                        addMenuEntries(node.parentNode || node);
-                    } else if (node.querySelectorAll) {
-                        node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
-                            if (!menu.hasAttribute('data-label-id')) {
-                                const btn = menu.closest('.extraMenuButton');
+        // Use the observer registry for #divThreads
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            const debouncedObserverCallback = debounce((mutations) => {
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType !== 1) continue;
+                        if (node.matches && node.matches(MENU_SELECTOR)) {
+                            if (!node.hasAttribute('data-label-id')) {
+                                const btn = node.closest('.extraMenuButton');
                                 const postCell = btn && btn.closest('.postCell, .opCell');
                                 if (postCell) {
                                     const labelIdSpan = postCell.querySelector('.labelId');
                                     if (labelIdSpan) {
-                                        menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                        node.setAttribute('data-label-id', labelIdSpan.textContent.trim());
                                     }
                                 }
                             }
-                            addMenuEntries(menu.parentNode || menu);
-                        });
+                            addMenuEntries(node.parentNode || node);
+                        } else if (node.querySelectorAll) {
+                            node.querySelectorAll(MENU_SELECTOR).forEach(menu => {
+                                if (!menu.hasAttribute('data-label-id')) {
+                                    const btn = menu.closest('.extraMenuButton');
+                                    const postCell = btn && btn.closest('.postCell, .opCell');
+                                    if (postCell) {
+                                        const labelIdSpan = postCell.querySelector('.labelId');
+                                        if (labelIdSpan) {
+                                            menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                        }
+                                    }
+                                }
+                                addMenuEntries(menu.parentNode || menu);
+                            });
+                        }
                     }
                 }
-            }
-        }, 100);
-
-        if (divThreads) {
-            const observer = new MutationObserver(debouncedObserverCallback);
-            observer.observe(divThreads, { childList: true, subtree: true });
-
-            // Cleanup observer on unload/navigation
-            window.addEventListener('beforeunload', () => observer.disconnect());
+            }, 100);
+            divThreadsObs.addHandler(debouncedObserverCallback);
         }
 
         // Initial marking on page load for all marked post numbers
@@ -3619,74 +3562,30 @@ onReady(async function () {
             }
         }
 
-        // Keep a reference to the observer so we can disconnect if needed
-        let intersectionObserver = null;
-        function observeUploadDetails(element) {
-            if (!intersectionObserver) return;
-            intersectionObserver.observe(element);
-        }
-        // Create the IntersectionObserver
-        intersectionObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const detailDiv = entry.target;
-                    addSauceLinksToElement(detailDiv);
-                    observer.unobserve(detailDiv);
-                }
-            });
-        }, {
-            root: null,
-            rootMargin: "0px",
-            threshold: 0.1 // Only when at least 10% is visible
-        });
-        // Process all .uploadDetails in a given container (but only observe, not process immediately)
+        // Initial observation for all .uploadDetails in .divPosts
         function observeAllUploadDetails(container = document) {
             const details = container.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)');
-            details.forEach(detailDiv => observeUploadDetails(detailDiv));
+            details.forEach(detailDiv => addSauceLinksToElement(detailDiv));
         }
-        // Helper: process a single node if it's .uploadDetails
-        function observeIfUploadDetails(node) {
-            if (node.nodeType === 1
-                && node.classList.contains('uploadDetails')
-                && !node.classList.contains('sauceLinksProcessed')) {
-                observeUploadDetails(node);
-            }
-        }
-        // Initial observation
         observeAllUploadDetails();
-        // Observe for new posts and attribute changes
-        if (divPosts) {
-            const mutationObserver = new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    // Process new .uploadDetails nodes
-                    if (mutation.type === "childList") {
-                        mutation.addedNodes.forEach(node => {
-                            if (node.nodeType === 1) {
-                                // If the node itself is .uploadDetails
-                                observeIfUploadDetails(node);
-                                // Or any descendants like tooltips or inline
-                                node.querySelectorAll?.('.uploadDetails:not(.sauceLinksProcessed)').forEach(observeUploadDetails);
-                            }
-                        });
-                    }
-                });
-            });
-            mutationObserver.observe(divPosts, {
-                childList: true,
-                subtree: true,
-            });
-        }
 
-        // Cleanup on navigation/unload
-        function cleanupObservers() {
-            if (intersectionObserver) {
-                intersectionObserver.disconnect();
-            }
-            if (mutationObserver) {
-                mutationObserver.disconnect();
-            }
+        // Use the observer registry for .divPosts
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
+        if (divPostsObs) {
+            divPostsObs.addHandler(function sauceLinksHandler(mutations) {
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1) {
+                            if (node.classList && node.classList.contains('uploadDetails')) {
+                                addSauceLinksToElement(node);
+                            } else if (node.querySelectorAll) {
+                                node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+                            }
+                        }
+                    }
+                }
+            });
         }
-        window.addEventListener('beforeunload', cleanupObservers);
     }
 
     // --- Feature: Custom Post Hide Menu ---
@@ -3791,27 +3690,6 @@ onReady(async function () {
             return hidden;
         }
 
-        function hideRepliesRecursive(rootPostId, reason = 'hidePostPlus') {
-            const allToHide = getAllRepliesRecursive(rootPostId);
-            allToHide.forEach(pid => {
-                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                    if (getPostId(cell) === pid) {
-                        hidePostCellWithStub(cell, getBoardUri(cell), pid, null, reason);
-                    }
-                });
-            });
-        }
-            
-        function unhideRepliesRecursive(rootPostId) {
-            const allToUnhide = getAllRepliesRecursive(rootPostId);
-            allToUnhide.forEach(pid => {
-                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                    if (getPostId(cell) === pid) {
-                        unhidePostCell(cell, getBoardUri(cell), pid);
-                    }
-                });
-            });
-        }
         async function setPostHidden(boardUri, postId, hide = true, plus = false) {
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
@@ -3886,9 +3764,9 @@ onReady(async function () {
             updateAllQuoteLinksFiltered();
         }
 
-        // --- Hide/unhide by ID (simple/plus) --- (unchanged)
+        // --- Hide/unhide by ID (simple/plus) ---
         async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
-            // 1. Hide/unhide all posts with this ID in this thread
+            // Hide/unhide all posts with this ID in this thread
             const postIdsWithId = new Set();
             if (!/^[a-z0-9]+$/i.test(id)) return;
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
@@ -3911,7 +3789,7 @@ onReady(async function () {
                 }
             });
 
-            // 2. For plus: hide/unhide all posts that directly reply to a post with this ID (via .quoteLink or .panelBacklinks .backLink)
+            // Plus: hide/unhide all posts that directly reply to a post with this ID (via .quoteLink or .panelBacklinks .backLink)
             if (plus && postIdsWithId.size > 0) {
                 // Hide all posts that have a .quoteLink or .backLink to any of the postIdsWithId
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
@@ -3956,7 +3834,7 @@ onReady(async function () {
             updateAllQuoteLinksFiltered();
         }
 
-        // --- QuoteLink filtering --- (unchanged)
+        // --- QuoteLink filtering ---
         async function updateAllQuoteLinksFiltered() {
             // Gather all hidden post IDs, filtered IDs, and filtered names
             const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
@@ -4339,6 +4217,7 @@ onReady(async function () {
             document.querySelectorAll('.floatingList.extraMenu[data-custom]').forEach(menu => menu.remove());
         }
 
+        // --- Hijack hide buttons ---
         function hijackHideButtons(root = document) {
             getAllHideButtons(root).forEach(hideButton => {
                 if (hideButton.dataset.customMenuHijacked) return;
@@ -4386,11 +4265,11 @@ onReady(async function () {
             updateAllQuoteLinksFiltered();
         }
 
-        // --- Mutation observer for new posts --- (unchanged)
-        const divPosts = document.querySelector('.divPosts');
-        if (divPosts) {
-            const observer = new MutationObserver(async mutations => {
-                // Gather all plus-hidden post IDs for all boards
+        // --- Use the observer registry for .divPosts ---
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
+        if (divPostsObs) {
+            divPostsObs.addHandler(async function customPostHideMenuHandler(mutations) {
+                // Gather all plus-hidden post IDs for all boards, etc. (unchanged logic)
                 const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
                 const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
                 let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
@@ -4565,7 +4444,6 @@ onReady(async function () {
                 }
                 updateAllQuoteLinksFiltered();
             });
-            observer.observe(divPosts, { childList: true, subtree: false });
         }
 
         // --- Initial setup ---
@@ -5853,20 +5731,25 @@ onReady(async function () {
             // Add the Show Hidden button
             onReady(addShowHiddenButton);
 
-            // Apply hidden threads on load and after DOM mutations
+            // Apply hidden threads on load
             onReady(applyHiddenThreads);
 
             // Scope event listener to catalog container only
             const catalogContainer = document.querySelector(".catalogWrapper, .catalogDiv");
             if (catalogContainer) {
                 catalogContainer.addEventListener("click", onCatalogCellClick, true);
-
-                // Re-apply hidden threads if catalog is dynamically updated
-                const observer = new MutationObserver(applyHiddenThreads);
-                observer.observe(catalogContainer, { childList: true, subtree: false });
             }
         }
         hideThreadsOnRefresh();
+
+        // Use the observer registry for .catalogDiv
+        const catalogDivObs = observeSelector('.catalogDiv', { childList: true, subtree: false });
+        if (catalogDivObs) {
+            const debouncedApply = debounce(applyHiddenThreads, 50);
+            catalogDivObs.addHandler(function catalogHidingHandler() {
+                debouncedApply();
+            });
+        }
     }
 
     ////// KEYBOARD END /////////////////////////////////////////////////////////////////////////////////////////////////////////////
