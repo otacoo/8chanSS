@@ -31,6 +31,9 @@
 // @grant        GM.setValue
 // @grant        GM.deleteValue
 // @grant        GM.listValues
+// @grant        GM.xmlHttpRequest
+// @connect      youtube.com
+// @connect      i.ytimg.com
 // @run-at       document-start
 // @updateURL    <%= meta.downloads %><%= meta.files.metajs %>
 // @downloadURL  <%= meta.downloads %><%= meta.files.userjs %>
