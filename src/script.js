@@ -297,10 +297,12 @@ onReady(async function () {
                     }
                 }
             },
-            _miscelFilterTitle: { type: "title", label: ":: IDs & Filtering" },
+            _miscelFilterTitle: { type: "title", label: ":: Filtering" },
             _miscelSection1: { type: "separator" },
             enableHidingMenu: { label: "Enable 8chanSS post hiding menu & features", default: false },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
+            _miscelIDTitle: { type: "title", label: ":: IDs" },
+            _miscelSection2: { type: "separator" },
             highlightNewIds: {
                 label: "Highlight New IDs",
                 default: false,
@@ -1042,10 +1044,19 @@ onReady(async function () {
         }
 
         // Watch for changes in .divPosts (new posts)
+        let unseenUpdateTimeout = null;
+        function debouncedUpdateUnseenCount() {
+            if (unseenUpdateTimeout) clearTimeout(unseenUpdateTimeout);
+            unseenUpdateTimeout = setTimeout(() => {
+                updateUnseenCountFromSaved();
+                unseenUpdateTimeout = null;
+            }, 100);
+        }
+
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
             divPostsObs.addHandler(function saveScrollPostCountHandler() {
-                updateUnseenCountFromSaved();
+                debouncedUpdateUnseenCount();
             });
         }
 
@@ -2523,18 +2534,21 @@ onReady(async function () {
             try {
                 const u = new URL(url);
                 let changed = false;
+                // Remove tracking params, keep t and start
+                const KEEP_PARAMS = new Set(['t', 'start']);
                 TRACKING_PARAMS.forEach(param => {
-                    if (u.searchParams.has(param)) {
+                    if (u.searchParams.has(param) && !KEEP_PARAMS.has(param)) {
                         u.searchParams.delete(param);
                         changed = true;
                     }
                 });
+                // Also handle hash params (e.g. #t=75)
                 if (u.hash && u.hash.includes('?')) {
                     const [hashPath, hashQuery] = u.hash.split('?');
                     const hashParams = new URLSearchParams(hashQuery);
                     let hashChanged = false;
                     TRACKING_PARAMS.forEach(param => {
-                        if (hashParams.has(param)) {
+                        if (hashParams.has(param) && !KEEP_PARAMS.has(param)) {
                             hashParams.delete(param);
                             hashChanged = true;
                         }
