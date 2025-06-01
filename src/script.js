@@ -319,7 +319,17 @@ onReady(async function () {
                     }
                 }
             },
-            enableIdFilters: { label: "Show only posts by ID when ID is clicked", type: "checkbox", default: true },
+            enableIdFilters: {
+                label: "Show only posts by ID when ID is clicked",
+                type: "checkbox",
+                default: true,
+                subOptions: {
+                    showIdLinksOnly: {
+                        label: "Show as a floating list",
+                        default: false
+                    }
+                }
+            },
             enableIdToggle: { label: "Add menu entry to toggle IDs as Yours", type: "checkbox", default: false }
         }
     };
@@ -5816,14 +5826,141 @@ onReady(async function () {
     });
 
     // --- Feature: Show all posts by ID ---
-    function enableIdFiltering() {
+    async function enableIdFiltering() {
         if (!window.pageType?.isThread) return;
 
+        const threadsContainer = document.getElementById('divThreads');
         const postCellSelector = ".postCell";
         const labelIdSelector = ".labelId";
         const hiddenClassName = "is-hidden-by-filter";
         let activeFilterColor = null;
-        // Filter posts    
+
+        // Check subOption: showIdLinksOnly
+        const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
+        let floatingDiv = null;
+
+        function closeFloatingDiv() {
+            if (floatingDiv && floatingDiv.parentNode) {
+                floatingDiv.parentNode.removeChild(floatingDiv);
+                floatingDiv = null;
+            }
+            document.removeEventListener("mousedown", outsideClickHandler, true);
+        }
+        function outsideClickHandler(e) {
+            if (floatingDiv && !floatingDiv.contains(e.target)) {
+                closeFloatingDiv();
+            }
+        }
+
+        // Show floating div with links to all posts by this ID
+        function showIdList(id, clickedLabel) {
+            // Extract only the hex ID (first 6 hex chars) from the label
+            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
+            console.log('showIdList: Matching ID:', idToMatch);
+
+            const threadsContainer = document.getElementById('divThreads');
+            if (!threadsContainer) {
+                console.log('showIdList: #divThreads not found');
+                return [];
+            }
+
+            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell'));
+            console.log('showIdList: Total posts found:', allPosts.length);
+
+            const matchingPosts = [];
+            allPosts.forEach(postEl => {
+                const label = postEl.querySelector('.labelId');
+                if (label) {
+                    const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
+                    console.log('showIdList: Post', postEl.id, 'labelId:', labelId);
+                    if (labelId === idToMatch) {
+                        matchingPosts.push(postEl);
+                    }
+                }
+            });
+
+            console.log('showIdList: Matching posts count:', matchingPosts.length);
+
+            // --- Floating div logic ---
+            // Remove any existing floating div
+            document.querySelectorAll('.ss-idlinks-floating').forEach(el => el.remove());
+
+            // Get board and thread from URL
+            const match = window.location.pathname.match(/^\/([^/]+)\/res\/(\d+)\.html/);
+            const board = match ? match[1] : '';
+            const thread = match ? match[2] : '';
+
+            // Build the floating div
+            const floatingDiv = document.createElement('div');
+            floatingDiv.className = 'ss-idlinks-floating';
+            floatingDiv.style.position = 'absolute';
+            floatingDiv.style.background = 'var(--background-color)';
+            floatingDiv.style.color = 'var(--text-color)';
+            floatingDiv.style.border = '1px solid var(--navbar-text-color)';
+            floatingDiv.style.borderRadius = '6px';
+            floatingDiv.style.padding = '10px 16px 10px 10px';
+            floatingDiv.style.boxShadow = '0 2px 12px rgba(0,0,0,0.25)';
+            floatingDiv.style.maxHeight = '60vh';
+            floatingDiv.style.overflowY = 'auto';
+            floatingDiv.style.fontSize = '14px';
+            floatingDiv.style.maxWidth = '55vw';
+
+            // Title
+            const title = document.createElement('div');
+            title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+            title.style.fontWeight = 'bold';
+            title.style.marginBottom = '8px';
+            floatingDiv.appendChild(title);
+
+            // List of links
+            const linkContainer = document.createElement('div');
+            linkContainer.style.display = 'flex';
+            linkContainer.style.flexWrap = 'wrap';
+            linkContainer.style.gap = '0.3em';
+
+            matchingPosts.forEach(postEl => {
+                const postId = postEl.id;
+                const link = document.createElement('a');
+                link.className = 'quoteLink postLink';
+                link.href = `/${board}/res/${thread}.html#${postId}`;
+                link.textContent = `>>${postId}`;
+                link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
+                link.style.display = 'inline-block';
+                link.onclick = function (e) {
+                    e.preventDefault();
+                    floatingDiv.remove();
+                    const target = document.getElementById(postId);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+                linkContainer.appendChild(link);
+            });
+            floatingDiv.appendChild(linkContainer);
+
+            // Position the floating div next to the clicked label
+            document.body.appendChild(floatingDiv);
+            const rect = clickedLabel.getBoundingClientRect();
+            let top = rect.bottom + window.scrollY + 4;
+            let left = rect.left + window.scrollX;
+            if (left + 320 > window.innerWidth) left = Math.max(0, window.innerWidth - 340);
+            if (top + 200 > window.innerHeight + window.scrollY) top = Math.max(10, rect.top + window.scrollY - 220);
+            floatingDiv.style.top = `${top}px`;
+            floatingDiv.style.left = `${left}px`;
+
+            // Close on click outside
+            setTimeout(() => {
+                function closeOnClick(e) {
+                    if (!floatingDiv.contains(e.target)) {
+                        floatingDiv.remove();
+                        document.removeEventListener('mousedown', closeOnClick, true);
+                    }
+                }
+                document.addEventListener('mousedown', closeOnClick, true);
+            }, 0);
+
+            return matchingPosts;
+        }
+
+        // Filtering logic (original)
         function applyFilter(targetRgbColor) {
             activeFilterColor = targetRgbColor;
             document.querySelectorAll(postCellSelector).forEach(cell => {
@@ -5832,27 +5969,29 @@ onReady(async function () {
                 cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
             });
         }
+
         // Click handler
         function handleClick(event) {
             const clickedLabel = event.target.closest(labelIdSelector);
-            // Only trigger if inside a .postCell and not inside a preview
             if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
                 event.preventDefault();
                 event.stopPropagation();
-
-                const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
-                const rect = clickedLabel.getBoundingClientRect();
-                const cursorOffsetY = event.clientY - rect.top;
-
-                if (activeFilterColor === clickedColor) {
-                    applyFilter(null); // Toggle off if already active
+                const id = clickedLabel.textContent.trim();
+                if (showIdLinksOnly) {
+                    showIdList(id, clickedLabel);
                 } else {
-                    applyFilter(clickedColor);
+                    const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
+                    const rect = clickedLabel.getBoundingClientRect();
+                    const cursorOffsetY = event.clientY - rect.top;
+                    if (activeFilterColor === clickedColor) {
+                        applyFilter(null); // Toggle off if already active
+                    } else {
+                        applyFilter(clickedColor);
+                    }
+                    // Scroll to keep the clicked label in view
+                    clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
+                    window.scrollBy(0, cursorOffsetY - rect.height / 2);
                 }
-
-                // Scroll to keep the clicked label in view
-                clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
-                window.scrollBy(0, cursorOffsetY - rect.height / 2);
             }
         }
         document.body.addEventListener("click", handleClick);
