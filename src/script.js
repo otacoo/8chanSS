@@ -5895,12 +5895,12 @@ onReady(async function () {
     async function enableIdFiltering() {
         if (!window.pageType?.isThread) return;
 
-        const postCellSelector = ".postCell";
+        const postCellSelector = ".postCell, .opCell, .innerOP";
         const labelIdSelector = ".labelId";
         const hiddenClassName = "is-hidden-by-filter";
         let activeFilterColor = null;
 
-        // Check subOption: showIdLinksOnly
+        // Check if subOption is enabled
         const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
         let floatingDiv = null;
 
@@ -5929,15 +5929,15 @@ onReady(async function () {
                 return [];
             }
 
-            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell'));
+            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell, .innerOP'));
             console.log('showIdList: Total posts found:', allPosts.length);
 
             const matchingPosts = [];
             allPosts.forEach(postEl => {
                 const label = postEl.querySelector('.labelId');
-                if (label) {
+                const postId = postEl.id;
+                if (label && postId) {
                     const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
-                    console.log('showIdList: Post', postEl.id, 'labelId:', labelId);
                     if (labelId === idToMatch) {
                         matchingPosts.push(postEl);
                     }
@@ -5958,18 +5958,7 @@ onReady(async function () {
             // Build the floating div
             const floatingDiv = document.createElement('div');
             floatingDiv.className = 'ss-idlinks-floating';
-            floatingDiv.style.position = 'absolute';
-            floatingDiv.style.background = 'var(--background-color)';
-            floatingDiv.style.color = 'var(--text-color)';
-            floatingDiv.style.border = '1px solid var(--navbar-text-color)';
-            floatingDiv.style.borderRadius = '6px';
-            floatingDiv.style.padding = '10px 16px 10px 10px';
-            floatingDiv.style.boxShadow = '0 2px 12px rgba(0,0,0,0.25)';
-            floatingDiv.style.maxHeight = '60vh';
-            floatingDiv.style.overflowY = 'auto';
-            floatingDiv.style.fontSize = '14px';
-            floatingDiv.style.maxWidth = '55vw';
-
+                                                                                                                        
             // Title
             const title = document.createElement('div');
             title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
@@ -5997,7 +5986,12 @@ onReady(async function () {
                     const target = document.getElementById(postId);
                     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 };
-                linkContainer.appendChild(link);
+                // Wrap each link in a div.innerPost with dataset.uri for tooltip compatibility
+                const wrapper = document.createElement('div');
+                wrapper.className = 'innerPost';
+                wrapper.dataset.uri = `${board}/${thread}#${postId}`;
+                wrapper.appendChild(link);
+                linkContainer.appendChild(wrapper);
             });
             floatingDiv.appendChild(linkContainer);
 

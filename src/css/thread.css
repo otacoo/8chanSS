@@ -52,7 +52,7 @@
 }
 
 #quick-reply {
-    box-shadow: -3px 3px 2px 0 rgba(0,0,0,.19);
+    box-shadow: -3px 3px 2px 0 rgba(0, 0, 0, .19);
 }
 
 /* Unread Line */
@@ -115,7 +115,7 @@
     margin-top: 4px;
 }
 
-.postInfo.title > .inlineQuote {
+.postInfo.title>.inlineQuote {
     margin-left: 15px;
 }
 
@@ -160,4 +160,24 @@
 .threadedReplies {
     border-left: 1px solid #ccc;
     padding-left: 15px;
+}
+
+/* Floating ID Links List */
+.ss-idlinks-floating {
+    position: absolute;
+    background: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--navbar-text-color);
+    border-radius: 6px;
+    padding: 10px 16px 10px 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .25);
+    max-height: 60vh;
+    overflow-y: auto;
+    font-size: 14px;
+    max-width: 56vw;
+    z-index: 990;
+}
+
+.ss-idlinks-floating .innerPost {
+    margin-bottom: 2px;
 }
