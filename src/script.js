@@ -3653,6 +3653,27 @@ onReady(async function () {
                 }
             });
         }
+
+        // Observe for .quoteTooltip and .innerPost additions and process .uploadDetails inside
+        const bodyObs = observeSelector('body', { childList: true, subtree: true });
+        if (bodyObs) {
+            bodyObs.addHandler(function quoteTooltipSauceLinksHandler(mutations) {
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType !== 1) continue;
+                        // .quoteTooltip
+                        if (node.classList && node.classList.contains('quoteTooltip')) {
+                            node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+                        } else if (node.classList && node.classList.contains('innerPost')) {
+                            node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+                        } else if (node.querySelectorAll) {
+                            node.querySelectorAll('.quoteTooltip .uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+                            node.querySelectorAll('.innerPost .uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+                        }
+                    }
+                }
+            });
+        }
     }
 
     // --- Feature: Custom Post Hide Menu ---
