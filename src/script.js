@@ -5949,9 +5949,9 @@ onReady(async function () {
             document.querySelectorAll('.ss-idlinks-floating').forEach(el => el.remove());
 
             // Get board and thread from URL
-            const match = window.location.pathname.match(/^\/([^/]+)\/res\/(\d+)\.html/);
+            const match = window.location.pathname.match(/^\/([^/]+)\/(res|last)\/(\d+)\.html/);
             const board = match ? match[1] : '';
-            const thread = match ? match[2] : '';
+            const thread = match ? match[3] : '';
 
             // Build the floating div
             const floatingDiv = document.createElement('div');
@@ -6082,7 +6082,7 @@ onReady(async function () {
                     window.callPageToast(
                         `8chanSS has updated to v${VERSION}. Check out the <b><a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank">changelog</a></b>.`,
                         "blue",
-                        12000
+                        15000
                     );
                 }
             }
