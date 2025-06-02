@@ -1,3 +1,17 @@
+## v1.51.0
+*2025-06-02*
+
+- **New Options:** 
+  - Misc > Enhanced Youtube Links > Show Thumbnails on Hover\
+    *Note:* To support Youtube thumbnails on hover the userscript will now connect to `youtube.com` and `i.ytimg.com`.
+  - Misc. > Alternative post hiding menu & features (replaces the native post hiding menu, "plus" options will hide *direct* replies to filtered/hidden IDs, posts & names) (Issue #5)
+  - Misc > Show only posts by ID when ID is clicked > Show as a floating list
+- Add support for /embed/, /live/ and /shorts/ Youtube links
+- Youtube links will now correctly keep their time stamp parameter (tracking params are still stripped)
+- Sauce links will now correctly show up in inlined posts
+- Blurred/revealed spoilers will now work correctly for hovering tooltips
+- Various optimizations to the code
+
 ### v1.50.3 (Patch)
 *2025-05-27*
 
