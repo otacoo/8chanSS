@@ -299,7 +299,7 @@ onReady(async function () {
             },
             _miscelFilterTitle: { type: "title", label: ":: Filtering" },
             _miscelSection1: { type: "separator" },
-            enableHidingMenu: { label: "Enable 8chanSS post hiding menu & features", default: false },
+            enableHidingMenu: { label: "Alternative post hiding menu & features", default: false },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
             _miscelIDTitle: { type: "title", label: ":: IDs" },
             _miscelSection2: { type: "separator" },
@@ -3311,6 +3311,8 @@ onReady(async function () {
                         if (labelIdSpan) {
                             menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
                         }
+                        // Immediately add the Toggle ID as Yours entry if not present
+                        addMenuEntries(menu.parentNode || menu);
                     }
                 }, 0);
             }
