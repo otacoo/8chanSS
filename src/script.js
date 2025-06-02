@@ -416,7 +416,8 @@ onReady(async function () {
             hideNoCookieLink: "hide-nocookie",
             autoExpandTW: "auto-expand-tw",
             hideJannyTools: "hide-jannytools",
-            opBackground: "op-background"
+            opBackground: "op-background",
+            blurSpoilers: "ss-blur-spoilers"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
@@ -1634,6 +1635,20 @@ onReady(async function () {
 
         const removeSpoilers = await getSetting("blurSpoilers_removeSpoilers");
 
+        // Helper to apply blur or remove spoilers styles
+        function applyBlurOrRemoveSpoilers(img, removeSpoilers) {
+            if (removeSpoilers) {
+                img.style.filter = "";
+                img.style.transition = "";
+                img.style.border = "1px dotted var(--border-color)";
+                img.onmouseover = null;
+                img.onmouseout = null;
+            } else {
+                img.style.filter = "blur(5px)";
+                img.style.transition = "filter 0.3s ease";
+            }
+        }
+
         function processImgLink(link) {
             if (link.dataset.blurSpoilerProcessed === "1") {
                 return;
@@ -1676,12 +1691,12 @@ onReady(async function () {
                 const ext = getExtensionForMimeType(fileMime);
 
                 // Check for data-filewidth attribute
-                const fileWidthAttr = link.getAttribute("data-filewidth");
-                const fileHeightAttr = link.getAttribute("data-fileheight");
+                let fileWidthAttr = link.getAttribute("data-filewidth");
+                let fileHeightAttr = link.getAttribute("data-fileheight");
                 let transformedSrc;
                 if (
-                    (fileWidthAttr && Number(fileWidthAttr) < 250) ||
-                    (fileHeightAttr && Number(fileHeightAttr) < 250)
+                    (fileWidthAttr && Number(fileWidthAttr) <= 220) ||
+                    (fileHeightAttr && Number(fileHeightAttr) <= 220)
                 ) {
                     // Use the full image, not the thumbnail, and append extension
                     transformedSrc = `/.media/${match[1]}${ext}`;
@@ -1692,6 +1707,28 @@ onReady(async function () {
                     link.dataset.blurSpoilerProcessed = "1";
                     return;
                 }
+
+                // Custom spoiler + no fileWidth/Height: check .dimensionLabel and use href if small
+                if (isCustomSpoiler && !fileWidthAttr && !fileHeightAttr) {
+                    const uploadCell = img.closest('.uploadCell');
+                    if (uploadCell) {
+                        const dimensionLabel = uploadCell.querySelector('.dimensionLabel');
+                        if (dimensionLabel) {
+                            const dimensions = dimensionLabel.textContent.trim().split(/x|×/);
+                            if (dimensions.length === 2) {
+                                const parsedWidth = parseInt(dimensions[0].trim(), 10);
+                                const parsedHeight = parseInt(dimensions[1].trim(), 10);
+                                if ((parsedWidth <= 220 || parsedHeight <= 220)) {
+                                img.src = href;
+                                link.dataset.blurSpoilerProcessed = "1";
+                                applyBlurOrRemoveSpoilers(img, removeSpoilers);
+                                return;
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Temporarily lock rendered size to avoid layout shift
                 const initialWidth = img.offsetWidth;
                 const initialHeight = img.offsetHeight;
@@ -1707,20 +1744,9 @@ onReady(async function () {
                     img.style.height = img.naturalHeight + "px";
                 });
 
-                // If Remove Spoilers is enabled, do not apply blur, just show the thumbnail
-                if (removeSpoilers) {
-                    img.style.filter = "";
-                    img.style.transition = "";
-                    img.style.border = "1px dotted var(--border-color)";
-                    img.onmouseover = null;
-                    img.onmouseout = null;
-                    link.dataset.blurSpoilerProcessed = "1";
-                    return;
-                } else {
-                    // Set initial blur style only
-                    img.style.filter = "blur(5px)";
-                    img.style.transition = "filter 0.3s ease";
-                }
+                applyBlurOrRemoveSpoilers(img, removeSpoilers);
+                link.dataset.blurSpoilerProcessed = "1";
+                return;
             }
             link.dataset.blurSpoilerProcessed = "1";
         }
@@ -1754,6 +1780,23 @@ onReady(async function () {
                 }
                 if (!debounceTimeout) {
                     debounceTimeout = setTimeout(processPendingImgLinks, 50);
+                }
+            });
+        }
+
+        // Observe for .quoteTooltip additions and process spoilers inside
+        const bodyObs = observeSelector('body', { childList: true, subtree: true });
+        if (bodyObs) {
+            bodyObs.addHandler(function quoteTooltipSpoilerHandler(mutations) {
+                for (const mutation of mutations) {
+                    for (const addedNode of mutation.addedNodes) {
+                        if (addedNode.nodeType !== 1) continue;
+                        if (addedNode.classList && addedNode.classList.contains('quoteTooltip')) {
+                            addedNode.querySelectorAll('a.imgLink').forEach(link => processImgLink(link));
+                        } else if (addedNode.querySelectorAll) {
+                            addedNode.querySelectorAll('.quoteTooltip a.imgLink').forEach(link => processImgLink(link));
+                        }
+                    }
                 }
             });
         }
@@ -5829,7 +5872,6 @@ onReady(async function () {
     async function enableIdFiltering() {
         if (!window.pageType?.isThread) return;
 
-        const threadsContainer = document.getElementById('divThreads');
         const postCellSelector = ".postCell";
         const labelIdSelector = ".labelId";
         const hiddenClassName = "is-hidden-by-filter";
