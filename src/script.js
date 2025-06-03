@@ -319,6 +319,7 @@ onReady(async function () {
                     }
                 }
             },
+            alwaysShowIdCount: { label: "Always show post count for IDs", default: false },
             enableIdFilters: {
                 label: "Show only posts by ID when ID is clicked",
                 type: "checkbox",
@@ -652,6 +653,7 @@ onReady(async function () {
         { key: "enableTheSauce", fn: featureSauceLinks },
         { key: "enableUpdateNotif", fn: updateNotif },
         { key: "enableHidingMenu", fn: featureCustomPostHideMenu },
+        { key: "alwaysShowIdCount", fn: featureShowIDCount },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -1719,16 +1721,16 @@ onReady(async function () {
                                 const parsedWidth = parseInt(dimensions[0].trim(), 10);
                                 const parsedHeight = parseInt(dimensions[1].trim(), 10);
                                 if ((parsedWidth <= 220 || parsedHeight <= 220)) {
-                                img.src = href;
-                                link.dataset.blurSpoilerProcessed = "1";
-                                applyBlurOrRemoveSpoilers(img, removeSpoilers);
-                                return;
+                                    img.src = href;
+                                    link.dataset.blurSpoilerProcessed = "1";
+                                    applyBlurOrRemoveSpoilers(img, removeSpoilers);
+                                    return;
                                 }
                             }
                         }
                     }
                 }
-                
+
                 // Temporarily lock rendered size to avoid layout shift
                 const initialWidth = img.offsetWidth;
                 const initialHeight = img.offsetHeight;
@@ -3064,14 +3066,14 @@ onReady(async function () {
             const idFrequency = {};
             const labelSpans = root.querySelectorAll('.labelId');
             labelSpans.forEach(span => {
-                const id = span.textContent.trim();
+                const id = span.textContent.split(/[|\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
 
             // Track first occurrence and apply class
             const seen = {};
             labelSpans.forEach(span => {
-                const id = span.textContent.trim();
+                const id = span.textContent.split(/[|\(]/)[0].trim();
                 // Remove all possible highlight classes in case of re-run
                 span.classList.remove('moetext', 'id-glow', 'id-dotted');
                 if (!seen[id]) {
@@ -3116,6 +3118,50 @@ onReady(async function () {
             });
         }
     }
+
+    // --- Feature: Always show post count for IDs ---
+    async function featureShowIDCount() {
+        // Early return if not on thread page
+        if (!window.pageType?.isThread) return;
+        // Early return if no .spanId exists on the page
+        if (!document.querySelector('.spanId')) return;
+
+        const alwaysShowIdCount = await getSetting("alwaysShowIdCount");
+
+        function updateIdCounts(root = divPosts) {
+        // Build frequency map
+        const idFrequency = {};
+        const labelSpans = root.querySelectorAll('.labelId');
+        labelSpans.forEach(span => {
+        // Extract just the ID part (before | or parens)
+        const id = span.textContent.split(/[|\(]/)[0].trim();
+        idFrequency[id] = (idFrequency[id] || 0) + 1;
+        });
+        labelSpans.forEach(span => {
+        const id = span.textContent.split(/[|\(]/)[0].trim();
+        if (alwaysShowIdCount) {
+        span.textContent = `${id} | ${idFrequency[id]}`;
+        // Prevent native hover handler from changing text
+        span.onmouseover = function(e) { e.stopImmediatePropagation(); e.preventDefault(); };
+        span.onmouseout = function(e) { e.stopImmediatePropagation(); e.preventDefault(); };
+        } else {
+        span.textContent = id;
+        span.onmouseover = null;
+        span.onmouseout = null;
+        }
+        });
+        }
+        // Initial run
+        updateIdCounts();
+        // Observe for dynamic post additions
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
+        if (divPostsObs) {
+            divPostsObs.addHandler(function showIdCountHandler(mutations) {
+                updateIdCounts();
+            });
+        }
+    }
+
 
     // --- Feature: Quote Threading ---
     async function featureQuoteThreading() {
@@ -4307,7 +4353,7 @@ onReady(async function () {
             document.querySelectorAll('.floatingList.extraMenu[data-custom]').forEach(menu => menu.remove());
         }
 
-        // --- Hijack hide buttons ---
+        // Hijack hide buttons
         function hijackHideButtons(root = document) {
             getAllHideButtons(root).forEach(hideButton => {
                 if (hideButton.dataset.customMenuHijacked) return;
@@ -4321,7 +4367,7 @@ onReady(async function () {
             });
         }
 
-        // --- Initial page load: apply all hiding/filtering ---
+        // Initial page load: apply all hiding/filtering
         async function autoHideAll() {
             // Hide posts
             const obj = await getStoredObject(HIDDEN_POSTS_KEY);
@@ -4355,7 +4401,7 @@ onReady(async function () {
             updateAllQuoteLinksFiltered();
         }
 
-        // --- Use the observer registry for .divPosts ---
+        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
             divPostsObs.addHandler(async function customPostHideMenuHandler(mutations) {
@@ -4539,6 +4585,166 @@ onReady(async function () {
         // --- Initial setup ---
         hijackHideButtons();
         autoHideAll();
+    }
+
+    // --- Feature: Show all posts by ID ---
+    async function enableIdFiltering() {
+        if (!window.pageType?.isThread) return;
+
+        const postCellSelector = ".postCell, .opCell, .innerOP";
+        const labelIdSelector = ".labelId";
+        const hiddenClassName = "is-hidden-by-filter";
+        let activeFilterColor = null;
+
+        // Check if subOption is enabled
+        const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
+        let floatingDiv = null;
+
+        function closeFloatingDiv() {
+            if (floatingDiv && floatingDiv.parentNode) {
+                floatingDiv.parentNode.removeChild(floatingDiv);
+                floatingDiv = null;
+            }
+            document.removeEventListener("mousedown", outsideClickHandler, true);
+        }
+        function outsideClickHandler(e) {
+            if (floatingDiv && !floatingDiv.contains(e.target)) {
+                closeFloatingDiv();
+            }
+        }
+
+        // Show floating div with links to all posts by this ID
+        function showIdList(id, clickedLabel) {
+            // Extract only the hex ID (first 6 hex chars) from the label
+            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
+
+            const threadsContainer = document.getElementById('divThreads');
+            if (!threadsContainer) {
+                return [];
+            }
+
+            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell, .innerOP'));
+
+            const matchingPosts = [];
+            allPosts.forEach(postEl => {
+                const label = postEl.querySelector('.labelId');
+                const postId = postEl.id;
+                if (label && postId) {
+                    const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
+                    if (labelId === idToMatch) {
+                        matchingPosts.push(postEl);
+                    }
+                }
+            });
+
+            // --- Floating div logic ---
+            // Remove any existing floating div
+            document.querySelectorAll('.ss-idlinks-floating').forEach(el => el.remove());
+
+            // Get board and thread from URL
+            const match = window.location.pathname.match(/^\/([^/]+)\/(res|last)\/(\d+)\.html/);
+            const board = match ? match[1] : '';
+            const thread = match ? match[3] : '';
+
+            // Build the floating div
+            const floatingDiv = document.createElement('div');
+            floatingDiv.className = 'ss-idlinks-floating';
+
+            // Title
+            const title = document.createElement('div');
+            title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+            title.style.fontWeight = 'bold';
+            title.style.marginBottom = '8px';
+            floatingDiv.appendChild(title);
+
+            // List of links
+            const linkContainer = document.createElement('div');
+            linkContainer.style.display = 'flex';
+            linkContainer.style.flexWrap = 'wrap';
+            linkContainer.style.gap = '0.3em';
+
+            matchingPosts.forEach(postEl => {
+                const postId = postEl.id;
+                const link = document.createElement('a');
+                link.className = 'quoteLink postLink';
+                link.href = `/${board}/res/${thread}.html#${postId}`;
+                link.textContent = `>>${postId}`;
+                link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
+                link.style.display = 'inline-block';
+                link.onclick = function (e) {
+                    e.preventDefault();
+                    floatingDiv.remove();
+                    const target = document.getElementById(postId);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+                // Wrap each link in a div.innerPost with dataset.uri for tooltip compatibility
+                const wrapper = document.createElement('div');
+                wrapper.className = 'innerPost';
+                wrapper.dataset.uri = `${board}/${thread}#${postId}`;
+                wrapper.appendChild(link);
+                linkContainer.appendChild(wrapper);
+            });
+            floatingDiv.appendChild(linkContainer);
+
+            // Position the floating div next to the clicked label
+            document.body.appendChild(floatingDiv);
+            const rect = clickedLabel.getBoundingClientRect();
+            let top = rect.bottom + window.scrollY + 4;
+            let left = rect.left + window.scrollX;
+            if (left + 320 > window.innerWidth) left = Math.max(0, window.innerWidth - 340);
+            if (top + 200 > window.innerHeight + window.scrollY) top = Math.max(10, rect.top + window.scrollY - 220);
+            floatingDiv.style.top = `${top}px`;
+            floatingDiv.style.left = `${left}px`;
+
+            // Close on click outside
+            setTimeout(() => {
+                function closeOnClick(e) {
+                    if (!floatingDiv.contains(e.target)) {
+                        floatingDiv.remove();
+                        document.removeEventListener('mousedown', closeOnClick, true);
+                    }
+                }
+                document.addEventListener('mousedown', closeOnClick, true);
+            }, 0);
+
+            return matchingPosts;
+        }
+
+        // Filtering logic (original)
+        function applyFilter(targetRgbColor) {
+            activeFilterColor = targetRgbColor;
+            document.querySelectorAll(postCellSelector).forEach(cell => {
+                const label = cell.querySelector(labelIdSelector);
+                const matches = label && window.getComputedStyle(label).backgroundColor === targetRgbColor;
+                cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
+            });
+        }
+
+        // Click handler
+        function handleClick(event) {
+            const clickedLabel = event.target.closest(labelIdSelector);
+            if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
+                event.preventDefault();
+                event.stopPropagation();
+                const id = clickedLabel.textContent.trim();
+                if (showIdLinksOnly) {
+                    showIdList(id, clickedLabel);
+                } else {
+                    const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
+                    const rect = clickedLabel.getBoundingClientRect();
+                    const cursorOffsetY = event.clientY - rect.top;
+                    if (activeFilterColor === clickedColor) {
+                        applyFilter(null); // Toggle off if already active
+                    } else {
+                        applyFilter(clickedColor);
+                    }
+                    // Scroll to keep the clicked label in view
+                    clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
+                    window.scrollBy(0, cursorOffsetY - rect.height / 2);
+                }
+            }
+        }
+        document.body.addEventListener("click", handleClick);
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -5890,171 +6096,6 @@ onReady(async function () {
             }, 0);
         }
     });
-
-    // --- Feature: Show all posts by ID ---
-    async function enableIdFiltering() {
-        if (!window.pageType?.isThread) return;
-
-        const postCellSelector = ".postCell, .opCell, .innerOP";
-        const labelIdSelector = ".labelId";
-        const hiddenClassName = "is-hidden-by-filter";
-        let activeFilterColor = null;
-
-        // Check if subOption is enabled
-        const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
-        let floatingDiv = null;
-
-        function closeFloatingDiv() {
-            if (floatingDiv && floatingDiv.parentNode) {
-                floatingDiv.parentNode.removeChild(floatingDiv);
-                floatingDiv = null;
-            }
-            document.removeEventListener("mousedown", outsideClickHandler, true);
-        }
-        function outsideClickHandler(e) {
-            if (floatingDiv && !floatingDiv.contains(e.target)) {
-                closeFloatingDiv();
-            }
-        }
-
-        // Show floating div with links to all posts by this ID
-        function showIdList(id, clickedLabel) {
-            // Extract only the hex ID (first 6 hex chars) from the label
-            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
-            console.log('showIdList: Matching ID:', idToMatch);
-
-            const threadsContainer = document.getElementById('divThreads');
-            if (!threadsContainer) {
-                console.log('showIdList: #divThreads not found');
-                return [];
-            }
-
-            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell, .innerOP'));
-            console.log('showIdList: Total posts found:', allPosts.length);
-
-            const matchingPosts = [];
-            allPosts.forEach(postEl => {
-                const label = postEl.querySelector('.labelId');
-                const postId = postEl.id;
-                if (label && postId) {
-                    const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
-                    if (labelId === idToMatch) {
-                        matchingPosts.push(postEl);
-                    }
-                }
-            });
-
-            console.log('showIdList: Matching posts count:', matchingPosts.length);
-
-            // --- Floating div logic ---
-            // Remove any existing floating div
-            document.querySelectorAll('.ss-idlinks-floating').forEach(el => el.remove());
-
-            // Get board and thread from URL
-            const match = window.location.pathname.match(/^\/([^/]+)\/(res|last)\/(\d+)\.html/);
-            const board = match ? match[1] : '';
-            const thread = match ? match[3] : '';
-
-            // Build the floating div
-            const floatingDiv = document.createElement('div');
-            floatingDiv.className = 'ss-idlinks-floating';
-                                                                                                                        
-            // Title
-            const title = document.createElement('div');
-            title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
-            title.style.fontWeight = 'bold';
-            title.style.marginBottom = '8px';
-            floatingDiv.appendChild(title);
-
-            // List of links
-            const linkContainer = document.createElement('div');
-            linkContainer.style.display = 'flex';
-            linkContainer.style.flexWrap = 'wrap';
-            linkContainer.style.gap = '0.3em';
-
-            matchingPosts.forEach(postEl => {
-                const postId = postEl.id;
-                const link = document.createElement('a');
-                link.className = 'quoteLink postLink';
-                link.href = `/${board}/res/${thread}.html#${postId}`;
-                link.textContent = `>>${postId}`;
-                link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
-                link.style.display = 'inline-block';
-                link.onclick = function (e) {
-                    e.preventDefault();
-                    floatingDiv.remove();
-                    const target = document.getElementById(postId);
-                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                };
-                // Wrap each link in a div.innerPost with dataset.uri for tooltip compatibility
-                const wrapper = document.createElement('div');
-                wrapper.className = 'innerPost';
-                wrapper.dataset.uri = `${board}/${thread}#${postId}`;
-                wrapper.appendChild(link);
-                linkContainer.appendChild(wrapper);
-            });
-            floatingDiv.appendChild(linkContainer);
-
-            // Position the floating div next to the clicked label
-            document.body.appendChild(floatingDiv);
-            const rect = clickedLabel.getBoundingClientRect();
-            let top = rect.bottom + window.scrollY + 4;
-            let left = rect.left + window.scrollX;
-            if (left + 320 > window.innerWidth) left = Math.max(0, window.innerWidth - 340);
-            if (top + 200 > window.innerHeight + window.scrollY) top = Math.max(10, rect.top + window.scrollY - 220);
-            floatingDiv.style.top = `${top}px`;
-            floatingDiv.style.left = `${left}px`;
-
-            // Close on click outside
-            setTimeout(() => {
-                function closeOnClick(e) {
-                    if (!floatingDiv.contains(e.target)) {
-                        floatingDiv.remove();
-                        document.removeEventListener('mousedown', closeOnClick, true);
-                    }
-                }
-                document.addEventListener('mousedown', closeOnClick, true);
-            }, 0);
-
-            return matchingPosts;
-        }
-
-        // Filtering logic (original)
-        function applyFilter(targetRgbColor) {
-            activeFilterColor = targetRgbColor;
-            document.querySelectorAll(postCellSelector).forEach(cell => {
-                const label = cell.querySelector(labelIdSelector);
-                const matches = label && window.getComputedStyle(label).backgroundColor === targetRgbColor;
-                cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
-            });
-        }
-
-        // Click handler
-        function handleClick(event) {
-            const clickedLabel = event.target.closest(labelIdSelector);
-            if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
-                event.preventDefault();
-                event.stopPropagation();
-                const id = clickedLabel.textContent.trim();
-                if (showIdLinksOnly) {
-                    showIdList(id, clickedLabel);
-                } else {
-                    const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
-                    const rect = clickedLabel.getBoundingClientRect();
-                    const cursorOffsetY = event.clientY - rect.top;
-                    if (activeFilterColor === clickedColor) {
-                        applyFilter(null); // Toggle off if already active
-                    } else {
-                        applyFilter(clickedColor);
-                    }
-                    // Scroll to keep the clicked label in view
-                    clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
-                    window.scrollBy(0, cursorOffsetY - rect.height / 2);
-                }
-            }
-        }
-        document.body.addEventListener("click", handleClick);
-    }
 
     // --- Version notification ---
     async function updateNotif() {
