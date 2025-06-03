@@ -792,14 +792,14 @@ onReady(async function () {
                 closeBtn.style.opacity = "0.7";
                 closeBtn.style.float = "right";
                 closeBtn.style.userSelect = "none";
-                closeBtn.onclick = function(e) {
+                closeBtn.onclick = function (e) {
                     e.stopPropagation();
                     if (toast.parentNode) toast.parentNode.removeChild(toast);
                     if (timeout1) clearTimeout(timeout1);
                     if (timeout2) clearTimeout(timeout2);
                 };
-                closeBtn.onmouseover = function() { closeBtn.style.opacity = "1"; };
-                closeBtn.onmouseout = function() { closeBtn.style.opacity = "0.7"; };
+                closeBtn.onmouseover = function () { closeBtn.style.opacity = "1"; };
+                closeBtn.onmouseout = function () { closeBtn.style.opacity = "0.7"; };
                 toast.appendChild(closeBtn);
 
                 if (icon && icon.parentNode) {
@@ -3834,33 +3834,41 @@ onReady(async function () {
             updateAllQuoteLinksFiltered();
         }
         function getAllRepliesRecursive(rootPostId, boardUri) {
-            const hidden = new Set();
-            function recurse(pid) {
-                if (hidden.has(pid)) return;
-                hidden.add(pid);
-                document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
-                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                    for (const link of quoteLinks) {
-                        const targetUri = link.getAttribute('data-target-uri');
-                        const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                        if (match && match[2] === pid) {
-                            const replyPostId = getPostId(cell);
-                            console.log(`[RecursiveHide] ${replyPostId} is a reply to ${pid} (board: ${boardUri})`);
-                            recurse(replyPostId);
-                            break;
+            // Build a map of postId -> post element for all posts in the thread
+            const postMap = {};
+            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+                const pid = getPostId(cell);
+                if (pid) postMap[pid] = cell;
+            });
+            const toHide = new Set();
+            const visited = new Set();
+            const rootNum = Number(rootPostId);
+            const queue = [];
+            queue.push(rootPostId);
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                const currentNum = Number(currentId);
+                const postEl = postMap[currentId];
+                if (!postEl) continue;
+                // Find all direct replies in .panelBacklinks
+                const backlinks = postEl.querySelectorAll('.panelBacklinks .backLink[data-target-uri]');
+                backlinks.forEach(link => {
+                    const targetUri = link.getAttribute('data-target-uri');
+                    const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                    if (match) {
+                        const replyId = match[2];
+                        const replyNum = Number(replyId);
+                        if (!isNaN(replyNum) && replyNum > rootNum && !visited.has(replyId)) {
+                            toHide.add(replyId);
+                            visited.add(replyId);
+                            queue.push(replyId);
+                            console.log(`[RecursiveHide] ${replyId} is a reply to ${currentId} (board: ${boardUri})`);
                         }
                     }
                 });
             }
-            recurse(rootPostId);
-            // Only keep replies with postId > rootPostId
-            const filtered = new Set(Array.from(hidden).filter(pid => {
-                // Both must be numbers
-                const nPid = Number(pid), nRoot = Number(rootPostId);
-                return !isNaN(nPid) && !isNaN(nRoot) && nPid > nRoot;
-            }));
-            console.log(`[RecursiveHide] All descendants of ${rootPostId} (board: ${boardUri}):`, Array.from(filtered));
-            return filtered;
+            console.log(`[RecursiveHide] All descendants of ${rootPostId} (board: ${boardUri}):`, Array.from(toHide));
+            return toHide;
         }
 
         async function setPostHidden(boardUri, postId, hide = true, plus = false) {
