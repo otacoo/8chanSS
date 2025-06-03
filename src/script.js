@@ -3853,8 +3853,14 @@ onReady(async function () {
                 });
             }
             recurse(rootPostId);
-            console.log(`[RecursiveHide] All descendants of ${rootPostId} (board: ${boardUri}):`, Array.from(hidden));
-            return hidden;
+            // Only keep replies with postId > rootPostId
+            const filtered = new Set(Array.from(hidden).filter(pid => {
+                // Both must be numbers
+                const nPid = Number(pid), nRoot = Number(rootPostId);
+                return !isNaN(nPid) && !isNaN(nRoot) && nPid > nRoot;
+            }));
+            console.log(`[RecursiveHide] All descendants of ${rootPostId} (board: ${boardUri}):`, Array.from(filtered));
+            return filtered;
         }
 
         async function setPostHidden(boardUri, postId, hide = true, plus = false) {
@@ -4039,7 +4045,7 @@ onReady(async function () {
                 }
                 for (const postId of (hiddenPostsObj[boardUri]?.plus || [])) {
                     filteredTargets.add(`${boardUri}#${postId}`);
-                    getAllRepliesRecursive(String(postId)).forEach(pid => {
+                    getAllRepliesRecursive(String(postId), boardUri).forEach(pid => {
                         filteredTargets.add(`${boardUri}#${pid}`);
                     });
                 }
