@@ -3833,18 +3833,19 @@ onReady(async function () {
             if (unhideBtn) unhideBtn.remove();
             updateAllQuoteLinksFiltered();
         }
-        function getAllRepliesRecursive(rootPostId) {
+        function getAllRepliesRecursive(rootPostId, boardUri) {
             const hidden = new Set();
             function recurse(pid) {
                 if (hidden.has(pid)) return;
                 hidden.add(pid);
-                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                     const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
                     for (const link of quoteLinks) {
                         const targetUri = link.getAttribute('data-target-uri');
                         const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
                         if (match && match[2] === pid) {
                             const replyPostId = getPostId(cell);
+                            console.log(`[RecursiveHide] ${replyPostId} is a reply to ${pid} (board: ${boardUri})`);
                             recurse(replyPostId);
                             break;
                         }
@@ -3852,6 +3853,7 @@ onReady(async function () {
                 });
             }
             recurse(rootPostId);
+            console.log(`[RecursiveHide] All descendants of ${rootPostId} (board: ${boardUri}):`, Array.from(hidden));
             return hidden;
         }
 
@@ -3869,8 +3871,8 @@ onReady(async function () {
             });
             if (plus) {
                 if (recursiveHide) {
-                    getAllRepliesRecursive(postId).forEach(replyPid => {
-                        document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    getAllRepliesRecursive(postId, boardUri).forEach(replyPid => {
+                        document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             if (getPostId(cell) === replyPid) {
                                 if (hide) {
                                     hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
