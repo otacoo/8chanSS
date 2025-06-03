@@ -3129,27 +3129,27 @@ onReady(async function () {
         const alwaysShowIdCount = await getSetting("alwaysShowIdCount");
 
         function updateIdCounts(root = divPosts) {
-        // Build frequency map
-        const idFrequency = {};
-        const labelSpans = root.querySelectorAll('.labelId');
-        labelSpans.forEach(span => {
-        // Extract just the ID part (before | or parens)
-        const id = span.textContent.split(/[|\(]/)[0].trim();
-        idFrequency[id] = (idFrequency[id] || 0) + 1;
-        });
-        labelSpans.forEach(span => {
-        const id = span.textContent.split(/[|\(]/)[0].trim();
-        if (alwaysShowIdCount) {
-        span.textContent = `${id} | ${idFrequency[id]}`;
-        // Prevent native hover handler from changing text
-        span.onmouseover = function(e) { e.stopImmediatePropagation(); e.preventDefault(); };
-        span.onmouseout = function(e) { e.stopImmediatePropagation(); e.preventDefault(); };
-        } else {
-        span.textContent = id;
-        span.onmouseover = null;
-        span.onmouseout = null;
-        }
-        });
+            // Build frequency map
+            const idFrequency = {};
+            const labelSpans = root.querySelectorAll('.labelId');
+            labelSpans.forEach(span => {
+                // Extract just the ID part (before | or parens)
+                const id = span.textContent.split(/[|\(]/)[0].trim();
+                idFrequency[id] = (idFrequency[id] || 0) + 1;
+            });
+            labelSpans.forEach(span => {
+                const id = span.textContent.split(/[|\(]/)[0].trim();
+                if (alwaysShowIdCount) {
+                    span.textContent = `${id} | ${idFrequency[id]}`;
+                    // Prevent native hover handler from changing text
+                    span.onmouseover = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
+                    span.onmouseout = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
+                } else {
+                    span.textContent = id;
+                    span.onmouseover = null;
+                    span.onmouseout = null;
+                }
+            });
         }
         // Initial run
         updateIdCounts();
