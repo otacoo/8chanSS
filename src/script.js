@@ -299,7 +299,16 @@ onReady(async function () {
             },
             _miscelFilterTitle: { type: "title", label: ":: Filtering" },
             _miscelSection1: { type: "separator" },
-            enableHidingMenu: { label: "Alternative post hiding menu & features", default: false },
+            enableHidingMenu: {
+                label: "Alternative post hiding menu & features",
+                default: false,
+                subOptions: {
+                    recursiveHide: {
+                        label: "Recursive hide/filter/name+ (hide replies to replies)",
+                        default: false
+                    }
+                }
+            },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
             _miscelIDTitle: { type: "title", label: ":: IDs" },
             _miscelSection2: { type: "separator" },
@@ -3827,6 +3836,7 @@ onReady(async function () {
         }
 
         async function setPostHidden(boardUri, postId, hide = true, plus = false) {
+            const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 if (getPostId(cell) === postId) {
@@ -3838,23 +3848,37 @@ onReady(async function () {
                 }
             });
             if (plus) {
-                // Only hide direct replies, not recursively
-                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                    for (const link of quoteLinks) {
-                        const targetUri = link.getAttribute('data-target-uri');
-                        const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
-                        if (match && match[2] === postId) {
-                            if (hide) {
-                                hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
-                            } else {
-                                unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
+                if (recursiveHide) {
+                    getAllRepliesRecursive(postId).forEach(replyPid => {
+                        document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                            if (getPostId(cell) === replyPid) {
+                                if (hide) {
+                                    hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
+                                } else {
+                                    unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
+                                }
                             }
-                            break;
+                        });
+                    });
+                } else {
+                    // Only hide direct replies, not recursively
+                    document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                        if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                        const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                        for (const link of quoteLinks) {
+                            const targetUri = link.getAttribute('data-target-uri');
+                            const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
+                            if (match && match[2] === postId) {
+                                if (hide) {
+                                    hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
+                                } else {
+                                    unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
+                                }
+                                break;
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
             updateAllQuoteLinksFiltered();
         }
