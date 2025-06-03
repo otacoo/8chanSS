@@ -3847,7 +3847,6 @@ onReady(async function () {
             queue.push(rootPostId);
             while (queue.length > 0) {
                 const currentId = queue.shift();
-                const currentNum = Number(currentId);
                 const postEl = postMap[currentId];
                 if (!postEl) continue;
                 // Find all direct replies in .panelBacklinks
@@ -3970,10 +3969,11 @@ onReady(async function () {
                 const inner = getInnerPostElem(cell);
                 const cellThreadId = getThreadIdFromInnerPost(inner);
                 const idElem = cell.querySelector('.labelId');
+                const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
                 if (
                     cellThreadId === threadId &&
-                    idElem &&
-                    idElem.textContent.trim() === id
+                    cellId &&
+                    cellId === id
                 ) {
                     const postId = getPostId(cell);
                     postIdsWithId.add(postId);
@@ -4196,7 +4196,7 @@ onReady(async function () {
             const inner = getInnerPostElem(postCell);
             const threadId = getThreadIdFromInnerPost(inner);
             const idElem = postCell.querySelector('.labelId');
-            const id = idElem ? idElem.textContent.trim() : null;
+            const id = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
             const nameElem = postCell.querySelector('.linkName');
             const name = nameElem ? nameElem.textContent.trim() : null;
             const isOP = postCell.classList.contains('opCell') || postCell.classList.contains('innerOP');
@@ -4342,17 +4342,19 @@ onReady(async function () {
                         }
                         if (!Array.isArray(threadObj.simple)) threadObj.simple = [];
                         let arr = threadObj.simple;
-                        const idx = arr.indexOf(id);
+                        // Use the raw ID for storage and comparison
+                        const rawId = id ? id.split(/[|\(]/)[0].trim() : id;
+                        const idx = arr.indexOf(rawId);
                         if (idx !== -1) {
                             arr.splice(idx, 1);
                             threadObj.simple = arr;
                             await setStoredObject(FILTERED_IDS_KEY, obj);
-                            setPostsWithIdHidden(boardUri, threadId, id, false, false);
+                            setPostsWithIdHidden(boardUri, threadId, rawId, false, false);
                         } else {
-                            arr.push(id);
+                            arr.push(rawId);
                             threadObj.simple = arr;
                             await setStoredObject(FILTERED_IDS_KEY, obj);
-                            setPostsWithIdHidden(boardUri, threadId, id, true, false);
+                            setPostsWithIdHidden(boardUri, threadId, rawId, true, false);
                         }
                         removeExistingMenu();
                     }
@@ -4372,17 +4374,18 @@ onReady(async function () {
                         }
                         if (!Array.isArray(threadObj.plus)) threadObj.plus = [];
                         let arr = threadObj.plus;
-                        const idx = arr.indexOf(id);
+                        const rawId = id ? id.split(/[|\(]/)[0].trim() : id;
+                        const idx = arr.indexOf(rawId);
                         if (idx !== -1) {
                             arr.splice(idx, 1);
                             threadObj.plus = arr;
                             await setStoredObject(FILTERED_IDS_KEY, obj);
-                            setPostsWithIdHidden(boardUri, threadId, id, false, true);
+                            setPostsWithIdHidden(boardUri, threadId, rawId, false, true);
                         } else {
-                            arr.push(id);
+                            arr.push(rawId);
                             threadObj.plus = arr;
                             await setStoredObject(FILTERED_IDS_KEY, obj);
-                            setPostsWithIdHidden(boardUri, threadId, id, true, true);
+                            setPostsWithIdHidden(boardUri, threadId, rawId, true, true);
                         }
                         removeExistingMenu();
                     }
@@ -4498,10 +4501,11 @@ onReady(async function () {
                                 const inner = getInnerPostElem(cell);
                                 const cellThreadId = getThreadIdFromInnerPost(inner);
                                 const idElem = cell.querySelector('.labelId');
+                                const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
                                 if (
                                     cellThreadId === threadId &&
-                                    idElem &&
-                                    idElem.textContent.trim() === id
+                                    cellId &&
+                                    cellId === id
                                 ) {
                                     plusFilteredIdPostIds[boardUri][threadId].add(getPostId(cell));
                                 }
@@ -4527,7 +4531,7 @@ onReady(async function () {
                             const inner = getInnerPostElem(cell);
                             const threadId = getThreadIdFromInnerPost(inner);
                             const idElem = cell.querySelector('.labelId');
-                            const id = idElem ? idElem.textContent.trim() : null;
+                            const id = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
                             const nameElem = cell.querySelector('.linkName');
                             const name = nameElem ? nameElem.textContent.trim() : null;
 
@@ -4567,33 +4571,47 @@ onReady(async function () {
                             // --- Hide if replying (directly or indirectly) to a plus-hidden post ---
                             let shouldHidePlus = false;
                             const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                            for (const link of quoteLinks) {
-                                const targetUri = link.getAttribute('data-target-uri');
-                                const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                                if (match && plusHiddenMap[boardUri] && plusHiddenMap[boardUri].has(match[2])) {
-                                    shouldHidePlus = true;
-                                    break;
-                                }
-                            }
-                            // If not a direct reply, check recursively if any ancestor is plus-hidden
-                            if (!shouldHidePlus && plusHiddenMap[boardUri] && plusHiddenMap[boardUri].size > 0) {
-                                const visited = new Set();
-                                function isDescendantOfPlusHidden(pid) {
-                                    if (visited.has(pid)) return false;
-                                    visited.add(pid);
-                                    for (const link of quoteLinks) {
+                            // Build a postId -> parentIds map for all posts in the thread (in-memory, once per batch)
+                            if (!window._8chanSS_postParentMapCache) {
+                                const postParentMap = {};
+                                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                                    const pid = postCell.id;
+                                    const parentIds = [];
+                                    postCell.querySelectorAll('.quoteLink[data-target-uri]').forEach(link => {
                                         const targetUri = link.getAttribute('data-target-uri');
                                         const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                                        if (match) {
-                                            if (plusHiddenMap[boardUri].has(match[2])) return true;
-                                            if (isDescendantOfPlusHidden(match[2])) return true;
-                                        }
+                                        if (match) parentIds.push(match[2]);
+                                    });
+                                    postParentMap[pid] = parentIds;
+                                });
+                                window._8chanSS_postParentMapCache = postParentMap;
+                            }
+                            const postParentMap = window._8chanSS_postParentMapCache;
+                            // Build a Set of all plus-hidden post IDs (once per batch)
+                            if (!window._8chanSS_plusHiddenSetCache) {
+                                const plusHiddenSet = new Set();
+                                for (const b in plusHiddenMap) {
+                                    for (const hid of plusHiddenMap[b]) {
+                                        plusHiddenSet.add(hid);
                                     }
-                                    return false;
                                 }
-                                if (isDescendantOfPlusHidden(postId)) {
-                                    shouldHidePlus = true;
+                                window._8chanSS_plusHiddenSetCache = plusHiddenSet;
+                            }
+                            const plusHiddenSet = window._8chanSS_plusHiddenSetCache;
+                            // Walk up the parent chain in memory
+                            const visited = new Set();
+                            function isDescendantOfPlusHidden_mem(pid) {
+                                if (visited.has(pid)) return false;
+                                visited.add(pid);
+                                if (plusHiddenSet.has(pid)) return true;
+                                const parents = postParentMap[pid] || [];
+                                for (const par of parents) {
+                                    if (isDescendantOfPlusHidden_mem(par)) return true;
                                 }
+                                return false;
+                            }
+                            if (isDescendantOfPlusHidden_mem(postId)) {
+                                shouldHidePlus = true;
                             }
                             if (shouldHidePlus) {
                                 setPostHidden(boardUri, postId, true, true);
