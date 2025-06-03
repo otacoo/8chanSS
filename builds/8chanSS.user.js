@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.51.0
+// @version      1.52.0
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -102,7 +102,7 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.51.0";
+    const VERSION = "1.52.0";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -308,7 +308,16 @@ onReady(async function () {
             },
             _miscelFilterTitle: { type: "title", label: ":: Filtering" },
             _miscelSection1: { type: "separator" },
-            enableHidingMenu: { label: "Alternative post hiding menu & features", default: false },
+            enableHidingMenu: {
+                label: "Alternative post hiding menu & features",
+                default: false,
+                subOptions: {
+                    recursiveHide: {
+                        label: "Recursive hide/filter/name+ (hide replies to replies)",
+                        default: false
+                    }
+                }
+            },
             hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
             _miscelIDTitle: { type: "title", label: ":: IDs" },
             _miscelSection2: { type: "separator" },
@@ -328,6 +337,7 @@ onReady(async function () {
                     }
                 }
             },
+            alwaysShowIdCount: { label: "Always show post count for IDs", default: false },
             enableIdFilters: {
                 label: "Show only posts by ID when ID is clicked",
                 type: "checkbox",
@@ -477,7 +487,7 @@ onReady(async function () {
             css += "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:visible}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}:root.is-thread footer{visibility:hidden;height:0}:root.op-background .opCell>.innerOP{padding-top:.25em;width:100%;background:var(--contrast-color);border:1px solid var(--horizon-sep-color);border-top-width:0;border-left-width:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-yous .innerOP:has(> .opHead.title > .youName),:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),:root.highlight-yous .yourPost{border-left:dashed #68b723 2px!important}:root.highlight-yous .innerPost:has(>.divMessage>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>:not(div)>.you),:root.highlight-yous .quotesYou{border-left:solid var(--subject-color) 2px!important}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"]{filter:blur(5px)!important;transition:filter .3s ease}:not(#media-viewer)>.imgExpanded,:not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}";
         }
         if (window.pageType?.isThread) {
-            css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto -3px auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}.ss-idlinks-floating{position:absolute;background:var(--background-color);color:var(--text-color);border:1px solid var(--navbar-text-color);border-radius:6px;padding:10px 16px 10px 10px;box-shadow:0 2px 12px rgba(0,0,0,.25);max-height:60vh;overflow-y:auto;font-size:14px;max-width:56vw;z-index:990}.ss-idlinks-floating .innerPost{margin-bottom:2px}";
+            css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto -3px auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}.ss-idlinks-floating{position:absolute;background:var(--background-color);color:var(--text-color);border:1px solid var(--navbar-text-color);padding:8px 15px 10px 10px;box-shadow:0 2px 12px rgba(0,0,0,.25);max-height:60vh;overflow-y:auto;font-size:14px;max-width:56vw;z-index:990}.ss-idlinks-floating .innerPost{margin-bottom:2px}";
         } else if (window.pageType?.isCatalog) {
             css += "#postingForm{margin:2em auto}#divTools>div:nth-child(5),#divTools>div:nth-child(6){float:left!important;margin-top:9px!important;margin-right:8px}";
         }
@@ -611,6 +621,7 @@ onReady(async function () {
         { key: "enableTheSauce", fn: featureSauceLinks },
         { key: "enableUpdateNotif", fn: updateNotif },
         { key: "enableHidingMenu", fn: featureCustomPostHideMenu },
+        { key: "alwaysShowIdCount", fn: featureShowIDCount },
     ];
     for (const { key, fn } of featureMap) {
         try {
@@ -712,6 +723,24 @@ onReady(async function () {
                 toast.style.transition = "opacity 0.3s";
                 toast.style.pointerEvents = "auto";
                 toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.18)";
+                let closeBtn = document.createElement("span");
+                closeBtn.textContent = "✕";
+                closeBtn.style.marginLeft = "10px";
+                closeBtn.style.cursor = "pointer";
+                closeBtn.style.fontWeight = "bold";
+                closeBtn.style.fontSize = "15px";
+                closeBtn.style.opacity = "0.7";
+                closeBtn.style.float = "right";
+                closeBtn.style.userSelect = "none";
+                closeBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                    if (timeout1) clearTimeout(timeout1);
+                    if (timeout2) clearTimeout(timeout2);
+                };
+                closeBtn.onmouseover = function() { closeBtn.style.opacity = "1"; };
+                closeBtn.onmouseout = function() { closeBtn.style.opacity = "0.7"; };
+                toast.appendChild(closeBtn);
 
                 if (icon && icon.parentNode) {
                     toast.style.left = (icon.offsetLeft - 50) + "px";
@@ -724,8 +753,8 @@ onReady(async function () {
                     document.body.appendChild(toast);
                 }
 
-                setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
-                setTimeout(() => { toast.remove(); }, duration);
+                let timeout1 = setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
+                let timeout2 = setTimeout(() => { toast.remove(); }, duration);
             };
         } + ')(' + sanitizeToastHTML.toString() + ');';
         document.documentElement.appendChild(script);
@@ -1476,10 +1505,10 @@ onReady(async function () {
                                 const parsedWidth = parseInt(dimensions[0].trim(), 10);
                                 const parsedHeight = parseInt(dimensions[1].trim(), 10);
                                 if ((parsedWidth <= 220 || parsedHeight <= 220)) {
-                                img.src = href;
-                                link.dataset.blurSpoilerProcessed = "1";
-                                applyBlurOrRemoveSpoilers(img, removeSpoilers);
-                                return;
+                                    img.src = href;
+                                    link.dataset.blurSpoilerProcessed = "1";
+                                    applyBlurOrRemoveSpoilers(img, removeSpoilers);
+                                    return;
                                 }
                             }
                         }
@@ -2546,12 +2575,12 @@ onReady(async function () {
             const idFrequency = {};
             const labelSpans = root.querySelectorAll('.labelId');
             labelSpans.forEach(span => {
-                const id = span.textContent.trim();
+                const id = span.textContent.split(/[|\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
             const seen = {};
             labelSpans.forEach(span => {
-                const id = span.textContent.trim();
+                const id = span.textContent.split(/[|\(]/)[0].trim();
                 span.classList.remove('moetext', 'id-glow', 'id-dotted');
                 if (!seen[id]) {
                     seen[id] = true;
@@ -2585,6 +2614,40 @@ onReady(async function () {
                 if (needsUpdate) {
                     debouncedHighlightIds();
                 }
+            });
+        }
+    }
+    async function featureShowIDCount() {
+        if (!window.pageType?.isThread) return;
+        if (!document.querySelector('.spanId')) return;
+
+        const alwaysShowIdCount = await getSetting("alwaysShowIdCount");
+
+        function updateIdCounts(root = divPosts) {
+            const idFrequency = {};
+            const labelSpans = root.querySelectorAll('.labelId');
+            labelSpans.forEach(span => {
+                const id = span.textContent.split(/[|\(]/)[0].trim();
+                idFrequency[id] = (idFrequency[id] || 0) + 1;
+            });
+            labelSpans.forEach(span => {
+                const id = span.textContent.split(/[|\(]/)[0].trim();
+                if (alwaysShowIdCount) {
+                    span.textContent = `${id} | ${idFrequency[id]}`;
+                    span.onmouseover = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
+                    span.onmouseout = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
+                } else {
+                    span.textContent = id;
+                    span.onmouseover = null;
+                    span.onmouseout = null;
+                }
+            });
+        }
+        updateIdCounts();
+        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
+        if (divPostsObs) {
+            divPostsObs.addHandler(function showIdCountHandler(mutations) {
+                updateIdCounts();
             });
         }
     }
@@ -3149,6 +3212,7 @@ onReady(async function () {
         }
 
         async function setPostHidden(boardUri, postId, hide = true, plus = false) {
+            const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 if (getPostId(cell) === postId) {
@@ -3160,22 +3224,36 @@ onReady(async function () {
                 }
             });
             if (plus) {
-                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                    for (const link of quoteLinks) {
-                        const targetUri = link.getAttribute('data-target-uri');
-                        const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
-                        if (match && match[2] === postId) {
-                            if (hide) {
-                                hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
-                            } else {
-                                unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
+                if (recursiveHide) {
+                    getAllRepliesRecursive(postId).forEach(replyPid => {
+                        document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                            if (getPostId(cell) === replyPid) {
+                                if (hide) {
+                                    hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
+                                } else {
+                                    unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
+                                }
                             }
-                            break;
+                        });
+                    });
+                } else {
+                    document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                        if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                        const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                        for (const link of quoteLinks) {
+                            const targetUri = link.getAttribute('data-target-uri');
+                            const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
+                            if (match && match[2] === postId) {
+                                if (hide) {
+                                    hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
+                                } else {
+                                    unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
+                                }
+                                break;
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
             updateAllQuoteLinksFiltered();
         }
@@ -3831,6 +3909,138 @@ onReady(async function () {
         }
         hijackHideButtons();
         autoHideAll();
+    }
+    async function enableIdFiltering() {
+        if (!window.pageType?.isThread) return;
+
+        const postCellSelector = ".postCell, .opCell, .innerOP";
+        const labelIdSelector = ".labelId";
+        const hiddenClassName = "is-hidden-by-filter";
+        let activeFilterColor = null;
+        const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
+        let floatingDiv = null;
+
+        function closeFloatingDiv() {
+            if (floatingDiv && floatingDiv.parentNode) {
+                floatingDiv.parentNode.removeChild(floatingDiv);
+                floatingDiv = null;
+            }
+            document.removeEventListener("mousedown", outsideClickHandler, true);
+        }
+        function outsideClickHandler(e) {
+            if (floatingDiv && !floatingDiv.contains(e.target)) {
+                closeFloatingDiv();
+            }
+        }
+        function showIdList(id, clickedLabel) {
+            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
+
+            const threadsContainer = document.getElementById('divThreads');
+            if (!threadsContainer) {
+                return [];
+            }
+
+            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell, .innerOP'));
+
+            const matchingPosts = [];
+            allPosts.forEach(postEl => {
+                const label = postEl.querySelector('.labelId');
+                const postId = postEl.id;
+                if (label && postId) {
+                    const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
+                    if (labelId === idToMatch) {
+                        matchingPosts.push(postEl);
+                    }
+                }
+            });
+            document.querySelectorAll('.ss-idlinks-floating').forEach(el => el.remove());
+            const match = window.location.pathname.match(/^\/([^/]+)\/(res|last)\/(\d+)\.html/);
+            const board = match ? match[1] : '';
+            const thread = match ? match[3] : '';
+            const floatingDiv = document.createElement('div');
+            floatingDiv.className = 'ss-idlinks-floating';
+            const title = document.createElement('div');
+            title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+            title.style.fontWeight = 'bold';
+            title.style.marginBottom = '8px';
+            floatingDiv.appendChild(title);
+            const linkContainer = document.createElement('div');
+            linkContainer.style.display = 'flex';
+            linkContainer.style.flexWrap = 'wrap';
+            linkContainer.style.gap = '0.3em';
+
+            matchingPosts.forEach(postEl => {
+                const postId = postEl.id;
+                const link = document.createElement('a');
+                link.className = 'quoteLink postLink';
+                link.href = `/${board}/res/${thread}.html#${postId}`;
+                link.textContent = `>>${postId}`;
+                link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
+                link.style.display = 'inline-block';
+                link.onclick = function (e) {
+                    e.preventDefault();
+                    floatingDiv.remove();
+                    const target = document.getElementById(postId);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+                const wrapper = document.createElement('div');
+                wrapper.className = 'innerPost';
+                wrapper.dataset.uri = `${board}/${thread}#${postId}`;
+                wrapper.appendChild(link);
+                linkContainer.appendChild(wrapper);
+            });
+            floatingDiv.appendChild(linkContainer);
+            document.body.appendChild(floatingDiv);
+            const rect = clickedLabel.getBoundingClientRect();
+            let top = rect.bottom + window.scrollY + 4;
+            let left = rect.left + window.scrollX;
+            if (left + 320 > window.innerWidth) left = Math.max(0, window.innerWidth - 340);
+            if (top + 200 > window.innerHeight + window.scrollY) top = Math.max(10, rect.top + window.scrollY - 220);
+            floatingDiv.style.top = `${top}px`;
+            floatingDiv.style.left = `${left}px`;
+            setTimeout(() => {
+                function closeOnClick(e) {
+                    if (!floatingDiv.contains(e.target)) {
+                        floatingDiv.remove();
+                        document.removeEventListener('mousedown', closeOnClick, true);
+                    }
+                }
+                document.addEventListener('mousedown', closeOnClick, true);
+            }, 0);
+
+            return matchingPosts;
+        }
+        function applyFilter(targetRgbColor) {
+            activeFilterColor = targetRgbColor;
+            document.querySelectorAll(postCellSelector).forEach(cell => {
+                const label = cell.querySelector(labelIdSelector);
+                const matches = label && window.getComputedStyle(label).backgroundColor === targetRgbColor;
+                cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
+            });
+        }
+        function handleClick(event) {
+            const clickedLabel = event.target.closest(labelIdSelector);
+            if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
+                event.preventDefault();
+                event.stopPropagation();
+                const id = clickedLabel.textContent.trim();
+                if (showIdLinksOnly) {
+                    showIdList(id, clickedLabel);
+                } else {
+                    const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
+                    const rect = clickedLabel.getBoundingClientRect();
+                    const cursorOffsetY = event.clientY - rect.top;
+                    if (activeFilterColor === clickedColor) {
+                        applyFilter(null); 
+                    } else {
+                        applyFilter(clickedColor);
+                    }
+                    clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
+                    window.scrollBy(0, cursorOffsetY - rect.height / 2);
+                }
+            }
+        }
+        document.body.addEventListener("click", handleClick);
     }
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
@@ -4945,143 +5155,6 @@ onReady(async function () {
             }, 0);
         }
     });
-    async function enableIdFiltering() {
-        if (!window.pageType?.isThread) return;
-
-        const postCellSelector = ".postCell, .opCell, .innerOP";
-        const labelIdSelector = ".labelId";
-        const hiddenClassName = "is-hidden-by-filter";
-        let activeFilterColor = null;
-        const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
-        let floatingDiv = null;
-
-        function closeFloatingDiv() {
-            if (floatingDiv && floatingDiv.parentNode) {
-                floatingDiv.parentNode.removeChild(floatingDiv);
-                floatingDiv = null;
-            }
-            document.removeEventListener("mousedown", outsideClickHandler, true);
-        }
-        function outsideClickHandler(e) {
-            if (floatingDiv && !floatingDiv.contains(e.target)) {
-                closeFloatingDiv();
-            }
-        }
-        function showIdList(id, clickedLabel) {
-            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
-            console.log('showIdList: Matching ID:', idToMatch);
-
-            const threadsContainer = document.getElementById('divThreads');
-            if (!threadsContainer) {
-                console.log('showIdList: #divThreads not found');
-                return [];
-            }
-
-            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell, .innerOP'));
-            console.log('showIdList: Total posts found:', allPosts.length);
-
-            const matchingPosts = [];
-            allPosts.forEach(postEl => {
-                const label = postEl.querySelector('.labelId');
-                const postId = postEl.id;
-                if (label && postId) {
-                    const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
-                    if (labelId === idToMatch) {
-                        matchingPosts.push(postEl);
-                    }
-                }
-            });
-
-            console.log('showIdList: Matching posts count:', matchingPosts.length);
-            document.querySelectorAll('.ss-idlinks-floating').forEach(el => el.remove());
-            const match = window.location.pathname.match(/^\/([^/]+)\/(res|last)\/(\d+)\.html/);
-            const board = match ? match[1] : '';
-            const thread = match ? match[3] : '';
-            const floatingDiv = document.createElement('div');
-            floatingDiv.className = 'ss-idlinks-floating';
-            const title = document.createElement('div');
-            title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
-            title.style.fontWeight = 'bold';
-            title.style.marginBottom = '8px';
-            floatingDiv.appendChild(title);
-            const linkContainer = document.createElement('div');
-            linkContainer.style.display = 'flex';
-            linkContainer.style.flexWrap = 'wrap';
-            linkContainer.style.gap = '0.3em';
-
-            matchingPosts.forEach(postEl => {
-                const postId = postEl.id;
-                const link = document.createElement('a');
-                link.className = 'quoteLink postLink';
-                link.href = `/${board}/res/${thread}.html#${postId}`;
-                link.textContent = `>>${postId}`;
-                link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
-                link.style.display = 'inline-block';
-                link.onclick = function (e) {
-                    e.preventDefault();
-                    floatingDiv.remove();
-                    const target = document.getElementById(postId);
-                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                };
-                const wrapper = document.createElement('div');
-                wrapper.className = 'innerPost';
-                wrapper.dataset.uri = `${board}/${thread}#${postId}`;
-                wrapper.appendChild(link);
-                linkContainer.appendChild(wrapper);
-            });
-            floatingDiv.appendChild(linkContainer);
-            document.body.appendChild(floatingDiv);
-            const rect = clickedLabel.getBoundingClientRect();
-            let top = rect.bottom + window.scrollY + 4;
-            let left = rect.left + window.scrollX;
-            if (left + 320 > window.innerWidth) left = Math.max(0, window.innerWidth - 340);
-            if (top + 200 > window.innerHeight + window.scrollY) top = Math.max(10, rect.top + window.scrollY - 220);
-            floatingDiv.style.top = `${top}px`;
-            floatingDiv.style.left = `${left}px`;
-            setTimeout(() => {
-                function closeOnClick(e) {
-                    if (!floatingDiv.contains(e.target)) {
-                        floatingDiv.remove();
-                        document.removeEventListener('mousedown', closeOnClick, true);
-                    }
-                }
-                document.addEventListener('mousedown', closeOnClick, true);
-            }, 0);
-
-            return matchingPosts;
-        }
-        function applyFilter(targetRgbColor) {
-            activeFilterColor = targetRgbColor;
-            document.querySelectorAll(postCellSelector).forEach(cell => {
-                const label = cell.querySelector(labelIdSelector);
-                const matches = label && window.getComputedStyle(label).backgroundColor === targetRgbColor;
-                cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
-            });
-        }
-        function handleClick(event) {
-            const clickedLabel = event.target.closest(labelIdSelector);
-            if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
-                event.preventDefault();
-                event.stopPropagation();
-                const id = clickedLabel.textContent.trim();
-                if (showIdLinksOnly) {
-                    showIdList(id, clickedLabel);
-                } else {
-                    const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
-                    const rect = clickedLabel.getBoundingClientRect();
-                    const cursorOffsetY = event.clientY - rect.top;
-                    if (activeFilterColor === clickedColor) {
-                        applyFilter(null); 
-                    } else {
-                        applyFilter(clickedColor);
-                    }
-                    clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
-                    window.scrollBy(0, cursorOffsetY - rect.height / 2);
-                }
-            }
-        }
-        document.body.addEventListener("click", handleClick);
-    }
     async function updateNotif() {
         const VERSION_KEY = "8chanSS_version";
         let storedVersion = null;

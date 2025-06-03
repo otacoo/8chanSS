@@ -1,3 +1,12 @@
+## v1.52.0
+*2025-06-03*
+
+- **New Option:** Recursive hide/filter/name+ (hide replies to replies)
+- **New Option:** Always show post count for IDs
+- Add a close button to dismiss 8chanSS notifications
+- Adjust floating ID list CSS, remove rounded corners
+- Removed some lingering console.logs
+
 ## v1.51.0
 *2025-06-02*
 
