@@ -782,6 +782,26 @@ onReady(async function () {
                 toast.style.pointerEvents = "auto";
                 toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.18)";
 
+                // Add close button
+                let closeBtn = document.createElement("span");
+                closeBtn.textContent = "✕";
+                closeBtn.style.marginLeft = "10px";
+                closeBtn.style.cursor = "pointer";
+                closeBtn.style.fontWeight = "bold";
+                closeBtn.style.fontSize = "15px";
+                closeBtn.style.opacity = "0.7";
+                closeBtn.style.float = "right";
+                closeBtn.style.userSelect = "none";
+                closeBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                    if (timeout1) clearTimeout(timeout1);
+                    if (timeout2) clearTimeout(timeout2);
+                };
+                closeBtn.onmouseover = function() { closeBtn.style.opacity = "1"; };
+                closeBtn.onmouseout = function() { closeBtn.style.opacity = "0.7"; };
+                toast.appendChild(closeBtn);
+
                 if (icon && icon.parentNode) {
                     toast.style.left = (icon.offsetLeft - 50) + "px";
                     toast.style.top = "28px";
@@ -793,8 +813,8 @@ onReady(async function () {
                     document.body.appendChild(toast);
                 }
 
-                setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
-                setTimeout(() => { toast.remove(); }, duration);
+                let timeout1 = setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
+                let timeout2 = setTimeout(() => { toast.remove(); }, duration);
             };
         } + ')(' + sanitizeToastHTML.toString() + ');';
         document.documentElement.appendChild(script);
