@@ -1,3 +1,10 @@
+### v1.52.1 (Patch)
+*2025-06-04*
+
+- Fix for "recursive hiding" not working with "Always show post count of IDs"
+- Fix for "recursive hiding" hiding unrelated posts up in the chain
+- Fix for "toggle ID as yours" to work with "Always show post count of IDs"
+
 ## v1.52.0
 *2025-06-03*
 
