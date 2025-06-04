@@ -3861,12 +3861,10 @@ onReady(async function () {
                             toHide.add(replyId);
                             visited.add(replyId);
                             queue.push(replyId);
-                            console.log(`[RecursiveHide] ${replyId} is a reply to ${currentId} (board: ${boardUri})`);
                         }
                     }
                 });
             }
-            console.log(`[RecursiveHide] All descendants of ${rootPostId} (board: ${boardUri}):`, Array.from(toHide));
             return toHide;
         }
 
