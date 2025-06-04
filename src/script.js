@@ -3204,7 +3204,7 @@ onReady(async function () {
             return;
         }
 
-        // --- Core Threading Logic ---
+        // Core Threading Logic
         function processPosts(posts) {
             posts.forEach(post => {
                 const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
@@ -3235,7 +3235,7 @@ onReady(async function () {
             });
         }
 
-        // --- Threading Handlers ---
+        // Threading Handlers
         function threadAllPosts() {
             processPosts(document.querySelectorAll('.divPosts .postCell'));
         }
@@ -3245,7 +3245,7 @@ onReady(async function () {
             processPosts(Array.from(allPosts).slice(-5));
         }
 
-        // --- Use the observer registry for .divPosts ---
+        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
             divPostsObs.addHandler(function quoteThreadingHandler(mutations) {
@@ -3257,7 +3257,7 @@ onReady(async function () {
             });
         }
 
-        // --- Refresh Button ---
+        // Refresh Button
         function addRefreshButton() {
             const replyButton = document.querySelector('.threadBottom .innerUtility #replyButton');
             if (!replyButton || replyButton.nextElementSibling?.classList.contains('quoteThreadingBtn')) return;
@@ -3401,7 +3401,8 @@ onReady(async function () {
         function toggleYouNameClassForId(labelId, add) {
             document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
-                if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
+                const rawId = labelIdSpan ? labelIdSpan.textContent.split(/[|\(]/)[0].trim() : null;
+                if (rawId === labelId) {
                     const nameLink = postCell.querySelector(".linkName.noEmailName");
                     if (nameLink) {
                         nameLink.classList.toggle("youName", add);
@@ -3415,7 +3416,8 @@ onReady(async function () {
             const postNumbers = [];
             document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
-                if (labelIdSpan && labelIdSpan.textContent.trim() === labelId) {
+                const rawId = labelIdSpan ? labelIdSpan.textContent.split(/[|\(]/)[0].trim() : null;
+                if (rawId === labelId) {
                     const num = Number(postCell.id);
                     if (!isNaN(num)) postNumbers.push(num);
                 }
@@ -3431,9 +3433,10 @@ onReady(async function () {
                 const ul = menu.querySelector("ul");
                 if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
 
-                // Get the labelId for this menu
-                const labelId = getLabelIdFromMenu(menu);
+                // Get the labelId for this menu (ensure raw ID)
+                let labelId = getLabelIdFromMenu(menu);
                 if (!labelId) return;
+                labelId = labelId.split(/[|\(]/)[0].trim();
 
                 // Check if any post with this ID is marked as "yours"
                 const yourPostNumbers = getYourPostNumbers();
@@ -3449,8 +3452,9 @@ onReady(async function () {
 
                 li.addEventListener("click", function (e) {
                     e.stopPropagation();
-                    const labelId = getLabelIdFromMenu(menu);
+                    let labelId = getLabelIdFromMenu(menu);
                     if (!labelId) return;
+                    labelId = labelId.split(/[|\(]/)[0].trim();
                     let yourPostNumbers = getYourPostNumbers();
                     const postNumbersForId = getAllPostNumbersForId(labelId);
 
