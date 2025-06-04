@@ -4568,7 +4568,7 @@ onReady(async function () {
                                 setPostsWithNameHidden(name, true, true);
                             }
 
-                            // --- Hide if replying (directly or indirectly) to a plus-hidden post ---
+                            // --- Hide if replying (directly or indirectly) to a plus-hidden post or filtered name+ ---
                             let shouldHidePlus = false;
                             const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
                             // Build a postId -> parentIds map for all posts in the thread (in-memory, once per batch)
@@ -4598,19 +4598,59 @@ onReady(async function () {
                                 window._8chanSS_plusHiddenSetCache = plusHiddenSet;
                             }
                             const plusHiddenSet = window._8chanSS_plusHiddenSetCache;
+                            // Build a Set of all post IDs with filtered name+ (once per batch)
+                            if (!window._8chanSS_filteredNamePlusSetCache) {
+                                const filteredNamePlusSet = new Set();
+                                const initialFiltered = [];
+                                // Find all postCells with a filtered name (plus)
+                                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                                    const nameElem = postCell.querySelector('.linkName');
+                                    const name = nameElem ? nameElem.textContent.trim() : null;
+                                    if (name && filteredNamesObj.plus.includes(name)) {
+                                        filteredNamePlusSet.add(postCell.id);
+                                        initialFiltered.push(postCell.id);
+                                    }
+                                });
+                                // Recursively add all descendants (replies of replies, etc.)
+                                // Use the postParentMap already built
+                                const postParentMap = window._8chanSS_postParentMapCache;
+                                // Build a reverse map: parentId -> [childId, ...]
+                                const childMap = {};
+                                Object.entries(postParentMap).forEach(([childId, parentIds]) => {
+                                    parentIds.forEach(parentId => {
+                                        if (!childMap[parentId]) childMap[parentId] = [];
+                                        childMap[parentId].push(childId);
+                                    });
+                                });
+                                // BFS to add all descendants
+                                const queue = [...initialFiltered];
+                                while (queue.length > 0) {
+                                    const current = queue.shift();
+                                    const children = childMap[current] || [];
+                                    for (const child of children) {
+                                        if (!filteredNamePlusSet.has(child)) {
+                                            filteredNamePlusSet.add(child);
+                                            queue.push(child);
+                                        }
+                                    }
+                                }
+                                window._8chanSS_filteredNamePlusSetCache = filteredNamePlusSet;
+                            }
+                            const filteredNamePlusSet = window._8chanSS_filteredNamePlusSetCache;
                             // Walk up the parent chain in memory
                             const visited = new Set();
-                            function isDescendantOfPlusHidden_mem(pid) {
+                            function isDescendantOfPlusHiddenOrFilteredNamePlus(pid) {
                                 if (visited.has(pid)) return false;
                                 visited.add(pid);
                                 if (plusHiddenSet.has(pid)) return true;
+                                if (filteredNamePlusSet.has(pid)) return true;
                                 const parents = postParentMap[pid] || [];
                                 for (const par of parents) {
-                                    if (isDescendantOfPlusHidden_mem(par)) return true;
+                                    if (isDescendantOfPlusHiddenOrFilteredNamePlus(par)) return true;
                                 }
                                 return false;
                             }
-                            if (isDescendantOfPlusHidden_mem(postId)) {
+                            if (isDescendantOfPlusHiddenOrFilteredNamePlus(postId)) {
                                 shouldHidePlus = true;
                             }
                             if (shouldHidePlus) {
