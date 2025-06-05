@@ -23,6 +23,7 @@
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAZlBMVEUAAABdlloAhl758AH58AH58AcAhl758ADj4CYAh14AhV4AhV0Ahl748AcChl4Chl0Ab2H58AIAhl758AD58AAAhl757wL48AD47wL78QL47wcAh1748AF3oFfs5yEAh1/68QDz7BM5qSu8AAAAH3RSTlMA/lg/OYtM8g/onXtoXzAaCdzBsIFzczMeaCXXyrmp9ddA3QAAANpJREFUSMft0tkOgjAQheFjtVCQVVxwnfr+L+kWM5FOC73TxP/6fBedFJwpyx5CtSpqSHXWpns4qYxo1cDtkNp7GoOW9KgSwM4+09KeEhmw4H0IuGJDAbCw79a8nwJYFDQCuO1gT8oLWCiKAXavKA5cZ78I5n/wBx7wfb+1TwOggpD2gxxSpvWBrIbY3AcUPK1lkMNbJ4FV4wd964KsQqBF6oAEwcoh2GAk/QlyjNYx4AeHMicGxxoTOrRvIB5IPtULJJhY+QIFJrd9gCUi0tdZjqgu5yYOGAO5G/kyc3TkciPeAAAAAElFTkSuQmCC
 // ==/UserScript==
+
 function onReady(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
@@ -345,6 +346,10 @@ onReady(async function () {
                 subOptions: {
                     showIdLinksOnly: {
                         label: "Show as a floating list",
+                        default: false
+                    },
+                    showIdLinksVertical: {
+                        label: "Show posts in a vertical list",
                         default: false
                     }
                 }
@@ -3983,6 +3988,7 @@ onReady(async function () {
         const hiddenClassName = "is-hidden-by-filter";
         let activeFilterColor = null;
         const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
+        const showIdLinksVertical = await getSetting("enableIdFilters_showIdLinksVertical");
         let floatingDiv = null;
 
         function closeFloatingDiv() {
@@ -4025,12 +4031,14 @@ onReady(async function () {
             const floatingDiv = document.createElement('div');
             floatingDiv.className = 'ss-idlinks-floating';
             const title = document.createElement('div');
-            title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
             title.style.fontWeight = 'bold';
             title.style.marginBottom = '8px';
             floatingDiv.appendChild(title);
             const linkContainer = document.createElement('div');
-            linkContainer.style.display = 'flex';
+            if (!showIdLinksVertical) {
+                title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+            }
+            linkContainer.style.display = showIdLinksVertical ? 'block' : 'flex';
             linkContainer.style.flexWrap = 'wrap';
             linkContainer.style.gap = '0.3em';
 
@@ -4041,7 +4049,7 @@ onReady(async function () {
                 link.href = `/${board}/res/${thread}.html#${postId}`;
                 link.textContent = `>>${postId}`;
                 link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
-                link.style.display = 'inline-block';
+                link.style.display = showIdLinksVertical ? 'block' : 'inline-block';
                 link.onclick = function (e) {
                     e.preventDefault();
                     floatingDiv.remove();
@@ -4052,6 +4060,11 @@ onReady(async function () {
                 wrapper.className = 'innerPost';
                 wrapper.dataset.uri = `${board}/${thread}#${postId}`;
                 wrapper.appendChild(link);
+                wrapper.style.boxShadow = 'none';
+                wrapper.style.border = 'none';
+                wrapper.style.outline = 'none';
+                wrapper.style.backgroundColor = 'inherit';
+                wrapper.style.display = 'block';
                 linkContainer.appendChild(wrapper);
             });
             floatingDiv.appendChild(linkContainer);
