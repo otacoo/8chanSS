@@ -4809,11 +4809,17 @@ onReady(async function () {
                 wrapper.className = 'innerPost';
                 wrapper.dataset.uri = `${board}/${thread}#${postId}`;
                 wrapper.appendChild(link);
-                wrapper.style.boxShadow = 'none';
-                wrapper.style.border = 'none';
-                wrapper.style.outline = 'none';
-                wrapper.style.backgroundColor = 'inherit';
-                wrapper.style.display = 'block';
+
+                if(showIdLinksVertical){
+                    wrapper.style.boxShadow = 'none';
+                    wrapper.style.border = 'none';
+                    wrapper.style.outline = 'none';
+                    wrapper.style.backgroundColor = 'inherit';
+                    wrapper.style.display = 'block';
+                    wrapper.style.padding = 0;
+                    wrapper.style.margin = 0;
+                }
+                
                 linkContainer.appendChild(wrapper);
             });
             floatingDiv.appendChild(linkContainer);
