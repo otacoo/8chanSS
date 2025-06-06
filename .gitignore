@@ -1,6 +1,0 @@
-# Ignore node_modules folder
-node_modules/
-package-lock.json
-
-# Ignore created builds
-builds/*
