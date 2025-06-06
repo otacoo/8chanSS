@@ -330,13 +330,19 @@ onReady(async function () {
             },
             alwaysShowIdCount: { label: "Always show post count for IDs", default: false },
             enableIdFilters: {
-                label: "Show only posts by ID when ID is clicked",
+                label: "Show posts by ID when ID is clicked",
                 type: "checkbox",
                 default: true,
                 subOptions: {
-                    showIdLinksOnly: {
-                        label: "Show as a floating list",
-                        default: false
+                    idViewMode: {
+                        label: "View Mode",
+                        type: "select",
+                        default: "showPostsOfIdOnly",
+                        options: [
+                            { value: "showPostsOfIdOnly", label: "Show only ID posts in thread" },
+                            { value: "showIdLinksOnly", label: "Floating list" },
+                            { value: "showIdLinksVertical", label: "Vertical list" }
+                        ]
                     }
                 }
             },
@@ -4717,7 +4723,7 @@ onReady(async function () {
         let activeFilterColor = null;
 
         // Check if subOption is enabled
-        const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
+        const showIdLinks = await getSetting("enableIdFilters_idViewMode");
         let floatingDiv = null;
 
         function closeFloatingDiv() {
@@ -4732,7 +4738,7 @@ onReady(async function () {
                 closeFloatingDiv();
             }
         }
-
+        
         // Show floating div with links to all posts by this ID
         function showIdList(id, clickedLabel) {
             // Extract only the hex ID (first 6 hex chars) from the label
@@ -4772,14 +4778,16 @@ onReady(async function () {
 
             // Title
             const title = document.createElement('div');
-            title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
             title.style.fontWeight = 'bold';
             title.style.marginBottom = '8px';
             floatingDiv.appendChild(title);
 
             // List of links
             const linkContainer = document.createElement('div');
-            linkContainer.style.display = 'flex';
+            if (showIdLinks == "showIdLinksOnly") {
+                title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+            }
+            linkContainer.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'flex';
             linkContainer.style.flexWrap = 'wrap';
             linkContainer.style.gap = '0.3em';
 
@@ -4790,7 +4798,7 @@ onReady(async function () {
                 link.href = `/${board}/res/${thread}.html#${postId}`;
                 link.textContent = `>>${postId}`;
                 link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
-                link.style.display = 'inline-block';
+                link.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'inline-block';
                 link.onclick = function (e) {
                     e.preventDefault();
                     floatingDiv.remove();
@@ -4802,6 +4810,17 @@ onReady(async function () {
                 wrapper.className = 'innerPost';
                 wrapper.dataset.uri = `${board}/${thread}#${postId}`;
                 wrapper.appendChild(link);
+
+                if(showIdLinks == "showIdLinksVertical"){
+                    wrapper.style.boxShadow = 'none';
+                    wrapper.style.border = 'none';
+                    wrapper.style.outline = 'none';
+                    wrapper.style.backgroundColor = 'inherit';
+                    wrapper.style.display = 'block';
+                    wrapper.style.padding = 0;
+                    wrapper.style.margin = 0;
+                }
+                
                 linkContainer.appendChild(wrapper);
             });
             floatingDiv.appendChild(linkContainer);
@@ -4847,7 +4866,7 @@ onReady(async function () {
                 event.preventDefault();
                 event.stopPropagation();
                 const id = clickedLabel.textContent.trim();
-                if (showIdLinksOnly) {
+                if (showIdLinks != "showPostsOfIdOnly") {
                     showIdList(id, clickedLabel);
                 } else {
                     const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
@@ -4866,6 +4885,7 @@ onReady(async function () {
         }
         document.body.addEventListener("click", handleClick);
     }
+    
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
