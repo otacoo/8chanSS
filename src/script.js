@@ -330,17 +330,19 @@ onReady(async function () {
             },
             alwaysShowIdCount: { label: "Always show post count for IDs", default: false },
             enableIdFilters: {
-                label: "Show only posts by ID when ID is clicked",
+                label: "Show posts by ID when ID is clicked",
                 type: "checkbox",
                 default: true,
                 subOptions: {
-                    showIdLinksOnly: {
-                        label: "Show as a floating list",
-                        default: false
-                    },
-                    showIdLinksVertical: {
-                        label: "Show posts in a vertical list",
-                        default: false
+                    idViewMode: {
+                        label: "View Mode",
+                        type: "select",
+                        default: "showPostsOfIdOnly",
+                        options: [
+                            { value: "showPostsOfIdOnly", label: "Show only ID posts in thread" },
+                            { value: "showIdLinksOnly", label: "Floating list" },
+                            { value: "showIdLinksVertical", label: "Vertical list" }
+                        ]
                     }
                 }
             },
@@ -4721,8 +4723,7 @@ onReady(async function () {
         let activeFilterColor = null;
 
         // Check if subOption is enabled
-        const showIdLinksOnly = await getSetting("enableIdFilters_showIdLinksOnly");
-        const showIdLinksVertical = await getSetting("enableIdFilters_showIdLinksVertical");
+        const showIdLinks = await getSetting("enableIdFilters_idViewMode");
         let floatingDiv = null;
 
         function closeFloatingDiv() {
@@ -4783,10 +4784,10 @@ onReady(async function () {
 
             // List of links
             const linkContainer = document.createElement('div');
-            if (!showIdLinksVertical) {
+            if (showIdLinks == "showIdLinksOnly") {
                 title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
             }
-            linkContainer.style.display = showIdLinksVertical ? 'block' : 'flex';
+            linkContainer.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'flex';
             linkContainer.style.flexWrap = 'wrap';
             linkContainer.style.gap = '0.3em';
 
@@ -4797,7 +4798,7 @@ onReady(async function () {
                 link.href = `/${board}/res/${thread}.html#${postId}`;
                 link.textContent = `>>${postId}`;
                 link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
-                link.style.display = showIdLinksVertical ? 'block' : 'inline-block';
+                link.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'inline-block';
                 link.onclick = function (e) {
                     e.preventDefault();
                     floatingDiv.remove();
@@ -4810,7 +4811,7 @@ onReady(async function () {
                 wrapper.dataset.uri = `${board}/${thread}#${postId}`;
                 wrapper.appendChild(link);
 
-                if(showIdLinksVertical){
+                if(showIdLinks == "showIdLinksVertical"){
                     wrapper.style.boxShadow = 'none';
                     wrapper.style.border = 'none';
                     wrapper.style.outline = 'none';
@@ -4865,7 +4866,7 @@ onReady(async function () {
                 event.preventDefault();
                 event.stopPropagation();
                 const id = clickedLabel.textContent.trim();
-                if (showIdLinksOnly) {
+                if (showIdLinks != "showPostsOfIdOnly") {
                     showIdList(id, clickedLabel);
                 } else {
                     const clickedColor = window.getComputedStyle(clickedLabel).backgroundColor;
