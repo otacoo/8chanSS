@@ -175,6 +175,12 @@
     font-size: 14px;
     max-width: 56vw;
     z-index: 990;
+    scrollbar-width: thin;
+}
+
+.ss-vertical-id-list .innerPost {
+    background: none;
+    border: none;
 }
 
 .ss-idlinks-floating .innerPost {

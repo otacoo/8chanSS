@@ -330,7 +330,7 @@ onReady(async function () {
             },
             alwaysShowIdCount: { label: "Always show post count for IDs", default: false },
             enableIdFilters: {
-                label: "Show posts by ID when ID is clicked",
+                label: "Show all posts by ID when ID is clicked",
                 type: "checkbox",
                 default: true,
                 subOptions: {
@@ -339,7 +339,7 @@ onReady(async function () {
                         type: "select",
                         default: "showPostsOfIdOnly",
                         options: [
-                            { value: "showPostsOfIdOnly", label: "Show only ID posts in thread" },
+                            { value: "showPostsOfIdOnly", label: "Only ID's posts" },
                             { value: "showIdLinksOnly", label: "Floating list" },
                             { value: "showIdLinksVertical", label: "Vertical list" }
                         ]
@@ -653,7 +653,7 @@ onReady(async function () {
         { key: "scrollToBottom", fn: preventFooterScrollIntoView },
         { key: "enableThreadHiding", fn: featureCatalogHiding },
         { key: "switchTimeFormat", fn: featureLabelCreated12h },
-        { key: "enableIdFilters", fn: enableIdFiltering },
+        { key: "enableIdFilters", fn: featureIdFiltering },
         { key: "enhanceYoutube", fn: enhanceYouTubeLinks },
         { key: "threadStatsInHeader", fn: threadInfoHeader },
         { key: "enableHashNav", fn: hashNavigation },
@@ -4714,18 +4714,20 @@ onReady(async function () {
     }
 
     // --- Feature: Show all posts by ID ---
-    async function enableIdFiltering() {
+    async function featureIdFiltering() {
         if (!window.pageType?.isThread) return;
+        if (!divThreads) return;
 
         const postCellSelector = ".postCell, .opCell, .innerOP";
         const labelIdSelector = ".labelId";
         const hiddenClassName = "is-hidden-by-filter";
         let activeFilterColor = null;
 
-        // Check if subOption is enabled
+        // Get subOptions for view mode
         const showIdLinks = await getSetting("enableIdFilters_idViewMode");
         let floatingDiv = null;
 
+        // Remove any existing floating div
         function closeFloatingDiv() {
             if (floatingDiv && floatingDiv.parentNode) {
                 floatingDiv.parentNode.removeChild(floatingDiv);
@@ -4738,7 +4740,6 @@ onReady(async function () {
                 closeFloatingDiv();
             }
         }
-        
         // Show floating div with links to all posts by this ID
         function showIdList(id, clickedLabel) {
             // Extract only the hex ID (first 6 hex chars) from the label
@@ -4778,16 +4779,21 @@ onReady(async function () {
 
             // Title
             const title = document.createElement('div');
-            title.style.fontWeight = 'bold';
-            title.style.marginBottom = '8px';
-            floatingDiv.appendChild(title);
+            if (showIdLinks === "showIdLinksOnly") {
+                title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+                title.style.fontWeight = 'bold';
+                title.style.marginBottom = '8px';
+                floatingDiv.appendChild(title);
+            }
 
             // List of links
             const linkContainer = document.createElement('div');
-            if (showIdLinks == "showIdLinksOnly") {
-                title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+            if (showIdLinks === "showIdLinksVertical") {
+                linkContainer.classList.add('ss-vertical-id-list');
+                linkContainer.style.display = 'block';
+            } else {
+                linkContainer.style.display = 'flex';
             }
-            linkContainer.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'flex';
             linkContainer.style.flexWrap = 'wrap';
             linkContainer.style.gap = '0.3em';
 
@@ -4798,7 +4804,6 @@ onReady(async function () {
                 link.href = `/${board}/res/${thread}.html#${postId}`;
                 link.textContent = `>>${postId}`;
                 link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
-                link.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'inline-block';
                 link.onclick = function (e) {
                     e.preventDefault();
                     floatingDiv.remove();
@@ -4811,30 +4816,26 @@ onReady(async function () {
                 wrapper.dataset.uri = `${board}/${thread}#${postId}`;
                 wrapper.appendChild(link);
 
-                if(showIdLinks == "showIdLinksVertical"){
-                    wrapper.style.boxShadow = 'none';
-                    wrapper.style.border = 'none';
-                    wrapper.style.outline = 'none';
-                    wrapper.style.backgroundColor = 'inherit';
-                    wrapper.style.display = 'block';
-                    wrapper.style.padding = 0;
-                    wrapper.style.margin = 0;
-                }
-                
                 linkContainer.appendChild(wrapper);
             });
             floatingDiv.appendChild(linkContainer);
 
-            // Position the floating div next to the clicked label
+            // Position the floating div below the clicked label
             document.body.appendChild(floatingDiv);
             const rect = clickedLabel.getBoundingClientRect();
-            let top = rect.bottom + window.scrollY + 4;
+            const floatWidth = 320;
+            const floatHeight = floatingDiv.offsetHeight || 200;
             let left = rect.left + window.scrollX;
-            if (left + 320 > window.innerWidth) left = Math.max(0, window.innerWidth - 340);
-            if (top + 200 > window.innerHeight + window.scrollY) top = Math.max(10, rect.top + window.scrollY - 220);
+            let top = rect.bottom + window.scrollY + 4;
+            // Clamp left to viewport
+            if (left + floatWidth > window.innerWidth) left = Math.max(0, window.innerWidth - floatWidth - 10);
+            // If not enough space below, show above the label
+            if (top + floatHeight > window.scrollY + window.innerHeight) {
+                top = rect.top + window.scrollY - floatHeight - 4;
+                if (top < 0) top = 10; // Clamp to top
+            }
             floatingDiv.style.top = `${top}px`;
             floatingDiv.style.left = `${left}px`;
-
             // Close on click outside
             setTimeout(() => {
                 function closeOnClick(e) {
@@ -4845,7 +4846,6 @@ onReady(async function () {
                 }
                 document.addEventListener('mousedown', closeOnClick, true);
             }, 0);
-
             return matchingPosts;
         }
 
@@ -4885,7 +4885,6 @@ onReady(async function () {
         }
         document.body.addEventListener("click", handleClick);
     }
-    
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
