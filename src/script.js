@@ -328,7 +328,7 @@ onReady(async function () {
                     }
                 }
             },
-            alwaysShowIdCount: { label: "Always show post count for IDs", default: false },
+            alwaysShowIdCount: { label: "Always show ID post count", default: false },
             enableIdFilters: {
                 label: "Show all posts by ID when ID is clicked",
                 type: "checkbox",
@@ -3163,20 +3163,19 @@ onReady(async function () {
 
         const alwaysShowIdCount = await getSetting("alwaysShowIdCount");
 
-        function updateIdCounts(root = divThreads) {
-            // Build frequency map
+        // Update only new or changed nodes 
+        function updateIdCounts(root = document) {
+            // Build frequency map from the main thread
             const idFrequency = {};
-            const labelSpans = root.querySelectorAll('.labelId');
-            labelSpans.forEach(span => {
-                // Extract just the ID part (before | or parens)
-                const id = span.textContent.split(/[|\(]/)[0].trim();
+            document.querySelectorAll('.divPosts .labelId').forEach(span => {
+                const id = span.textContent.split(/[|\\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
-            labelSpans.forEach(span => {
-                const id = span.textContent.split(/[|\(]/)[0].trim();
+            // Update all .labelId elements in the given root
+            root.querySelectorAll('.labelId').forEach(span => {
+                const id = span.textContent.split(/[|\\(]/)[0].trim();
                 if (alwaysShowIdCount) {
-                    span.textContent = `${id} | ${idFrequency[id]}`;
-                    // Prevent native hover handler from changing text
+                    span.textContent = `${id} | ${idFrequency[id] || 1}`;
                     span.onmouseover = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
                     span.onmouseout = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
                 } else {
@@ -3187,14 +3186,23 @@ onReady(async function () {
             });
         }
         // Initial run
-        updateIdCounts();
+        updateIdCounts(document);
         // Observe for dynamic post additions
-        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
-        if (divPostsObs) {
-            divPostsObs.addHandler(function showIdCountHandler(mutations) {
-                updateIdCounts();
-            });
-        }
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === 1) {
+                        // Only update if the node or its subtree contains .labelId
+                        if (node.classList && node.classList.contains('labelId')) {
+                            updateIdCounts(node.parentNode || node);
+                        } else if (node.querySelectorAll && node.querySelector('.labelId')) {
+                            updateIdCounts(node);
+                        }
+                    }
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
 
