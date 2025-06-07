@@ -4994,31 +4994,35 @@ onReady(async function () {
             })
         );
 
-        // Create tabs
+        // Cache for tab contents
+        const tabContentCache = {};
+        const shortcutsTabCache = { node: null };
+
+        // Create tabs with caching
         const tabs = {
             site: {
                 label: "Site",
-                content: createTabContent("site", tempSettings),
+                content: tabContentCache.site || (tabContentCache.site = createTabContent("site", tempSettings)),
             },
             threads: {
                 label: "Threads",
-                content: createTabContent("threads", tempSettings),
+                content: tabContentCache.threads || (tabContentCache.threads = createTabContent("threads", tempSettings)),
             },
             catalog: {
                 label: "Catalog",
-                content: createTabContent("catalog", tempSettings),
+                content: tabContentCache.catalog || (tabContentCache.catalog = createTabContent("catalog", tempSettings)),
             },
             styling: {
                 label: "Style",
-                content: createTabContent("styling", tempSettings),
+                content: tabContentCache.styling || (tabContentCache.styling = createTabContent("styling", tempSettings)),
             },
             miscel: {
                 label: "Misc.",
-                content: createTabContent("miscel", tempSettings),
+                content: tabContentCache.miscel || (tabContentCache.miscel = createTabContent("miscel", tempSettings)),
             },
             shortcuts: {
                 label: "⌨️",
-                content: createShortcutsTab(),
+                content: shortcutsTabCache.node || (shortcutsTabCache.node = createShortcutsTab()),
             },
         };
 
@@ -5105,7 +5109,7 @@ onReady(async function () {
         saveBtn.style.fontSize = "15px";
         saveBtn.style.cursor = "pointer";
         saveBtn.style.flex = "1";
-        saveBtn.addEventListener("click", async function () {
+        saveBtn.addEventListener("click", debounce(async function () {
             for (const key of Object.keys(tempSettings)) {
                 await setSetting(key, tempSettings[key]);
             }
@@ -5116,7 +5120,7 @@ onReady(async function () {
             setTimeout(() => {
                 window.location.reload();
             }, 400);
-        });
+        }, 50));
         buttonContainer.appendChild(saveBtn);
 
         // Reset Button
@@ -5130,9 +5134,8 @@ onReady(async function () {
         resetBtn.style.fontSize = "15px";
         resetBtn.style.cursor = "pointer";
         resetBtn.style.flex = "1";
-        resetBtn.addEventListener("click", async function () {
+        resetBtn.addEventListener("click", debounce(async function () {
             if (confirm("Reset all 8chanSS settings to defaults?")) {
-                // Remove all 8chanSS_ GM values
                 const keys = await GM.listValues();
                 for (const key of keys) {
                     if (key.startsWith("8chanSS_")) {
@@ -5147,7 +5150,7 @@ onReady(async function () {
                     window.location.reload();
                 }, 400);
             }
-        });
+        }, 50));
         buttonContainer.appendChild(resetBtn);
 
         menu.appendChild(buttonContainer);
