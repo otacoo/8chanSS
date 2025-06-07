@@ -3832,7 +3832,7 @@ onReady(async function () {
                 inner.classList.remove('hidden');
                 unhideBtn.remove();
                 if (typeof onUnhide === 'function') onUnhide();
-                updateAllQuoteLinksFiltered();
+                if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
             });
             inner.parentNode.insertBefore(unhideBtn, inner.nextSibling);
         }
@@ -3841,36 +3841,45 @@ onReady(async function () {
             if (inner) inner.classList.remove('hidden');
             const unhideBtn = cell.querySelector('.unhideButton');
             if (unhideBtn) unhideBtn.remove();
-            updateAllQuoteLinksFiltered();
+            if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
         }
-        function getAllRepliesRecursive(rootPostId, boardUri) {
-            // Build a map of postId -> post element for all posts in the thread
-            const postMap = {};
-            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+
+        // --- Helper: Get all direct children (posts that quote any in rootIds) ---
+        function getDirectChildren(rootIds) {
+            const children = new Set();
+            document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 const pid = getPostId(cell);
-                if (pid) postMap[pid] = cell;
+                const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                for (const link of quoteLinks) {
+                    const targetUri = link.getAttribute('data-target-uri');
+                    const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
+                    if (match && rootIds.has(match[2])) {
+                        children.add(pid);
+                        break;
+                    }
+                }
             });
-            const toHide = new Set();
-            const visited = new Set();
-            const rootNum = Number(rootPostId);
-            const queue = [];
-            queue.push(rootPostId);
+            return children;
+        }
+        // --- Helper: Get all descendant post IDs (recursive quote tree, only quoteLinks, never backlinks) ---
+        function getAllDescendants(initialSet) {
+            const toHide = new Set(initialSet);
+            const queue = Array.from(initialSet);
             while (queue.length > 0) {
                 const currentId = queue.shift();
-                const postEl = postMap[currentId];
-                if (!postEl) continue;
-                // Find all direct replies in .panelBacklinks
-                const backlinks = postEl.querySelectorAll('.panelBacklinks .backLink[data-target-uri]');
-                backlinks.forEach(link => {
-                    const targetUri = link.getAttribute('data-target-uri');
-                    const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                    if (match) {
-                        const replyId = match[2];
-                        const replyNum = Number(replyId);
-                        if (!isNaN(replyNum) && replyNum > rootNum && !visited.has(replyId)) {
-                            toHide.add(replyId);
-                            visited.add(replyId);
-                            queue.push(replyId);
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                    const pid = getPostId(cell);
+                    if (toHide.has(pid)) return;
+                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                    for (const link of quoteLinks) {
+                        const targetUri = link.getAttribute('data-target-uri');
+                        const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
+                        if (match && match[2] === currentId) {
+                            toHide.add(pid);
+                            queue.push(pid);
+                            break;
                         }
                     }
                 });
@@ -3878,61 +3887,58 @@ onReady(async function () {
             return toHide;
         }
 
-        async function setPostHidden(boardUri, postId, hide = true, plus = false) {
-            const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
-            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
-                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                if (getPostId(cell) === postId) {
-                    if (hide) {
-                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'hidePostPlus' : undefined);
-                    } else {
-                        unhidePostCell(cell, boardUri, postId);
-                    }
-                }
-            });
-            if (plus) {
-                if (recursiveHide) {
-                    // Hide all descendants (replies of replies)
-                    getAllRepliesRecursive(postId, boardUri).forEach(replyPid => {
-                        document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
-                            if (getPostId(cell) === replyPid) {
-                                if (hide) {
-                                    hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
-                                } else {
-                                    unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
-                                }
-                            }
-                        });
-                    });
-                } else {
-                    // Only hide direct replies, not recursively
-                    document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                        if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                        const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                        for (const link of quoteLinks) {
-                            const targetUri = link.getAttribute('data-target-uri');
-                            const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
-                            if (match && match[2] === postId) {
-                                if (hide) {
-                                    hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
-                                } else {
-                                    unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
-                                }
-                                break;
-                            }
-                        }
-                    });
-                }
-            }
-            updateAllQuoteLinksFiltered();
+        // --- Hide/unhide by ID (simple/plus/recursive) ---
+        async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
+        const postIdsWithId = new Set();
+        if (!/^[a-z0-9]+$/i.test(id)) return;
+        document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+        if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+        const inner = getInnerPostElem(cell);
+        const cellThreadId = getThreadIdFromInnerPost(inner);
+        const idElem = cell.querySelector('.labelId');
+        const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+        if (
+        cellThreadId === threadId &&
+        cellId &&
+        cellId === id
+        ) {
+        const postId = getPostId(cell);
+        postIdsWithId.add(postId);
+        if (hide) {
+        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'filteredIDPlus' : 'filteredID');
+        } else {
+        unhidePostCell(cell, boardUri, postId);
+        }
+        }
+        });
+        
+        if (plus && postIdsWithId.size > 0) {
+        const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
+        let toHide = getDirectChildren(postIdsWithId);
+        if (recursiveHide) {
+        const initial = new Set([...postIdsWithId, ...toHide]);
+        toHide = getAllDescendants(initial);
+        for (const pid of postIdsWithId) toHide.delete(pid);
+        }
+        document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+        if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+        const pid = getPostId(cell);
+        if (toHide.has(pid)) {
+        if (hide) {
+        hidePostCellWithStub(cell, getBoardUri(cell), pid, null, 'filteredIDPlus');
+        } else {
+        unhidePostCell(cell, getBoardUri(cell), pid);
+        }
+        }
+        });
+        }
+        if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
         }
 
-        // --- Hide/unhide by name (simple/plus) ---
+        // --- Hide/unhide by name (simple/plus/recursive) ---
         async function setPostsWithNameHidden(name, hide = true, plus = false) {
-            // Find all posts with this name
             const postIdsWithName = new Set();
             document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                // Never hide OP
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 const nameElem = cell.querySelector('.linkName');
                 if (nameElem && nameElem.textContent.trim() === name) {
@@ -3946,133 +3952,94 @@ onReady(async function () {
                     }
                 }
             });
-            // For plus: only hide direct replies to these posts
+
             if (plus && postIdsWithName.size > 0) {
+                const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
+                let toHide = getDirectChildren(postIdsWithName);
+                if (recursiveHide) {
+                    const initial = new Set([...postIdsWithName, ...toHide]);
+                    toHide = getAllDescendants(initial);
+                    for (const pid of postIdsWithName) toHide.delete(pid);
+                }
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                    for (const link of quoteLinks) {
-                        const targetUri = link.getAttribute('data-target-uri');
-                        const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
-                        if (match && postIdsWithName.has(match[2])) {
-                            if (hide) {
-                                hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'filteredNamePlus');
-                            } else {
-                                unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
-                            }
-                            break;
+                    const pid = getPostId(cell);
+                    if (toHide.has(pid)) {
+                        if (hide) {
+                            hidePostCellWithStub(cell, getBoardUri(cell), pid, null, 'filteredNamePlus');
+                        } else {
+                            unhidePostCell(cell, getBoardUri(cell), pid);
                         }
                     }
                 });
             }
-            updateAllQuoteLinksFiltered();
+            if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
         }
 
-        // --- Hide/unhide by ID (simple/plus) ---
-        async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
-            // Hide/unhide all posts with this ID in this thread
-            const postIdsWithId = new Set();
-            if (!/^[a-z0-9]+$/i.test(id)) return;
+        // --- Hide/unhide by post (simple/plus/recursive) ---
+        async function setPostHidden(boardUri, postId, hide = true, plus = false) {
+            const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
+            // Always hide/unhide the post itself
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                const inner = getInnerPostElem(cell);
-                const cellThreadId = getThreadIdFromInnerPost(inner);
-                const idElem = cell.querySelector('.labelId');
-                const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
-                if (
-                    cellThreadId === threadId &&
-                    cellId &&
-                    cellId === id
-                ) {
-                    const postId = getPostId(cell);
-                    postIdsWithId.add(postId);
+                if (getPostId(cell) === postId) {
                     if (hide) {
-                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'filteredIDPlus' : 'filteredID');
+                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'hidePostPlus' : 'hidePost');
                     } else {
                         unhidePostCell(cell, boardUri, postId);
                     }
                 }
             });
-
-            // Plus: hide/unhide all posts that directly reply to a post with this ID (via .quoteLink or .panelBacklinks .backLink)
-            if (plus && postIdsWithId.size > 0) {
-                // Hide all posts that have a .quoteLink or .backLink to any of the postIdsWithId
+            if (plus) {
+                let toHide = getDirectChildren(new Set([postId]));
+                if (recursiveHide) {
+                    const initial = new Set([postId, ...toHide]);
+                    toHide = getAllDescendants(initial);
+                    toHide.delete(postId);
+                }
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                    let isDirectReply = false;
-                    // Check .quoteLink
-                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                    for (const link of quoteLinks) {
-                        const targetUri = link.getAttribute('data-target-uri');
-                        const match = targetUri && targetUri.match(/^([^#]+)#([a-z0-9]+)$/i);
-                        if (match && postIdsWithId.has(match[2])) {
-                            isDirectReply = true;
-                            break;
-                        }
-                    }
-                    // Check .panelBacklinks .backLink
-                    if (!isDirectReply) {
-                        const panelBacklinks = cell.querySelector('.panelBacklinks');
-                        if (panelBacklinks) {
-                            const backLinks = panelBacklinks.querySelectorAll('.backLink[data-target-uri]');
-                            for (const link of backLinks) {
-                                const targetUri = link.getAttribute('data-target-uri');
-                                const match = targetUri && targetUri.match(/^([^#]+)#([a-z0-9]+)$/i);
-                                if (match && postIdsWithId.has(match[2])) {
-                                    isDirectReply = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (isDirectReply) {
-                        const replyBoardUri = getBoardUri(cell);
-                        const replyPostId = getPostId(cell);
+                    const pid = getPostId(cell);
+                    if (toHide.has(pid)) {
                         if (hide) {
-                            hidePostCellWithStub(cell, replyBoardUri, replyPostId, null, 'filteredIDPlus');
+                            hidePostCellWithStub(cell, getBoardUri(cell), pid, null, 'hidePostPlus');
                         } else {
-                            unhidePostCell(cell, replyBoardUri, replyPostId);
+                            unhidePostCell(cell, getBoardUri(cell), pid);
                         }
                     }
                 });
             }
-            updateAllQuoteLinksFiltered();
+            if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
         }
 
-        // --- QuoteLink filtering ---
         async function updateAllQuoteLinksFiltered() {
             // Gather all hidden post IDs, filtered IDs, and filtered names
             const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
             let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
-
-            // Support both old array and new object for filtered names
             if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
                 filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
             }
             if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
 
-            // Build a set of all hidden/filtered post targets (boardUri#postId)
-            const filteredTargets = new Set();
+            // Build a set of all hidden/filtered post IDs
+            const filteredPostIds = new Set();
 
-            // Hidden posts (simple and plus, recursively for plus)
+            // Hidden posts (simple and plus)
             for (const boardUri in hiddenPostsObj) {
                 for (const postId of (hiddenPostsObj[boardUri]?.simple || [])) {
-                    filteredTargets.add(`${boardUri}#${postId}`);
+                    filteredPostIds.add(postId + ''); // ensure string
                 }
                 for (const postId of (hiddenPostsObj[boardUri]?.plus || [])) {
-                    filteredTargets.add(`${boardUri}#${postId}`);
-                    getAllRepliesRecursive(String(postId), boardUri).forEach(pid => {
-                        filteredTargets.add(`${boardUri}#${pid}`);
-                    });
+                    filteredPostIds.add(postId + '');
                 }
             }
+
             // Filtered IDs (simple and plus)
             const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
             for (const boardUri in filteredIdsObj) {
                 for (const threadId in filteredIdsObj[boardUri]) {
                     let threadObj = filteredIdsObj[boardUri][threadId];
-                    // Migrate old array to new object if needed
                     if (Array.isArray(threadObj)) {
                         threadObj = { simple: threadObj, plus: [] };
                         filteredIdsObj[boardUri][threadId] = threadObj;
@@ -4081,83 +4048,38 @@ onReady(async function () {
                     for (const id of threadObj.simple || []) {
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
-                            if (idElem && idElem.textContent.trim() === id) {
-                                const postId = getPostId(cell);
-                                filteredTargets.add(`${boardUri}#${postId}`);
+                            if (idElem && idElem.textContent.split(/[|\\(]/)[0].trim() === id) {
+                                filteredPostIds.add(getPostId(cell));
                             }
                         });
                     }
-                    // Plus: posts with this ID and direct replies via .panelBacklinks
+                    // Plus
                     for (const id of threadObj.plus || []) {
-                        // Posts with this ID
-                        const postIdsWithId = new Set();
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
-                            if (idElem && idElem.textContent.trim() === id) {
-                                const postId = getPostId(cell);
-                                filteredTargets.add(`${boardUri}#${postId}`);
-                                postIdsWithId.add(postId);
+                            if (idElem && idElem.textContent.split(/[|\\(]/)[0].trim() === id) {
+                                filteredPostIds.add(getPostId(cell));
                             }
                         });
-                        // Direct replies via .panelBacklinks
-                        if (postIdsWithId.size > 0) {
-                            document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                                const panelBacklinks = cell.querySelector('.panelBacklinks');
-                                if (!panelBacklinks) return;
-                                const backLinks = panelBacklinks.querySelectorAll('.backLink[data-target-uri]');
-                                let isDirectReply = false;
-                                for (const link of backLinks) {
-                                    const targetUri = link.getAttribute('data-target-uri');
-                                    const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                                    if (match && postIdsWithId.has(match[2])) {
-                                        isDirectReply = true;
-                                        break;
-                                    }
-                                }
-                                if (isDirectReply) {
-                                    const replyBoardUri = getBoardUri(cell);
-                                    const replyPostId = getPostId(cell);
-                                    filteredTargets.add(`${replyBoardUri}#${replyPostId}`);
-                                }
-                            });
-                        }
                     }
                 }
             }
+
             // Filtered names (simple and plus)
-            // Simple
             for (const name of filteredNamesObj.simple) {
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     const nameElem = cell.querySelector('.linkName');
                     if (nameElem && nameElem.textContent.trim() === name) {
-                        const boardUri = getBoardUri(cell);
-                        const postId = getPostId(cell);
-                        filteredTargets.add(`${boardUri}#${postId}`);
+                        filteredPostIds.add(getPostId(cell));
                     }
                 });
             }
-            // Plus: posts with this name and all their replies (recursively)
             for (const name of filteredNamesObj.plus) {
-                const postIdsWithName = new Set();
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     const nameElem = cell.querySelector('.linkName');
                     if (nameElem && nameElem.textContent.trim() === name) {
-                        const boardUri = getBoardUri(cell);
-                        const postId = getPostId(cell);
-                        filteredTargets.add(`${boardUri}#${postId}`);
-                        postIdsWithName.add(postId);
+                        filteredPostIds.add(getPostId(cell));
                     }
-                });
-                // Recursively add all replies to these posts
-                postIdsWithName.forEach(pid => {
-                    getAllRepliesRecursive(pid).forEach(replyPid => {
-                        document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                            if (getPostId(cell) === replyPid) {
-                                const boardUri = getBoardUri(cell);
-                                filteredTargets.add(`${boardUri}#${replyPid}`);
-                            }
-                        });
-                    });
                 });
             }
 
@@ -4165,19 +4087,10 @@ onReady(async function () {
             document.querySelectorAll('.quoteLink').forEach(link => {
                 let isFiltered = false;
                 const targetUri = link.getAttribute('data-target-uri');
-                if (targetUri && filteredTargets.has(targetUri)) {
-                    isFiltered = true;
-                } else {
-                    const href = link.getAttribute('href');
-                    if (href) {
-                        const match = href.match(/\/([^\/]+)\/res\/\d+\.html#(\d+)$/);
-                        if (match) {
-                            const boardUri = match[1];
-                            const postId = match[2];
-                            if (filteredTargets.has(`${boardUri}#${postId}`)) {
-                                isFiltered = true;
-                            }
-                        }
+                if (targetUri) {
+                    const match = targetUri.match(/^([^#]+)#(\w+)$/);
+                    if (match && filteredPostIds.has(match[2])) {
+                        isFiltered = true;
                     }
                 }
                 if (isFiltered) link.classList.add('filtered');
@@ -4712,6 +4625,7 @@ onReady(async function () {
         // --- Initial setup ---
         hijackHideButtons();
         autoHideAll();
+
     }
 
     // --- Feature: Show all posts by ID ---
