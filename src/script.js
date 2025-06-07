@@ -4127,20 +4127,53 @@ onReady(async function () {
         }
 
         // --- Menu logic ---
+        class CustomHideMenu {
+            constructor(hideButton, postCell, options) {
+                this.hideButton = hideButton;
+                this.postCell = postCell;
+                this.options = options;
+                this.menu = null;
+            }
+            render() {
+                this.remove();
+                this.menu = document.createElement('div');
+                this.menu.className = 'floatingList extraMenu';
+                this.menu.setAttribute('data-custom', '1');
+                const rect = this.hideButton.getBoundingClientRect();
+                this.menu.style.position = 'absolute';
+                this.menu.style.left = `${rect.left + window.scrollX}px`;
+                this.menu.style.top = `${rect.bottom + window.scrollY}px`;
+                this.menu.style.zIndex = 9999;
+                this.menu.style.fontSize = "10pt";
+                const list = document.createElement('ul');
+                this.menu.appendChild(list);
+                this.options.forEach(opt => {
+                    const li = document.createElement('li');
+                    li.textContent = opt.name;
+                    li.onclick = opt.callback;
+                    list.appendChild(li);
+                });
+                document.body.appendChild(this.menu);
+                setTimeout(() => {
+                    document.addEventListener('mousedown', this.handleOutsideClick.bind(this));
+                }, 0);
+            }
+            handleOutsideClick(e) {
+                if (!this.menu.contains(e.target)) {
+                    this.remove();
+                    document.removeEventListener('mousedown', this.handleOutsideClick.bind(this));
+                }
+            }
+            remove() {
+                if (this.menu && this.menu.parentNode) {
+                    this.menu.parentNode.removeChild(this.menu);
+                    this.menu = null;
+                }
+            }
+        }
+
         async function showCustomMenu(hideButton, postCell) {
             removeExistingMenu();
-            const extraMenu = document.createElement('div');
-            extraMenu.className = 'floatingList extraMenu';
-            extraMenu.setAttribute('data-custom', '1');
-            const rect = hideButton.getBoundingClientRect();
-            extraMenu.style.position = 'absolute';
-            extraMenu.style.left = `${rect.left + window.scrollX}px`;
-            extraMenu.style.top = `${rect.bottom + window.scrollY}px`;
-            extraMenu.style.zIndex = 9999;
-            extraMenu.style.fontSize = "10pt";
-            const list = document.createElement('ul');
-            extraMenu.appendChild(list);
-
             const boardUri = getBoardUri(postCell);
             const postId = getPostId(postCell);
             const inner = getInnerPostElem(postCell);
@@ -4176,8 +4209,8 @@ onReady(async function () {
 
             // Filtered names: support both old array and new object
             let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
-            if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
-                filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
+            if (!filteredNamesObj || typeof filteredNamesObj !== "object") {
+                filteredNamesObj = { simple: [], plus: [] };
             }
             if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
@@ -4239,8 +4272,8 @@ onReady(async function () {
                     name: isNameFiltered ? 'Unfilter name' : 'Filter name',
                     callback: async () => {
                         let obj = await getStoredObject(FILTERED_NAMES_KEY);
-                        if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
-                            obj = { simple: Array.isArray(obj) ? obj : [], plus: [] };
+                        if (!obj || typeof obj !== "object") {
+                            obj = { simple: [], plus: [] };
                         }
                         if (!Array.isArray(obj.simple)) obj.simple = [];
                         const idx = obj.simple.indexOf(name);
@@ -4260,8 +4293,8 @@ onReady(async function () {
                     name: isNameFilteredPlus ? 'Unfilter name+' : 'Filter name+',
                     callback: async () => {
                         let obj = await getStoredObject(FILTERED_NAMES_KEY);
-                        if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
-                            obj = { simple: Array.isArray(obj) ? obj : [], plus: [] };
+                        if (!obj || typeof obj !== "object") {
+                            obj = { simple: [], plus: [] };
                         }
                         if (!Array.isArray(obj.plus)) obj.plus = [];
                         const idx = obj.plus.indexOf(name);
@@ -4342,24 +4375,8 @@ onReady(async function () {
                 }
             );
 
-            options.forEach(opt => {
-                const li = document.createElement('li');
-                li.textContent = opt.name;
-                li.onclick = opt.callback;
-                list.appendChild(li);
-            });
-
-            document.body.appendChild(extraMenu);
-
-            function handleOutsideClick(e) {
-                if (!extraMenu.contains(e.target)) {
-                    removeExistingMenu();
-                    document.removeEventListener('mousedown', handleOutsideClick);
-                }
-            }
-            setTimeout(() => {
-                document.addEventListener('mousedown', handleOutsideClick);
-            }, 0);
+            const menu = new CustomHideMenu(hideButton, postCell, options);
+            menu.render();
         }
 
         function removeExistingMenu() {
@@ -4405,8 +4422,8 @@ onReady(async function () {
             }
             // Hide filtered names (simple and plus)
             let namesObj = await getStoredObject(FILTERED_NAMES_KEY);
-            if (!namesObj || typeof namesObj !== "object" || Array.isArray(namesObj)) {
-                namesObj = { simple: Array.isArray(namesObj) ? namesObj : [], plus: [] };
+            if (!namesObj || typeof namesObj !== "object") {
+                namesObj = { simple: [], plus: [] };
             }
             (namesObj.simple || []).forEach(name => setPostsWithNameHidden(name, true, false));
             (namesObj.plus || []).forEach(name => setPostsWithNameHidden(name, true, true));
@@ -4414,16 +4431,104 @@ onReady(async function () {
             updateAllQuoteLinksFiltered();
         }
 
+        // Post parent/child map cache
+        const postMapCache = (() => {
+            let postParentMap = null;
+            let childMap = null;
+            let filteredNamePlusSet = null;
+            let plusHiddenSet = null;
+            return {
+                getParentMap: function () {
+                    if (!postParentMap) {
+                        postParentMap = {};
+                        document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                            const pid = postCell.id;
+                            const parentIds = [];
+                            postCell.querySelectorAll('.quoteLink[data-target-uri]').forEach(link => {
+                                const targetUri = link.getAttribute('data-target-uri');
+                                const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                                if (match) parentIds.push(match[2]);
+                            });
+                            postParentMap[pid] = parentIds;
+                        });
+                    }
+                    return postParentMap;
+                },
+                getChildMap: function () {
+                    if (!childMap) {
+                        childMap = {};
+                        const postParentMap = this.getParentMap();
+                        Object.entries(postParentMap).forEach(([childId, parentIds]) => {
+                            parentIds.forEach(parentId => {
+                                if (!childMap[parentId]) childMap[parentId] = [];
+                                childMap[parentId].push(childId);
+                            });
+                        });
+                    }
+                    return childMap;
+                },
+                getFilteredNamePlusSet: function (filteredNamesObj) {
+                    if (!filteredNamePlusSet) {
+                        filteredNamePlusSet = new Set();
+                        const initialFiltered = [];
+                        // Find all postCells with a filtered name (plus)
+                        document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                            const nameElem = postCell.querySelector('.linkName');
+                            const name = nameElem ? nameElem.textContent.trim() : null;
+                            if (name && filteredNamesObj.plus.includes(name)) {
+                                filteredNamePlusSet.add(postCell.id);
+                                initialFiltered.push(postCell.id);
+                            }
+                        });
+                        // Recursively add all descendants (replies of replies, etc.)
+                        const childMap = this.getChildMap();
+                        const queue = [...initialFiltered];
+                        while (queue.length > 0) {
+                            const current = queue.shift();
+                            const children = childMap[current] || [];
+                            for (const child of children) {
+                                if (!filteredNamePlusSet.has(child)) {
+                                    filteredNamePlusSet.add(child);
+                                    queue.push(child);
+                                }
+                            }
+                        }
+                    }
+                    return filteredNamePlusSet;
+                },
+                getPlusHiddenSet: function (plusHiddenMap) {
+                    if (!plusHiddenSet) {
+                        plusHiddenSet = new Set();
+                        for (const b in plusHiddenMap) {
+                            for (const hid of plusHiddenMap[b]) {
+                                plusHiddenSet.add(hid);
+                            }
+                        }
+                    }
+                    return plusHiddenSet;
+                },
+                invalidate: function () {
+                    postParentMap = null;
+                    childMap = null;
+                    filteredNamePlusSet = null;
+                    plusHiddenSet = null;
+                }
+            };
+        })();
+
         // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
-            divPostsObs.addHandler(async function customPostHideMenuHandler(mutations) {
+            const debouncedHandler = debounce(async function customPostHideMenuHandler(mutations) {
+                // Invalidate caches on DOM mutation
+                postMapCache.invalidate();
+
                 // Gather all plus-hidden post IDs for all boards, etc.
                 const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
                 const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
                 let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
-                if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
-                    filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
+                if (!filteredNamesObj || typeof filteredNamesObj !== "object") {
+                    filteredNamesObj = { simple: [], plus: [] };
                 }
                 if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
                 if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
@@ -4521,72 +4626,11 @@ onReady(async function () {
                             // --- Hide if replying (directly or indirectly) to a plus-hidden post or filtered name+ ---
                             let shouldHidePlus = false;
                             const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                            // Build a postId -> parentIds map for all posts in the thread (in-memory, once per batch)
-                            if (!window._8chanSS_postParentMapCache) {
-                                const postParentMap = {};
-                                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-                                    const pid = postCell.id;
-                                    const parentIds = [];
-                                    postCell.querySelectorAll('.quoteLink[data-target-uri]').forEach(link => {
-                                        const targetUri = link.getAttribute('data-target-uri');
-                                        const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                                        if (match) parentIds.push(match[2]);
-                                    });
-                                    postParentMap[pid] = parentIds;
-                                });
-                                window._8chanSS_postParentMapCache = postParentMap;
-                            }
-                            const postParentMap = window._8chanSS_postParentMapCache;
-                            // Build a Set of all plus-hidden post IDs (once per batch)
-                            if (!window._8chanSS_plusHiddenSetCache) {
-                                const plusHiddenSet = new Set();
-                                for (const b in plusHiddenMap) {
-                                    for (const hid of plusHiddenMap[b]) {
-                                        plusHiddenSet.add(hid);
-                                    }
-                                }
-                                window._8chanSS_plusHiddenSetCache = plusHiddenSet;
-                            }
-                            const plusHiddenSet = window._8chanSS_plusHiddenSetCache;
-                            // Build a Set of all post IDs with filtered name+ (once per batch)
-                            if (!window._8chanSS_filteredNamePlusSetCache) {
-                                const filteredNamePlusSet = new Set();
-                                const initialFiltered = [];
-                                // Find all postCells with a filtered name (plus)
-                                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-                                    const nameElem = postCell.querySelector('.linkName');
-                                    const name = nameElem ? nameElem.textContent.trim() : null;
-                                    if (name && filteredNamesObj.plus.includes(name)) {
-                                        filteredNamePlusSet.add(postCell.id);
-                                        initialFiltered.push(postCell.id);
-                                    }
-                                });
-                                // Recursively add all descendants (replies of replies, etc.)
-                                // Use the postParentMap already built
-                                const postParentMap = window._8chanSS_postParentMapCache;
-                                // Build a reverse map: parentId -> [childId, ...]
-                                const childMap = {};
-                                Object.entries(postParentMap).forEach(([childId, parentIds]) => {
-                                    parentIds.forEach(parentId => {
-                                        if (!childMap[parentId]) childMap[parentId] = [];
-                                        childMap[parentId].push(childId);
-                                    });
-                                });
-                                // BFS to add all descendants
-                                const queue = [...initialFiltered];
-                                while (queue.length > 0) {
-                                    const current = queue.shift();
-                                    const children = childMap[current] || [];
-                                    for (const child of children) {
-                                        if (!filteredNamePlusSet.has(child)) {
-                                            filteredNamePlusSet.add(child);
-                                            queue.push(child);
-                                        }
-                                    }
-                                }
-                                window._8chanSS_filteredNamePlusSetCache = filteredNamePlusSet;
-                            }
-                            const filteredNamePlusSet = window._8chanSS_filteredNamePlusSetCache;
+                            // Cache in a closure-scoped variable
+                            const postParentMap = postMapCache.getParentMap();
+                            const plusHiddenSet = postMapCache.getPlusHiddenSet(plusHiddenMap);
+                            const filteredNamePlusSet = postMapCache.getFilteredNamePlusSet(filteredNamesObj);
+
                             // Walk up the parent chain in memory
                             const visited = new Set();
                             function isDescendantOfPlusHiddenOrFilteredNamePlus(pid) {
@@ -4647,13 +4691,13 @@ onReady(async function () {
                     }
                 }
                 updateAllQuoteLinksFiltered();
-            });
+            }, 50); // 50ms debounce
+            divPostsObs.addHandler(debouncedHandler);
         }
 
         // --- Initial setup ---
         hijackHideButtons();
         autoHideAll();
-
     }
 
     // --- Feature: Show all posts by ID ---
@@ -4994,11 +5038,11 @@ onReady(async function () {
             })
         );
 
-        // Cache for tab contents
+        // Cache tab contents
         const tabContentCache = {};
         const shortcutsTabCache = { node: null };
 
-        // Create tabs with caching
+        // Create tabs
         const tabs = {
             site: {
                 label: "Site",
