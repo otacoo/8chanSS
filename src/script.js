@@ -205,7 +205,44 @@ onReady(async function () {
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
-            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true }
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
+            _miscelIDTitle: { type: "title", label: ":: IDs" },
+            _miscelSection2: { type: "separator" },
+            highlightNewIds: {
+                label: "Highlight New IDs",
+                default: false,
+                subOptions: {
+                    idHlStyle: {
+                        label: "Highlight Style",
+                        type: "select",
+                        default: "moetext",
+                        options: [
+                            { value: "moetext", label: "Moe" },
+                            { value: "glow", label: "Glow" },
+                            { value: "dotted", label: "Border" }
+                        ]
+                    }
+                }
+            },
+            alwaysShowIdCount: { label: "Always show ID post count", default: false },
+            enableIdFilters: {
+                label: "Show all posts by ID when ID is clicked",
+                type: "checkbox",
+                default: true,
+                subOptions: {
+                    idViewMode: {
+                        label: "View Mode",
+                        type: "select",
+                        default: "showPostsOfIdOnly",
+                        options: [
+                            { value: "showPostsOfIdOnly", label: "Only ID's posts" },
+                            { value: "showIdLinksOnly", label: "Floating list" },
+                            { value: "showIdLinksVertical", label: "Vertical list" }
+                        ]
+                    }
+                }
+            },
+            enableIdToggle: { label: "Add menu entry to toggle IDs as Yours", type: "checkbox", default: false }
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
@@ -309,44 +346,7 @@ onReady(async function () {
                     }
                 }
             },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
-            _miscelIDTitle: { type: "title", label: ":: IDs" },
-            _miscelSection2: { type: "separator" },
-            highlightNewIds: {
-                label: "Highlight New IDs",
-                default: false,
-                subOptions: {
-                    idHlStyle: {
-                        label: "Highlight Style",
-                        type: "select",
-                        default: "moetext",
-                        options: [
-                            { value: "moetext", label: "Moe" },
-                            { value: "glow", label: "Glow" },
-                            { value: "dotted", label: "Border" }
-                        ]
-                    }
-                }
-            },
-            alwaysShowIdCount: { label: "Always show ID post count", default: false },
-            enableIdFilters: {
-                label: "Show all posts by ID when ID is clicked",
-                type: "checkbox",
-                default: true,
-                subOptions: {
-                    idViewMode: {
-                        label: "View Mode",
-                        type: "select",
-                        default: "showPostsOfIdOnly",
-                        options: [
-                            { value: "showPostsOfIdOnly", label: "Only ID's posts" },
-                            { value: "showIdLinksOnly", label: "Floating list" },
-                            { value: "showIdLinksVertical", label: "Vertical list" }
-                        ]
-                    }
-                }
-            },
-            enableIdToggle: { label: "Add menu entry to toggle IDs as Yours", type: "checkbox", default: false }
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, }
         }
     };
 
@@ -3897,50 +3897,50 @@ onReady(async function () {
 
         // --- Hide/unhide by ID (simple/plus/recursive) ---
         async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
-        const postIdsWithId = new Set();
-        if (!/^[a-z0-9]+$/i.test(id)) return;
-        document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
-        if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-        const inner = getInnerPostElem(cell);
-        const cellThreadId = getThreadIdFromInnerPost(inner);
-        const idElem = cell.querySelector('.labelId');
-        const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
-        if (
-        cellThreadId === threadId &&
-        cellId &&
-        cellId === id
-        ) {
-        const postId = getPostId(cell);
-        postIdsWithId.add(postId);
-        if (hide) {
-        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'filteredIDPlus' : 'filteredID');
-        } else {
-        unhidePostCell(cell, boardUri, postId);
-        }
-        }
-        });
-        
-        if (plus && postIdsWithId.size > 0) {
-        const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
-        let toHide = getDirectChildren(postIdsWithId);
-        if (recursiveHide) {
-        const initial = new Set([...postIdsWithId, ...toHide]);
-        toHide = getAllDescendants(initial);
-        for (const pid of postIdsWithId) toHide.delete(pid);
-        }
-        document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-        if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-        const pid = getPostId(cell);
-        if (toHide.has(pid)) {
-        if (hide) {
-        hidePostCellWithStub(cell, getBoardUri(cell), pid, null, 'filteredIDPlus');
-        } else {
-        unhidePostCell(cell, getBoardUri(cell), pid);
-        }
-        }
-        });
-        }
-        if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
+            const postIdsWithId = new Set();
+            if (!/^[a-z0-9]+$/i.test(id)) return;
+            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                const inner = getInnerPostElem(cell);
+                const cellThreadId = getThreadIdFromInnerPost(inner);
+                const idElem = cell.querySelector('.labelId');
+                const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+                if (
+                    cellThreadId === threadId &&
+                    cellId &&
+                    cellId === id
+                ) {
+                    const postId = getPostId(cell);
+                    postIdsWithId.add(postId);
+                    if (hide) {
+                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'filteredIDPlus' : 'filteredID');
+                    } else {
+                        unhidePostCell(cell, boardUri, postId);
+                    }
+                }
+            });
+
+            if (plus && postIdsWithId.size > 0) {
+                const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
+                let toHide = getDirectChildren(postIdsWithId);
+                if (recursiveHide) {
+                    const initial = new Set([...postIdsWithId, ...toHide]);
+                    toHide = getAllDescendants(initial);
+                    for (const pid of postIdsWithId) toHide.delete(pid);
+                }
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                    const pid = getPostId(cell);
+                    if (toHide.has(pid)) {
+                        if (hide) {
+                            hidePostCellWithStub(cell, getBoardUri(cell), pid, null, 'filteredIDPlus');
+                        } else {
+                            unhidePostCell(cell, getBoardUri(cell), pid);
+                        }
+                    }
+                });
+            }
+            if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
         }
 
         // --- Hide/unhide by name (simple/plus/recursive) ---
