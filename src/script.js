@@ -1355,8 +1355,13 @@ onReady(async function () {
             const thumbnailSrc = thumbNode.getAttribute("src");
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
             const href = parentA ? parentA.getAttribute("href") : "";
-            const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
-            const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
+            // Try to get width/height from data attributes, else fallback to image's natural size
+            let fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
+            let fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
+            if ((!fileWidth || !fileHeight) && thumbNode.naturalWidth && thumbNode.naturalHeight) {
+                fileWidth = thumbNode.naturalWidth;
+                fileHeight = thumbNode.naturalHeight;
+            }
 
             // Helper: does a string have an extension?
             function hasExtension(str) {
@@ -1627,18 +1632,18 @@ onReady(async function () {
 
         // --- Attach listeners to thumbnails and audio links ---
         function attachThumbListeners(root = document) {
-            // Attach to all a.linkThumb > img and a.imgLink > img in root
-            root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
+            // Attach to all descendant images inside a.linkThumb or a.imgLink
+            root.querySelectorAll("a.linkThumb img, a.imgLink img").forEach(thumb => {
                 if (!thumb._fullImgHoverBound) {
                     thumb.addEventListener("mouseenter", onThumbEnter);
                     thumb._fullImgHoverBound = true;
                 }
             });
-            // If root itself is such an img, attach as well
+            // If root itself is an img inside a link, attach as well
             if (
                 root.tagName === "IMG" &&
                 root.parentElement &&
-                (root.parentElement.matches("a.linkThumb") || root.parentElement.matches("a.imgLink")) &&
+                (root.parentElement.closest("a.linkThumb") || root.parentElement.closest("a.imgLink")) &&
                 !root._fullImgHoverBound
             ) {
                 root.addEventListener("mouseenter", onThumbEnter);
