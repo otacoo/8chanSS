@@ -1,3 +1,21 @@
+## v1.53.0
+*2025-06-07*
+
+- **New Feature:** Show a filter list in the menu to remove hiding filters
+- ID post count will now work for OP and inline posts
+- Refactor "plus" hiding options and recursive hiding, should no longer hide random innocent posts (might still be buggy however...)
+- Move options for IDs to Thread tab
+- Adjust style for vertical ID list
+- Prevent posts from being marked when an ID is clicked (floating lists only)
+- Improved Sauce links
+- Fix for small images inside nested posts not being hoverable
+- Fir for small videos not playing on hover if they were spoilered
+- Fix for small videos having broken spoilers
+- Fix for audio files with generic thumbs not being playable on hover
+
+**PR by @KillAllBugsEatAllPotatos:**
+- Added toggle function to list post history by id in a vertical list
+
 ### v1.52.1 (Patch)
 *2025-06-04*
 
