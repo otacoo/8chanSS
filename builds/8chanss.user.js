@@ -1,5 +1,28 @@
-////////// HELPERS ///////////////////////
-// DOM onReady Helper
+// ==UserScript==
+// @name         8chanSS
+// @version      1.52.1
+// @namespace    8chanss
+// @description  A userscript to add functionality to 8chan.
+// @author       otakudude
+// @minGMVer     4.3
+// @minFFVer     121
+// @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
+// @match        *://8chan.moe/*
+// @match        *://8chan.se/*
+// @exclude      *://8chan.moe/login.html
+// @exclude      *://8chan.se/login.html
+// @grant        GM.getValue
+// @grant        GM.setValue
+// @grant        GM.deleteValue
+// @grant        GM.listValues
+// @grant        GM.xmlHttpRequest
+// @connect      youtube.com
+// @connect      i.ytimg.com
+// @run-at       document-start
+// @updateURL    https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.meta.js
+// @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
+// @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAZlBMVEUAAABdlloAhl758AH58AH58AcAhl758ADj4CYAh14AhV4AhV0Ahl748AcChl4Chl0Ab2H58AIAhl758AD58AAAhl757wL48AD47wL78QL47wcAh1748AF3oFfs5yEAh1/68QDz7BM5qSu8AAAAH3RSTlMA/lg/OYtM8g/onXtoXzAaCdzBsIFzczMeaCXXyrmp9ddA3QAAANpJREFUSMft0tkOgjAQheFjtVCQVVxwnfr+L+kWM5FOC73TxP/6fBedFJwpyx5CtSpqSHXWpns4qYxo1cDtkNp7GoOW9KgSwM4+09KeEhmw4H0IuGJDAbCw79a8nwJYFDQCuO1gT8oLWCiKAXavKA5cZ78I5n/wBx7wfb+1TwOggpD2gxxSpvWBrIbY3AcUPK1lkMNbJ4FV4wd964KsQqBF6oAEwcoh2GAk/QlyjNYx4AeHMicGxxoTOrRvIB5IPtULJJhY+QIFJrd9gCUi0tdZjqgu5yYOGAO5G/kyc3TkciPeAAAAAElFTkSuQmCC
+// ==/UserScript==
 function onReady(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
@@ -7,8 +30,6 @@ function onReady(fn) {
         fn();
     }
 }
-// Debouncer
-// Usage: debounce(fn, delay);
 const debounce = (fn, delay) => {
     let timeout;
     return (...args) => {
@@ -16,7 +37,6 @@ const debounce = (fn, delay) => {
         timeout = setTimeout(() => fn.apply(this, args), delay);
     };
 };
-// Observer registry helper
 const observerRegistry = {};
 
 function observeSelector(selector, options = { childList: true, subtree: false }) {
@@ -37,8 +57,6 @@ function observeSelector(selector, options = { childList: true, subtree: false }
     });
 
     observer.observe(node, options);
-
-    // Disconnect on unload
     window.addEventListener('beforeunload', () => observer.disconnect());
 
     observerRegistry[selector] = {
@@ -49,8 +67,6 @@ function observeSelector(selector, options = { childList: true, subtree: false }
     };
     return observerRegistry[selector];
 }
-// URL-based location helper (catalog, thread, index) 
-// Usage: e.g. window.pageType.isCatalog, or to get the raw values: window.pageType.host or pageType.path
 window.pageType = (() => {
     const path = window.location.pathname.toLowerCase();
     const currentHost = window.location.hostname.toLowerCase();
@@ -65,7 +81,6 @@ window.pageType = (() => {
         path: path
     };
 })();
-///////// CSS Shim Inject ASAP ////////////
 (function injectCssAsap() {
     function doInject() {
         if (document.getElementById('8chSShim')) return;
@@ -75,25 +90,19 @@ window.pageType = (() => {
         }
         const style = document.createElement('style');
         style.id = '8chSShim';
-        style.textContent = "<%= grunt.file.read('tmp/shim.min.css').replace(/\\(^\")/g, '') %>";
+        style.textContent = "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:hidden}:not(.is-catalog) body{margin:0}.innerUtility.top{margin-top:2em;background:0 0!important;color:var(--link-color)!important}.innerUtility.top a{color:var(--link-color)!important}";
         document.head.appendChild(style);
     }
     doInject();
 })();
-//////// START OF THE SCRIPT ////////////////////
 onReady(async function () {
     "use strict";
-    //////// GLOBAL SELECTORS ///////////////////////
     const divThreads = document.getElementById('divThreads');
     const innerOP = document.querySelector('.innerOP');
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-
-    // Version
-    const VERSION = "<%= version %>";
-
-    /////// Default Settings ////////////////////////
+    const VERSION = "1.52.1";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -330,7 +339,7 @@ onReady(async function () {
             },
             alwaysShowIdCount: { label: "Always show post count for IDs", default: false },
             enableIdFilters: {
-                label: "Show posts by ID when ID is clicked",
+                label: "Show all posts by ID when ID is clicked",
                 type: "checkbox",
                 default: true,
                 subOptions: {
@@ -339,7 +348,7 @@ onReady(async function () {
                         type: "select",
                         default: "showPostsOfIdOnly",
                         options: [
-                            { value: "showPostsOfIdOnly", label: "Show only ID posts in thread" },
+                            { value: "showPostsOfIdOnly", label: "Only ID's posts" },
                             { value: "showIdLinksOnly", label: "Floating list" },
                             { value: "showIdLinksVertical", label: "Vertical list" }
                         ]
@@ -350,9 +359,7 @@ onReady(async function () {
         }
     };
 
-    Object.freeze(scriptSettings); // Prevent accidental mutation of original settings
-
-    // Flatten settings for backward compatibility with existing functions
+    Object.freeze(scriptSettings); 
     function flattenSettings() {
         const result = {};
         Object.keys(scriptSettings).forEach((category) => {
@@ -370,8 +377,6 @@ onReady(async function () {
         return Object.freeze(result);
     }
     let flatSettings = flattenSettings();
-
-    // --- GM storage wrappers ---
     async function getSetting(key) {
         if (!flatSettings[key]) {
             console.warn(`Setting key not found: ${key}`);
@@ -399,15 +404,12 @@ onReady(async function () {
     }
 
     async function setSetting(key, value) {
-        // Always store as string for consistency
         try {
             await GM.setValue("8chanSS_" + key, String(value));
         } catch (err) {
             console.error(`Failed to set setting for key ${key}:`, err);
         }
     }
-
-    // --- Root CSS Class Toggles ---
     (async function featureCssClassToggles() {
         document.documentElement.classList.add("8chanSS");
         const enableSidebar = await getSetting("enableSidebar");
@@ -415,7 +417,6 @@ onReady(async function () {
 
         const classToggles = {
             enableFitReplies: "fit-replies",
-            // enableSidebar handled below
             enableSidebar_leftSidebar: "ss-leftsidebar",
             enableStickyQR: "sticky-qr",
             fadeQuickReply: "fade-qr",
@@ -435,15 +436,11 @@ onReady(async function () {
             opBackground: "op-background",
             blurSpoilers: "ss-blur-spoilers"
         };
-
-        // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
         if (enableSidebar && !enableSidebar_leftSidebar) {
             document.documentElement.classList.add("ss-sidebar");
         } else {
             document.documentElement.classList.remove("ss-sidebar");
         }
-
-        // All other toggles
         const settingKeys = Object.keys(classToggles);
         const settingValues = await Promise.all(settingKeys.map(getSetting));
         settingKeys.forEach((key, i) => {
@@ -454,8 +451,6 @@ onReady(async function () {
                 document.documentElement.classList.remove(className);
             }
         });
-
-        // URL-based class toggling
         if (window.pageType?.isCatalog) {
             document.documentElement.classList.add("is-catalog");
         } else {
@@ -472,8 +467,6 @@ onReady(async function () {
             document.documentElement.classList.remove("is-index");
         }
     })();
-
-    // Sidebar Right/Left
     (async function featureSidebar() {
         const enableSidebar = await getSetting("enableSidebar");
         const enableSidebar_leftSidebar = await getSetting("enableSidebar_leftSidebar");
@@ -492,24 +485,17 @@ onReady(async function () {
             mainPanel.style.marginLeft = "0";
         }
     })();
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // Custom CSS injection
     (function injectCustomCss() {
-        // Only inject if not already present
         if (document.getElementById('8chSS')) return;
 
         let css = "";
-        // Always inject site CSS for 8chan domains
         if (window.pageType?.is8chan) {
-            css += "<%= grunt.file.read('tmp/site.min.css').replace(/\\(^\")/g, '') %>";
+            css += "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:visible}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}:root.is-thread footer{visibility:hidden;height:0}:root.op-background .opCell>.innerOP{padding-top:.25em;width:100%;background:var(--contrast-color);border:1px solid var(--horizon-sep-color);border-top-width:0;border-left-width:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-yous .innerOP:has(> .opHead.title > .youName),:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),:root.highlight-yous .yourPost{border-left:dashed #68b723 2px!important}:root.highlight-yous .innerPost:has(>.divMessage>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>:not(div)>.you),:root.highlight-yous .quotesYou{border-left:solid var(--subject-color) 2px!important}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"]{filter:blur(5px)!important;transition:filter .3s ease}:not(#media-viewer)>.imgExpanded,:not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}";
         }
-        // Inject CSS based on page type
         if (window.pageType?.isThread) {
-            css += "<%= grunt.file.read('tmp/thread.min.css').replace(/\\(^\")/g, '') %>";
+            css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto -3px auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}.ss-idlinks-floating{position:absolute;background:var(--background-color);color:var(--text-color);border:1px solid var(--navbar-text-color);padding:8px 15px 10px 10px;box-shadow:0 2px 12px rgba(0,0,0,.25);max-height:60vh;overflow-y:auto;font-size:14px;max-width:56vw;z-index:990}.ss-idlinks-floating .innerPost{margin-bottom:2px}";
         } else if (window.pageType?.isCatalog) {
-            css += "<%= grunt.file.read('tmp/catalog.min.css').replace(/\\(^\")/g, '') %>";
+            css += "#postingForm{margin:2em auto}#divTools>div:nth-child(5),#divTools>div:nth-child(6){float:left!important;margin-top:9px!important;margin-right:8px}";
         }
 
         if (!css) return;
@@ -519,60 +505,48 @@ onReady(async function () {
         style.textContent = css;
         document.head.appendChild(style);
     })();
-
-    ////// Favicon Manager /////////////////////////////////////////////////////////////////////////////////////////////////////////
     const faviconManager = (() => {
-        // Map available styles
         const STYLES = [
             "default",
             "eight", "eight_dark",
             "pixel", "pixel_alt"
         ];
         const STATES = ["base", "unread", "notif"];
-
-        // Favicons
         const FAVICON_DATA = {
             default: {
-                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_base.png', {encoding: 'base64'}) %>",
-                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_unread.png', {encoding: 'base64'}) %>",
-                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/default_notif.png', {encoding: 'base64'}) %>",
+                base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAq1BMVEUAAACKtMV2lqSE1PWZ1Oyr1eaqzNp7udPO7vuc3ffh8vmG0/OB0fKv3e+N0e3B4e693+56x+bb6e6YzeOgydl7wd3L3OOwytS35fjZ8fuQ2feB1Pbo9vyy5Pjm9Pmp4PW85fbW7feO1/S55Pbk8/mq3/TY7fbn9Pnf7/bQ6vWS1fDa7fWH0vCb0+rY6/Pc7POBzezA4/GNz+vJ4+662ebH1958wNzD6vqm4Ph4HvJJAAAAN3RSTlMADwXliF4dGP7949HLn5mUhWllVCglJBf6+fn5+Pjo4N3a2NfV1MzIxb28rayinJKOioB7UzEt0Y3/cQAAAIBJREFUGNOVjsUOhVAMRG97BXcePHd3Q/7/y0hhQWDHrDpJT86wIQHo1t/xHGLb8aNvzHnYFC2KFHh+mu1PNTW6GuVB0vlaJvTsTl2xWjgxw5upCOB3ZLEzXvve5IlE8DdJ5K7QL0nts61cEw9Q8p82kmDGt4ZgbTCwrS/0Rw9IBRlvB34XFuslAAAAAElFTkSuQmCC",
+                unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAolBMVEUAAACG2vyC1/iH1vaB1/mC1PSC2PuC2fuD2fyE2fyG3P2I3Pqn3vWB1PWO1fKD2fuE2vqE2vyH3Puk4PaK1vSg2/OP1vJ/0fGB0/SF1vaC1faB1vmF2vyy5PiP2PbF6vnK6vjU7/m/5/ao3fKF0/K55PaW2PKK1PGA0/SP2PWA1/mC2fuE2fyD2fyx4vaT1e+S1/PX8PrO7vqb3fjh9Pu25fiNN6jgAAAAMXRSTlMAHK7Kmf6CYlc/EAnrxOt4OSwV/f3y8OrQv7afI/7+/f379/Pz8OLhvLmRb1pK+/PUqRXqEQAAALhJREFUGNN1j8cSgkAAQ7c3dykiSLFTpaiA/v+vCXrAi7klM5nkgUWrFfjVWgrhqMVDnkQREeuPURBCEevjSaNurrmcsYbo4dQ/NYMA7GxTlhinGj/OZ+QAxc1m9DwrRHad91cJXJIdgsDb+5igyxzImGYowf5r76d9TlwgK7qtbRRat+NwwVwBB1EaGutucFFE9m4aYVu6OYwBaRjj7kzQoSmxYjG9U1+IllQm4XDBUI5o5QTxB/wNI78Nh2SdMuEAAAAASUVORK5CYII=",
+                notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA4VBMVEUAAACE3vuD1veC1veB2PqB2fuD2/2H2/2I3PqP1vOB1faE2vyN1/WD1PSB2PuE2vzQ7Pak4PaB0/OG0/J/0fGn3vSB1vmC2PqE2vmG2vq54vKf3fWrLzam4PaO1fGD1faP2PWE2fyD2fyD2fzW8PrD5PG11+WXtcW55PVvbnqqOj+XmKaT1e+x3e1+obS4AACBjqGH0/F8vNh5hpuQNj+P2PZyX2+C1/SKEBOC2ftjKjApAAAdAAAJAACD1fXkAADg9Pu05/qb3fi1vsefoq+xhIildHu4PECpMjSkLDDPAQHtACoGAAAAPnRSTlMAEsOumWJVGwnuuT39zIMs/f388erpn3k4I/Tz8/Lmz7laSkH++/v7+vr5+PPv7ezk4M7OzcSdkZFwWTIVCIgxa4YAAADDSURBVBjTdY/VrgJBGIP/cWZm3XE77oLLLm7v/0BAgMANvWuapv3gqlwOboU05wm6esEijClHp1AIwVX49BiSxrFmM8vq0/J8s5yElgDIx/i3Yprl9+zNcUgCiGFj5rqV6n9W+pzUmmBT35DSnRZ/slLhoaZBq9QnkVmcLrK1U6A2NFUadGNSlc/b1UubIdDE80wsP/Df6xeO84cRK0hTYyZpZ9di9pGgQQLP8BUffPfOP+tU4YiJ8XB0wUp4XR/CO+B76XMRs7uqu4cAAAAASUVORK5CYII=",
             },
             eight: {
-                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_base.png', {encoding: 'base64'}) %>",
-                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_unread.png', {encoding: 'base64'}) %>",
-                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_notif.png', {encoding: 'base64'}) %>",
+                base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAxV2oFSGADP1Y1Wm0zWW1EY3Q1VmgpU2g2VWYkUGUyUWIiTWEAKUcFSmErU2c5W24zVWghUWckTmIKSmEZTmUxUmMwUWP1+fxcc4HL6f7j9f/g7PWi1fWWprFJZXUeSl7Z7v6Myu7d4OOjt8SKrcOSrsFMa30/YnT////C5v/Q6PmHz/nt7/Gw1e+bzu+Dx+7A1+d7wOa+ztqtx9m5v8Sds8KDn7J0lqqJl6GEkZtJfZlRb4E5Zn1Ybnw0YHc3V2kPSWAAQVqY0vZpstqMu9mIutjO0tV5rcyru8dfm7xTmLthh51TfpcZngh2AAAAGHRSTlMA1cx8MBoH8fHm5s3Kv5qUiFhYUFDxmpptBtYcAAAAzUlEQVQY0zWOVRKDQBBEB4+77OLB4+5B43b/64QU8P76VddMQwpTyWGFbEAGXTjoaLxWqmlmSRnF9HUl7bSwKO49fO+vyURQsvCMiDZGY+Xfb1JlQ9iENcJDCMf3SqetOe8tgzDaIz0HTH43GfD8sLfcGCI6VKD7laamtYqNIIhygQHudj6qarDi54aMSRrA1jSfqKkWb5WpFhv/cBYzlyNUc7ClkgnF1+hh2x9pcmomou5cRtpUknYlFhKqznsxux7zNGTUi77LdZg0/QBWixhGoJiKLQAAAABJRU5ErkJggg==",
+                unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAtFBMVEUAAAAAYYUAYYQAXIAAW38AYYMAY4YAXYAAYIQAZIcAY4Udc5MAWX8BZogldJQAWn6L2fIRa4xy0faB2/xt0vqI3Ph+0vBdxO1Wp8c/i6l41fhPwO1Ivu1Lo8dEoMYegaYYcZMEa46X5f1NxvZfyfNZyPOI1OxqwuV3w947rttputpdttldq8porscrmcNRnbtEmLpOmLU9krQFb5MHZIVIueY6tuaAyeJOstp1vNRCp9Auh6qJsLovAAAADnRSTlMAWfLRzujVm5EzHAqLiBrNc7IAAADDSURBVBjTNY9XEsIwEEPd0mFtp4d0eocU+v3vRRic9yeNZldCCtsgIBlGI5aWbMX6JE2lHdoEgRDzh1QZDGGYALzmJ/Y3JhfvyHUCYi1/eWzS2Iv5VAchYLhH4ZpvZvue8yTYEmRrbeT7rjvbx8cwSAxklMuoKA6D43lho9mI7FYl5/3B3cQXoBZCkKW1PuWFn7MJdoYf9T3riM5z/6pasvPiXVWfKKrGknK3SNPVsqWO2mHK8y17lpqFRjCrO2LYSn0BV4wQhK3VgFcAAAAASUVORK5CYII=",
+                notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABEVBMVEUAAAAAW38AYoUAYoQAYYQAZYgAYYMAZIYAXoEBZom1AwbrAABGAAAALT4AAAAAYYRHAAAAAAAadJTeAAABZohHGymuAABFAACcAAAAAAAAAAAAUnIAZ4oAAAAQao2M2/Qic5Rw0/pKv+1EoscAXoD5AAB31fhfxO0egaYpdpUAa40AWX3/AgK/AAC6AABNAACX5f2B2/xr0fqH2/dNxvZy0fVfyfNZyPN80e+I1OxQv+x7xuA7rttmu9ldttlorsddqsdUpsZLocMrmcNEmLpPm7g+iqkFb5MZcJJYwu1IueY6tuZoweROstp1vNRdsdBCp9Bwt8xAk7U6kbRYnbEuh6oJZYWZdYM1RF0AKDwAHjhOZ3nrAAAAHnRSTlMA0FnyjRzo1psy/v785K2UiVwL+PLu6OPLyL6nm49luDk4AAAA4ElEQVQY0zWP5XLDMBAGT5YpnJRRkiHGOg0zc7lheP8HiTN29t/t7NzMByGCjBlBHFyIiNMWbfRIKryv0KRUojTfImHD2fX6lNm/+R4KBD8p9F0J27RBzj3Ho0FhoPOJw4Iy/x9i4+G30dH3UW+3vgFBXJlFRakY/ffsm3d8Admqfmhat2J0fJFLCIDbNcvVt13l7yyeAJjadCRe15RhPJaNJgHIlzrDkqsVx8/38TQAoFH5fz7fmKZzex27ewXgSLusNmvVJUrnvIeMn6TI6FP9scQIJB8zwRDkzLAsQMAJImsd3S869hIAAAAASUVORK5CYII=",
             },
             eight_dark: {
-                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_base.png', {encoding: 'base64'}) %>",
-                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_unread.png', {encoding: 'base64'}) %>",
-                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/eight_dark_notif.png', {encoding: 'base64'}) %>",
+                base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA2FBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAmKCkAAAADBAQAAAD1+fxMTEzM6v4vLy7i9f/E6P/v8PKMye2frbiFo7aNpLQ1P0b////Z7/+I0PrQ6Pmk1vab0/bi7PXe6fKfz+6w1O2Cxu15veS/1OPY2dq8ydOrwdKHtdK1traZqbSQmqF8kZ+QlJhshJSBhIZ7fH0+YnY9R09GREMOIiwfJivp+f/X7fyYzO3g4OBmrtTMzMt0pcKnsrpWjq1Ii6xUcIEyZX8ENUgYNkYAKD1NaNryAAAADnRSTlMAzPGY5tV8WFAwGge/iAmaI18AAADKSURBVBjTNY7XFoIwEEQ3CR1NQi/23rsC9q7//0fiAe7bzLlndyBHI5ibSIYCVdgMmTM1SZ51tGQplZOZOwpvt9YRv1SmKCukuXWjIubMMf++IpU8a0bLYuQwnt5Du4U/qI4opWs2xKAJq65tG/XDaOa12IYA2TY6fjA26tW91V4KGuBJ85XaY2PgzTlSAULX/YplGhhBSVL09Efc732wSH17IWUT0L12DcNnp7tTskJOzjX32GyskA4ZJHn0e5OtoEKBjOI3Jlqefl82Et7gg4sWAAAAAElFTkSuQmCC",
+                unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEAAADb3NxEQ0IAAAAAAABISEgAAAAAAAAlKCk9NzGurq6cnJwAAAD+/v73+Pi6u7tNTExGREMwLy7N6v61trY1QEfE6P/t7u+dzu6Mye2rwdKForaNpLTy+f/h9f/Z7//S6vuI0Pqk1vbg6/Sw1O2Cxu2+0uCHtdLKzM2qtbycqrV8kaCPl51shJV8f4I+YnYOIiwfJiud1PaY0vbo6Oh+vuR0vOPg4OBmrtS8ydN0pcLAwMBWjq1Ii6yjpaZUcIEyZX88R08ENUgYNkYAKD0sty6hAAAAFXRSTlMAzZjyWeUa1owv/Oe/roh8UAf26MtVcWhmAAAA10lEQVQY0zWP1ZLDMBRDr+04SbkLpjgMZeZ2mfn/f2ebqas3aTQaHTCyMVEaWXBWhW6rIg40Nv4CrTsdIfijNp22Go22nprzAJ2C1rq7YA5RItZlv92qL7tL5lI25+q4h75X+bT3zHQg5QcBm27GUeT3ewuPc8kw4N0wyYvM7089wSW1gcxuvxhjmZ+VQR0gTNM/x2WFX1zGPGgA7B8mv8RhebTCNa8JAOht8BKGn8k4rFXvrlwA6/A0SJOb4QY15et1+Rwf3u8nsx2tQMPQWmj/Q7BtOP8BG/MW/0ZJlAQAAAAASUVORK5CYII=",
+                notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABDlBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAQEAAAAAAAAAAAC2AQHrAAA4AAAAAAAAAABIAgIAAAAAAAAlKCneAABDAACuAABFAACcAAADBAQAAAAAAAC8AABNTE3+AQHN6v72+PmKo7QvLy5GAAD+/v/E6P+Myu6rwtLy+f/h9f/Z7//S6vuI0Pqk1vab0/bg6/Sfz+6w1O2Cxu2+0uHc3d2HtdLKzc61tracqrV8kaBshJV8f4I+YnY5R081QUkOIiwfJiv3AADt7u/r7e6YzO1+vuR0vONmrtS8ydN0pcKtucGnsrqQqLeCordWjq1Ii6yjqaqQmqGOk5i3hYhUcIEyZX8ENUgYNkZGREM1PEEAKD1ovUZyAAAAGnRSTlMAzfLlmliSGtYv/v77v66IfFAH+Ozo4suIXxNuy1MAAADcSURBVBjTNY9VjkJBFERvyxMcxud2Pxfc3cfdffa/ESA09VeVk0oOqBicSo9osEuCTbrO+cDTVd8j78Wi4wRdTzEF2WhMfmU/GJDtkH8rPaBJpXPhbfhCPjMsDVFn2A/k+o/MRm6nfIvppPh4pWCwcSsM7Ur53rcsgRz4tNZ8cmO70vHPLMEMoL36FyLGdrwZMgDzKPo3T9C1H9MpK5kFWFy3f6iJbjjiR34OAMhz9W7+99lszQ72U4c6gLa8qUaX9dqY5IQ4PgUAffly1e5NWQKyylYji2/KDeW5AobCG0Lco88iAAAAAElFTkSuQmCC",
             },
             pixel: {
-                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_base.png', {encoding: 'base64'}) %>",
-                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_unread.png', {encoding: 'base64'}) %>",
-                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_notif.png', {encoding: 'base64'}) %>",
+                base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEUAAAAAAAAAAABiam00WmxcZWlFTE4jQE1GTU8jQU4yV2g8QUIbNkE/WGRWYWY9WGUAAAAAAADg8vnY6fB5yOyA0fW95fi23fB+z/PQ4Od0weNoeYFWcoBSXmNFS00jP0wFxP2oAAAAEnRSTlMAIRHe3v3w8Nzc/ezs/u7u7EbfERAsAAAAcUlEQVQY05VP1wqAMAw0de82TYf7//9SOhBFELy3G1wuyQcYYw8OVVHBzYJUokzBW3VZg+MYFMhI0ThMMm9zlIXnVmmzbFy0iHtSkmq63mhtYuJQthO8X40OHSHR0DwO4UrsoAziDq84HudcO15P/MAJxpAGt0Xg7i0AAAAASUVORK5CYII=",
+                unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEUAAAAATHcAIGJii6I0gKFFepYjdJVGepYjdJUAXIFeiaEyf6A8dZIbcJJThZ8/f55WhZ89f58AY4YAM2ng8/p/0vbY6/R5zPC95vq23/TQ5O10xelolKxWj6tFepUjdJUJarSxAAAAFHRSTlMAIBHe3vDw3Nwj/f3s7P7+7u7sRkWW9w4AAAB4SURBVBjTlY/ZDoUwCERL3fcNSnsX/f+/tEpjNCYm8nZgMjOoh9FaXxiyJIPTCSKDJoL9lKc5bIx+U3iOmXjoP6asSzSJKjwTWfdrx6lGnFXKVDWds9a1oliImmns/s6Khygq/g69pAQPjiH0kBTPoc7R4/bEi1kBHCgHTIPhydUAAAAASUVORK5CYII=",
+                notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAAAV34AIDg0gKEkdJQjdJUUAAMAAEAyf6AbcJI7dZA/f55MAABAgaBEeZVljaVUhJ4AZIZpkKYAQmp5y/B+0fVrS0224PPf8vnP4uu85vqA0/fY6/NUIivtAABNHynjAAB0xelolKxWj6tNgZpFepUjdJVOTU9fREtAREvaAABiAADosgfnAAAAFHRSTlMAIBHe8NzcIP3s3v7x7u7e7uzeRqhOt1sAAACESURBVBjTlY9ZDoMwDERxCHvp6mASSKH7dv/71YWoAiEh4b83Ho3H3swIIUYchaswGqwgta1N4ccQyABgr4tjoTfA7KPCfKtrFsp63bGqDJ2vloXy5klUcZKRMfRsO8e9Uslhl12IXp8HZ/SOGE+5bN4NX3EZ6IPr0SvMrs6/x+SJBfMF/doItAPX5RIAAAAASUVORK5CYII=",
             },
             pixel_alt: {
-                base: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_base.png', {encoding: 'base64'}) %>",
-                unread: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_unread.png', {encoding: 'base64'}) %>",
-                notif: "data:image/png;base64,<%= grunt.file.read('src/img/fav/pixel_alt_notif.png', {encoding: 'base64'}) %>",
+                base: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAY1BMVEUAAAAATHcAIGJii6I0gKFFepYjdJVGepYjdJUAXIFeiaEyf6A8dZIbcJJThZ8/f55WhZ89f58AY4YAQmoAJGjg8/p/0vbY6/R5zPC95vq23/TQ5O10xelolKxWj6tFepUjdJUOfB3LAAAAFXRSTlMAIBHe3vDw3Nwj/f3s7P7+7u7sRkaqQLDYAAAAeUlEQVQY05WP6Q6EMAiES73vYxdKu4e+/1NapTEaExP598FkZlA3o7U+MWRJBocTRAZNBNspT3NYGf2m8Bwz8dB/TFmXaBJVeCay7teO7xpxUilT1XTOWteKYiZqXmP3d1Y8RFHxd+glJXhwDKGHpHgOdfYelycezAI9gweHH0yPzQAAAABJRU5ErkJggg==",
+                unread: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAAjR1sKChFJeZBBa4FAZ3tCbIEVFRYABA9IeI9OaXlReI1MTExSeo9WcYBxh5RjfYw4WGt0ipcdKTh7y+6A0vdqbm/f8fi85fl+0PTY6vK23fDt7OzP4OdVWFlOUlS44PPj4+NZdITR4+t3xefa2tpyj55jiZ1Ba4BgZ2tiYF9ATFKjqzLCAAAAFHRSTlMAIBHe8O3c3CD93v7x7u7e7uzeRvBdAgMAAACFSURBVBjTlY9ZDoMwDERxIKylqwOBlATo3t7/fjVpVIGQkPDfG4/GY29hGGMTjqNNFI9WkOpOpzAwhEEIcGyKc9HsgNhHgfn+UpNQ1lvLlZDtvdcklL0XoEh4pqRUr846nqLip0P2aNXnbSjj50jwmnNzM3TFZaAProdVBnZ1/j1mT6yYLxHCCNKMC/PDAAAAAElFTkSuQmCC",
+                notif: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAdVBMVEUAAAAkSFwKChFAaX9JeZAABBhCbIEVAABIeI9yiJVObnxReI1MAABSeo9WcYBjfYw4WGsdKTiA0vd7y+5rS0233/JSHiPf8vnP4um85fnY6/LtAABZdobjAAB3xedyj55jiZ1Ba4BOTU9gREtAREvaAABiAADFYUIqAAAAEnRSTlMAIRHv3iDc3P3e3v7x7u7u7EYDRb2ZAAAAgklEQVQY05WPWQ7CMAxE67jpSlnsOk1Kyw73PyJJFCEQUqX6741H43G2MEqpH9blptRfK2jMbBoIDAUWoGvbH3tbg+ecibudHb0wjNvIRE7Ok/HCMGXIVGErzsl9jo4rER727UXk8bqFjOio+NSheYYrKYNzSD2iEjjV+fT4e2LFvAFuzge5hY5wYgAAAABJRU5ErkJggg==",
             }
         };
-
-        // Internal state tracking
         let currentStyle = "default";
         let currentState = "base";
         let cachedUserStyle = null;
-
-        // Remove all favicon links from <head>
         function removeFavicons() {
             const head = document.head;
             if (!head) return;
-            // Only remove if present
             head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(link => link.remove());
         }
-
-        // Insert favicon link into <head>
         function insertFavicon(href) {
             const head = document.head;
             if (!head) return;
@@ -582,8 +556,6 @@ onReady(async function () {
             link.href = href;
             head.appendChild(link);
         }
-
-        // Get user-selected style from settings ('faviconStyle', fallback: "default")
         async function getUserFaviconStyle() {
             if (cachedUserStyle) return cachedUserStyle;
             let style = "default";
@@ -594,36 +566,28 @@ onReady(async function () {
             cachedUserStyle = style;
             return style;
         }
-
-        // Only update favicon if style/state changed
         async function setFaviconStyle(style, state = "base") {
             if (!STYLES.includes(style)) style = "default";
             if (!STATES.includes(state)) state = "base";
-            if (currentStyle === style && currentState === state) return; // No change
+            if (currentStyle === style && currentState === state) return; 
 
             const url = (FAVICON_DATA?.[style]?.[state]) || FAVICON_DATA.default.base;
             removeFavicons();
             insertFavicon(url);
-            // Track state
             currentStyle = style;
             currentState = state;
-            // Dispatch event for listeners
             document.dispatchEvent(new CustomEvent("faviconStateChanged", {
                 detail: { style, state }
             }));
         }
-
-        // Set favicon based on state ("base", "unread", "notif") and user style
         async function setFavicon(state = "base") {
             if (!STATES.includes(state)) state = "base";
             const style = await getUserFaviconStyle();
             await setFaviconStyle(style, state);
         }
-        // Reset to base state (default)
         async function resetFavicon() {
             await setFavicon("base");
         }
-        // Getter for current state (for state managers)
         function getCurrentFaviconState() {
             return { style: currentStyle, state: currentState };
         }
@@ -637,11 +601,6 @@ onReady(async function () {
             STATES
         };
     })();
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Feature Initialization based on Settings ---
-    // Map all the settings to their functions
     const featureMap = [
         { key: "enableScrollSave", fn: featureSaveScroll },
         { key: "watchThreadOnReply", fn: featureWatchThreadOnReply },
@@ -653,7 +612,7 @@ onReady(async function () {
         { key: "scrollToBottom", fn: preventFooterScrollIntoView },
         { key: "enableThreadHiding", fn: featureCatalogHiding },
         { key: "switchTimeFormat", fn: featureLabelCreated12h },
-        { key: "enableIdFilters", fn: enableIdFiltering },
+        { key: "enableIdFilters", fn: featureIdFiltering },
         { key: "enhanceYoutube", fn: enhanceYouTubeLinks },
         { key: "threadStatsInHeader", fn: threadInfoHeader },
         { key: "enableHashNav", fn: hashNavigation },
@@ -670,7 +629,6 @@ onReady(async function () {
         { key: "enableHidingMenu", fn: featureCustomPostHideMenu },
         { key: "alwaysShowIdCount", fn: featureShowIDCount },
     ];
-    // Enable settings
     for (const { key, fn } of featureMap) {
         try {
             if (await getSetting(key)) {
@@ -680,7 +638,6 @@ onReady(async function () {
             console.error(`${fn.name || 'Feature'} failed:`, e);
         }
     }
-    // Truncate filenames
     if (await getSetting("truncFilenames")) {
         try {
             const filenameLength = await getSetting("truncFilenames_customTrunc");
@@ -689,19 +646,16 @@ onReady(async function () {
             console.error("truncateFilenames failed:", e);
         }
     }
-    // Custom Favicon
     async function enableFavicon() {
         try {
             const customFaviconEnabled = await getSetting("customFavicon");
             const selectedStyle = await getSetting("customFavicon_faviconStyle");
 
             if (customFaviconEnabled) {
-                // Make sure selectedStyle is a non-empty string
                 if (selectedStyle && typeof selectedStyle === 'string') {
                     await faviconManager.setFaviconStyle(selectedStyle);
                 } else {
                     console.warn("Invalid favicon style:", selectedStyle);
-                    // Fallback to a known style
                     await faviconManager.setFaviconStyle("eight_dark");
                 }
             } else {
@@ -711,8 +665,6 @@ onReady(async function () {
             console.error("Error updating favicon:", e);
         }
     }
-
-    // Image Hover - Check if we should enable hover based on the current page
     let imageHoverEnabled = false;
     try {
         if (window.pageType?.isCatalog) {
@@ -727,24 +679,15 @@ onReady(async function () {
     } catch (e) {
         console.error("featureImageHover failed:", e);
     }
-
-    //////// NOTIFICATION HANDLER ///////////////////
     (function () {
-        // Strip all tags except <a>, <b>, <i>, <u>, <strong>, <em>
-        // Only allows href, target, rel on <a>
         function sanitizeToastHTML(html) {
-            // Remove all tags except allowed ones
             html = html.replace(/<(\/?)(?!a\b|b\b|i\b|u\b|strong\b|em\b)[^>]*>/gi, '');
-            // Remove all attributes from allowed tags except for <a>
             html = html.replace(/<(b|i|u|strong|em)[^>]*>/gi, '<$1>');
-
-            // For <a>, only allow href, target, rel attributes
             html = html.replace(/<a\s+([^>]+)>/gi, function (match, attrs) {
                 let allowed = '';
                 attrs.replace(/(\w+)\s*=\s*(['"])(.*?)\2/gi, function (_, name, q, value) {
                     name = name.toLowerCase();
                     if (['href', 'target', 'rel'].includes(name)) {
-                        // Prevent javascript: and data: URIs in href
                         if (name === 'href' && (/^\s*javascript:/i.test(value) || /^\s*data:/i.test(value))) return;
                         allowed += ` ${name}=${q}${value}${q}`;
                     }
@@ -758,7 +701,6 @@ onReady(async function () {
         const script = document.createElement('script');
         script.textContent = '(' + function (sanitizeToastHTML) {
             window.showGlobalToast = function (htmlMessage, color = "black", duration = 1200) {
-                // Prevent multiple notifications at once
                 if (document.querySelector('.global-toast-notification')) {
                     return;
                 }
@@ -787,8 +729,6 @@ onReady(async function () {
                 toast.style.transition = "opacity 0.3s";
                 toast.style.pointerEvents = "auto";
                 toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.18)";
-
-                // Add close button
                 let closeBtn = document.createElement("span");
                 closeBtn.textContent = "✕";
                 closeBtn.style.marginLeft = "10px";
@@ -825,8 +765,6 @@ onReady(async function () {
         } + ')(' + sanitizeToastHTML.toString() + ');';
         document.documentElement.appendChild(script);
         script.remove();
-
-        // Helper for userscript context to call the global notification handler
         window.callPageToast = function (msg, color = 'black', duration = 1200) {
             const script = document.createElement('script');
             script.textContent = `window.showGlobalToast && window.showGlobalToast(${JSON.stringify(msg)}, ${JSON.stringify(color)}, ${duration});`;
@@ -834,25 +772,17 @@ onReady(async function () {
             script.remove();
         };
     })();
-
-    //////////// FEATURES ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Feature: Save Scroll Position ---
     async function featureSaveScroll() {
         if (!window.pageType?.isThread) return;
 
         const STORAGE_KEY = "8chanSS_scrollPositions";
         const UNREAD_LINE_ID = "unread-line";
         const MAX_THREADS = 200;
-
-        // Helper functions
-        // Get board name and thread number
         function getBoardAndThread() {
-            const match = window.location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i); // don't run on /last/ threads
+            const match = window.location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i); 
             if (!match) return null;
             return { board: match[1], thread: match[2] };
         }
-        // Get saved positions
         async function getAllSavedScrollData() {
             const saved = await GM.getValue(STORAGE_KEY, null);
             if (!saved) return {};
@@ -861,56 +791,42 @@ onReady(async function () {
         async function setAllSavedScrollData(data) {
             await GM.setValue(STORAGE_KEY, JSON.stringify(data));
         }
-        // Get current post count
         function getCurrentPostCount() {
             if (!divPosts) return 0;
             return divPosts.querySelectorAll(":scope > .postCell[id]").length;
         }
-        // Remove unread line marker
         function removeUnreadLineMarker() {
             const oldMarker = document.getElementById(UNREAD_LINE_ID);
             if (oldMarker && oldMarker.parentNode) {
                 oldMarker.parentNode.removeChild(oldMarker);
             }
         }
-
-        // Unseen post count logic
         let lastSeenPostCount = 0;
         let unseenCount = 0;
         let tabTitleBase = null;
-
-        // Store previous favicon state so we can restore it
         let previousFaviconState = null;
-        // Helper: Update Tab title and favicon state
         const customFaviconEnabled = await getSetting("customFavicon");
 
         async function updateTabTitle() {
             if (window.isNotifying) return;
             if (!tabTitleBase) tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             document.title = unseenCount > 0 ? `(${unseenCount}) ${tabTitleBase}` : tabTitleBase;
-
-            // Get current favicon state
             const { style, state } = faviconManager.getCurrentFaviconState();
 
             if (unseenCount > 0 && customFaviconEnabled) {
                 if (state !== "unread") {
                     previousFaviconState = { style, state };
                 }
-                // Use setFaviconStyle to preserve current style but change state to "unread"
                 faviconManager.setFaviconStyle(style, "unread");
             } else if (unseenCount == 0 && customFaviconEnabled) {
-                // Restore previous favicon state
                 if (state === "unread" && previousFaviconState) {
                     faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
                     previousFaviconState = null;
                 } else if (state === "unread") {
-                    // Fallback: reset to default if no previous state
                     faviconManager.setFavicon("base");
                 }
             }
         }
-
-        // Update Unseen counter
         async function updateUnseenCountFromSaved() {
             const info = getBoardAndThread();
             if (!info) return;
@@ -922,14 +838,10 @@ onReady(async function () {
             unseenCount = Math.max(0, currentCount - lastSeenPostCount);
             updateTabTitle();
         }
-
-        // Only update lastSeenPostCount if user scrolls down
         let lastScrollY = window.scrollY;
         async function onScrollUpdateSeen() {
             const info = getBoardAndThread();
             if (!info || !(await getSetting("enableScrollSave"))) return;
-
-            // Always get the latest .divPosts
             const posts = Array.from(document.querySelectorAll(".divPosts > .postCell[id]"));
             let maxIndex = -1;
             for (let i = 0; i < posts.length; ++i) {
@@ -967,8 +879,6 @@ onReady(async function () {
             }
             lastScrollY = window.scrollY;
         }
-
-        // Save scroll position for current thread (does not update lastSeenPostCount)
         async function saveScrollPosition() {
             const info = getBoardAndThread();
             if (!info || !(await getSetting("enableScrollSave"))) return;
@@ -994,21 +904,15 @@ onReady(async function () {
                 await setAllSavedScrollData(allData);
             }
         }
-
-        // Helper: Calculate center of screen
         function scrollElementToViewportCenter(el) {
             if (!el) return;
             const rect = el.getBoundingClientRect();
             const elTop = rect.top + window.pageYOffset;
             const elHeight = rect.height;
             const viewportHeight = window.innerHeight;
-
-            // Calculate scroll position so that the element is centered
             const scrollTo = elTop - (viewportHeight / 2) + (elHeight / 2);
             window.scrollTo({ top: scrollTo, behavior: "auto" });
         }
-
-        // Restore scroll position for current thread or scroll to anchor postCell
         async function restoreScrollPosition() {
             const info = getBoardAndThread();
             if (!info || !(await getSetting("enableScrollSave"))) return;
@@ -1019,7 +923,6 @@ onReady(async function () {
             if (!saved || typeof saved.position !== "number") return;
 
             const anchor = window.location.hash ? window.location.hash.replace(/^#/, "") : null;
-            // If anchor, scroll to the postCell with that id (sanitized)
             const safeAnchor = anchor && /^[a-zA-Z0-9_-]+$/.test(anchor) ? anchor : null;
 
             if (safeAnchor) {
@@ -1028,33 +931,23 @@ onReady(async function () {
                     if (post && post.classList.contains("postCell")) {
                         scrollElementToViewportCenter(post);
                     }
-                    // Add unread-line but do NOT scroll to it
                     addUnreadLineAtSavedScrollPosition(saved.position, false);
                 }, 25);
                 return;
             }
-            // No anchor: restore scroll and add unread-line
             saved.timestamp = Date.now();
             await setAllSavedScrollData(allData);
-            // Restore scroll position directly
             window.scrollTo({ top: saved.position, behavior: "auto" });
-            // Only insert unread-line, do not scroll to it (set to true to scroll to unread-line)
             setTimeout(() => addUnreadLineAtSavedScrollPosition(saved.position, false), 80);
         }
-
-        // Add an unread-line marker after the .postCell <div> at a specific scroll position
         async function addUnreadLineAtSavedScrollPosition(scrollPosition, centerAfter = false) {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
             if (!divPosts) return;
-
-            // Don't insert unread-line if scrollPosition is at (or near) the bottom ---
-            const margin = 5; // px, same as in removeUnreadLineIfAtBottom
+            const margin = 5; 
             const docHeight = document.body.offsetHeight;
             if ((scrollPosition + window.innerHeight) >= (docHeight - margin)) {
                 return;
             }
-
-            // Find the postCell whose top is just below or equal to the scrollPosition
             const posts = Array.from(divPosts.querySelectorAll(":scope > .postCell[id]"));
             let targetPost = null;
             for (let i = 0; i < posts.length; ++i) {
@@ -1063,11 +956,7 @@ onReady(async function () {
                 targetPost = posts[i];
             }
             if (!targetPost) return;
-
-            // Remove old marker if exists
             removeUnreadLineMarker();
-
-            // Insert marker after the target post
             const marker = document.createElement("hr");
             marker.id = UNREAD_LINE_ID;
             if (targetPost.nextSibling) {
@@ -1075,14 +964,11 @@ onReady(async function () {
             } else {
                 divPosts.appendChild(marker);
             }
-
-            // If requested, scroll so unread-line is slightly above center
             if (centerAfter) {
                 setTimeout(() => {
                     const markerElem = document.getElementById(UNREAD_LINE_ID);
                     if (markerElem) {
                         const rect = markerElem.getBoundingClientRect();
-                        // Calculate the offset so the unread-line is about 1/3 from the top
                         const desiredY = window.innerHeight / 3;
                         const scrollY = window.scrollY + rect.top - desiredY;
                         window.scrollTo({ top: scrollY, behavior: "auto" });
@@ -1090,8 +976,6 @@ onReady(async function () {
                 }, 25);
             }
         }
-
-        // Watch for changes in .divPosts (new posts)
         let unseenUpdateTimeout = null;
         function debouncedUpdateUnseenCount() {
             if (unseenUpdateTimeout) clearTimeout(unseenUpdateTimeout);
@@ -1107,18 +991,13 @@ onReady(async function () {
                 debouncedUpdateUnseenCount();
             });
         }
-
-        // Remove unread line at the bottom
         async function removeUnreadLineIfAtBottom() {
             if (!(await getSetting("enableScrollSave_showUnreadLine"))) return;
-            const margin = 5; // px
+            const margin = 5; 
             if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - margin)) {
                 removeUnreadLineMarker();
             }
         }
-
-        // --- Event listeners and initialization ---
-        // Save Scroll Position
         window.addEventListener("beforeunload", () => {
             saveScrollPosition();
         });
@@ -1127,7 +1006,6 @@ onReady(async function () {
             tabTitleBase = document.title.replace(/^\(\d+\)\s*/, "");
             updateTabTitle();
         });
-        // On Page Load
         window.addEventListener("load", async () => {
             await restoreScrollPosition();
             await updateUnseenCountFromSaved();
@@ -1140,15 +1018,11 @@ onReady(async function () {
                 await onScrollUpdateSeen();
                 await removeUnreadLineIfAtBottom();
                 scrollTimeout = null;
-            }, 100); // 100ms throttle to the scroll event
+            }, 100); 
         });
-
-        // Initial restore and unseen count update (in case load event already fired)
         await restoreScrollPosition();
         await updateUnseenCountFromSaved();
     }
-
-    // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
         async function appendCatalogToLinks() {
             const navboardsSpan = document.getElementById("navBoardsSpan");
@@ -1157,7 +1031,6 @@ onReady(async function () {
                 const openInNewTab = await getSetting("enableHeaderCatalogLinks_openInNewTab");
 
                 for (let link of links) {
-                    // Prevent duplicate appends and only process once
                     if (
                         link.href &&
                         !link.href.endsWith("/catalog.html") &&
@@ -1165,11 +1038,9 @@ onReady(async function () {
                     ) {
                         link.href += "/catalog.html";
                         link.dataset.catalogLinkProcessed = "1";
-
-                        // Set target="_blank" if the option is enabled
                         if (openInNewTab) {
                             link.target = "_blank";
-                            link.rel = "noopener noreferrer"; // Security best practice
+                            link.rel = "noopener noreferrer"; 
                         } else {
                             link.target = "";
                             link.rel = "";
@@ -1178,14 +1049,8 @@ onReady(async function () {
                 }
             }
         }
-
-        // Initial run
         appendCatalogToLinks();
-
-        // Debounced handler for observer
         const debouncedAppend = debounce(appendCatalogToLinks, 100);
-
-        // Use the observer registry for #navBoardsSpan
         const navboardsObs = observeSelector('#navBoardsSpan', { childList: true, subtree: true });
         if (navboardsObs) {
             navboardsObs.addHandler(function headerCatalogLinksHandler() {
@@ -1193,19 +1058,13 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Always Open Catalog Threads in New Tab ---
     function catalogThreadsInNewTab() {
         if (!window.pageType?.isCatalog) return;
-
-        // Set target="_blank" for existing cells
         catalogDiv.querySelectorAll('.catalogCell a.linkThumb').forEach(link => {
             if (link.getAttribute('target') !== '_blank') {
                 link.setAttribute('target', '_blank');
             }
         });
-
-        // Use event delegation for future clicks
         catalogDiv.addEventListener('click', function (e) {
             const link = e.target.closest('.catalogCell a.linkThumb');
             if (link && link.getAttribute('target') !== '_blank') {
@@ -1213,18 +1072,13 @@ onReady(async function () {
             }
         });
     }
-
-    // --- Feature: Image/Video/Audio Hover Preview ---
     function featureImageHover() {
-        // --- Config ---
         const MEDIA_MAX_WIDTH = "90vw";
         const MEDIA_OPACITY_LOADING = "0";
         const MEDIA_OPACITY_LOADED = "1";
-        const MEDIA_OFFSET = 50; // Margin between cursor and image, in px
-        const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
+        const MEDIA_OFFSET = 50; 
+        const MEDIA_BOTTOM_MARGIN = 3; 
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
-
-        // --- Utility: MIME type to extension mapping ---
         function getExtensionForMimeType(mime) {
             const map = {
                 "image/jpeg": ".jpg",
@@ -1246,12 +1100,9 @@ onReady(async function () {
             };
             return map[mime.toLowerCase()] || null;
         }
-
-        // --- Utility: Sanitize URLs before assigning to src/href ---
         function sanitizeUrl(url) {
             try {
                 const parsed = new URL(url, window.location.origin);
-                // Only allow http(s) protocols and same-origin or trusted hosts
                 if ((parsed.protocol === "http:" || parsed.protocol === "https:") &&
                     parsed.origin === window.location.origin) {
                     return parsed.href;
@@ -1259,19 +1110,13 @@ onReady(async function () {
             } catch { }
             return "";
         }
-
-        // --- Initial state ---
         let floatingMedia = null;
         let cleanupFns = [];
         let currentAudioIndicator = null;
-        let lastMouseEvent = null; // Store last mouse event for initial placement
-
-        // --- Utility: Clamp value between min and max ---
+        let lastMouseEvent = null; 
         function clamp(val, min, max) {
             return Math.max(min, Math.min(max, val));
         }
-
-        // --- Utility: Position floating media to the right or left of mouse, never touching bottom ---
         function positionFloatingMedia(event) {
             if (!floatingMedia) return;
             const vw = window.innerWidth;
@@ -1280,24 +1125,18 @@ onReady(async function () {
             const mh = floatingMedia.offsetHeight || 0;
 
             const docElement = document.documentElement;
-            const SCROLLBAR_WIDTH = window.innerWidth - docElement.clientWidth; // Calculate scrollbar width once
+            const SCROLLBAR_WIDTH = window.innerWidth - docElement.clientWidth; 
             const MEDIA_BOTTOM_MARGIN_PX = vh * (MEDIA_BOTTOM_MARGIN / 100);
 
             let x, y;
-
-            // Try to show on the right of the cursor first
             const rightX = event.clientX + MEDIA_OFFSET;
             const leftX = event.clientX - MEDIA_OFFSET - mw;
-
-            // If there's enough space on the right, use it
             if (rightX + mw <= vw - SCROLLBAR_WIDTH) {
                 x = rightX;
             }
-            // Else, if there's enough space on the left, use it
             else if (leftX >= 0) {
                 x = leftX;
             }
-            // Else, clamp to fit in viewport
             else {
                 x = clamp(rightX, 0, vw - mw - SCROLLBAR_WIDTH);
             }
@@ -1309,8 +1148,6 @@ onReady(async function () {
             floatingMedia.style.left = `${x}px`;
             floatingMedia.style.top = `${y}px`;
         }
-
-        // --- Utility: Clean up floating media and event listeners ---
         function cleanupFloatingMedia() {
             cleanupFns.forEach(fn => { try { fn(); } catch { } });
             cleanupFns = [];
@@ -1332,32 +1169,24 @@ onReady(async function () {
                 currentAudioIndicator = null;
             }
         }
-
-        // --- Helper: Get full media URL from thumbnail and MIME type ---
         function getFullMediaSrc(thumbNode, filemime) {
             const thumbnailSrc = thumbNode.getAttribute("src");
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
             const href = parentA ? parentA.getAttribute("href") : "";
             const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
             const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
-
-            // Helper: does a string have an extension?
             function hasExtension(str) {
                 return /\.[a-z0-9]+$/i.test(str);
             }
-            // Helper: is a t_ thumbnail?
             function isTThumb(str) {
                 return /\/t_/.test(str);
             }
-            // Helper: is a direct hash (no extension)?
             function isDirectHash(str) {
                 return /^\/\.media\/[a-f0-9]{40,}$/i.test(str) && !hasExtension(str);
             }
-            // Helper: is a small image?
             function isSmallImage() {
                 return (fileWidth && fileWidth <= 220) || (fileHeight && fileHeight <= 220);
             }
-            // Helper: is a PNG with no t_ and no extension?
             function isBarePngNoThumb() {
                 return (
                     filemime &&
@@ -1367,7 +1196,6 @@ onReady(async function () {
                     !hasExtension(href)
                 );
             }
-            // Helper: is a small PNG with no t_ and no extension in src?
             function isSmallBarePngSrc() {
                 return (
                     isSmallImage() &&
@@ -1377,7 +1205,6 @@ onReady(async function () {
                     !hasExtension(thumbnailSrc)
                 );
             }
-            // Helper: is a generic fallback thumbnail?
             function isGenericThumb() {
                 return (
                     /\/spoiler\.png$/i.test(thumbnailSrc) ||
@@ -1385,8 +1212,6 @@ onReady(async function () {
                     /\/audioGenericThumb\.png$/i.test(thumbnailSrc)
                 );
             }
-
-            // 1. If filemime is missing, fallback: use src as-is if in catalogCell or matches extensionless pattern
             if (!filemime) {
                 if (
                     thumbNode.closest('.catalogCell') ||
@@ -1396,28 +1221,18 @@ onReady(async function () {
                 }
                 return null;
             }
-
-            // 2. PNG with no t_ and no extension in href: show as-is
             if (isBarePngNoThumb()) {
                 return thumbnailSrc;
             }
-
-            // 3. Small PNG with no t_ and no extension in src: show as-is
             if (isSmallBarePngSrc()) {
                 return thumbnailSrc;
             }
-
-            // 4. For small images with extension, use original src directly
             if (isSmallImage() && hasExtension(thumbnailSrc)) {
                 return thumbnailSrc;
             }
-
-            // 5. If "t_" thumbnail, transform to full image
             if (isTThumb(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
                 base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|mp3|m4a|wav)$/i, "");
-
-                // Special cases: APNG and m4v - do not append extension
                 if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
                     return base;
                 }
@@ -1426,8 +1241,6 @@ onReady(async function () {
                 if (!ext) return null;
                 return base + ext;
             }
-
-            // 6. If src is a direct hash (no t_) and has no extension, append extension unless APNG or m4v
             if (isDirectHash(thumbnailSrc)) {
                 if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
                     return thumbnailSrc;
@@ -1438,8 +1251,6 @@ onReady(async function () {
                 }
                 return thumbnailSrc + ext;
             }
-
-            // 7. If generic fallback thumbnail, use href if available
             if (isGenericThumb()) {
                 if (parentA && parentA.getAttribute("href")) {
                     return sanitizeUrl(parentA.getAttribute("href"));
@@ -1449,8 +1260,6 @@ onReady(async function () {
 
             return null;
         }
-
-        // --- Event Handlers (defined once for reuse) ---
         function leaveHandler() {
             cleanupFloatingMedia();
         }
@@ -1458,15 +1267,11 @@ onReady(async function () {
             lastMouseEvent = ev;
             positionFloatingMedia(ev);
         }
-
-        // --- Main hover handler ---
         async function onThumbEnter(e) {
             cleanupFloatingMedia();
-            lastMouseEvent = e; // Store the mouse event for initial placement
+            lastMouseEvent = e; 
             const thumb = e.currentTarget;
             let filemime = null, fullSrc = null, isVideo = false, isAudio = false;
-
-            // Determine file type and source
             if (thumb.tagName === "IMG") {
                 const parentA = thumb.closest("a.linkThumb, a.imgLink");
                 if (!parentA) return;
@@ -1497,13 +1302,8 @@ onReady(async function () {
                 isVideo = filemime && filemime.startsWith("video/");
                 isAudio = filemime && filemime.startsWith("audio/");
             }
-
-            // If filemime is missing, still try to preview if getFullMediaSrc returns something
             fullSrc = sanitizeUrl(fullSrc);
             if (!fullSrc) return;
-
-            // --- Setup floating media element ---
-            // Get user volume setting (default 0.5) first
             let volume = 0.5;
             try {
                 if (typeof getSetting === "function") {
@@ -1515,8 +1315,6 @@ onReady(async function () {
             } catch { }
 
             if (isAudio) {
-                // Audio: show indicator, play audio (hidden)
-                // Always append indicator to the nearest .imgLink or .linkThumb
                 const container = thumb.closest("a.linkThumb, a.imgLink");
                 if (container && !container.style.position) {
                     container.style.position = "relative";
@@ -1528,8 +1326,6 @@ onReady(async function () {
                 floatingMedia.volume = volume;
                 document.body.appendChild(floatingMedia);
                 floatingMedia.play().catch(() => { });
-
-                // Show indicator
                 const indicator = document.createElement("div");
                 indicator.classList.add("audio-preview-indicator");
                 indicator.textContent = AUDIO_INDICATOR_TEXT;
@@ -1537,8 +1333,6 @@ onReady(async function () {
                     container.appendChild(indicator);
                 }
                 currentAudioIndicator = indicator;
-
-                // Cleanup on leave/click/scroll
                 thumb.addEventListener("mouseleave", leaveHandler, { once: true });
                 if (container) container.addEventListener("click", leaveHandler, { once: true });
                 window.addEventListener("scroll", leaveHandler, { passive: true, once: true });
@@ -1547,8 +1341,6 @@ onReady(async function () {
                 cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
                 return;
             }
-
-            // --- Image or Video ---
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
             floatingMedia.src = fullSrc;
             floatingMedia.id = "hover-preview-media";
@@ -1559,7 +1351,6 @@ onReady(async function () {
             floatingMedia.style.left = "-9999px";
             floatingMedia.style.top = "-9999px";
             floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
-            // Dynamically set maxHeight to fit above the bottom margin
             const availableHeight = window.innerHeight * (1 - MEDIA_BOTTOM_MARGIN / 100);
             floatingMedia.style.maxHeight = `${availableHeight}px`;
             if (isVideo) {
@@ -1570,19 +1361,12 @@ onReady(async function () {
                 floatingMedia.volume = volume;
             }
             document.body.appendChild(floatingMedia);
-
-            // Placement of the image
-            // --- Always follow the cursor, even while loading ---
             document.addEventListener("mousemove", mouseMoveHandler, { passive: true });
             thumb.addEventListener("mouseleave", leaveHandler, { passive: true, once: true });
             cleanupFns.push(() => document.removeEventListener("mousemove", mouseMoveHandler));
-
-            // Place at initial mouse position
             if (lastMouseEvent) {
                 positionFloatingMedia(lastMouseEvent);
             }
-
-            // When loaded, fade in and reposition with real size
             if (isVideo) {
                 floatingMedia.onloadeddata = function () {
                     if (floatingMedia) {
@@ -1598,26 +1382,19 @@ onReady(async function () {
                     }
                 };
             }
-            // If error, cleanup
             floatingMedia.onerror = cleanupFloatingMedia;
-
-            // Cleanup on leave/scroll
             thumb.addEventListener("mouseleave", leaveHandler, { once: true });
             window.addEventListener("scroll", leaveHandler, { passive: true, once: true });
             cleanupFns.push(() => thumb.removeEventListener("mouseleave", leaveHandler));
             cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
         }
-
-        // --- Attach listeners to thumbnails and audio links ---
         function attachThumbListeners(root = document) {
-            // Attach to all a.linkThumb > img and a.imgLink > img in root
             root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
                 if (!thumb._fullImgHoverBound) {
                     thumb.addEventListener("mouseenter", onThumbEnter);
                     thumb._fullImgHoverBound = true;
                 }
             });
-            // If root itself is such an img, attach as well
             if (
                 root.tagName === "IMG" &&
                 root.parentElement &&
@@ -1628,11 +1405,7 @@ onReady(async function () {
                 root._fullImgHoverBound = true;
             }
         }
-
-        // Attach to all existing thumbs at startup
         attachThumbListeners();
-
-        // Use the observer registry for #divThreads
         const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
             divThreadsObs.addHandler(function imageHoverHandler(mutations, node) {
@@ -1646,9 +1419,6 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
-    // Utility: MIME type to extension mapping
     function getExtensionForMimeType(mime) {
         const map = {
             "image/jpeg": ".jpg",
@@ -1665,14 +1435,11 @@ onReady(async function () {
     }
 
     async function featureBlurSpoilers() {
-        // Only run on thread or index pages
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
             return;
         }
 
         const removeSpoilers = await getSetting("blurSpoilers_removeSpoilers");
-
-        // Helper to apply blur or remove spoilers styles
         function applyBlurOrRemoveSpoilers(img, removeSpoilers) {
             if (removeSpoilers) {
                 img.style.filter = "";
@@ -1694,7 +1461,6 @@ onReady(async function () {
             if (!img) {
                 return;
             }
-            // Skip if src is already a full media file (not t_ and has extension)
             if (
                 /\/\.media\/[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src) &&
                 !/\/\.media\/t_[^\/]+?\.[a-zA-Z0-9]+$/.test(img.src)
@@ -1702,11 +1468,9 @@ onReady(async function () {
                 link.dataset.blurSpoilerProcessed = "1";
                 return;
             }
-            // Check if this is a custom spoiler image
             const isCustomSpoiler = img.src.includes("/custom.spoiler")
                 || img.src.includes("/*/custom.spoiler")
                 || img.src.includes("/spoiler.png");
-            // Check if this is NOT already a thumbnail
             const isNotThumbnail = !img.src.includes("/.media/t_");
             const hasFilenameExtension = !isCustomSpoiler && /\.[a-zA-Z0-9]+$/.test(img.src);
 
@@ -1716,18 +1480,13 @@ onReady(async function () {
                     link.dataset.blurSpoilerProcessed = "1";
                     return;
                 }
-                // Extract filename without extension
                 const match = href.match(/\/\.media\/([^\/]+)\.[a-zA-Z0-9]+$/);
                 if (!match) {
                     link.dataset.blurSpoilerProcessed = "1";
                     return;
                 }
-
-                // Get file extension from data-filemime
                 const fileMime = link.getAttribute("data-filemime") || "";
                 const ext = getExtensionForMimeType(fileMime);
-
-                // Check for data-filewidth attribute
                 let fileWidthAttr = link.getAttribute("data-filewidth");
                 let fileHeightAttr = link.getAttribute("data-fileheight");
                 let transformedSrc;
@@ -1735,17 +1494,13 @@ onReady(async function () {
                     (fileWidthAttr && Number(fileWidthAttr) <= 220) ||
                     (fileHeightAttr && Number(fileHeightAttr) <= 220)
                 ) {
-                    // Use the full image, not the thumbnail, and append extension
                     transformedSrc = `/.media/${match[1]}${ext}`;
                 } else if (!hasFilenameExtension && isCustomSpoiler) {
-                    // Use the thumbnail path (t_filename) and append extension
                     transformedSrc = `/.media/t_${match[1]}`;
                 } else {
                     link.dataset.blurSpoilerProcessed = "1";
                     return;
                 }
-
-                // Custom spoiler + no fileWidth/Height: check .dimensionLabel and use href if small
                 if (isCustomSpoiler && !fileWidthAttr && !fileHeightAttr) {
                     const uploadCell = img.closest('.uploadCell');
                     if (uploadCell) {
@@ -1765,17 +1520,11 @@ onReady(async function () {
                         }
                     }
                 }
-
-                // Temporarily lock rendered size to avoid layout shift
                 const initialWidth = img.offsetWidth;
                 const initialHeight = img.offsetHeight;
                 img.style.width = initialWidth + "px";
                 img.style.height = initialHeight + "px";
-
-                // Change the src
                 img.src = transformedSrc;
-
-                // Set width/height to its initial thumbnail size when loading img again
                 img.addEventListener('load', function () {
                     img.style.width = img.naturalWidth + "px";
                     img.style.height = img.naturalHeight + "px";
@@ -1787,21 +1536,15 @@ onReady(async function () {
             }
             link.dataset.blurSpoilerProcessed = "1";
         }
-
-        // Initial processing for all existing links
         document.querySelectorAll("a.imgLink").forEach(link => processImgLink(link));
-
-        // Debounced batch processing for observer
         let pendingImgLinks = new WeakSet();
         let debounceTimeout = null;
         function processPendingImgLinks() {
             const linksToProcess = Array.from(document.querySelectorAll("a.imgLink")).filter(link => pendingImgLinks.has(link));
             linksToProcess.forEach(link => processImgLink(link));
-            pendingImgLinks = new WeakSet(); // Reset the WeakSet
+            pendingImgLinks = new WeakSet(); 
             debounceTimeout = null;
         }
-
-        // Use the observer registry for #divThreads
         const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
             divThreadsObs.addHandler(function blurSpoilersHandler(mutations) {
@@ -1820,8 +1563,6 @@ onReady(async function () {
                 }
             });
         }
-
-        // Observe for .quoteTooltip additions and process spoilers inside
         const bodyObs = observeSelector('body', { childList: true, subtree: true });
         if (bodyObs) {
             bodyObs.addHandler(function quoteTooltipSpoilerHandler(mutations) {
@@ -1837,8 +1578,6 @@ onReady(async function () {
                 }
             });
         }
-
-        // Use event delegation for blur toggling
         document.body.addEventListener("mouseover", function (e) {
             if (e.target.matches("a.imgLink img[style*='blur(5px)']")) {
                 e.target.style.filter = "none";
@@ -1850,38 +1589,27 @@ onReady(async function () {
             }
         });
     }
-
-    // --- Feature: Auto-hide Header on Scroll ---
     function autoHideHeaderOnScroll() {
         const header = document.getElementById('dynamicHeaderThread');
         if (!header) return;
-        // Configuration
-        const scrollThreshold = 50; // How many pixels to scroll before hiding/showing
-        // Track scroll position
+        const scrollThreshold = 50; 
         let lastScrollY = window.scrollY;
         let scrollDirection = 'none';
         let ticking = false;
 
         function updateHeaderVisibility() {
-            // Calculate scroll direction
             const currentScrollY = window.scrollY;
             scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
             lastScrollY = currentScrollY;
-            // Calculate if we're near the top of the page
             const isNearTop = currentScrollY < 100;
-
-            // Show header when:
             if (scrollDirection === 'up' || isNearTop) {
                 header.classList.remove('nav-hidden');
             } else if (scrollDirection === 'down' && currentScrollY > scrollThreshold) {
-                // Hide header when scrolling down and not at the top
                 header.classList.add('nav-hidden');
             }
 
             ticking = false;
         }
-
-        // Add CSS for the transition
         const style = document.createElement('style');
         style.textContent = `
             #dynamicHeaderThread {
@@ -1895,22 +1623,14 @@ onReady(async function () {
             }
         `;
         document.head.appendChild(style);
-
-        // Listen for scroll events
         window.addEventListener('scroll', () => {
             if (!ticking) {
                 window.requestAnimationFrame(updateHeaderVisibility);
                 ticking = true;
             }
         }, { passive: true });
-
-        // Initial check
         updateHeaderVisibility();
     }
-
-    ////////// THREAD WATCHER THINGZ ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // Decode HTML entities in <a> to string (e.g., &gt; to >, &apos; to ')
     const decodeHtmlEntitiesTwice = (() => {
         const txt = document.createElement('textarea');
         return function (html) {
@@ -1920,46 +1640,34 @@ onReady(async function () {
             return txt.value;
         };
     })();
-
-    // --- Feature: Highlight TW mentions and new posts ---
     function highlightMentions() {
         const watchedCells = document.querySelectorAll("#watchedMenu .watchedCell");
         const watchButton = document.querySelector(".opHead .watchButton");
-        if (!watchedCells.length) return; // Early exit if no watched cells
-
-        // Process all cells in a single pass
+        if (!watchedCells.length) return; 
         watchedCells.forEach((cell) => {
             const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
-            if (!notification) return; // Skip if no notification
+            if (!notification) return; 
 
             const labelLink = cell.querySelector(".watchedCellLabel a");
-            if (!labelLink) return; // Skip if no link
-
-            // Process board data only once per link
+            if (!labelLink) return; 
             if (!labelLink.dataset.board) {
                 const href = labelLink.getAttribute("href");
                 const match = href?.match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
                 if (match) {
                     labelLink.dataset.board = `/${match[1]}/ -`;
                 }
-
-                // Highlight watch button if this thread is open
                 if (document.location.href.includes(href)) {
                     if (watchButton) {
                         watchButton.style.color = "var(--board-title-color)";
                         watchButton.title = "Watched";
                     }
                 }
-
-                // Decode HTML entities (only if needed)
                 const originalText = labelLink.textContent;
                 const decodedText = decodeHtmlEntitiesTwice(originalText);
                 if (labelLink.textContent !== decodedText) {
                     labelLink.textContent = decodedText;
                 }
             }
-
-            // Process notification text
             const notificationText = notification.textContent.trim();
 
             function styleMentionYou(labelLink, notification, totalReplies) {
@@ -1974,61 +1682,41 @@ onReady(async function () {
                 notification.style.color = "var(--link-color)";
                 notification.style.fontWeight = "bold";
             }
-
-            // Skip if already processed (starts with parenthesis)
             if (notificationText.startsWith("(") === true) {
                 return;
             }
-
-            // Case 1: Has "(you)" - format "2, 1 (you)"
             if (notificationText.includes("(you)") === true) {
                 const parts = notificationText.split(", ");
                 const totalReplies = parts[0];
                 styleMentionYou(labelLink, notification, totalReplies);
             }
-            // Case 2: Just a number - format "2"
             else if (/^\d+$/.test(notificationText)) {
                 styleMentionNumber(notification, notificationText);
             }
-
-            // Mark as processed
             notification.dataset.processed = "true";
         });
     }
-
-    // Use the observer registry for #watchedMenu
     const watchedMenuObs = observeSelector('#watchedMenu', { childList: true, subtree: true });
     if (watchedMenuObs) {
         watchedMenuObs.addHandler(function highlightMentionsHandler() {
             highlightMentions();
         });
     }
-
-    // Initial highlight on page load
     highlightMentions();
-
-    // --- Feature: Watch Thread on Reply ---
     async function featureWatchThreadOnReply() {
         if ((window.pageType?.isIndex || window.pageType?.isCatalog)) {
             return;
         }
-
-        // --- Helpers ---
         const getWatchButton = () => document.querySelector(".watchButton");
-
-        // Watch the thread if not already watched
         function watchThreadIfNotWatched() {
             const btn = getWatchButton();
             if (btn && !btn.classList.contains("watched-active")) {
-                btn.click(); // Triggers site's watcher logic
-                // Fallback: ensure class is set after watcher logic
+                btn.click(); 
                 setTimeout(() => {
                     btn.classList.add("watched-active");
                 }, 100);
             }
         }
-
-        // Update the watch button's class to reflect watched state
         function updateWatchButtonClass() {
             const btn = getWatchButton();
             if (!btn) return;
@@ -2038,34 +1726,24 @@ onReady(async function () {
                 btn.classList.remove("watched-active");
             }
         }
-
-        // Handle reply submit: watch thread if setting enabled
         const submitButton = document.getElementById("qrbutton");
         if (submitButton) {
-            // Remove any previous handler to avoid duplicates
             submitButton.removeEventListener("click", submitButton._watchThreadHandler || (() => { }));
             submitButton._watchThreadHandler = async function () {
                 if (await getSetting("watchThreadOnReply")) {
-                    setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
+                    setTimeout(watchThreadIfNotWatched, 500); 
                 }
             };
             submitButton.addEventListener("click", submitButton._watchThreadHandler);
         }
-
-        // On page load, sync the watch button UI
         updateWatchButtonClass();
-
-        // Keep UI in sync when user manually clicks the watch button
         const btn = getWatchButton();
         if (btn) {
-            // Remove any previous handler to avoid duplicates
             btn.removeEventListener("click", btn._updateWatchHandler || (() => { }));
             btn._updateWatchHandler = () => setTimeout(updateWatchButtonClass, 100);
             btn.addEventListener("click", btn._updateWatchHandler);
         }
     }
-
-    // --- Feature: Pin Thread Watcher ---
     async function featureAlwaysShowTW() {
         if (!(await getSetting("alwaysShowTW"))) return;
         if ((await getSetting("alwaysShowTW_noPinInCatalog")) && window.pageType.isCatalog) return;
@@ -2079,29 +1757,20 @@ onReady(async function () {
 
         showThreadWatcher();
     }
-
-    // --- Feature: Mark All Threads as Read Button ---
     (function markAllThreadsAsRead() {
         const handleDiv = document.querySelector('#watchedMenu > div.handle');
         if (!handleDiv) return;
-        // Check if the button already exists to avoid duplicates
         if (handleDiv.querySelector('.watchedCellDismissButton.markAllRead')) return;
-
-        // Create the "Mark all threads as read" button
         const btn = document.createElement('a');
         btn.className = 'watchedCellDismissButton glowOnHover coloredIcon markAllRead';
         btn.title = 'Mark all threads as read';
         btn.style.float = 'right';
         btn.style.paddingTop = '3px';
-
-        // Helper to check if there are unread threads
         function hasUnreadThreads() {
             const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
             if (!watchedMenu) return false;
             return watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]').length > 0;
         }
-
-        // Helper to update button state
         function updateButtonState() {
             if (hasUnreadThreads()) {
                 btn.style.opacity = '1';
@@ -2113,8 +1782,6 @@ onReady(async function () {
                 btn.title = 'No unread threads';
             }
         }
-
-        // Reusable function to find and click all 'Mark as read' buttons
         function clickAllMarkAsReadButtons(watchedMenu) {
             const markButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
             markButtons.forEach(btn => {
@@ -2126,8 +1793,6 @@ onReady(async function () {
             });
             return markButtons.length;
         }
-
-        // Function to mark all threads with retry capability
         function markAllThreadsAsReadWithRetry(retriesLeft, callback) {
             setTimeout(function () {
                 const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
@@ -2148,8 +1813,6 @@ onReady(async function () {
                 }
             }, 100);
         }
-
-        // Use the observer registry for #watchedMenu > div.floatingContainer
         const watchedMenuObs = observeSelector('#watchedMenu > div.floatingContainer', { childList: true, subtree: true });
         if (watchedMenuObs) {
             const debouncedUpdate = debounce(updateButtonState, 100);
@@ -2157,23 +1820,15 @@ onReady(async function () {
                 debouncedUpdate();
             });
         }
-
-        // Set initial state
         updateButtonState();
-
-        // Append the button as the last child of div.handle
         handleDiv.appendChild(btn);
-
-        // Event delegation for close button and mark-all-read button
         document.body.addEventListener('click', function (e) {
-            // Close button delegation
             const closeBtn = e.target.closest('#watchedMenu .close-btn');
             if (closeBtn) {
                 const watchedMenu = document.getElementById("watchedMenu");
                 if (watchedMenu) watchedMenu.style.display = "none";
                 return;
             }
-            // Mark all as read button delegation
             const markAllBtn = e.target.closest('.watchedCellDismissButton.markAllRead');
             if (markAllBtn) {
                 e.preventDefault();
@@ -2187,39 +1842,22 @@ onReady(async function () {
             }
         });
     })();
-
-    ///////// THREAD WATCHER END ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Feature: Hash Navigation ---
-    // Adapted from impregnator's code for 8chan Lightweight Extended Suite
-    // MIT License
-    // https://greasyfork.org/en/scripts/533173-8chan-lightweight-extended-suite
     function hashNavigation() {
-        // Only proceed if the page is a thread
         if (!window.pageType?.isThread) return;
-
-        // Use a WeakSet to track processed links
         const processedLinks = new WeakSet();
-
-        // Add # links to quote/backlink anchors within a container
         function addHashLinks(container = document) {
             const links = container.querySelectorAll('.panelBacklinks a, .altBacklinks a, .divMessage .quoteLink');
-            // Cache NodeList in a variable to avoid multiple queries
             links.forEach(link => {
                 if (
                     processedLinks.has(link) ||
                     (link.nextSibling && link.nextSibling.classList && link.nextSibling.classList.contains('hash-link-container'))
                 ) return;
-
-                // Create # link
                 const hashSpan = document.createElement('span');
                 hashSpan.textContent = ' #';
                 hashSpan.className = 'hash-link';
                 hashSpan.style.cursor = 'pointer';
                 hashSpan.style.color = 'var(--navbar-text-color)';
                 hashSpan.title = 'Scroll to post';
-
-                // Wrap in container
                 const wrapper = document.createElement('span');
                 wrapper.className = 'hash-link-container';
                 wrapper.appendChild(hashSpan);
@@ -2228,11 +1866,7 @@ onReady(async function () {
                 processedLinks.add(link);
             });
         }
-
-        // Initial run
         addHashLinks();
-
-        // Use the observer registry for #divThreads
         const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
             const debouncedAddHashLinks = debounce(() => addHashLinks(), 25);
@@ -2240,26 +1874,22 @@ onReady(async function () {
                 debouncedAddHashLinks();
             });
         }
-
-        // Event delegation for hash link clicks
         const postsContainer = document.getElementById('divThreads') || document.body;
         postsContainer.addEventListener('click', function (e) {
             if (e.target.classList.contains('hash-link')) {
                 e.preventDefault();
                 const link = e.target.closest('.hash-link-container').previousElementSibling;
                 if (!link || !link.href) return;
-                // Extract post ID from the href's hash
                 const hashMatch = link.href.match(/#(\d+)$/);
                 if (!hashMatch) return;
                 const postId = hashMatch[1];
-                // Sanitize postId: only allow digits
                 const safePostId = /^[0-9]+$/.test(postId) ? postId : null;
                 if (!safePostId) return;
                 const postElem = document.getElementById(safePostId);
                 if (postElem) {
                     window.location.hash = `#${safePostId}`;
                     if (postElem.classList.contains('opCell')) {
-                        const offset = 25; // px
+                        const offset = 25; 
                         const rect = postElem.getBoundingClientRect();
                         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
                         const targetY = rect.top + scrollTop - offset;
@@ -2271,15 +1901,10 @@ onReady(async function () {
             }
         }, true);
     }
-
-    // --- Feature: Scroll Arrows ---
     function featureScrollArrows() {
-        // Only add once
         if (document.getElementById("scroll-arrow-up") || document.getElementById("scroll-arrow-down")) {
             return;
         }
-
-        // Up arrow
         const upBtn = document.createElement("button");
         upBtn.id = "scroll-arrow-up";
         upBtn.className = "scroll-arrow-btn";
@@ -2288,8 +1913,6 @@ onReady(async function () {
         upBtn.addEventListener("click", () => {
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
-
-        // Down arrow
         const downBtn = document.createElement("button");
         downBtn.id = "scroll-arrow-down";
         downBtn.className = "scroll-arrow-btn";
@@ -2302,35 +1925,25 @@ onReady(async function () {
         document.body.appendChild(upBtn);
         document.body.appendChild(downBtn);
     }
-
-    // --- Feature: Hide Announcement and unhide if message changes ---
     async function featureHideAnnouncement() {
-        // Helper to process the dynamic announcement element
         async function processElement(selector, settingKey, contentKey) {
             const el = document.querySelector(selector);
             if (!el) return;
 
-            const content = (el.textContent || "").replace(/[^\w\s.,!?-]/g, ""); // Basic sanitization
-
-            // Get setting and stored content from GM storage
+            const content = (el.textContent || "").replace(/[^\w\s.,!?-]/g, ""); 
             const shouldHide = await GM.getValue(`8chanSS_${settingKey}`, "false") === "true";
             const storedContent = await GM.getValue(`8chanSS_${contentKey}`, null);
-
-            // Reference to the root element for toggling the class
             const root = document.documentElement;
 
             if (shouldHide) {
                 if (storedContent !== null && storedContent !== content) {
-                    // Announcement content changed: disable the setting
                     if (typeof window.setSetting === "function") {
                         await window.setSetting("hideAnnouncement", false);
                     }
                     await GM.setValue(`8chanSS_${settingKey}`, "false");
                     await GM.deleteValue(`8chanSS_${contentKey}`);
-                    // No need to remove class; on reload, class won't be present
                     return;
                 }
-                // Content is equal to stored content or first time: hide announcement and store content
                 root.classList.add("hide-announcement");
                 await GM.setValue(`8chanSS_${contentKey}`, content);
             } else {
@@ -2341,17 +1954,11 @@ onReady(async function () {
 
         await processElement("#dynamicAnnouncement", "hideAnnouncement", "announcementContent");
     }
-
-    // --- Feature: Beep/Notify on (You) ---
     (async function featureBeepOnYou() {
         if (!divPosts) return;
-
-        // Web Audio API beep
         let audioContext = null;
         let audioContextReady = false;
         let audioContextPromise = null;
-
-        // Helper to create/resume AudioContext after user gesture
         function ensureAudioContextReady() {
             if (audioContextReady) return Promise.resolve();
             if (audioContextPromise) return audioContextPromise;
@@ -2361,7 +1968,6 @@ onReady(async function () {
                     if (!audioContext) {
                         audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     }
-                    // Resume if suspended
                     if (audioContext.state === 'suspended') {
                         audioContext.resume().then(() => {
                             audioContextReady = true;
@@ -2376,7 +1982,6 @@ onReady(async function () {
                         resolve();
                     }
                 }
-                // Listen for first user gesture
                 window.addEventListener('click', resumeAudioContext);
                 window.addEventListener('keydown', resumeAudioContext);
             });
@@ -2387,121 +1992,86 @@ onReady(async function () {
             if (!(await getSetting("beepOnYou"))) {
                 return;
             }
-            // Wait for AudioContext to be ready (after user gesture)
             await ensureAudioContextReady();
 
             return function playBeep() {
                 try {
-                    // Create oscillator for the beep
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
 
                     oscillator.type = 'sine';
-                    oscillator.frequency.value = 550; // frequency in hertz
-                    gainNode.gain.value = 0.1; // volume
+                    oscillator.frequency.value = 550; 
+                    gainNode.gain.value = 0.1; 
 
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
-
-                    // Start and stop the beep
                     oscillator.start();
                     setTimeout(() => {
                         oscillator.stop();
-                    }, 100); // 100ms beep duration
+                    }, 100); 
                 } catch (e) {
                     console.warn("Beep failed:", e);
                 }
             };
         }
-
-        // Store the original title globally so all functions can access it
         window.originalTitle = document.title;
         window.isNotifying = false;
-
-        // Cache settings to avoid repeated async calls
         let beepOnYouSetting = false;
         let notifyOnYouSetting = false;
         let customMsgSetting = "(!) ";
-
-        // Store previous favicon state so we can restore it after notif
         let previousFaviconState = null;
-
-        // Initialize settings
         async function initSettings() {
             beepOnYouSetting = await getSetting("beepOnYou");
             notifyOnYouSetting = await getSetting("notifyOnYou");
             const customMsg = await getSetting("notifyOnYou_customMessage");
             if (customMsg) customMsgSetting = customMsg;
         }
-        // Await settings before observer setup
         await initSettings();
-
-        // Store the beep
         let playBeep = null;
         createBeepSound().then(fn => { playBeep = fn; });
-
-        // Function to notify on (You)
         let scrollHandlerActive = false;
         async function notifyOnYou() {
             if (!window.isNotifying) {
                 window.isNotifying = true;
                 document.title = customMsgSetting + " " + window.originalTitle;
                 if (await getSetting("customFavicon")) {
-                    // Store previous favicon state before setting "notif"
                     const { style, state } = faviconManager.getCurrentFaviconState();
                     if (state !== "notif") {
                         previousFaviconState = { style, state };
                     }
-                    // Use setFaviconStyle to preserve current style but change state to "notif"
                     faviconManager.setFaviconStyle(style, "notif");
                 }
             }
         }
-
-        // Remove notification when user scrolls to the bottom of the page
         function setupNotificationScrollHandler() {
             if (scrollHandlerActive) return;
             scrollHandlerActive = true;
             const BOTTOM_OFFSET = 45;
-
-            // Function to check if user has scrolled to the bottom
             function checkScrollPosition() {
                 if (!window.isNotifying) return;
                 const scrollPosition = window.scrollY + window.innerHeight;
                 const documentHeight = document.documentElement.scrollHeight;
-
-                // If user has scrolled to near the bottom (with offset)
                 if (scrollPosition >= documentHeight - BOTTOM_OFFSET) {
                     document.title = window.originalTitle;
                     window.isNotifying = false;
-                    // Restore previous favicon state if available
                     const { state } = faviconManager.getCurrentFaviconState();
                     if (state === "notif" && previousFaviconState) {
                         faviconManager.setFaviconStyle(previousFaviconState.style, previousFaviconState.state);
                         previousFaviconState = null;
                     } else if (state === "notif") {
-                        // Fallback: reset to base if no previous state
                         faviconManager.setFavicon("base");
                     }
-                    // Remove the scroll listener once notification is cleared
                     window.removeEventListener('scroll', checkScrollPosition);
                     scrollHandlerActive = false;
                 }
             }
-
-            // Add scroll event listener
             window.addEventListener('scroll', checkScrollPosition);
         }
-
-        // Set up the scroll handler when a notification appears
         window.addEventListener("focus", () => {
             if (window.isNotifying) {
-                // Clear notification when user scrolls to bottom
                 setupNotificationScrollHandler();
             }
         });
-
-        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
             divPostsObs.addHandler(function beepOnYouHandler(mutations) {
@@ -2526,14 +2096,11 @@ onReady(async function () {
                 }
             });
         }
-
-        // Listen for settings changes
         window.addEventListener("8chanSS_settingChanged", async (e) => {
             if (e.detail && e.detail.key) {
                 const key = e.detail.key;
                 if (key === "beepOnYou") {
                     beepOnYouSetting = await getSetting("beepOnYou");
-                    // Recreate beep function if setting changes
                     createBeepSound().then(fn => { playBeep = fn; });
                 } else if (key === "notifyOnYou") {
                     notifyOnYouSetting = await getSetting("notifyOnYou");
@@ -2544,16 +2111,11 @@ onReady(async function () {
             }
         });
     })();
-
-    // --- Feature: Enhanced Youtube links ---
     async function enhanceYouTubeLinks() {
-        // Only run on thread or index pages
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
             return;
         }
-        // Check if thumbnail hover is enabled
         const ytThumbsEnabled = await getSetting("enhanceYoutube_ytThumbs");
-        // Title cache
         const ytTitleCache = {};
         const MAX_CACHE_SIZE = 350;
         const ORDER_KEY = "_order";
@@ -2561,11 +2123,7 @@ onReady(async function () {
             "si", "feature", "ref", "fsi", "source",
             "utm_source", "utm_medium", "utm_campaign", "gclid", "gclsrc", "fbclid"
         ];
-
-        // Thumbnail cache (videoId -> dataURL or null)
         const ytThumbCache = {};
-
-        // Try to load cache and order from localStorage
         function loadCache() {
             try {
                 const data = localStorage.getItem('ytTitleCache');
@@ -2588,21 +2146,16 @@ onReady(async function () {
             } catch (e) { }
         }
         loadCache();
-
-        // Helper to extract YouTube video ID from URL
         function getYouTubeId(url) {
             try {
-                // youtu.be short links
                 const u = new URL(url);
                 if (u.hostname === 'youtu.be') {
                     return u.pathname.slice(1);
                 }
-                // Standard watch links
                 if (u.hostname.endsWith('youtube.com')) {
                     if (u.pathname === '/watch') {
                         return u.searchParams.get('v');
                     }
-                    // /live/VIDEOID or /embed/VIDEOID or /shorts/VIDEOID
                     const liveMatch = u.pathname.match(/^\/(live|embed|shorts)\/([a-zA-Z0-9_-]{11})/);
                     if (liveMatch) {
                         return liveMatch[2];
@@ -2611,20 +2164,15 @@ onReady(async function () {
             } catch (e) { }
             return null;
         }
-
-        // Helper to sanitize YouTube video ID (should be 11 valid chars)
         function sanitizeYouTubeId(videoId) {
             if (!videoId) return null;
-            // YouTube IDs are 11 chars, letters, numbers, - and _
             const match = videoId.match(/([a-zA-Z0-9_-]{11})/);
             return match ? match[1] : null;
         }
-        // Strip tracking params
         function stripTrackingParams(url) {
             try {
                 const u = new URL(url);
                 let changed = false;
-                // Remove tracking params, keep t and start
                 const KEEP_PARAMS = new Set(['t', 'start']);
                 TRACKING_PARAMS.forEach(param => {
                     if (u.searchParams.has(param) && !KEEP_PARAMS.has(param)) {
@@ -2632,7 +2180,6 @@ onReady(async function () {
                         changed = true;
                     }
                 });
-                // Also handle hash params (e.g. #t=75)
                 if (u.hash && u.hash.includes('?')) {
                     const [hashPath, hashQuery] = u.hash.split('?');
                     const hashParams = new URLSearchParams(hashQuery);
@@ -2687,8 +2234,6 @@ onReady(async function () {
                 return null;
             }
         }
-
-        // Fetch as data URL using GM.xmlHttpRequest
         async function fetchAsDataURL(url) {
             return new Promise((resolve) => {
                 GM.xmlHttpRequest({
@@ -2711,8 +2256,6 @@ onReady(async function () {
                 });
             });
         }
-
-        // Thumbnail fetch with per-videoId cache and DOM safety
         async function fetchYouTubeThumbnailAsDataURL(videoId) {
             if (ytThumbCache.hasOwnProperty(videoId)) {
                 return ytThumbCache[videoId];
@@ -2727,8 +2270,6 @@ onReady(async function () {
             ytThumbCache[videoId] = dataUrl;
             return dataUrl;
         }
-
-        // Show thumbnail on hover (CSP-safe, webp/jpg fallback)
         function addThumbnailHover(link, videoId) {
             if (link.dataset.ytThumbHover) return;
             link.dataset.ytThumbHover = "1";
@@ -2758,7 +2299,7 @@ onReady(async function () {
                     img.style.maxHeight = '200px';
                     img.style.borderRadius = '3px';
                     img.alt = "YouTube thumbnail";
-                    img.src = "data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQv///wAAACH5BAEAAAMALAAAAAAQABAAAAIgjI+py+0Po5yUFQA7"; // spinner
+                    img.src = "data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQv///wAAACH5BAEAAAMALAAAAAAQABAAAAIgjI+py+0Po5yUFQA7"; 
 
                     lastImg = img;
                     const hoverToken = ++lastHoverToken;
@@ -2780,7 +2321,6 @@ onReady(async function () {
                         if (thumbDiv) thumbDiv.style.opacity = '1';
                     }, 10);
                 }
-                // Position near mouse
                 const top = Math.min(window.innerHeight - 130, e.clientY + 12);
                 const left = Math.min(window.innerWidth - 290, e.clientX + 12);
                 thumbDiv.style.top = `${top}px`;
@@ -2817,31 +2357,21 @@ onReady(async function () {
                 const cleanId = sanitizeYouTubeId(videoId);
                 if (!cleanId) return;
                 link.dataset.ytEnhanced = "1";
-
-                // Strip tracking params from href
                 const cleanUrl = stripTrackingParams(link.href);
                 if (cleanUrl !== link.href) {
                     link.href = cleanUrl;
                 }
-
-                // Replace link text with SVG icon and video title
                 fetchYouTubeTitle(cleanId).then(title => {
                     if (title) {
                         link.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#FF0000" d="M549.7 124.1c-6.3-23.7-24.9-42.4-48.6-48.6C456.5 64 288 64 288 64s-168.5 0-213.1 11.5c-23.7 6.3-42.4 24.9-48.6 48.6C16 168.5 16 256 16 256s0 87.5 10.3 131.9c6.3 23.7 24.9 42.4 48.6 48.6C119.5 448 288 448 288 448s168.5 0 213.1-11.5c23.7-6.3 42.4-24.9 48.6-48.6 10.3-44.4 10.3-131.9 10.3-131.9s0-87.5-10.3-131.9zM232 334.1V177.9L361 256 232 334.1z"/></svg><span></span> ${title}`;
                     }
                 });
-
-                // Add thumbnail hover only if enabled
                 if (ytThumbsEnabled) {
                     addThumbnailHover(link, cleanId);
                 }
             });
         }
-
-        // Initial run
         processLinks(document);
-
-        // Use the observer registry for #divThreads
         const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
             divThreadsObs.addHandler(function enhanceYoutubeLinksHandler(mutations) {
@@ -2855,8 +2385,6 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Convert to 12-hour format (AM/PM) ---
     function featureLabelCreated12h() {
         if (window.pageType?.isCatalog) {
             return;
@@ -2881,8 +2409,6 @@ onReady(async function () {
             span.textContent = newText;
             span.dataset.timeConverted = "1";
         }
-
-        // Initial conversion on page load
         function convertAllLabelCreated(root = document) {
             const spans = root.querySelectorAll
                 ? root.querySelectorAll('.labelCreated')
@@ -2891,8 +2417,6 @@ onReady(async function () {
         }
 
         convertAllLabelCreated();
-
-        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
         if (divPostsObs) {
             divPostsObs.addHandler(function labelCreated12hHandler(mutations) {
@@ -2909,22 +2433,17 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Truncate Filenames and Show Only Extension ---
     function truncateFilenames(filenameLength) {
         if (window.pageType?.isCatalog) return;
         if (!divThreads) return;
-
-        // Store full and truncated filenames in dataset for quick access
         function processLinks(root = document) {
             const links = root.querySelectorAll('a.originalNameLink');
             links.forEach(link => {
-                // Skip if already processed
                 if (link.dataset.truncated === "1") return;
                 const fullFilename = link.getAttribute('download');
                 if (!fullFilename) return;
                 const lastDot = fullFilename.lastIndexOf('.');
-                if (lastDot === -1) return; // No extension found
+                if (lastDot === -1) return; 
                 const name = fullFilename.slice(0, lastDot);
                 const ext = fullFilename.slice(lastDot);
                 let truncated = fullFilename;
@@ -2938,11 +2457,7 @@ onReady(async function () {
                 link.title = fullFilename;
             });
         }
-
-        // Initial processing
         processLinks(document);
-
-        // Event delegation for hover: show full filename on mouseenter, truncated on mouseleave
         divThreads.addEventListener('mouseover', function (e) {
             const link = e.target.closest('a.originalNameLink');
             if (link && link.dataset.fullFilename) {
@@ -2955,8 +2470,6 @@ onReady(async function () {
                 link.textContent = link.dataset.truncatedFilename;
             }
         });
-
-        // Use the observer registry for #divThreads
         const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
             const debouncedProcess = debounce(() => processLinks(divThreads), 100);
@@ -2965,8 +2478,6 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Show Thread Stats in Header ---
     function threadInfoHeader() {
         const navHeader = document.querySelector('.navHeader');
         const navOptionsSpan = document.getElementById('navOptionsSpan');
@@ -2980,8 +2491,6 @@ onReady(async function () {
             const postCount = postCountEl.textContent || '0';
             const userCount = userCountEl.textContent || '0';
             const fileCount = fileCountEl.textContent || '0';
-
-            // Find or create display element
             let statsDisplay = navHeader.querySelector('.thread-stats-display');
             if (!statsDisplay) {
                 statsDisplay = document.createElement('span');
@@ -2996,8 +2505,6 @@ onReady(async function () {
         <span class="statLabel">Files: </span><span class="statNumb">${fileCount}</span>
         ]
         `;
-
-            // Prepend statsDisplay to #navOptionsSpan if it exists
             if (statsDisplay.parentNode && statsDisplay.parentNode !== navOptionsSpan) {
                 statsDisplay.parentNode.removeChild(statsDisplay);
             }
@@ -3005,11 +2512,7 @@ onReady(async function () {
                 navOptionsSpan.insertBefore(statsDisplay, navOptionsSpan.firstChild);
             }
         }
-
-        // Initial update
         updateHeader();
-
-        // Use the observer registry for each stat element
         const statSelectors = ['#postCount', '#userCountLabel', '#fileCount'];
         statSelectors.forEach(selector => {
             const statObs = observeSelector(selector, { childList: true, subtree: false, characterData: true });
@@ -3021,10 +2524,7 @@ onReady(async function () {
             }
         });
     }
-
-    // --- Feature: Advanced Media Viewer ---
     function mediaViewerPositioning() {
-        // Set native 8chan setting
         localStorage.setItem("mediaViewer", "true");
 
         async function updateMediaViewerClass() {
@@ -3033,35 +2533,23 @@ onReady(async function () {
 
             const isEnabled = await getSetting("enableMediaViewer");
             if (!isEnabled) {
-                // Remove positioning classes if feature is disabled
                 mediaViewer.classList.remove('topright', 'topleft');
                 return;
             }
 
             const viewerStyle = await getSetting("enableMediaViewer_viewerStyle");
-
-            // Remove all positioning classes first
             mediaViewer.classList.remove('topright', 'topleft');
-
-            // Apply the appropriate class based on setting
             if (viewerStyle === 'topright' || viewerStyle === 'topleft') {
                 mediaViewer.classList.add(viewerStyle);
             }
-            // For 'native', we don't add any class
         }
-
-        // Initial setup if media viewer already exists
         updateMediaViewerClass();
-
-        // Use the observer registry for #media-viewer
         const mediaViewerObs = observeSelector('#media-viewer', { childList: false, subtree: false });
         if (mediaViewerObs) {
             mediaViewerObs.addHandler(function mediaViewerPositioningHandler() {
                 updateMediaViewerClass();
             });
         }
-
-        // If #media-viewer is not present, observe the body for its addition
         const bodyObs = observeSelector('body', { childList: true, subtree: false });
         if (bodyObs) {
             bodyObs.addHandler(function bodyMediaViewerHandler(mutations) {
@@ -3075,8 +2563,6 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Highlight New IDs ---
     async function featureHighlightNewIds() {
         if (window.pageType?.isLast || window.pageType?.isCatalog) {
             return;
@@ -3084,52 +2570,36 @@ onReady(async function () {
 
         const hlStyle = await getSetting("highlightNewIds_idHlStyle");
         if (!divPosts) return;
-        // Return early if there are no .spanId elements on this board
         if (!document.querySelector('.spanId')) return;
-
-        // Map option value to actual class name
         const styleClassMap = {
             moetext: "moeText",
             glow: "id-glow",
             dotted: "id-dotted"
         };
-        const styleClass = styleClassMap[hlStyle] || "moeText"; // fallback to 'moetext'
-
-        // Helper: Highlight IDs
+        const styleClass = styleClassMap[hlStyle] || "moeText"; 
         function highlightIds(root = divPosts) {
-            // Build frequency map
             const idFrequency = {};
             const labelSpans = root.querySelectorAll('.labelId');
             labelSpans.forEach(span => {
                 const id = span.textContent.split(/[|\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
-
-            // Track first occurrence and apply class
             const seen = {};
             labelSpans.forEach(span => {
                 const id = span.textContent.split(/[|\(]/)[0].trim();
-                // Remove all possible highlight classes in case of re-run
                 span.classList.remove('moetext', 'id-glow', 'id-dotted');
                 if (!seen[id]) {
                     seen[id] = true;
-                    // Add class if first occurrence
                     span.classList.add(styleClass);
-                    // Add a tooltip for clarity
                     span.title = idFrequency[id] === 1
                         ? "This ID appears only once."
                         : "This was the first occurrence of this ID.";
                 } else {
-                    // Remove tooltip for subsequent occurrences
                     span.title = "";
                 }
             });
         }
-
-        // Initial run
         highlightIds();
-
-        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
         if (divPostsObs) {
             const debouncedHighlightIds = debounce(() => highlightIds(), 50);
@@ -3153,22 +2623,16 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Always show post count for IDs ---
     async function featureShowIDCount() {
-        // Early return if not on thread page
         if (!window.pageType?.isThread) return;
-        // Early return if no .spanId exists on the page
         if (!document.querySelector('.spanId')) return;
 
         const alwaysShowIdCount = await getSetting("alwaysShowIdCount");
 
         function updateIdCounts(root = divThreads) {
-            // Build frequency map
             const idFrequency = {};
             const labelSpans = root.querySelectorAll('.labelId');
             labelSpans.forEach(span => {
-                // Extract just the ID part (before | or parens)
                 const id = span.textContent.split(/[|\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
@@ -3176,7 +2640,6 @@ onReady(async function () {
                 const id = span.textContent.split(/[|\(]/)[0].trim();
                 if (alwaysShowIdCount) {
                     span.textContent = `${id} | ${idFrequency[id]}`;
-                    // Prevent native hover handler from changing text
                     span.onmouseover = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
                     span.onmouseout = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
                 } else {
@@ -3186,9 +2649,7 @@ onReady(async function () {
                 }
             });
         }
-        // Initial run
         updateIdCounts();
-        // Observe for dynamic post additions
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
         if (divPostsObs) {
             divPostsObs.addHandler(function showIdCountHandler(mutations) {
@@ -3196,11 +2657,7 @@ onReady(async function () {
             });
         }
     }
-
-
-    // --- Feature: Quote Threading ---
     async function featureQuoteThreading() {
-        // Feature toggle check
         const isEnabled = typeof getSetting === "function"
             ? await getSetting("quoteThreading")
             : true;
@@ -3209,8 +2666,6 @@ onReady(async function () {
             document.querySelector('.quoteThreadingRefresh')?.remove();
             return;
         }
-
-        // Core Threading Logic
         function processPosts(posts) {
             posts.forEach(post => {
                 const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
@@ -3224,15 +2679,11 @@ onReady(async function () {
 
                     if (targetPost) {
                         let repliesContainer = post.nextElementSibling;
-
-                        // Create container if needed
                         if (!repliesContainer?.classList.contains('threadedReplies')) {
                             repliesContainer = document.createElement('div');
                             repliesContainer.className = 'threadedReplies';
                             post.parentNode.insertBefore(repliesContainer, post.nextSibling);
                         }
-
-                        // Move post if not already in container
                         if (!repliesContainer.contains(targetPost)) {
                             repliesContainer.appendChild(targetPost);
                         }
@@ -3240,8 +2691,6 @@ onReady(async function () {
                 });
             });
         }
-
-        // Threading Handlers
         function threadAllPosts() {
             processPosts(document.querySelectorAll('.divPosts .postCell'));
         }
@@ -3250,8 +2699,6 @@ onReady(async function () {
             const allPosts = document.querySelectorAll('.divPosts .postCell');
             processPosts(Array.from(allPosts).slice(-5));
         }
-
-        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
             divPostsObs.addHandler(function quoteThreadingHandler(mutations) {
@@ -3262,8 +2709,6 @@ onReady(async function () {
                 }
             });
         }
-
-        // Refresh Button
         function addRefreshButton() {
             const replyButton = document.querySelector('.threadBottom .innerUtility #replyButton');
             if (!replyButton || replyButton.nextElementSibling?.classList.contains('quoteThreadingBtn')) return;
@@ -3281,18 +2726,12 @@ onReady(async function () {
                 threadAllPosts();
             });
         }
-
-        // --- Initialization ---
-        threadAllPosts();  // Process all posts on initial load
+        threadAllPosts();  
         addRefreshButton();
     }
-
-    // --- Feature: Last 50 Button ---
     function featureLastFifty() {
         if (!window.pageType?.isCatalog) return;
         if (!catalogDiv) return;
-
-        // Add the [L] button to catalog cell
         function addLastLinkButtons(root = document) {
             root.querySelectorAll('.catalogCell').forEach(cell => {
                 const linkThumb = cell.querySelector('.linkThumb');
@@ -3301,14 +2740,8 @@ onReady(async function () {
 
                 const href = linkThumb.getAttribute('href');
                 if (!href || !/\/res\//.test(href)) return;
-
-                // Create the /last/ href
                 const lastHref = href.replace('/res/', '/last/');
-
-                // Remove any existing button to avoid duplicates (robustness)
                 threadStats.querySelectorAll('.last-link-btn').forEach(btn => btn.remove());
-
-                // Create the [L] button
                 const span = document.createElement('span');
                 span.className = 'last-link-btn';
                 span.style.marginLeft = '0.5em';
@@ -3319,8 +2752,6 @@ onReady(async function () {
                 a.style.textDecoration = 'none';
                 a.style.fontWeight = 'bold';
                 span.appendChild(a);
-
-                // Insert after .labelPage if present, else as last child of .threadStats
                 const labelPage = threadStats.querySelector('.labelPage');
                 if (labelPage && labelPage.parentNode) {
                     labelPage.parentNode.insertBefore(span, labelPage.nextSibling);
@@ -3329,11 +2760,7 @@ onReady(async function () {
                 }
             });
         }
-
-        // Initial run on page load
         addLastLinkButtons(document);
-
-        // Use the observer registry for .catalogDiv
         const catalogDivObs = observeSelector('.catalogDiv', { childList: true, subtree: false });
         if (catalogDivObs) {
             const debouncedUpdate = debounce(() => addLastLinkButtons(document), 50);
@@ -3342,15 +2769,9 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Toggle ID as Yours ---
     function featureToggleIdAsYours() {
-        // Early return if not on thread page
         if (!window.pageType?.isThread) return;
-        // Early return if no .spanId exists on the page
         if (!document.querySelector('.spanId')) return;
-
-        // --- Board Key Detection ---
         function getBoardName() {
             const postCell = document.querySelector('.postCell[data-boarduri], .opCell[data-boarduri]');
             if (postCell) return postCell.getAttribute('data-boarduri');
@@ -3361,8 +2782,6 @@ onReady(async function () {
         const T_YOUS_KEY = `${BOARD_NAME}-yous`;
         const MENU_ENTRY_CLASS = "toggleIdAsYoursMenuEntry";
         const MENU_SELECTOR = ".floatingList.extraMenu";
-
-        // --- Storage Helpers (post numbers as numbers) ---
         function getYourPostNumbers() {
             try {
                 const val = localStorage.getItem(T_YOUS_KEY);
@@ -3374,8 +2793,6 @@ onReady(async function () {
         function setYourPostNumbers(arr) {
             localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
         }
-
-        // Menu/Post Association
         document.body.addEventListener('click', function (e) {
             if (e.target.matches('.extraMenuButton')) {
                 const postCell = e.target.closest('.postCell, .opCell');
@@ -3392,7 +2809,6 @@ onReady(async function () {
                         if (labelIdSpan) {
                             menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
                         }
-                        // Immediately add the Toggle ID as Yours entry if not present
                         addMenuEntries(menu.parentNode || menu);
                     }
                 }, 0);
@@ -3402,8 +2818,6 @@ onReady(async function () {
         function getLabelIdFromMenu(menu) {
             return menu.getAttribute('data-label-id') || null;
         }
-
-        // Toggle all posts with a given ID
         function toggleYouNameClassForId(labelId, add) {
             document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
@@ -3416,8 +2830,6 @@ onReady(async function () {
                 }
             });
         }
-
-        // Get all post numbers for a given ID
         function getAllPostNumbersForId(labelId) {
             const postNumbers = [];
             document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
@@ -3430,21 +2842,14 @@ onReady(async function () {
             });
             return postNumbers;
         }
-
-        // Menu Entry Logic
         function addMenuEntries(root = document) {
             root.querySelectorAll(MENU_SELECTOR).forEach(menu => {
-                // Only proceed if the menu is a descendant of an .extraMenuButton
                 if (!menu.closest('.extraMenuButton')) return;
                 const ul = menu.querySelector("ul");
                 if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
-
-                // Get the labelId for this menu (ensure raw ID)
                 let labelId = getLabelIdFromMenu(menu);
                 if (!labelId) return;
                 labelId = labelId.split(/[|\(]/)[0].trim();
-
-                // Check if any post with this ID is marked as "yours"
                 const yourPostNumbers = getYourPostNumbers();
                 const postNumbersForId = getAllPostNumbersForId(labelId);
                 const isMarked = postNumbersForId.length > 0 && postNumbersForId.every(num => yourPostNumbers.includes(num));
@@ -3479,13 +2884,9 @@ onReady(async function () {
                         toggleYouNameClassForId(labelId, false);
                     }
                 });
-
-                // On menu open, update all posts with this ID to reflect current state
                 toggleYouNameClassForId(labelId, isMarked);
             });
         }
-
-        // Listen for storage changes
         window.addEventListener("storage", function (event) {
             if (event.key === T_YOUS_KEY) {
                 const yourPostNumbers = getYourPostNumbers();
@@ -3498,8 +2899,6 @@ onReady(async function () {
                 });
             }
         });
-
-        // Use the observer registry for #divThreads
         const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
             const debouncedObserverCallback = debounce((mutations) => {
@@ -3538,8 +2937,6 @@ onReady(async function () {
             }, 100);
             divThreadsObs.addHandler(debouncedObserverCallback);
         }
-
-        // Initial marking on page load for all marked post numbers
         const yourPostNumbers = getYourPostNumbers();
         document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
             const nameLink = postCell.querySelector(".linkName.noEmailName");
@@ -3549,19 +2946,12 @@ onReady(async function () {
             }
         });
     }
-
-    // --- Feature: Sauce Links, appended to .uploadDetails ---
     async function featureSauceLinks() {
-        // Only enable for index or thread
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
             return;
         }
-
-        // Check if the Sauce Links feature is enabled
         const enabled = await getSetting("enableTheSauce");
         if (!enabled) return;
-
-        // Define supported services
         const services = [
             {
                 key: "iqdb",
@@ -3586,8 +2976,6 @@ onReady(async function () {
                 method: "pixiv",
             },
         ];
-
-        // Helper: Get the image URL from a .uploadDetails div
         function getImageUrl(detailDiv) {
             const parentCell = detailDiv.closest('.postCell') || detailDiv.closest('.opCell');
             const imgLink = parentCell?.querySelector('.imgLink');
@@ -3598,8 +2986,6 @@ onReady(async function () {
 
             let imgSrc = img.getAttribute('src');
             let origin = window.location.origin;
-
-            // Normalize the image URL
             if (imgSrc.startsWith("//")) {
                 return window.location.protocol + imgSrc;
             } else if (imgSrc.startsWith("/")) {
@@ -3610,15 +2996,11 @@ onReady(async function () {
                 return origin + "/" + imgSrc;
             }
         }
-
-        // Helper: Fetch the image as a Blob
         async function fetchImageBlob(url) {
             const response = await fetch(url);
             if (!response.ok) throw new Error("Failed to fetch image");
             return await response.blob();
         }
-
-        // Helper: Extract Pixiv ID from filename
         function getPixivId(detailDiv) {
             const origNameLink = detailDiv.querySelector('.originalNameLink');
             if (!origNameLink) return null;
@@ -3626,15 +3008,10 @@ onReady(async function () {
             const match = filename && filename.match(/^(\d+)_p\d+\./);
             return match ? match[1] : null;
         }
-
-        // Main: Add sauce links to a single .uploadDetails element
         function addSauceLinksToElement(detailDiv) {
-            // Prevent duplicate processing
             if (detailDiv.classList.contains('sauceLinksProcessed')) {
                 return;
             }
-
-            // Remove any existing sauce links first
             detailDiv.querySelectorAll('.sauceLinksContainer').forEach(el => el.remove());
 
             const imgUrl = getImageUrl(detailDiv);
@@ -3670,8 +3047,6 @@ onReady(async function () {
                         try {
                             const blob = await fetchImageBlob(imgUrl);
                             const file = new File([blob], "image.png", { type: blob.type || "image/png" });
-
-                            // Create a form to submit the file
                             const form = document.createElement("form");
                             form.action = service.url;
                             form.method = "POST";
@@ -3683,8 +3058,6 @@ onReady(async function () {
                             input.type = "file";
                             input.name = service.fileField;
                             form.appendChild(input);
-
-                            // Use DataTransfer to set the file input
                             const dt = new DataTransfer();
                             dt.items.add(file);
                             input.files = dt.files;
@@ -3715,15 +3088,11 @@ onReady(async function () {
                 detailDiv.appendChild(container);
             }
         }
-
-        // Initial observation for all .uploadDetails in .divPosts
         function observeAllUploadDetails(container = document) {
             const details = container.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)');
             details.forEach(detailDiv => addSauceLinksToElement(detailDiv));
         }
         observeAllUploadDetails();
-
-        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
         if (divPostsObs) {
             divPostsObs.addHandler(function sauceLinksHandler(mutations) {
@@ -3740,15 +3109,12 @@ onReady(async function () {
                 }
             });
         }
-
-        // Observe for .quoteTooltip and .innerPost additions and process .uploadDetails inside
         const bodyObs = observeSelector('body', { childList: true, subtree: true });
         if (bodyObs) {
             bodyObs.addHandler(function quoteTooltipSauceLinksHandler(mutations) {
                 for (const mutation of mutations) {
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType !== 1) continue;
-                        // .quoteTooltip
                         if (node.classList && node.classList.contains('quoteTooltip')) {
                             node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
                         } else if (node.classList && node.classList.contains('innerPost')) {
@@ -3762,15 +3128,10 @@ onReady(async function () {
             });
         }
     }
-
-    // --- Feature: Custom Post Hide Menu ---
     function featureCustomPostHideMenu() {
-        // Storage keys
         const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
         const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
         const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-
-        // --- Storage helpers ---
         async function getStoredObject(key) {
             let obj = {};
             if (typeof GM !== 'undefined' && GM.getValue) {
@@ -3783,8 +3144,6 @@ onReady(async function () {
                 await GM.setValue(key, obj);
             }
         }
-
-        // --- DOM helpers ---
         function getAllHideButtons(root = document) {
             return Array.from(root.querySelectorAll('label.hideButton'));
         }
@@ -3808,14 +3167,11 @@ onReady(async function () {
         function getBoardUri(cell) {
             return cell.getAttribute('data-boarduri') || '';
         }
-
-        // --- Hide/unhide logic ---
         function hidePostCellWithStub(cell, boardUri, postId, onUnhide, reason) {
             if (!cell) return;
             const inner = getInnerPostElem(cell);
             if (!inner) return;
             inner.classList.add('hidden');
-            // Remove any existing stub for this post
             const oldStub = cell.querySelector('.unhideButton');
             if (oldStub) oldStub.remove();
             const unhideBtn = document.createElement('span');
@@ -3844,7 +3200,6 @@ onReady(async function () {
             updateAllQuoteLinksFiltered();
         }
         function getAllRepliesRecursive(rootPostId, boardUri) {
-            // Build a map of postId -> post element for all posts in the thread
             const postMap = {};
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                 const pid = getPostId(cell);
@@ -3859,7 +3214,6 @@ onReady(async function () {
                 const currentId = queue.shift();
                 const postEl = postMap[currentId];
                 if (!postEl) continue;
-                // Find all direct replies in .panelBacklinks
                 const backlinks = postEl.querySelectorAll('.panelBacklinks .backLink[data-target-uri]');
                 backlinks.forEach(link => {
                     const targetUri = link.getAttribute('data-target-uri');
@@ -3904,7 +3258,6 @@ onReady(async function () {
                         });
                     });
                 } else {
-                    // Only hide direct replies, not recursively
                     document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                         if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                         const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
@@ -3925,13 +3278,9 @@ onReady(async function () {
             }
             updateAllQuoteLinksFiltered();
         }
-
-        // --- Hide/unhide by name (simple/plus) ---
         async function setPostsWithNameHidden(name, hide = true, plus = false) {
-            // Find all posts with this name
             const postIdsWithName = new Set();
             document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                // Never hide OP
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 const nameElem = cell.querySelector('.linkName');
                 if (nameElem && nameElem.textContent.trim() === name) {
@@ -3945,7 +3294,6 @@ onReady(async function () {
                     }
                 }
             });
-            // For plus: only hide direct replies to these posts
             if (plus && postIdsWithName.size > 0) {
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
@@ -3966,10 +3314,7 @@ onReady(async function () {
             }
             updateAllQuoteLinksFiltered();
         }
-
-        // --- Hide/unhide by ID (simple/plus) ---
         async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
-            // Hide/unhide all posts with this ID in this thread
             const postIdsWithId = new Set();
             if (!/^[a-z0-9]+$/i.test(id)) return;
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
@@ -3992,14 +3337,10 @@ onReady(async function () {
                     }
                 }
             });
-
-            // Plus: hide/unhide all posts that directly reply to a post with this ID (via .quoteLink or .panelBacklinks .backLink)
             if (plus && postIdsWithId.size > 0) {
-                // Hide all posts that have a .quoteLink or .backLink to any of the postIdsWithId
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                     let isDirectReply = false;
-                    // Check .quoteLink
                     const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
                     for (const link of quoteLinks) {
                         const targetUri = link.getAttribute('data-target-uri');
@@ -4009,7 +3350,6 @@ onReady(async function () {
                             break;
                         }
                     }
-                    // Check .panelBacklinks .backLink
                     if (!isDirectReply) {
                         const panelBacklinks = cell.querySelector('.panelBacklinks');
                         if (panelBacklinks) {
@@ -4037,24 +3377,15 @@ onReady(async function () {
             }
             updateAllQuoteLinksFiltered();
         }
-
-        // --- QuoteLink filtering ---
         async function updateAllQuoteLinksFiltered() {
-            // Gather all hidden post IDs, filtered IDs, and filtered names
             const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
             let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
-
-            // Support both old array and new object for filtered names
             if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
                 filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
             }
             if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
-
-            // Build a set of all hidden/filtered post targets (boardUri#postId)
             const filteredTargets = new Set();
-
-            // Hidden posts (simple and plus, recursively for plus)
             for (const boardUri in hiddenPostsObj) {
                 for (const postId of (hiddenPostsObj[boardUri]?.simple || [])) {
                     filteredTargets.add(`${boardUri}#${postId}`);
@@ -4066,17 +3397,14 @@ onReady(async function () {
                     });
                 }
             }
-            // Filtered IDs (simple and plus)
             const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
             for (const boardUri in filteredIdsObj) {
                 for (const threadId in filteredIdsObj[boardUri]) {
                     let threadObj = filteredIdsObj[boardUri][threadId];
-                    // Migrate old array to new object if needed
                     if (Array.isArray(threadObj)) {
                         threadObj = { simple: threadObj, plus: [] };
                         filteredIdsObj[boardUri][threadId] = threadObj;
                     }
-                    // Simple
                     for (const id of threadObj.simple || []) {
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
@@ -4086,9 +3414,7 @@ onReady(async function () {
                             }
                         });
                     }
-                    // Plus: posts with this ID and direct replies via .panelBacklinks
                     for (const id of threadObj.plus || []) {
-                        // Posts with this ID
                         const postIdsWithId = new Set();
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
@@ -4098,7 +3424,6 @@ onReady(async function () {
                                 postIdsWithId.add(postId);
                             }
                         });
-                        // Direct replies via .panelBacklinks
                         if (postIdsWithId.size > 0) {
                             document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                                 const panelBacklinks = cell.querySelector('.panelBacklinks');
@@ -4123,8 +3448,6 @@ onReady(async function () {
                     }
                 }
             }
-            // Filtered names (simple and plus)
-            // Simple
             for (const name of filteredNamesObj.simple) {
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     const nameElem = cell.querySelector('.linkName');
@@ -4135,7 +3458,6 @@ onReady(async function () {
                     }
                 });
             }
-            // Plus: posts with this name and all their replies (recursively)
             for (const name of filteredNamesObj.plus) {
                 const postIdsWithName = new Set();
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
@@ -4147,7 +3469,6 @@ onReady(async function () {
                         postIdsWithName.add(postId);
                     }
                 });
-                // Recursively add all replies to these posts
                 postIdsWithName.forEach(pid => {
                     getAllRepliesRecursive(pid).forEach(replyPid => {
                         document.querySelectorAll('.postCell, .opCell').forEach(cell => {
@@ -4159,8 +3480,6 @@ onReady(async function () {
                     });
                 });
             }
-
-            // Now update all quoteLinks
             document.querySelectorAll('.quoteLink').forEach(link => {
                 let isFiltered = false;
                 const targetUri = link.getAttribute('data-target-uri');
@@ -4183,8 +3502,6 @@ onReady(async function () {
                 else link.classList.remove('filtered');
             });
         }
-
-        // --- Menu logic ---
         async function showCustomMenu(hideButton, postCell) {
             removeExistingMenu();
             const extraMenu = document.createElement('div');
@@ -4208,8 +3525,6 @@ onReady(async function () {
             const nameElem = postCell.querySelector('.linkName');
             const name = nameElem ? nameElem.textContent.trim() : null;
             const isOP = postCell.classList.contains('opCell') || postCell.classList.contains('innerOP');
-
-            // Get storage state
             const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
             if (!hiddenPostsObj[boardUri]) hiddenPostsObj[boardUri] = { simple: [], plus: [] };
             if (!Array.isArray(hiddenPostsObj[boardUri].simple)) hiddenPostsObj[boardUri].simple = [];
@@ -4217,7 +3532,6 @@ onReady(async function () {
             const isHiddenSimple = hiddenPostsObj[boardUri].simple.includes(Number(postId));
             const isHiddenPlus = hiddenPostsObj[boardUri].plus.includes(Number(postId));
             const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
-            // Ensure correct structure for filteredIdsObj[boardUri][threadId]
             let threadObj = filteredIdsObj[boardUri] && filteredIdsObj[boardUri][threadId];
             if (Array.isArray(threadObj)) {
                 threadObj = { simple: threadObj, plus: [] };
@@ -4231,8 +3545,6 @@ onReady(async function () {
             if (!Array.isArray(threadObj.plus)) threadObj.plus = [];
             const isFilteredId = id && threadObj.simple.includes(id);
             const isFilteredIdPlus = id && threadObj.plus.includes(id);
-
-            // Filtered names: support both old array and new object
             let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
             if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
                 filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
@@ -4241,8 +3553,6 @@ onReady(async function () {
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
             const isNameFiltered = name && filteredNamesObj.simple.includes(name);
             const isNameFilteredPlus = name && filteredNamesObj.plus.includes(name);
-
-            // Menu entries
             const options = [];
 
             if (!isOP) {
@@ -4350,7 +3660,6 @@ onReady(async function () {
                         }
                         if (!Array.isArray(threadObj.simple)) threadObj.simple = [];
                         let arr = threadObj.simple;
-                        // Use the raw ID for storage and comparison
                         const rawId = id ? id.split(/[|\(]/)[0].trim() : id;
                         const idx = arr.indexOf(rawId);
                         if (idx !== -1) {
@@ -4423,8 +3732,6 @@ onReady(async function () {
         function removeExistingMenu() {
             document.querySelectorAll('.floatingList.extraMenu[data-custom]').forEach(menu => menu.remove());
         }
-
-        // Hijack hide buttons
         function hijackHideButtons(root = document) {
             getAllHideButtons(root).forEach(hideButton => {
                 if (hideButton.dataset.customMenuHijacked) return;
@@ -4437,10 +3744,7 @@ onReady(async function () {
                 }, true);
             });
         }
-
-        // Initial page load: apply all hiding/filtering
         async function autoHideAll() {
-            // Hide posts
             const obj = await getStoredObject(HIDDEN_POSTS_KEY);
             for (const boardUri in obj) {
                 const arrSimple = obj[boardUri]?.simple || [];
@@ -4448,7 +3752,6 @@ onReady(async function () {
                 arrSimple.forEach(postId => setPostHidden(boardUri, String(postId), true, false));
                 arrPlus.forEach(postId => setPostHidden(boardUri, String(postId), true, true));
             }
-            // Hide filtered IDs
             const idsObj = await getStoredObject(FILTERED_IDS_KEY);
             for (const boardUri in idsObj) {
                 for (const threadId in idsObj[boardUri]) {
@@ -4461,22 +3764,17 @@ onReady(async function () {
                     (threadObj.plus || []).forEach(id => setPostsWithIdHidden(boardUri, threadId, id, true, true));
                 }
             }
-            // Hide filtered names (simple and plus)
             let namesObj = await getStoredObject(FILTERED_NAMES_KEY);
             if (!namesObj || typeof namesObj !== "object" || Array.isArray(namesObj)) {
                 namesObj = { simple: Array.isArray(namesObj) ? namesObj : [], plus: [] };
             }
             (namesObj.simple || []).forEach(name => setPostsWithNameHidden(name, true, false));
             (namesObj.plus || []).forEach(name => setPostsWithNameHidden(name, true, true));
-            // Update all quoteLinks after initial hiding
             updateAllQuoteLinksFiltered();
         }
-
-        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
             divPostsObs.addHandler(async function customPostHideMenuHandler(mutations) {
-                // Gather all plus-hidden post IDs for all boards, etc.
                 const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
                 const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
                 let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
@@ -4485,14 +3783,10 @@ onReady(async function () {
                 }
                 if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
                 if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
-
-                // Map: boardUri -> Set of plus-hidden post IDs (as strings)
                 const plusHiddenMap = {};
                 for (const boardUri in hiddenPostsObj) {
                     plusHiddenMap[boardUri] = new Set((hiddenPostsObj[boardUri]?.plus || []).map(String));
                 }
-
-                // Build a map of boardUri+threadId => Set of postIds with plus-filtered IDs
                 const plusFilteredIdPostIds = {};
                 for (const boardUri in filteredIdsObj) {
                     for (const threadId in filteredIdsObj[boardUri]) {
@@ -4504,7 +3798,6 @@ onReady(async function () {
                         if (!plusFilteredIdPostIds[boardUri]) plusFilteredIdPostIds[boardUri] = {};
                         plusFilteredIdPostIds[boardUri][threadId] = new Set();
                         for (const id of threadObj.plus || []) {
-                            // Find all postIds in this thread with this ID
                             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                                 const inner = getInnerPostElem(cell);
                                 const cellThreadId = getThreadIdFromInnerPost(inner);
@@ -4542,16 +3835,12 @@ onReady(async function () {
                             const id = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
                             const nameElem = cell.querySelector('.linkName');
                             const name = nameElem ? nameElem.textContent.trim() : null;
-
-                            // Hide post (simple/plus)
                             if (hiddenPostsObj[boardUri]?.simple?.includes(Number(postId))) {
                                 setPostHidden(boardUri, postId, true, false);
                             }
                             if (hiddenPostsObj[boardUri]?.plus?.includes(Number(postId))) {
                                 setPostHidden(boardUri, postId, true, true);
                             }
-
-                            // Hide by filtered ID (simple and plus)
                             let threadObj = filteredIdsObj[boardUri] && filteredIdsObj[boardUri][threadId];
                             if (Array.isArray(threadObj)) {
                                 threadObj = { simple: threadObj, plus: [] };
@@ -4567,19 +3856,14 @@ onReady(async function () {
                             if (id && threadObj.plus.includes(id)) {
                                 setPostsWithIdHidden(boardUri, threadId, id, true, true);
                             }
-
-                            // Hide by filtered name (simple and plus)
                             if (name && filteredNamesObj.simple.includes(name)) {
                                 setPostsWithNameHidden(name, true, false);
                             }
                             if (name && filteredNamesObj.plus.includes(name)) {
                                 setPostsWithNameHidden(name, true, true);
                             }
-
-                            // --- Hide if replying (directly or indirectly) to a plus-hidden post or filtered name+ ---
                             let shouldHidePlus = false;
                             const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                            // Build a postId -> parentIds map for all posts in the thread (in-memory, once per batch)
                             if (!window._8chanSS_postParentMapCache) {
                                 const postParentMap = {};
                                 document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
@@ -4595,7 +3879,6 @@ onReady(async function () {
                                 window._8chanSS_postParentMapCache = postParentMap;
                             }
                             const postParentMap = window._8chanSS_postParentMapCache;
-                            // Build a Set of all plus-hidden post IDs (once per batch)
                             if (!window._8chanSS_plusHiddenSetCache) {
                                 const plusHiddenSet = new Set();
                                 for (const b in plusHiddenMap) {
@@ -4606,11 +3889,9 @@ onReady(async function () {
                                 window._8chanSS_plusHiddenSetCache = plusHiddenSet;
                             }
                             const plusHiddenSet = window._8chanSS_plusHiddenSetCache;
-                            // Build a Set of all post IDs with filtered name+ (once per batch)
                             if (!window._8chanSS_filteredNamePlusSetCache) {
                                 const filteredNamePlusSet = new Set();
                                 const initialFiltered = [];
-                                // Find all postCells with a filtered name (plus)
                                 document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                                     const nameElem = postCell.querySelector('.linkName');
                                     const name = nameElem ? nameElem.textContent.trim() : null;
@@ -4619,10 +3900,7 @@ onReady(async function () {
                                         initialFiltered.push(postCell.id);
                                     }
                                 });
-                                // Recursively add all descendants (replies of replies, etc.)
-                                // Use the postParentMap already built
                                 const postParentMap = window._8chanSS_postParentMapCache;
-                                // Build a reverse map: parentId -> [childId, ...]
                                 const childMap = {};
                                 Object.entries(postParentMap).forEach(([childId, parentIds]) => {
                                     parentIds.forEach(parentId => {
@@ -4630,7 +3908,6 @@ onReady(async function () {
                                         childMap[parentId].push(childId);
                                     });
                                 });
-                                // BFS to add all descendants
                                 const queue = [...initialFiltered];
                                 while (queue.length > 0) {
                                     const current = queue.shift();
@@ -4645,7 +3922,6 @@ onReady(async function () {
                                 window._8chanSS_filteredNamePlusSetCache = filteredNamePlusSet;
                             }
                             const filteredNamePlusSet = window._8chanSS_filteredNamePlusSetCache;
-                            // Walk up the parent chain in memory
                             const visited = new Set();
                             function isDescendantOfPlusHiddenOrFilteredNamePlus(pid) {
                                 if (visited.has(pid)) return false;
@@ -4664,15 +3940,11 @@ onReady(async function () {
                             if (shouldHidePlus) {
                                 setPostHidden(boardUri, postId, true, true);
                             }
-
-                            // --- Hide if replying to a plus-filtered ID (Filter ID+) ---
-                            // Only direct replies (not recursive)
                             if (
                                 plusFilteredIdPostIds[boardUri] &&
                                 plusFilteredIdPostIds[boardUri][threadId] &&
                                 plusFilteredIdPostIds[boardUri][threadId].size > 0
                             ) {
-                                // Check .panelBacklinks .backLink
                                 const panelBacklinks = cell.querySelector('.panelBacklinks');
                                 let isDirectReplyToFilteredId = false;
                                 if (panelBacklinks) {
@@ -4686,7 +3958,6 @@ onReady(async function () {
                                         }
                                     }
                                 }
-                                // Also check .quoteLink (for completeness)
                                 if (!isDirectReplyToFilteredId) {
                                     for (const link of quoteLinks) {
                                         const targetUri = link.getAttribute('data-target-uri');
@@ -4707,92 +3978,59 @@ onReady(async function () {
                 updateAllQuoteLinksFiltered();
             });
         }
-
-        // --- Initial setup ---
         hijackHideButtons();
         autoHideAll();
     }
-
-    // --- Feature: Show all posts by ID ---
-    async function enableIdFiltering() {
+    async function featureIdFiltering() {
         if (!window.pageType?.isThread) return;
+        if (!divThreads) return;
 
         const postCellSelector = ".postCell, .opCell, .innerOP";
         const labelIdSelector = ".labelId";
         const hiddenClassName = "is-hidden-by-filter";
         let activeFilterColor = null;
-
-        // Check if subOption is enabled
         const showIdLinks = await getSetting("enableIdFilters_idViewMode");
         let floatingDiv = null;
-
-        function closeFloatingDiv() {
-            if (floatingDiv && floatingDiv.parentNode) {
-                floatingDiv.parentNode.removeChild(floatingDiv);
-                floatingDiv = null;
-            }
+        function removeFloatingDiv() {
+            if (floatingDiv && floatingDiv.parentNode) floatingDiv.parentNode.removeChild(floatingDiv);
+            floatingDiv = null;
             document.removeEventListener("mousedown", outsideClickHandler, true);
         }
         function outsideClickHandler(e) {
-            if (floatingDiv && !floatingDiv.contains(e.target)) {
-                closeFloatingDiv();
-            }
+            if (floatingDiv && !floatingDiv.contains(e.target)) removeFloatingDiv();
         }
-        
-        // Show floating div with links to all posts by this ID
-        function showIdList(id, clickedLabel) {
-            // Extract only the hex ID (first 6 hex chars) from the label
+        function getPostsById(id) {
             const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
-
-            const threadsContainer = document.getElementById('divThreads');
-            if (!threadsContainer) {
-                return [];
-            }
-
-            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell, .innerOP'));
-
-            const matchingPosts = [];
-            allPosts.forEach(postEl => {
-                const label = postEl.querySelector('.labelId');
-                const postId = postEl.id;
-                if (label && postId) {
-                    const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
-                    if (labelId === idToMatch) {
-                        matchingPosts.push(postEl);
-                    }
-                }
+            return Array.from(divThreads.querySelectorAll(postCellSelector)).filter(postEl => {
+                const label = postEl.querySelector(labelIdSelector);
+                if (!label) return false;
+                const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
+                return labelId === idToMatch;
             });
-
-            // --- Floating div logic ---
-            // Remove any existing floating div
-            document.querySelectorAll('.ss-idlinks-floating').forEach(el => el.remove());
-
-            // Get board and thread from URL
+        }
+        function showIdList(id, clickedLabel) {
+            removeFloatingDiv();
+            const matchingPosts = getPostsById(id);
             const match = window.location.pathname.match(/^\/([^/]+)\/(res|last)\/(\d+)\.html/);
             const board = match ? match[1] : '';
             const thread = match ? match[3] : '';
-
-            // Build the floating div
-            const floatingDiv = document.createElement('div');
+            floatingDiv = document.createElement('div');
             floatingDiv.className = 'ss-idlinks-floating';
-
-            // Title
             const title = document.createElement('div');
             title.style.fontWeight = 'bold';
             title.style.marginBottom = '8px';
-            floatingDiv.appendChild(title);
-
-            // List of links
-            const linkContainer = document.createElement('div');
+            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
             if (showIdLinks == "showIdLinksOnly") {
-                title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+                title.textContent = `Posts by ID: ${idToMatch} (${getPostsById(id).length})`;
             }
+            floatingDiv.appendChild(title);
+            const linkContainer = document.createElement('div');
             linkContainer.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'flex';
             linkContainer.style.flexWrap = 'wrap';
             linkContainer.style.gap = '0.3em';
-
             matchingPosts.forEach(postEl => {
                 const postId = postEl.id;
+                if (!postId) return; 
                 const link = document.createElement('a');
                 link.className = 'quoteLink postLink';
                 link.href = `/${board}/res/${thread}.html#${postId}`;
@@ -4801,17 +4039,15 @@ onReady(async function () {
                 link.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'inline-block';
                 link.onclick = function (e) {
                     e.preventDefault();
-                    floatingDiv.remove();
+                    removeFloatingDiv();
                     const target = document.getElementById(postId);
                     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 };
-                // Wrap each link in a div.innerPost with dataset.uri for tooltip compatibility
                 const wrapper = document.createElement('div');
                 wrapper.className = 'innerPost';
                 wrapper.dataset.uri = `${board}/${thread}#${postId}`;
                 wrapper.appendChild(link);
-
-                if(showIdLinks == "showIdLinksVertical"){
+                if (showIdLinks == "showIdLinksVertical") {
                     wrapper.style.boxShadow = 'none';
                     wrapper.style.border = 'none';
                     wrapper.style.outline = 'none';
@@ -4820,36 +4056,27 @@ onReady(async function () {
                     wrapper.style.padding = 0;
                     wrapper.style.margin = 0;
                 }
-                
                 linkContainer.appendChild(wrapper);
             });
             floatingDiv.appendChild(linkContainer);
-
-            // Position the floating div next to the clicked label
             document.body.appendChild(floatingDiv);
             const rect = clickedLabel.getBoundingClientRect();
-            let top = rect.bottom + window.scrollY + 4;
+            const floatWidth = 320;
+            const floatHeight = floatingDiv.offsetHeight || 200;
             let left = rect.left + window.scrollX;
-            if (left + 320 > window.innerWidth) left = Math.max(0, window.innerWidth - 340);
-            if (top + 200 > window.innerHeight + window.scrollY) top = Math.max(10, rect.top + window.scrollY - 220);
+            let top = rect.bottom + window.scrollY + 4;
+            if (left + floatWidth > window.innerWidth) left = Math.max(0, window.innerWidth - floatWidth - 10);
+            if (top + floatHeight > window.scrollY + window.innerHeight) {
+                top = rect.top + window.scrollY - floatHeight - 4;
+                if (top < 0) top = 10; 
+            }
             floatingDiv.style.top = `${top}px`;
             floatingDiv.style.left = `${left}px`;
-
-            // Close on click outside
             setTimeout(() => {
-                function closeOnClick(e) {
-                    if (!floatingDiv.contains(e.target)) {
-                        floatingDiv.remove();
-                        document.removeEventListener('mousedown', closeOnClick, true);
-                    }
-                }
-                document.addEventListener('mousedown', closeOnClick, true);
+                document.addEventListener('mousedown', outsideClickHandler, true);
             }, 0);
-
             return matchingPosts;
         }
-
-        // Filtering logic (original)
         function applyFilter(targetRgbColor) {
             activeFilterColor = targetRgbColor;
             document.querySelectorAll(postCellSelector).forEach(cell => {
@@ -4858,8 +4085,6 @@ onReady(async function () {
                 cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
             });
         }
-
-        // Click handler
         function handleClick(event) {
             const clickedLabel = event.target.closest(labelIdSelector);
             if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
@@ -4873,11 +4098,10 @@ onReady(async function () {
                     const rect = clickedLabel.getBoundingClientRect();
                     const cursorOffsetY = event.clientY - rect.top;
                     if (activeFilterColor === clickedColor) {
-                        applyFilter(null); // Toggle off if already active
+                        applyFilter(null); 
                     } else {
                         applyFilter(clickedColor);
                     }
-                    // Scroll to keep the clicked label in view
                     clickedLabel.scrollIntoView({ behavior: "instant", block: "center" });
                     window.scrollBy(0, cursorOffsetY - rect.height / 2);
                 }
@@ -4885,19 +4109,14 @@ onReady(async function () {
         }
         document.body.addEventListener("click", handleClick);
     }
-    
-
-    ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Floating Settings Menu with Tabs ---
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
         if (menu) return menu;
         menu = document.createElement("div");
         menu.id = "8chanSS-menu";
         menu.style.position = "fixed";
-        menu.style.top = "3rem"; // Position of menu
-        menu.style.left = "20rem"; // Position of menu
+        menu.style.top = "3rem"; 
+        menu.style.left = "20rem"; 
         menu.style.zIndex = "99999";
         menu.style.background = "var(--menu-color)";
         menu.style.color = "var(--text-color)";
@@ -4910,8 +4129,6 @@ onReady(async function () {
         menu.style.maxWidth = "470px";
         menu.style.fontFamily = "sans-serif";
         menu.style.userSelect = "none";
-
-        // Draggable
         let isDragging = false,
             dragOffsetX = 0,
             dragOffsetY = 0;
@@ -4950,8 +4167,6 @@ onReady(async function () {
             isDragging = false;
             document.body.style.userSelect = "";
         });
-
-        // Title and close button
         const title = document.createElement("span");
         title.textContent = "8chanSS Settings";
         title.style.fontWeight = "bold";
@@ -4972,31 +4187,23 @@ onReady(async function () {
         header.appendChild(closeBtn);
 
         menu.appendChild(header);
-
-        // Add click outside to close functionality
         const closeOnOutsideClick = (e) => {
             if (menu.style.display !== "none" && !menu.contains(e.target)) {
-                // Make sure we're not clicking the menu toggle button
                 const menuToggle = document.getElementById("8chanSS-icon");
                 if (menuToggle && !menuToggle.contains(e.target)) {
                     menu.style.display = "none";
                 }
             }
         };
-
-        // Add the event listener when the menu is shown, remove when hidden
         Object.defineProperty(menu.style, 'display', {
             set: function (value) {
                 const oldValue = this.getPropertyValue('display');
                 this.setProperty('display', value);
-
-                // If changing from hidden to visible, add listener
                 if (oldValue === 'none' && value !== 'none') {
-                    setTimeout(() => { // Use timeout to avoid immediate triggering
+                    setTimeout(() => { 
                         document.addEventListener('click', closeOnOutsideClick);
                     }, 10);
                 }
-                // If changing from visible to hidden, remove listener
                 else if (oldValue !== 'none' && value === 'none') {
                     document.removeEventListener('click', closeOnOutsideClick);
                 }
@@ -5005,30 +4212,22 @@ onReady(async function () {
                 return this.getPropertyValue('display');
             }
         });
-
-        // Tab navigation
         const tabNav = document.createElement("div");
         tabNav.style.display = "flex";
         tabNav.style.borderBottom = "1px solid #444";
         tabNav.style.background = "rgb(from var(--menu-color) r g b / 1)";
-
-        // Tab content container
         const tabContent = document.createElement("div");
         tabContent.style.padding = "15px 16px";
         tabContent.style.maxHeight = "70vh";
         tabContent.style.overflowY = "auto";
         tabContent.style.scrollbarWidth = "thin";
         tabContent.style.fontSize = "smaller";
-
-        // Store current (unsaved) values
         const tempSettings = {};
         await Promise.all(
             Object.keys(flatSettings).map(async (key) => {
                 tempSettings[key] = await getSetting(key);
             })
         );
-
-        // Create tabs
         const tabs = {
             site: {
                 label: "Site",
@@ -5055,8 +4254,6 @@ onReady(async function () {
                 content: createShortcutsTab(),
             },
         };
-
-        // Create tab buttons
         Object.keys(tabs).forEach((tabId, index, arr) => {
             const tab = tabs[tabId];
             const tabButton = document.createElement("button");
@@ -5075,8 +4272,6 @@ onReady(async function () {
             tabButton.style.flex = "1";
             tabButton.style.fontSize = "14px";
             tabButton.style.transition = "background 0.2s";
-
-            // Add rounded corners and margin to the first and last tab
             if (index === 0) {
                 tabButton.style.setProperty("border-top-left-radius", "8px", "important");
                 tabButton.style.setProperty("border-top-right-radius", "0", "important");
@@ -5090,19 +4285,14 @@ onReady(async function () {
                 tabButton.style.setProperty("border-bottom-left-radius", "0", "important");
                 tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
                 tabButton.style.margin = "5px 5px 0 0";
-                tabButton.style.borderRight = "none"; // Remove border on last tab
+                tabButton.style.borderRight = "none"; 
             }
 
             tabButton.addEventListener("click", () => {
-                // Hide all tab contents
                 Object.values(tabs).forEach((t) => {
                     t.content.style.display = "none";
                 });
-
-                // Show selected tab content
                 tab.content.style.display = "block";
-
-                // Update active tab button
                 tabNav.querySelectorAll("button").forEach((btn) => {
                     btn.style.background = "transparent";
                 });
@@ -5113,22 +4303,16 @@ onReady(async function () {
         });
 
         menu.appendChild(tabNav);
-
-        // Add all tab contents to the container
         Object.values(tabs).forEach((tab, index) => {
             tab.content.style.display = index === 0 ? "block" : "none";
             tabContent.appendChild(tab.content);
         });
 
         menu.appendChild(tabContent);
-
-        // Button container for Save and Reset buttons
         const buttonContainer = document.createElement("div");
         buttonContainer.style.display = "flex";
         buttonContainer.style.gap = "10px";
         buttonContainer.style.padding = "0 18px 15px";
-
-        // Save Button
         const saveBtn = document.createElement("button");
         saveBtn.textContent = "Save";
         saveBtn.style.setProperty("background", "#4caf50", "important");
@@ -5152,8 +4336,6 @@ onReady(async function () {
             }, 400);
         });
         buttonContainer.appendChild(saveBtn);
-
-        // Reset Button
         const resetBtn = document.createElement("button");
         resetBtn.textContent = "Reset";
         resetBtn.style.setProperty("background", "#dd3333", "important");
@@ -5166,7 +4348,6 @@ onReady(async function () {
         resetBtn.style.flex = "1";
         resetBtn.addEventListener("click", async function () {
             if (confirm("Reset all 8chanSS settings to defaults?")) {
-                // Remove all 8chanSS_ GM values
                 const keys = await GM.listValues();
                 for (const key of keys) {
                     if (key.startsWith("8chanSS_")) {
@@ -5185,8 +4366,6 @@ onReady(async function () {
         buttonContainer.appendChild(resetBtn);
 
         menu.appendChild(buttonContainer);
-
-        // Info
         const info = document.createElement("div");
         info.style.fontSize = "11px";
         info.style.padding = "0 18px 12px";
@@ -5198,16 +4377,12 @@ onReady(async function () {
         document.body.appendChild(menu);
         return menu;
     }
-
-    // Helper function to create tab content
     function createTabContent(category, tempSettings) {
         const container = document.createElement("div");
         const categorySettings = scriptSettings[category];
 
         Object.keys(categorySettings).forEach((key) => {
             const setting = categorySettings[key];
-
-            // --- Separator ---
             if (setting.type === "separator") {
                 const hr = document.createElement("hr");
                 hr.style.border = "none";
@@ -5216,8 +4391,6 @@ onReady(async function () {
                 container.appendChild(hr);
                 return;
             }
-
-            // --- Section Title ---
             if (setting.type === "title") {
                 const title = document.createElement("div");
                 title.textContent = setting.label;
@@ -5229,14 +4402,10 @@ onReady(async function () {
                 container.appendChild(title);
                 return;
             }
-
-            // Parent row: flex for checkbox, label, chevron
             const parentRow = document.createElement("div");
             parentRow.style.display = "flex";
             parentRow.style.alignItems = "center";
             parentRow.style.marginBottom = "0px";
-
-            // Special case: hoverVideoVolume slider
             if (key === "hoverVideoVolume" && setting.type === "number") {
                 const label = document.createElement("label");
                 label.htmlFor = "setting_" + key;
@@ -5277,36 +4446,28 @@ onReady(async function () {
 
                 parentRow.appendChild(label);
                 parentRow.appendChild(sliderContainer);
-
-                // Wrapper for parent row and sub-options
                 const wrapper = document.createElement("div");
                 wrapper.style.marginBottom = "10px";
                 wrapper.appendChild(parentRow);
                 container.appendChild(wrapper);
-                return; // Skip the rest for this key
+                return; 
             }
-
-            // Checkbox for boolean settings
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.id = "setting_" + key;
             checkbox.checked =
                 tempSettings[key] === true || tempSettings[key] === "true";
             checkbox.style.marginRight = "8px";
-
-            // Label
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
             label.textContent = setting.label;
             label.style.flex = "1";
-
-            // Chevron for subOptions
             let chevron = null;
             let subOptionsContainer = null;
             if (setting?.subOptions) {
                 chevron = document.createElement("span");
                 chevron.className = "ss-chevron";
-                chevron.innerHTML = "&#9654;"; // Right-pointing triangle
+                chevron.innerHTML = "&#9654;"; 
                 chevron.style.display = "inline-block";
                 chevron.style.transition = "transform 0.2s";
                 chevron.style.marginLeft = "6px";
@@ -5316,8 +4477,6 @@ onReady(async function () {
                     ? "rotate(90deg)"
                     : "rotate(0deg)";
             }
-
-            // Checkbox change handler
             checkbox.addEventListener("change", function () {
                 tempSettings[key] = checkbox.checked;
                 if (!setting?.subOptions) return;
@@ -5336,14 +4495,10 @@ onReady(async function () {
             parentRow.appendChild(checkbox);
             parentRow.appendChild(label);
             if (chevron) parentRow.appendChild(chevron);
-
-            // Wrapper for parent row and sub-options
             const wrapper = document.createElement("div");
             wrapper.style.marginBottom = "10px";
 
             wrapper.appendChild(parentRow);
-
-            // Handle sub-options if any exist
             if (setting?.subOptions) {
                 subOptionsContainer = document.createElement("div");
                 subOptionsContainer.style.marginLeft = "25px";
@@ -5358,7 +4513,6 @@ onReady(async function () {
                     subWrapper.style.marginBottom = "5px";
 
                     if (subSetting.type === "text") {
-                        // Text input for custom notification message
                         const subLabel = document.createElement("label");
                         subLabel.htmlFor = "setting_" + fullKey;
                         subLabel.textContent = subSetting.label + ": ";
@@ -5371,8 +4525,6 @@ onReady(async function () {
                         subInput.style.width = "60px";
                         subInput.style.marginLeft = "2px";
                         subInput.placeholder = "(!) ";
-
-                        // Escape input and enforce length
                         subInput.addEventListener("input", function () {
                             let val = subInput.value.replace(/[<>"']/g, "");
                             if (val.length > subInput.maxLength) {
@@ -5385,7 +4537,6 @@ onReady(async function () {
                         subWrapper.appendChild(subLabel);
                         subWrapper.appendChild(subInput);
                     } else if (subSetting.type === "textarea") {
-                        // Textarea for multi-line input
                         const subLabel = document.createElement("label");
                         subLabel.htmlFor = "setting_" + fullKey;
                         subLabel.textContent = subSetting.label + ": ";
@@ -5431,13 +4582,10 @@ onReady(async function () {
                         subWrapper.appendChild(subLabel);
                         subWrapper.appendChild(subInput);
                     } else if (subSetting.type === "select") {
-                        // Select dropdown for options like favicon style
                         const subSelect = document.createElement("select");
                         subSelect.id = "setting_" + fullKey;
                         subSelect.style.marginLeft = "5px";
                         subSelect.style.width = "120px";
-
-                        // Add options to select
                         if (Array.isArray(subSetting.options)) {
                             subSetting.options.forEach(option => {
                                 const optionEl = document.createElement("option");
@@ -5449,17 +4597,12 @@ onReady(async function () {
                                 subSelect.appendChild(optionEl);
                             });
                         }
-
-                        // Set default if no value is selected
                         if (!subSelect.value && subSetting.default) {
                             subSelect.value = subSetting.default;
                             tempSettings[fullKey] = subSetting.default;
                         }
-
-                        // --- Live preview: update favicon immediately on change ---
                         subSelect.addEventListener("change", function () {
                             tempSettings[fullKey] = subSelect.value;
-                            // Only update favicon if customFavicon is enabled
                             if (key === "customFavicon" && tempSettings["customFavicon"]) {
                                 faviconManager.setFaviconStyle(subSelect.value, "base");
                             }
@@ -5476,7 +4619,6 @@ onReady(async function () {
                         subWrapper.appendChild(subLabel);
                         subWrapper.appendChild(subSelect);
                     } else {
-                        // Checkbox for boolean suboptions (existing code)
                         const subCheckbox = document.createElement("input");
                         subCheckbox.type = "checkbox";
                         subCheckbox.id = "setting_" + fullKey;
@@ -5505,8 +4647,6 @@ onReady(async function () {
 
         return container;
     }
-
-    // --- Menu Icon ---
     const themeSelector = document.getElementById("themesBefore");
     let link = null;
     let bracketSpan = null;
@@ -5525,21 +4665,16 @@ onReady(async function () {
         );
         themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
     }
-
-    // --- Shortcuts tab ---
     function createShortcutsTab() {
         const container = document.createElement("div");
-        // Title
         const title = document.createElement("h3");
         title.textContent = "Keyboard Shortcuts";
         title.style.margin = "0 0 15px 0";
         title.style.fontSize = "16px";
         container.appendChild(title);
-        // Shortcuts table
         const table = document.createElement("table");
         table.style.width = "100%";
         table.style.borderCollapse = "collapse";
-        // Table styles
         const tableStyles = {
             th: {
                 textAlign: "left",
@@ -5563,8 +4698,6 @@ onReady(async function () {
                 fontFamily: "monospace",
             },
         };
-
-        // Create header row
         const headerRow = document.createElement("tr");
         const shortcutHeader = document.createElement("th");
         shortcutHeader.textContent = "Shortcut";
@@ -5577,8 +4710,6 @@ onReady(async function () {
         headerRow.appendChild(actionHeader);
 
         table.appendChild(headerRow);
-
-        // Shortcut data
         const shortcuts = [
             { keys: ["Ctrl", "F1"], action: "Open 8chanSS settings" },
             { keys: ["Tab"], action: "Target Quick Reply text area" },
@@ -5599,23 +4730,15 @@ onReady(async function () {
             { keys: ["Ctrl", "M"], action: "Moe text" },
             { keys: ["Alt", "C"], action: "Code block" },
         ];
-
-        // Create rows for each shortcut
         shortcuts.forEach((shortcut) => {
             const row = document.createElement("tr");
-
-            // Shortcut cell
             const shortcutCell = document.createElement("td");
             Object.assign(shortcutCell.style, tableStyles.td);
-
-            // Create kbd elements for each key
             shortcut.keys.forEach((key, index) => {
                 const kbd = document.createElement("kbd");
                 kbd.textContent = key;
                 Object.assign(kbd.style, tableStyles.kbd);
                 shortcutCell.appendChild(kbd);
-
-                // Add + between keys
                 if (index < shortcut.keys.length - 1) {
                     const plus = document.createTextNode(" + ");
                     shortcutCell.appendChild(plus);
@@ -5623,8 +4746,6 @@ onReady(async function () {
             });
 
             row.appendChild(shortcutCell);
-
-            // Action cell
             const actionCell = document.createElement("td");
             actionCell.textContent = shortcut.action;
             Object.assign(actionCell.style, tableStyles.td);
@@ -5634,8 +4755,6 @@ onReady(async function () {
         });
 
         container.appendChild(table);
-
-        // Add note about BBCode shortcuts
         const note = document.createElement("p");
         note.textContent =
             "Text formatting shortcuts work when text is selected or when inserting at cursor position.";
@@ -5647,8 +4766,6 @@ onReady(async function () {
 
         return container;
     }
-
-    // Hook up the icon to open/close the menu
     if (link) {
         let menu = await createSettingsMenu();
         link.style.cursor = "pointer";
@@ -5659,56 +4776,42 @@ onReady(async function () {
             menu.style.display = menu.style.display === "none" ? "block" : "none";
         });
     }
-    //////// MENU END ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    ///////// KEYBOARD SHORTCUTS ////////////////////////////////////////////////////////////////////////////////////////////////////
-    // --- Global toggle for all shortcuts ---
     async function shortcutsGloballyEnabled() {
         return await getSetting("enableShortcuts");
     }
-
-    // --- BBCODE Combination keys and Tags ---
     const bbCodeCombinations = new Map([
         ["s", ["[spoiler]", "[/spoiler]"]],
         ["b", ["'''", "'''"]],
         ["u", ["__", "__"]],
         ["i", ["''", "''"]],
-        ["d", ["==", "=="]],           // Srz Biznizz
+        ["d", ["==", "=="]],           
         ["m", ["[moe]", "[/moe]"]],
         ["c", ["[code]", "[/code]"]],
     ]);
-
-    // Helper function for applying BBCode
     function applyBBCode(textBox, key) {
         const [openTag, closeTag] = bbCodeCombinations.get(key);
         const { selectionStart, selectionEnd, value } = textBox;
 
         if (selectionStart === selectionEnd) {
-            // No selection: insert empty tags and place cursor between them
             const before = value.slice(0, selectionStart);
             const after = value.slice(selectionEnd);
             const newCursor = selectionStart + openTag.length;
             textBox.value = before + openTag + closeTag + after;
             textBox.selectionStart = textBox.selectionEnd = newCursor;
         } else {
-            // Replace selected text with tags around it
             const before = value.slice(0, selectionStart);
             const selected = value.slice(selectionStart, selectionEnd);
             const after = value.slice(selectionEnd);
             textBox.value = before + openTag + selected + closeTag + after;
-            // Keep selection around the newly wrapped text
             textBox.selectionStart = selectionStart + openTag.length;
             textBox.selectionEnd = selectionEnd + openTag.length;
         }
     }
-
-    // --- Feature: Scroll between posts functionality ---
     let lastHighlighted = null;
-    let lastType = null; // "own" or "reply"
-    let lastRefreshTime = 0; // Refresh cooldown
+    let lastType = null; 
+    let lastRefreshTime = 0; 
 
     function getEligiblePostCells(isOwnReply) {
-        // Find all .postCell and .opCell that contain at least one matching anchor
         const selector = isOwnReply
             ? '.postCell:has(a.youName), .opCell:has(a.youName)'
             : '.postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)';
@@ -5718,12 +4821,8 @@ onReady(async function () {
     function scrollToReply(isOwnReply = true, getNextReply = true) {
         const postCells = getEligiblePostCells(isOwnReply);
         if (!postCells.length) return;
-
-        // Determine current index in postCells for navigation
         let currentIndex = -1;
         const expectedType = isOwnReply ? "own" : "reply";
-
-        // Try to use lastHighlighted if it matches the current navigation type and is still present
         if (
             lastType === expectedType &&
             lastHighlighted
@@ -5731,33 +4830,25 @@ onReady(async function () {
             const container = lastHighlighted.closest('.postCell, .opCell');
             currentIndex = postCells.indexOf(container);
         }
-        // If lastHighlighted is not valid, find the first cell below the viewport middle
         if (currentIndex === -1) {
             const viewportMiddle = window.innerHeight / 2;
             currentIndex = postCells.findIndex(cell => {
                 const rect = cell.getBoundingClientRect();
                 return rect.top + rect.height / 2 > viewportMiddle;
             });
-            // If none found, set to -1 (before first) or postCells.length (after last) depending on direction
             if (currentIndex === -1) {
                 currentIndex = getNextReply ? -1 : postCells.length;
             }
         }
-
-        // Determine target index
         const targetIndex = getNextReply ? currentIndex + 1 : currentIndex - 1;
         if (targetIndex < 0 || targetIndex >= postCells.length) return;
 
         const postContainer = postCells[targetIndex];
         if (postContainer) {
             postContainer.scrollIntoView({ behavior: "smooth", block: "center" });
-
-            // Remove highlight from previous post
             if (lastHighlighted) {
                 lastHighlighted.classList.remove('target-highlight');
             }
-
-            // Find the anchor id for this post (usually something like id="p123456")
             let anchorId = null;
             let anchorElem = postContainer.querySelector('[id^="p"]');
             if (anchorElem && anchorElem.id) {
@@ -5765,13 +4856,9 @@ onReady(async function () {
             } else if (postContainer.id) {
                 anchorId = postContainer.id;
             }
-
-            // Update the URL hash to simulate :target
             if (anchorId && location.hash !== '#' + anchorId) {
                 history.replaceState(null, '', '#' + anchorId);
             }
-
-            // Add highlight class to .innerPost
             const innerPost = postContainer.querySelector('.innerPost');
             if (innerPost) {
                 innerPost.classList.add('target-highlight');
@@ -5779,13 +4866,9 @@ onReady(async function () {
             } else {
                 lastHighlighted = null;
             }
-
-            // Track type for next navigation
             lastType = isOwnReply ? "own" : "reply";
         }
     }
-
-    // Remove highlight and update on hash change
     window.addEventListener('hashchange', () => {
         if (lastHighlighted) {
             lastHighlighted.classList.remove('target-highlight');
@@ -5803,43 +4886,30 @@ onReady(async function () {
             }
         }
     });
-
-    // --- Consolidated Keyboard Shortcuts ---
     document.addEventListener("keydown", async function (event) {
-        // Check if global toggle is enabled first
         if (!(await shortcutsGloballyEnabled())) return;
-
-        // Don't trigger shortcuts in input/textarea/contenteditable except for QR textarea
         const active = document.activeElement;
         if (
             active &&
-            event.key !== "Tab" && // Allow Tab key to pass through
+            event.key !== "Tab" && 
             (active.tagName === "INPUT" ||
                 active.tagName === "TEXTAREA" ||
                 active.isContentEditable)
         ) {
             return;
         }
-
-        // Open 8chanSS menu (CTRL + F1)
         if (event.ctrlKey && event.key === "F1") {
             event.preventDefault();
             let menu = document.getElementById("8chanSS-menu") || (await createSettingsMenu());
             menu.style.display = menu.style.display === "none" || menu.style.display === "" ? "block" : "none";
             return;
         }
-
-        // QR (CTRL + Q)
         if (event.ctrlKey && (event.key === "q" || event.key === "Q")) {
             event.preventDefault();
             const hiddenDiv = document.getElementById("quick-reply");
             if (!hiddenDiv) return;
-
-            // Toggle QR
             const isHidden = hiddenDiv.style.display === "none" || hiddenDiv.style.display === "";
             hiddenDiv.style.display = isHidden ? "block" : "none";
-
-            // Focus the textarea after a small delay to ensure it's visible
             if (isHidden) {
                 setTimeout(() => {
                     const textarea = document.getElementById("qrbody");
@@ -5848,8 +4918,6 @@ onReady(async function () {
             }
             return;
         }
-
-        // Tab key: focus #qrbody if not already focused, else focus #QRfieldCaptcha
         if (
             event.key === "Tab" &&
             !event.ctrlKey &&
@@ -5861,23 +4929,18 @@ onReady(async function () {
 
             if (qrbody) {
                 if (document.activeElement === qrbody && captcha) {
-                    // If focus is on qrbody and captcha exists, focus captcha
                     event.preventDefault();
                     captcha.focus();
                 } else if (document.activeElement === captcha) {
-                    // If focus is on captcha, cycle back to qrbody
                     event.preventDefault();
                     qrbody.focus();
                 } else if (document.activeElement !== qrbody) {
-                    // If focus is anywhere else, focus qrbody
                     event.preventDefault();
                     qrbody.focus();
                 }
             }
             return;
         }
-
-        // (R key): refresh thread page with 5 sec cooldown
         if (event.key === "r" || event.key === "R") {
             const isThread = window.pageType?.isThread;
             const isCatalog = window.pageType?.isCatalog;
@@ -5903,42 +4966,29 @@ onReady(async function () {
                 return;
             }
         }
-
-        // --- Shift+T to toggle quote threading ---
         if (event.shiftKey && !event.ctrlKey && !event.altKey && (event.key === "t" || event.key === "T")) {
             event.preventDefault();
 
             const current = await getSetting("quoteThreading");
             const newValue = !current;
             await setSetting("quoteThreading", newValue);
-
-            // Show a quick notification
             try {
                 const msg = `Quote threading <b>${newValue ? "enabled" : "disabled"}</b>`;
                 const color = newValue ? 'blue' : 'black';
                 callPageToast(msg, color, 1300);
             } catch { }
-            // Reload to apply the change after 1.4 secs
             setTimeout(() => window.location.reload(), 1400);
             return;
         }
-
-        // (ESC) Clear textarea and hide all dialogs
         if (event.key === "Escape") {
-            // Clear the textarea
             const textarea = document.getElementById("qrbody");
             if (textarea) textarea.value = "";
-
-            // Hide QR
             const quickReply = document.getElementById("quick-reply");
             if (quickReply) quickReply.style.display = "none";
-            // Hide TW            
             const threadWatcher = document.getElementById("watchedMenu");
             if (threadWatcher) threadWatcher.style.display = "none";
             return;
         }
-
-        // Scroll between posts with CTRL+Arrow keys
         if (event.ctrlKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault();
             const isOwnReply = !event.shiftKey;
@@ -5946,8 +4996,6 @@ onReady(async function () {
             scrollToReply(isOwnReply, isNext);
             return;
         }
-
-        // Watch Thread on ALT+W Keyboard Shortcut
         if (
             event.altKey &&
             (event.key === "w" || event.key === "W")
@@ -5963,10 +5011,7 @@ onReady(async function () {
             return;
         }
     });
-
-    // (CTRL + Enter) and BBCodes - Only for QR textarea
     const replyTextarea = document.getElementById("qrbody");
-    // Check if global toggle is enabled first
     if (!(await shortcutsGloballyEnabled())) {
         return;
     } else if (replyTextarea) {
@@ -5990,19 +5035,13 @@ onReady(async function () {
                 }
             }
         });
-
-        // BBCODE Combination keys and Tags - Keep with the textarea
         replyTextarea.addEventListener("keydown", function (event) {
             const key = event.key.toLowerCase();
-
-            // Special case: alt+c for [code] tag
             if (key === "c" && event.altKey && !event.ctrlKey && bbCodeCombinations.has(key)) {
                 event.preventDefault();
                 applyBBCode(event.target, key);
                 return;
             }
-
-            // All other tags: ctrl+key
             if (event.ctrlKey && !event.altKey && bbCodeCombinations.has(key) && key !== "c") {
                 event.preventDefault();
                 applyBBCode(event.target, key);
@@ -6010,13 +5049,9 @@ onReady(async function () {
             }
         });
     }
-
-    // --- Feature: Hide catalog threads with SHIFT+click, per-board storage ---
     function featureCatalogHiding() {
         const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
         let showHiddenMode = false;
-
-        // Extract board name and thread number from a .catalogCell
         function getBoardAndThreadNumFromCell(cell) {
             const link = cell.querySelector("a.linkThumb[href*='/res/']");
             if (!link) return { board: null, threadNum: null };
@@ -6024,8 +5059,6 @@ onReady(async function () {
             if (!match) return { board: null, threadNum: null };
             return { board: match[1], threadNum: match[2] };
         }
-
-        // Load hidden threads object from storage
         async function loadHiddenThreadsObj() {
             const raw = await GM.getValue(STORAGE_KEY, "{}");
             try {
@@ -6035,13 +5068,9 @@ onReady(async function () {
                 return {};
             }
         }
-
-        // Save hidden threads object to storage
         async function saveHiddenThreadsObj(obj) {
             await GM.setValue(STORAGE_KEY, JSON.stringify(obj));
         }
-
-        // Hide all catalog cells whose thread numbers are in the hidden list for this board
         async function applyHiddenThreads() {
             const hiddenThreadsObjRaw = await GM.getValue(STORAGE_KEY, "{}");
             let hiddenThreadsObj;
@@ -6051,15 +5080,12 @@ onReady(async function () {
             } catch {
                 hiddenThreadsObj = {};
             }
-
-            // Loop through all catalog cells
             document.querySelectorAll(".catalogCell").forEach(cell => {
                 const { board, threadNum } = getBoardAndThreadNumFromCell(cell);
                 if (!board || !threadNum) return;
                 const hiddenThreads = hiddenThreadsObj[board] || [];
 
                 if (typeof showHiddenMode !== "undefined" && showHiddenMode) {
-                    // Show only hidden threads, hide all others
                     if (hiddenThreads.includes(threadNum)) {
                         cell.style.display = "";
                         cell.classList.add("ss-unhide-thread");
@@ -6069,7 +5095,6 @@ onReady(async function () {
                         cell.classList.remove("ss-unhide-thread", "ss-hidden-thread");
                     }
                 } else {
-                    // Normal mode: hide hidden threads, show all others
                     if (hiddenThreads.includes(threadNum)) {
                         cell.style.display = "none";
                         cell.classList.add("ss-hidden-thread");
@@ -6081,13 +5106,9 @@ onReady(async function () {
                 }
             });
         }
-
-        // Event handler for SHIFT+click to hide/unhide a thread
         async function onCatalogCellClick(e) {
             const cell = e.target.closest(".catalogCell");
             if (!cell) return;
-
-            // Only act on shift+left-click
             if (e.shiftKey && e.button === 0) {
                 const { board, threadNum } = getBoardAndThreadNumFromCell(cell);
                 if (!board || !threadNum) return;
@@ -6097,13 +5118,11 @@ onReady(async function () {
                 let hiddenThreads = hiddenThreadsObj[board];
 
                 if (showHiddenMode) {
-                    // Unhide: remove from hidden list
                     hiddenThreads = hiddenThreads.filter(num => num !== threadNum);
                     hiddenThreadsObj[board] = hiddenThreads;
                     await saveHiddenThreadsObj(hiddenThreadsObj);
                     await applyHiddenThreads();
                 } else {
-                    // Hide: add to hidden list
                     if (!hiddenThreads.includes(threadNum)) {
                         hiddenThreads.push(threadNum);
                         hiddenThreadsObj[board] = hiddenThreads;
@@ -6116,26 +5135,18 @@ onReady(async function () {
                 e.stopPropagation();
             }
         }
-
-        // Show all hidden threads in the catalog
         async function showAllHiddenThreads() {
             showHiddenMode = true;
             await applyHiddenThreads();
-            // Change button text to "Hide Hidden"
             const btn = document.getElementById("ss-show-hidden-btn");
             if (btn) btn.textContent = "Hide Hidden";
         }
-
-        // Hide all hidden threads again
         async function hideAllHiddenThreads() {
             showHiddenMode = false;
             await applyHiddenThreads();
-            // Change button text to "Show Hidden"
             const btn = document.getElementById("ss-show-hidden-btn");
             if (btn) btn.textContent = "Show Hidden";
         }
-
-        // Toggle show/hide hidden threads
         async function toggleShowHiddenThreads() {
             if (showHiddenMode) {
                 await hideAllHiddenThreads();
@@ -6143,8 +5154,6 @@ onReady(async function () {
                 await showAllHiddenThreads();
             }
         }
-
-        // Add the Show Hidden button
         function addShowHiddenButton() {
             if (document.getElementById("ss-show-hidden-btn")) return;
             const refreshBtn = document.querySelector("#catalogRefreshButton");
@@ -6158,27 +5167,16 @@ onReady(async function () {
             btn.addEventListener("click", toggleShowHiddenThreads);
             refreshBtn.parentNode.insertBefore(btn, refreshBtn);
         }
-
-        // Attach event listeners and apply hidden threads on catalog load
         function hideThreadsOnRefresh() {
-            // Only run on catalog pages
             if (!window.pageType?.isCatalog) return;
-
-            // Add the Show Hidden button
             onReady(addShowHiddenButton);
-
-            // Apply hidden threads on load
             onReady(applyHiddenThreads);
-
-            // Scope event listener to catalog container only
             const catalogContainer = document.querySelector(".catalogWrapper, .catalogDiv");
             if (catalogContainer) {
                 catalogContainer.addEventListener("click", onCatalogCellClick, true);
             }
         }
         hideThreadsOnRefresh();
-
-        // Use the observer registry for .catalogDiv
         const catalogDivObs = observeSelector('.catalogDiv', { childList: true, subtree: false });
         if (catalogDivObs) {
             const debouncedApply = debounce(applyHiddenThreads, 50);
@@ -6187,31 +5185,21 @@ onReady(async function () {
             });
         }
     }
-
-    ////// KEYBOARD END /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // --- Misc Fixes ---
-
-    // Captcha input no history
     (function noCaptchaHistory() {
         const captchaInput = document.getElementById("QRfieldCaptcha");
         if (captchaInput) {
             captchaInput.autocomplete = "off";
         }
     })();
-
-    // Don't scroll to bottom on post
     function preventFooterScrollIntoView() {
         const footer = document.getElementById('footer');
         if (footer && !footer._scrollBlocked) {
-            footer._scrollBlocked = true; // Prevent double-wrapping
+            footer._scrollBlocked = true; 
             footer.scrollIntoView = function () {
                 return;
             };
         }
     }
-
-    // Move file uploads below OP title
     (function moveFileUploadsBelowOp() {
         if (window.pageType?.isCatalog) {
             return;
@@ -6219,8 +5207,6 @@ onReady(async function () {
             innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
         }
     })();
-
-    // Dashed underline for inlined reply backlinks and quotelinks
     document.addEventListener('click', function (e) {
         const a = e.target.closest('.panelBacklinks > a');
         if (a) {
@@ -6236,8 +5222,6 @@ onReady(async function () {
             }, 0);
         }
     });
-
-    // --- Version notification ---
     async function updateNotif() {
         const VERSION_KEY = "8chanSS_version";
         let storedVersion = null;
@@ -6248,7 +5232,6 @@ onReady(async function () {
         }
 
         if (storedVersion !== VERSION) {
-            // Only notify if this isn't the first install (i.e., storedVersion is not null)
             if (storedVersion !== null) {
                 let tries = 0;
                 while (typeof window.callPageToast !== "function" && tries < 20) {
