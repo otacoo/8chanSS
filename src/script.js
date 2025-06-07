@@ -4683,6 +4683,20 @@ onReady(async function () {
                 closeFloatingDiv();
             }
         }
+
+        // Remove native onclick handler from .labelId elements
+        function removeNativeLabelIdOnClickHandlers() {
+            document.querySelectorAll('.labelId').forEach(label => {
+                // Remove inline onclick attribute if present
+                if (label.hasAttribute('onclick')) {
+                    label.removeAttribute('onclick');
+                }
+                // Remove property-based handler if present
+                if (typeof label.onclick === 'function') {
+                    label.onclick = null;
+                }
+            });
+        }
         // Show floating div with links to all posts by this ID
         function showIdList(id, clickedLabel) {
             // Extract only the hex ID (first 6 hex chars) from the label
@@ -4706,10 +4720,6 @@ onReady(async function () {
                     }
                 }
             });
-
-            // --- Floating div logic ---
-            // Remove any existing floating div
-            document.querySelectorAll('.ss-idlinks-floating').forEach(el => el.remove());
 
             // Get board and thread from URL
             const match = window.location.pathname.match(/^\/([^/]+)\/(res|last)\/(\d+)\.html/);
@@ -4784,18 +4794,18 @@ onReady(async function () {
                 function closeOnClick(e) {
                     if (!floatingDiv.contains(e.target)) {
                         floatingDiv.remove();
-                        document.removeEventListener('mousedown', closeOnClick, true);
                     }
                 }
-                document.addEventListener('mousedown', closeOnClick, true);
+                document.addEventListener('mousedown', closeOnClick, { capture: true, once: true });
             }, 0);
             return matchingPosts;
         }
 
-        // Filtering logic (original)
+        // Filtering logic
         function applyFilter(targetRgbColor) {
             activeFilterColor = targetRgbColor;
-            document.querySelectorAll(postCellSelector).forEach(cell => {
+            const cells = document.querySelectorAll(postCellSelector); // cache NodeList
+            cells.forEach(cell => {
                 const label = cell.querySelector(labelIdSelector);
                 const matches = label && window.getComputedStyle(label).backgroundColor === targetRgbColor;
                 cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
@@ -4806,8 +4816,15 @@ onReady(async function () {
         function handleClick(event) {
             const clickedLabel = event.target.closest(labelIdSelector);
             if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
-                event.preventDefault();
-                event.stopPropagation();
+                // Hijack native marking for specific modes
+                if (showIdLinks === "showIdLinksOnly" || showIdLinks === "showIdLinksVertical") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                    if (clickedLabel.hasAttribute('onclick')) clickedLabel.removeAttribute('onclick');
+                    if (typeof clickedLabel.onclick === 'function') clickedLabel.onclick = null;
+                }
+
                 const id = clickedLabel.textContent.trim();
                 if (showIdLinks != "showPostsOfIdOnly") {
                     showIdList(id, clickedLabel);
@@ -4826,7 +4843,14 @@ onReady(async function () {
                 }
             }
         }
-        document.body.addEventListener("click", handleClick);
+        // Debounced click handler
+        const debouncedHandleClick = debounce(handleClick, 50);
+        document.body.addEventListener("click", debouncedHandleClick, true);
+
+        // On mode change or initial load, remove native handlers if needed
+        if (showIdLinks === "showIdLinksOnly" || showIdLinks === "showIdLinksVertical") {
+            removeNativeLabelIdOnClickHandlers();
+        }
     }
 
     ///// MENU /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
