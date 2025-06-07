@@ -3586,12 +3586,22 @@ onReady(async function () {
         const enabled = await getSetting("enableTheSauce");
         if (!enabled) return;
 
-        // Define supported services
+        // Fetch all service settings
+        const [
+            iqdbEnabled,
+            saucenaoEnabled,
+            pixivEnabled
+        ] = await Promise.all([
+            getSetting("enableTheSauce_iqdb"),
+            getSetting("enableTheSauce_saucenao"),
+            getSetting("enableTheSauce_pixiv")
+        ]);
+
         const services = [
             {
                 key: "iqdb",
                 label: "iqdb",
-                enabled: await getSetting("enableTheSauce_iqdb"),
+                enabled: iqdbEnabled,
                 method: "post",
                 url: "https://iqdb.org/",
                 fileField: "file",
@@ -3599,7 +3609,7 @@ onReady(async function () {
             {
                 key: "saucenao",
                 label: "sauce",
-                enabled: await getSetting("enableTheSauce_saucenao"),
+                enabled: saucenaoEnabled,
                 method: "post",
                 url: "https://saucenao.com/search.php",
                 fileField: "file",
@@ -3607,7 +3617,7 @@ onReady(async function () {
             {
                 key: "pixiv",
                 label: "pixiv",
-                enabled: await getSetting("enableTheSauce_pixiv"),
+                enabled: pixivEnabled,
                 method: "pixiv",
             },
         ];
@@ -3650,6 +3660,29 @@ onReady(async function () {
             const filename = origNameLink.getAttribute('download') || origNameLink.textContent;
             const match = filename && filename.match(/^(\d+)_p\d+\./);
             return match ? match[1] : null;
+        }
+
+        // Utility function for form creation and submission
+        function submitImageToService({ url, fileField, file }) {
+            const form = document.createElement("form");
+            form.action = url;
+            form.method = "POST";
+            form.enctype = "multipart/form-data";
+            form.target = "_blank";
+            form.style.display = "none";
+
+            const input = document.createElement("input");
+            input.type = "file";
+            input.name = fileField;
+            form.appendChild(input);
+
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+
+            document.body.appendChild(form);
+            form.submit();
+            setTimeout(() => form.remove(), 10000);
         }
 
         // Main: Add sauce links to a single .uploadDetails element
@@ -3695,30 +3728,9 @@ onReady(async function () {
                         try {
                             const blob = await fetchImageBlob(imgUrl);
                             const file = new File([blob], "image.png", { type: blob.type || "image/png" });
-
-                            // Create a form to submit the file
-                            const form = document.createElement("form");
-                            form.action = service.url;
-                            form.method = "POST";
-                            form.enctype = "multipart/form-data";
-                            form.target = "_blank";
-                            form.style.display = "none";
-
-                            const input = document.createElement("input");
-                            input.type = "file";
-                            input.name = service.fileField;
-                            form.appendChild(input);
-
-                            // Use DataTransfer to set the file input
-                            const dt = new DataTransfer();
-                            dt.items.add(file);
-                            input.files = dt.files;
-
-                            document.body.appendChild(form);
-                            form.submit();
-                            setTimeout(() => form.remove(), 10000);
+                            submitImageToService({ url: service.url, fileField: service.fileField, file });
                         } catch (err) {
-                            alert("Failed to upload thumbnail: " + err);
+                            callPageToast("Failed to upload thumbnail.", "red", 2500);
                         }
                     });
                 } else if (service.method === "pixiv") {
@@ -3748,7 +3760,12 @@ onReady(async function () {
         }
         observeAllUploadDetails();
 
-        // Use the observer registry for .divPosts
+        const pendingUploadDetails = new Set();
+        const debouncedProcessUploadDetails = debounce(() => {
+            pendingUploadDetails.forEach(detailDiv => addSauceLinksToElement(detailDiv));
+            pendingUploadDetails.clear();
+        }, 50);
+
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
         if (divPostsObs) {
             divPostsObs.addHandler(function sauceLinksHandler(mutations) {
@@ -3756,13 +3773,14 @@ onReady(async function () {
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType === 1) {
                             if (node.classList && node.classList.contains('uploadDetails')) {
-                                addSauceLinksToElement(node);
+                                pendingUploadDetails.add(node);
                             } else if (node.querySelectorAll) {
-                                node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+                                node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(n => pendingUploadDetails.add(n));
                             }
                         }
                     }
                 }
+                debouncedProcessUploadDetails();
             });
         }
 
