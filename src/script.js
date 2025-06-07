@@ -3390,7 +3390,7 @@ onReady(async function () {
                         menu.setAttribute('data-post-id', postCell.id);
                         const labelIdSpan = postCell.querySelector('.labelId');
                         if (labelIdSpan) {
-                            menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                            menu.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
                         }
                         // Immediately add the Toggle ID as Yours entry if not present
                         addMenuEntries(menu.parentNode || menu);
@@ -3513,7 +3513,7 @@ onReady(async function () {
                                 if (postCell) {
                                     const labelIdSpan = postCell.querySelector('.labelId');
                                     if (labelIdSpan) {
-                                        node.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                        node.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
                                     }
                                 }
                             }
@@ -3526,7 +3526,7 @@ onReady(async function () {
                                     if (postCell) {
                                         const labelIdSpan = postCell.querySelector('.labelId');
                                         if (labelIdSpan) {
-                                            menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                            menu.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
                                         }
                                     }
                                 }
@@ -3892,6 +3892,7 @@ onReady(async function () {
             });
             if (plus) {
                 if (recursiveHide) {
+                    // Hide all descendants (replies of replies)
                     getAllRepliesRecursive(postId, boardUri).forEach(replyPid => {
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             if (getPostId(cell) === replyPid) {
