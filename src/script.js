@@ -89,7 +89,10 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-
+    // Storage keys
+    const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
+    const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
+    const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
     // Version
     const VERSION = "<%= version %>";
 
@@ -404,6 +407,20 @@ onReady(async function () {
             await GM.setValue("8chanSS_" + key, String(value));
         } catch (err) {
             console.error(`Failed to set setting for key ${key}:`, err);
+        }
+    }
+
+    // --- Storage helpers ---
+    async function getStoredObject(key) {
+        let obj = {};
+        if (typeof GM !== 'undefined' && GM.getValue) {
+            obj = await GM.getValue(key, {});
+        }
+        return typeof obj === 'object' && obj !== null ? obj : {};
+    }
+    async function setStoredObject(key, obj) {
+        if (typeof GM !== 'undefined' && GM.setValue) {
+            await GM.setValue(key, obj);
         }
     }
 
@@ -3773,25 +3790,6 @@ onReady(async function () {
 
     // --- Feature: Custom Post Hide Menu ---
     function featureCustomPostHideMenu() {
-        // Storage keys
-        const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
-        const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
-        const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-
-        // --- Storage helpers ---
-        async function getStoredObject(key) {
-            let obj = {};
-            if (typeof GM !== 'undefined' && GM.getValue) {
-                obj = await GM.getValue(key, {});
-            }
-            return typeof obj === 'object' && obj !== null ? obj : {};
-        }
-        async function setStoredObject(key, obj) {
-            if (typeof GM !== 'undefined' && GM.setValue) {
-                await GM.setValue(key, obj);
-            }
-        }
-
         // --- DOM helpers ---
         function getAllHideButtons(root = document) {
             return Array.from(root.querySelectorAll('label.hideButton'));
@@ -5125,6 +5123,7 @@ onReady(async function () {
     function createTabContent(category, tempSettings) {
         const container = document.createElement("div");
         const categorySettings = scriptSettings[category];
+        let hiddenListContainer;
 
         Object.keys(categorySettings).forEach((key) => {
             const setting = categorySettings[key];
@@ -5422,6 +5421,229 @@ onReady(async function () {
                 wrapper.appendChild(subOptionsContainer);
             }
 
+            // Create Filter lists
+            if (key === "enableHidingMenu") {
+                // Container for the tabbed hidden/filtered list UI
+                hiddenListContainer = document.createElement("div");
+                hiddenListContainer.style.display = tempSettings["enableHidingMenu"] ? "block" : "none";
+                hiddenListContainer.style.margin = "10px 0";
+                hiddenListContainer.style.maxHeight = "220px";
+                hiddenListContainer.style.overflowY = "auto";
+                hiddenListContainer.style.background = "var(--menu-color)";
+                hiddenListContainer.style.border = "1px solid var(--border-color)";
+                hiddenListContainer.style.borderRadius = "6px";
+                hiddenListContainer.style.scrollbarWidth = "thin";
+                hiddenListContainer.style.padding = "8px";
+                hiddenListContainer.style.fontSize = "13px";
+
+                // Tab selector
+                const tabRow = document.createElement("div");
+                tabRow.style.display = "flex";
+                tabRow.style.marginBottom = "8px";
+                tabRow.style.gap = "6px";
+                const tabs = [
+                    { key: "posts", label: "Hidden Posts" },
+                    { key: "names", label: "Filtered Names" },
+                    { key: "ids", label: "Filtered IDs" }
+                ];
+                let currentTab = "posts";
+                const tabButtons = {};
+
+                tabs.forEach(tab => {
+                    const btn = document.createElement("button");
+                    btn.textContent = tab.label;
+                    btn.style.flex = "1";
+                    btn.style.padding = "4px 8px";
+                    btn.style.border = "none";
+                    btn.style.borderRadius = "4px";
+                    btn.style.setProperty("background", tab.key === currentTab ? "var(--contrast-color)" : "#222", "important");
+                    btn.style.color = "#fff";
+                    btn.style.cursor = "pointer";
+                    btn.addEventListener("click", () => {
+                        currentTab = tab.key;
+                        Object.values(tabButtons).forEach(b => b.style.setProperty("background", "#222", "important"));
+                        btn.style.setProperty("background", "var(--contrast-color)", "important");
+                        renderList();
+                    });
+                    tabButtons[tab.key] = btn;
+                    tabRow.appendChild(btn);
+                });
+
+                hiddenListContainer.appendChild(tabRow);
+
+                // List area
+                const listArea = document.createElement("div");
+                listArea.style.overflowY = "auto";
+                listArea.style.maxHeight = "160px";
+                hiddenListContainer.appendChild(listArea);
+
+                // Render the list for the current tab
+                async function renderList() {
+                    listArea.innerHTML = "<span style='color: #aaa; font-size: 12px;'>Loading...</span>";
+                    if (currentTab === "posts") {
+                        const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
+                        const items = [];
+                        for (const boardUri in hiddenPostsObj) {
+                            for (const postId of (hiddenPostsObj[boardUri]?.simple || [])) {
+                                items.push({ boardUri, postId, type: "simple" });
+                            }
+                            for (const postId of (hiddenPostsObj[boardUri]?.plus || [])) {
+                                items.push({ boardUri, postId, type: "plus" });
+                            }
+                        }
+                        if (items.length === 0) {
+                            listArea.innerHTML = "<span style='color: #aaa;'>No hidden posts.</span>";
+                            return;
+                        }
+                        listArea.innerHTML = "";
+                        items.forEach(({ boardUri, postId, type }) => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.alignItems = "center";
+                            row.style.justifyContent = "space-between";
+                            row.style.marginBottom = "2px";
+                            row.innerHTML = `<span style="flex:1;">/${boardUri}/ #${postId} ${type === 'plus' ? '(+)' : ''}</span>`;
+                            const xBtn = document.createElement("button");
+                            xBtn.textContent = "✕";
+                            xBtn.style.background = "none";
+                            xBtn.style.border = "none";
+                            xBtn.style.color = "#c00";
+                            xBtn.style.cursor = "pointer";
+                            xBtn.style.fontWeight = "bold";
+                            xBtn.title = "Unhide";
+                            xBtn.onclick = async () => {
+                                const obj = await getStoredObject(HIDDEN_POSTS_KEY);
+                                if (obj[boardUri]) {
+                                    const arr = obj[boardUri][type] || [];
+                                    const idx = arr.indexOf(Number(postId));
+                                    if (idx !== -1) {
+                                        arr.splice(idx, 1);
+                                        obj[boardUri][type] = arr;
+                                        await setStoredObject(HIDDEN_POSTS_KEY, obj);
+                                        renderList();
+                                    }
+                                }
+                            };
+                            row.appendChild(xBtn);
+                            listArea.appendChild(row);
+                        });
+                    } else if (currentTab === "names") {
+                        const obj = await getStoredObject(FILTERED_NAMES_KEY);
+                        let simple = obj.simple || [];
+                        let plus = obj.plus || [];
+                        if (simple.length === 0 && plus.length === 0) {
+                            listArea.innerHTML = "<span style='color: #aaa;'>No filtered names.</span>";
+                            return;
+                        }
+                        listArea.innerHTML = "";
+                        simple.forEach(name => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.alignItems = "center";
+                            row.style.justifyContent = "space-between";
+                            row.style.marginBottom = "2px";
+                            row.innerHTML = `<span style="flex:1;">${name}</span>`;
+                            const xBtn = document.createElement("button");
+                            xBtn.textContent = "✕";
+                            xBtn.style.background = "none";
+                            xBtn.style.border = "none";
+                            xBtn.style.color = "#c00";
+                            xBtn.style.cursor = "pointer";
+                            xBtn.title = "Remove filter";
+                            xBtn.onclick = async () => {
+                                const obj = await getStoredObject(FILTERED_NAMES_KEY);
+                                obj.simple = (obj.simple || []).filter(n => n !== name);
+                                await setStoredObject(FILTERED_NAMES_KEY, obj);
+                                renderList();
+                            };
+                            row.appendChild(xBtn);
+                            listArea.appendChild(row);
+                        });
+                        plus.forEach(name => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.alignItems = "center";
+                            row.style.justifyContent = "space-between";
+                            row.style.marginBottom = "2px";
+                            row.innerHTML = `<span style="flex:1;">${name} (+)</span>`;
+                            const xBtn = document.createElement("button");
+                            xBtn.textContent = "✕";
+                            xBtn.style.background = "none";
+                            xBtn.style.border = "none";
+                            xBtn.style.color = "#c00";
+                            xBtn.style.cursor = "pointer";
+                            xBtn.title = "Remove filter+";
+                            xBtn.onclick = async () => {
+                                const obj = await getStoredObject(FILTERED_NAMES_KEY);
+                                obj.plus = (obj.plus || []).filter(n => n !== name);
+                                await setStoredObject(FILTERED_NAMES_KEY, obj);
+                                renderList();
+                            };
+                            row.appendChild(xBtn);
+                            listArea.appendChild(row);
+                        });
+                    } else if (currentTab === "ids") {
+                        const obj = await getStoredObject(FILTERED_IDS_KEY);
+                        const items = [];
+                        for (const boardUri in obj) {
+                            for (const threadId in obj[boardUri]) {
+                                let threadObj = obj[boardUri][threadId];
+                                if (Array.isArray(threadObj)) {
+                                    threadObj = { simple: threadObj, plus: [] };
+                                    obj[boardUri][threadId] = threadObj;
+                                }
+                                (threadObj.simple || []).forEach(id => {
+                                    items.push({ boardUri, threadId, id, type: 'simple' });
+                                });
+                                (threadObj.plus || []).forEach(id => {
+                                    items.push({ boardUri, threadId, id, type: 'plus' });
+                                });
+                            }
+                        }
+                        if (items.length === 0) {
+                            listArea.innerHTML = "<span style='color: #aaa;'>No filtered IDs.</span>";
+                            return;
+                        }
+                        listArea.innerHTML = "";
+                        items.forEach(({ boardUri, threadId, id, type }) => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.alignItems = "center";
+                            row.style.justifyContent = "space-between";
+                            row.style.marginBottom = "2px";
+                            row.innerHTML = `<span style="flex:1;">/${boardUri}/ [${threadId}] ${id} ${type === 'plus' ? '(+)' : ''}</span>`;
+                            const xBtn = document.createElement("button");
+                            xBtn.textContent = "✕";
+                            xBtn.style.background = "none";
+                            xBtn.style.border = "none";
+                            xBtn.style.color = "#c00";
+                            xBtn.style.cursor = "pointer";
+                            xBtn.title = "Remove filter";
+                            xBtn.onclick = async () => {
+                                const obj = await getStoredObject(FILTERED_IDS_KEY);
+                                let threadObj = obj[boardUri][threadId];
+                                if (Array.isArray(threadObj)) {
+                                    threadObj = { simple: threadObj, plus: [] };
+                                    obj[boardUri][threadId] = threadObj;
+                                }
+                                threadObj[type] = (threadObj[type] || []).filter(val => val !== id);
+                                await setStoredObject(FILTERED_IDS_KEY, obj);
+                                renderList();
+                            };
+                            row.appendChild(xBtn);
+                            listArea.appendChild(row);
+                        });
+                    }
+                }
+                // Show/hide the container when enableHidingMenu is toggled
+                checkbox.addEventListener('change', function () {
+                    hiddenListContainer.style.display = checkbox.checked ? "block" : "none";
+                    if (checkbox.checked) renderList();
+                });
+                // Insert after the enableHidingMenu option in the menu
+                wrapper.appendChild(hiddenListContainer);
+            }
+
             container.appendChild(wrapper);
         });
 
@@ -5572,7 +5794,6 @@ onReady(async function () {
 
     // Hook up the icon to open/close the menu
     if (link) {
-        let menu = await createSettingsMenu();
         link.style.cursor = "pointer";
         link.title = "Open 8chanSS settings";
         link.addEventListener("click", async function (e) {
