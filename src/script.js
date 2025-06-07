@@ -1540,11 +1540,21 @@ onReady(async function () {
                 // Audio: show indicator, play audio (hidden)
                 // Always append indicator to the nearest .imgLink or .linkThumb
                 const container = thumb.closest("a.linkThumb, a.imgLink");
+                let audioSrc = fullSrc;
+                // If the thumbnail is a generic audio thumb, use the parent link's href as the audio source
+                if (
+                    thumb.tagName === "IMG" &&
+                    container &&
+                    /audioGenericThumb\.png$/.test(thumb.getAttribute("src") || "") &&
+                    container.getAttribute("href")
+                ) {
+                    audioSrc = container.getAttribute("href");
+                }
                 if (container && !container.style.position) {
                     container.style.position = "relative";
                 }
                 floatingMedia = document.createElement("audio");
-                floatingMedia.src = fullSrc;
+                floatingMedia.src = audioSrc;
                 floatingMedia.controls = false;
                 floatingMedia.style.display = "none";
                 floatingMedia.volume = volume;
