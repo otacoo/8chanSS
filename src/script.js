@@ -3189,7 +3189,7 @@ onReady(async function () {
         function updateIdCounts(root = document) {
             // Build frequency map from the main thread
             const idFrequency = {};
-            document.querySelectorAll('.divPosts .labelId').forEach(span => {
+            document.querySelectorAll('.labelId').forEach(span => {
                 const id = span.textContent.split(/[|\\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
@@ -3226,7 +3226,6 @@ onReady(async function () {
         });
         observer.observe(document.body, { childList: true, subtree: true });
     }
-
 
     // --- Feature: Quote Threading ---
     async function featureQuoteThreading() {
