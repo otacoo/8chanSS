@@ -1581,8 +1581,21 @@ onReady(async function () {
             }
 
             // --- Image or Video ---
+            let videoSrc = fullSrc;
+            if (
+                isVideo &&
+                thumb.tagName === "IMG" &&
+                thumb.closest("a.linkThumb, a.imgLink") &&
+                (!/\.(mp4|webm|m4v)$/i.test(fullSrc) || /\/\.media\//.test(fullSrc) && !/\.(mp4|webm|m4v)$/i.test(fullSrc))
+            ) {
+                // If the thumbnail src is not a valid video file, use the parent link's href
+                const parentA = thumb.closest("a.linkThumb, a.imgLink");
+                if (parentA && parentA.getAttribute("href")) {
+                    videoSrc = parentA.getAttribute("href");
+                }
+            }
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
-            floatingMedia.src = fullSrc;
+            floatingMedia.src = isVideo ? videoSrc : fullSrc;
             floatingMedia.id = "hover-preview-media";
             floatingMedia.style.position = "fixed";
             floatingMedia.style.zIndex = "9999";
@@ -1767,6 +1780,11 @@ onReady(async function () {
                     (fileWidthAttr && Number(fileWidthAttr) <= 220) ||
                     (fileHeightAttr && Number(fileHeightAttr) <= 220)
                 ) {
+                    // If this is a video, do not rewrite the src
+                    if (fileMime && fileMime.startsWith('video/')) {
+                        link.dataset.blurSpoilerProcessed = "1";
+                        return;
+                    }
                     // Use the full image, not the thumbnail, and append extension
                     transformedSrc = `/.media/${match[1]}${ext}`;
                 } else if (!hasFilenameExtension && isCustomSpoiler) {
