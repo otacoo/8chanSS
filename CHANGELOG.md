@@ -13,9 +13,8 @@
 - Fix for small videos having broken spoilers
 - Fix for audio files with generic thumbs not being playable on hover
 
-## New Contributors
-* @KillAllBugsEatAllPotatos made their first contribution in https://github.com/otacoo/8chanSS/pull/6
-
+**PR by @KillAllBugsEatAllPotatos :**
+- Added toggle function to list post history by id in a vertical list
 
 ### v1.52.1 (Patch)
 *2025-06-04*
