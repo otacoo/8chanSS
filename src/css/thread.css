@@ -179,7 +179,7 @@
 }
 
 .ss-vertical-id-list .innerPost {
-    background: 0 0;
+    background: none;
     border: none;
     box-shadow: none;
     outline: none;
