@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.52.1
+// @version      1.53.0
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -102,7 +102,10 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.52.1";
+    const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
+    const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
+    const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
+    const VERSION = "1.53.0";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -214,7 +217,44 @@ onReady(async function () {
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
-            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true }
+            scrollToBottom: { label: "Don't Scroll to Bottom on Reply", default: true },
+            _miscelIDTitle: { type: "title", label: ":: IDs" },
+            _miscelSection2: { type: "separator" },
+            highlightNewIds: {
+                label: "Highlight New IDs",
+                default: false,
+                subOptions: {
+                    idHlStyle: {
+                        label: "Highlight Style",
+                        type: "select",
+                        default: "moetext",
+                        options: [
+                            { value: "moetext", label: "Moe" },
+                            { value: "glow", label: "Glow" },
+                            { value: "dotted", label: "Border" }
+                        ]
+                    }
+                }
+            },
+            alwaysShowIdCount: { label: "Always show ID post count", default: false },
+            enableIdFilters: {
+                label: "Show all posts by ID when ID is clicked",
+                type: "checkbox",
+                default: true,
+                subOptions: {
+                    idViewMode: {
+                        label: "View Mode",
+                        type: "select",
+                        default: "showPostsOfIdOnly",
+                        options: [
+                            { value: "showPostsOfIdOnly", label: "Only ID's posts" },
+                            { value: "showIdLinksOnly", label: "Floating list" },
+                            { value: "showIdLinksVertical", label: "Vertical list" }
+                        ]
+                    }
+                }
+            },
+            enableIdToggle: { label: "Add menu entry to toggle IDs as Yours", type: "checkbox", default: false }
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
@@ -318,44 +358,7 @@ onReady(async function () {
                     }
                 }
             },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
-            _miscelIDTitle: { type: "title", label: ":: IDs" },
-            _miscelSection2: { type: "separator" },
-            highlightNewIds: {
-                label: "Highlight New IDs",
-                default: false,
-                subOptions: {
-                    idHlStyle: {
-                        label: "Highlight Style",
-                        type: "select",
-                        default: "moetext",
-                        options: [
-                            { value: "moetext", label: "Moe" },
-                            { value: "glow", label: "Glow" },
-                            { value: "dotted", label: "Border" }
-                        ]
-                    }
-                }
-            },
-            alwaysShowIdCount: { label: "Always show post count for IDs", default: false },
-            enableIdFilters: {
-                label: "Show all posts by ID when ID is clicked",
-                type: "checkbox",
-                default: true,
-                subOptions: {
-                    idViewMode: {
-                        label: "View Mode",
-                        type: "select",
-                        default: "showPostsOfIdOnly",
-                        options: [
-                            { value: "showPostsOfIdOnly", label: "Only ID's posts" },
-                            { value: "showIdLinksOnly", label: "Floating list" },
-                            { value: "showIdLinksVertical", label: "Vertical list" }
-                        ]
-                    }
-                }
-            },
-            enableIdToggle: { label: "Add menu entry to toggle IDs as Yours", type: "checkbox", default: false }
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, }
         }
     };
 
@@ -408,6 +411,18 @@ onReady(async function () {
             await GM.setValue("8chanSS_" + key, String(value));
         } catch (err) {
             console.error(`Failed to set setting for key ${key}:`, err);
+        }
+    }
+    async function getStoredObject(key) {
+        let obj = {};
+        if (typeof GM !== 'undefined' && GM.getValue) {
+            obj = await GM.getValue(key, {});
+        }
+        return typeof obj === 'object' && obj !== null ? obj : {};
+    }
+    async function setStoredObject(key, obj) {
+        if (typeof GM !== 'undefined' && GM.setValue) {
+            await GM.setValue(key, obj);
         }
     }
     (async function featureCssClassToggles() {
@@ -493,7 +508,7 @@ onReady(async function () {
             css += "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:visible}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}:root.is-thread footer{visibility:hidden;height:0}:root.op-background .opCell>.innerOP{padding-top:.25em;width:100%;background:var(--contrast-color);border:1px solid var(--horizon-sep-color);border-top-width:0;border-left-width:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-yous .innerOP:has(> .opHead.title > .youName),:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),:root.highlight-yous .yourPost{border-left:dashed #68b723 2px!important}:root.highlight-yous .innerPost:has(>.divMessage>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>:not(div)>.you),:root.highlight-yous .quotesYou{border-left:solid var(--subject-color) 2px!important}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"]{filter:blur(5px)!important;transition:filter .3s ease}:not(#media-viewer)>.imgExpanded,:not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}";
         }
         if (window.pageType?.isThread) {
-            css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto -3px auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}.ss-idlinks-floating{position:absolute;background:var(--background-color);color:var(--text-color);border:1px solid var(--navbar-text-color);padding:8px 15px 10px 10px;box-shadow:0 2px 12px rgba(0,0,0,.25);max-height:60vh;overflow-y:auto;font-size:14px;max-width:56vw;z-index:990}.ss-idlinks-floating .innerPost{margin-bottom:2px}";
+            css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto -3px auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}.ss-idlinks-floating{position:absolute;background:var(--background-color);color:var(--text-color);border:1px solid var(--navbar-text-color);padding:8px 15px 10px 10px;box-shadow:0 2px 12px rgba(0,0,0,.25);max-height:60vh;overflow-y:auto;font-size:14px;max-width:56vw;z-index:990;scrollbar-width:thin}.ss-vertical-id-list .innerPost{background:0 0;border:none}.ss-idlinks-floating .innerPost{margin-bottom:2px}";
         } else if (window.pageType?.isCatalog) {
             css += "#postingForm{margin:2em auto}#divTools>div:nth-child(5),#divTools>div:nth-child(6){float:left!important;margin-top:9px!important;margin-right:8px}";
         }
@@ -1173,8 +1188,12 @@ onReady(async function () {
             const thumbnailSrc = thumbNode.getAttribute("src");
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
             const href = parentA ? parentA.getAttribute("href") : "";
-            const fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
-            const fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
+            let fileWidth = parentA ? parseInt(parentA.getAttribute("data-filewidth"), 10) : null;
+            let fileHeight = parentA ? parseInt(parentA.getAttribute("data-fileheight"), 10) : null;
+            if ((!fileWidth || !fileHeight) && thumbNode.naturalWidth && thumbNode.naturalHeight) {
+                fileWidth = thumbNode.naturalWidth;
+                fileHeight = thumbNode.naturalHeight;
+            }
             function hasExtension(str) {
                 return /\.[a-z0-9]+$/i.test(str);
             }
@@ -1316,11 +1335,20 @@ onReady(async function () {
 
             if (isAudio) {
                 const container = thumb.closest("a.linkThumb, a.imgLink");
+                let audioSrc = fullSrc;
+                if (
+                    thumb.tagName === "IMG" &&
+                    container &&
+                    /audioGenericThumb\.png$/.test(thumb.getAttribute("src") || "") &&
+                    container.getAttribute("href")
+                ) {
+                    audioSrc = container.getAttribute("href");
+                }
                 if (container && !container.style.position) {
                     container.style.position = "relative";
                 }
                 floatingMedia = document.createElement("audio");
-                floatingMedia.src = fullSrc;
+                floatingMedia.src = audioSrc;
                 floatingMedia.controls = false;
                 floatingMedia.style.display = "none";
                 floatingMedia.volume = volume;
@@ -1341,8 +1369,20 @@ onReady(async function () {
                 cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
                 return;
             }
+            let videoSrc = fullSrc;
+            if (
+                isVideo &&
+                thumb.tagName === "IMG" &&
+                thumb.closest("a.linkThumb, a.imgLink") &&
+                (!/\.(mp4|webm|m4v)$/i.test(fullSrc) || /\/\.media\//.test(fullSrc) && !/\.(mp4|webm|m4v)$/i.test(fullSrc))
+            ) {
+                const parentA = thumb.closest("a.linkThumb, a.imgLink");
+                if (parentA && parentA.getAttribute("href")) {
+                    videoSrc = parentA.getAttribute("href");
+                }
+            }
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
-            floatingMedia.src = fullSrc;
+            floatingMedia.src = isVideo ? videoSrc : fullSrc;
             floatingMedia.id = "hover-preview-media";
             floatingMedia.style.position = "fixed";
             floatingMedia.style.zIndex = "9999";
@@ -1389,7 +1429,7 @@ onReady(async function () {
             cleanupFns.push(() => window.removeEventListener("scroll", leaveHandler));
         }
         function attachThumbListeners(root = document) {
-            root.querySelectorAll("a.linkThumb > img, a.imgLink > img").forEach(thumb => {
+            root.querySelectorAll("a.linkThumb img, a.imgLink img").forEach(thumb => {
                 if (!thumb._fullImgHoverBound) {
                     thumb.addEventListener("mouseenter", onThumbEnter);
                     thumb._fullImgHoverBound = true;
@@ -1398,7 +1438,7 @@ onReady(async function () {
             if (
                 root.tagName === "IMG" &&
                 root.parentElement &&
-                (root.parentElement.matches("a.linkThumb") || root.parentElement.matches("a.imgLink")) &&
+                (root.parentElement.closest("a.linkThumb") || root.parentElement.closest("a.imgLink")) &&
                 !root._fullImgHoverBound
             ) {
                 root.addEventListener("mouseenter", onThumbEnter);
@@ -1494,6 +1534,10 @@ onReady(async function () {
                     (fileWidthAttr && Number(fileWidthAttr) <= 220) ||
                     (fileHeightAttr && Number(fileHeightAttr) <= 220)
                 ) {
+                    if (fileMime && fileMime.startsWith('video/')) {
+                        link.dataset.blurSpoilerProcessed = "1";
+                        return;
+                    }
                     transformedSrc = `/.media/${match[1]}${ext}`;
                 } else if (!hasFilenameExtension && isCustomSpoiler) {
                     transformedSrc = `/.media/t_${match[1]}`;
@@ -2628,18 +2672,16 @@ onReady(async function () {
         if (!document.querySelector('.spanId')) return;
 
         const alwaysShowIdCount = await getSetting("alwaysShowIdCount");
-
-        function updateIdCounts(root = divThreads) {
+        function updateIdCounts(root = document) {
             const idFrequency = {};
-            const labelSpans = root.querySelectorAll('.labelId');
-            labelSpans.forEach(span => {
-                const id = span.textContent.split(/[|\(]/)[0].trim();
+            document.querySelectorAll('.labelId').forEach(span => {
+                const id = span.textContent.split(/[|\\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
-            labelSpans.forEach(span => {
-                const id = span.textContent.split(/[|\(]/)[0].trim();
+            root.querySelectorAll('.labelId').forEach(span => {
+                const id = span.textContent.split(/[|\\(]/)[0].trim();
                 if (alwaysShowIdCount) {
-                    span.textContent = `${id} | ${idFrequency[id]}`;
+                    span.textContent = `${id} | ${idFrequency[id] || 1}`;
                     span.onmouseover = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
                     span.onmouseout = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
                 } else {
@@ -2649,13 +2691,21 @@ onReady(async function () {
                 }
             });
         }
-        updateIdCounts();
-        const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
-        if (divPostsObs) {
-            divPostsObs.addHandler(function showIdCountHandler(mutations) {
-                updateIdCounts();
-            });
-        }
+        updateIdCounts(document);
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === 1) {
+                        if (node.classList && node.classList.contains('labelId')) {
+                            updateIdCounts(node.parentNode || node);
+                        } else if (node.querySelectorAll && node.querySelector('.labelId')) {
+                            updateIdCounts(node);
+                        }
+                    }
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
     async function featureQuoteThreading() {
         const isEnabled = typeof getSetting === "function"
@@ -2807,7 +2857,7 @@ onReady(async function () {
                         menu.setAttribute('data-post-id', postCell.id);
                         const labelIdSpan = postCell.querySelector('.labelId');
                         if (labelIdSpan) {
-                            menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                            menu.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
                         }
                         addMenuEntries(menu.parentNode || menu);
                     }
@@ -2912,7 +2962,7 @@ onReady(async function () {
                                 if (postCell) {
                                     const labelIdSpan = postCell.querySelector('.labelId');
                                     if (labelIdSpan) {
-                                        node.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                        node.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
                                     }
                                 }
                             }
@@ -2925,7 +2975,7 @@ onReady(async function () {
                                     if (postCell) {
                                         const labelIdSpan = postCell.querySelector('.labelId');
                                         if (labelIdSpan) {
-                                            menu.setAttribute('data-label-id', labelIdSpan.textContent.trim());
+                                            menu.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
                                         }
                                     }
                                 }
@@ -2952,11 +3002,21 @@ onReady(async function () {
         }
         const enabled = await getSetting("enableTheSauce");
         if (!enabled) return;
+        const [
+            iqdbEnabled,
+            saucenaoEnabled,
+            pixivEnabled
+        ] = await Promise.all([
+            getSetting("enableTheSauce_iqdb"),
+            getSetting("enableTheSauce_saucenao"),
+            getSetting("enableTheSauce_pixiv")
+        ]);
+
         const services = [
             {
                 key: "iqdb",
                 label: "iqdb",
-                enabled: await getSetting("enableTheSauce_iqdb"),
+                enabled: iqdbEnabled,
                 method: "post",
                 url: "https://iqdb.org/",
                 fileField: "file",
@@ -2964,7 +3024,7 @@ onReady(async function () {
             {
                 key: "saucenao",
                 label: "sauce",
-                enabled: await getSetting("enableTheSauce_saucenao"),
+                enabled: saucenaoEnabled,
                 method: "post",
                 url: "https://saucenao.com/search.php",
                 fileField: "file",
@@ -2972,7 +3032,7 @@ onReady(async function () {
             {
                 key: "pixiv",
                 label: "pixiv",
-                enabled: await getSetting("enableTheSauce_pixiv"),
+                enabled: pixivEnabled,
                 method: "pixiv",
             },
         ];
@@ -3007,6 +3067,27 @@ onReady(async function () {
             const filename = origNameLink.getAttribute('download') || origNameLink.textContent;
             const match = filename && filename.match(/^(\d+)_p\d+\./);
             return match ? match[1] : null;
+        }
+        function submitImageToService({ url, fileField, file }) {
+            const form = document.createElement("form");
+            form.action = url;
+            form.method = "POST";
+            form.enctype = "multipart/form-data";
+            form.target = "_blank";
+            form.style.display = "none";
+
+            const input = document.createElement("input");
+            input.type = "file";
+            input.name = fileField;
+            form.appendChild(input);
+
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+
+            document.body.appendChild(form);
+            form.submit();
+            setTimeout(() => form.remove(), 10000);
         }
         function addSauceLinksToElement(detailDiv) {
             if (detailDiv.classList.contains('sauceLinksProcessed')) {
@@ -3047,26 +3128,9 @@ onReady(async function () {
                         try {
                             const blob = await fetchImageBlob(imgUrl);
                             const file = new File([blob], "image.png", { type: blob.type || "image/png" });
-                            const form = document.createElement("form");
-                            form.action = service.url;
-                            form.method = "POST";
-                            form.enctype = "multipart/form-data";
-                            form.target = "_blank";
-                            form.style.display = "none";
-
-                            const input = document.createElement("input");
-                            input.type = "file";
-                            input.name = service.fileField;
-                            form.appendChild(input);
-                            const dt = new DataTransfer();
-                            dt.items.add(file);
-                            input.files = dt.files;
-
-                            document.body.appendChild(form);
-                            form.submit();
-                            setTimeout(() => form.remove(), 10000);
+                            submitImageToService({ url: service.url, fileField: service.fileField, file });
                         } catch (err) {
-                            alert("Failed to upload thumbnail: " + err);
+                            callPageToast("Failed to upload thumbnail.", "red", 2500);
                         }
                     });
                 } else if (service.method === "pixiv") {
@@ -3093,6 +3157,13 @@ onReady(async function () {
             details.forEach(detailDiv => addSauceLinksToElement(detailDiv));
         }
         observeAllUploadDetails();
+
+        const pendingUploadDetails = new Set();
+        const debouncedProcessUploadDetails = debounce(() => {
+            pendingUploadDetails.forEach(detailDiv => addSauceLinksToElement(detailDiv));
+            pendingUploadDetails.clear();
+        }, 50);
+
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
         if (divPostsObs) {
             divPostsObs.addHandler(function sauceLinksHandler(mutations) {
@@ -3100,13 +3171,14 @@ onReady(async function () {
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType === 1) {
                             if (node.classList && node.classList.contains('uploadDetails')) {
-                                addSauceLinksToElement(node);
+                                pendingUploadDetails.add(node);
                             } else if (node.querySelectorAll) {
-                                node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+                                node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(n => pendingUploadDetails.add(n));
                             }
                         }
                     }
                 }
+                debouncedProcessUploadDetails();
             });
         }
         const bodyObs = observeSelector('body', { childList: true, subtree: true });
@@ -3129,21 +3201,6 @@ onReady(async function () {
         }
     }
     function featureCustomPostHideMenu() {
-        const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
-        const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
-        const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-        async function getStoredObject(key) {
-            let obj = {};
-            if (typeof GM !== 'undefined' && GM.getValue) {
-                obj = await GM.getValue(key, {});
-            }
-            return typeof obj === 'object' && obj !== null ? obj : {};
-        }
-        async function setStoredObject(key, obj) {
-            if (typeof GM !== 'undefined' && GM.setValue) {
-                await GM.setValue(key, obj);
-            }
-        }
         function getAllHideButtons(root = document) {
             return Array.from(root.querySelectorAll('label.hideButton'));
         }
@@ -3188,7 +3245,7 @@ onReady(async function () {
                 inner.classList.remove('hidden');
                 unhideBtn.remove();
                 if (typeof onUnhide === 'function') onUnhide();
-                updateAllQuoteLinksFiltered();
+                if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
             });
             inner.parentNode.insertBefore(unhideBtn, inner.nextSibling);
         }
@@ -3197,122 +3254,47 @@ onReady(async function () {
             if (inner) inner.classList.remove('hidden');
             const unhideBtn = cell.querySelector('.unhideButton');
             if (unhideBtn) unhideBtn.remove();
-            updateAllQuoteLinksFiltered();
+            if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
         }
-        function getAllRepliesRecursive(rootPostId, boardUri) {
-            const postMap = {};
-            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
-                const pid = getPostId(cell);
-                if (pid) postMap[pid] = cell;
-            });
-            const toHide = new Set();
-            const visited = new Set();
-            const rootNum = Number(rootPostId);
-            const queue = [];
-            queue.push(rootPostId);
-            while (queue.length > 0) {
-                const currentId = queue.shift();
-                const postEl = postMap[currentId];
-                if (!postEl) continue;
-                const backlinks = postEl.querySelectorAll('.panelBacklinks .backLink[data-target-uri]');
-                backlinks.forEach(link => {
-                    const targetUri = link.getAttribute('data-target-uri');
-                    const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                    if (match) {
-                        const replyId = match[2];
-                        const replyNum = Number(replyId);
-                        if (!isNaN(replyNum) && replyNum > rootNum && !visited.has(replyId)) {
-                            toHide.add(replyId);
-                            visited.add(replyId);
-                            queue.push(replyId);
-                        }
-                    }
-                });
-            }
-            return toHide;
-        }
-
-        async function setPostHidden(boardUri, postId, hide = true, plus = false) {
-            const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
-            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
-                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                if (getPostId(cell) === postId) {
-                    if (hide) {
-                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'hidePostPlus' : undefined);
-                    } else {
-                        unhidePostCell(cell, boardUri, postId);
-                    }
-                }
-            });
-            if (plus) {
-                if (recursiveHide) {
-                    getAllRepliesRecursive(postId, boardUri).forEach(replyPid => {
-                        document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
-                            if (getPostId(cell) === replyPid) {
-                                if (hide) {
-                                    hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
-                                } else {
-                                    unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
-                                }
-                            }
-                        });
-                    });
-                } else {
-                    document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                        if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                        const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                        for (const link of quoteLinks) {
-                            const targetUri = link.getAttribute('data-target-uri');
-                            const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
-                            if (match && match[2] === postId) {
-                                if (hide) {
-                                    hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'hidePostPlus');
-                                } else {
-                                    unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
-                                }
-                                break;
-                            }
-                        }
-                    });
-                }
-            }
-            updateAllQuoteLinksFiltered();
-        }
-        async function setPostsWithNameHidden(name, hide = true, plus = false) {
-            const postIdsWithName = new Set();
+        function getDirectChildren(rootIds) {
+            const children = new Set();
             document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                const nameElem = cell.querySelector('.linkName');
-                if (nameElem && nameElem.textContent.trim() === name) {
-                    const boardUri = getBoardUri(cell);
-                    const postId = getPostId(cell);
-                    postIdsWithName.add(postId);
-                    if (hide) {
-                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'filteredNamePlus' : 'filteredName');
-                    } else {
-                        unhidePostCell(cell, boardUri, postId);
+                const pid = getPostId(cell);
+                const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
+                for (const link of quoteLinks) {
+                    const targetUri = link.getAttribute('data-target-uri');
+                    const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
+                    if (match && rootIds.has(match[2])) {
+                        children.add(pid);
+                        break;
                     }
                 }
             });
-            if (plus && postIdsWithName.size > 0) {
+            return children;
+        }
+        function getAllDescendants(initialSet) {
+            const toHide = new Set(initialSet);
+            const queue = Array.from(initialSet);
+            while (queue.length > 0) {
+                const currentId = queue.shift();
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                    const pid = getPostId(cell);
+                    if (toHide.has(pid)) return;
                     const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
                     for (const link of quoteLinks) {
                         const targetUri = link.getAttribute('data-target-uri');
                         const match = targetUri && targetUri.match(/^([^#]+)#(\w+)$/);
-                        if (match && postIdsWithName.has(match[2])) {
-                            if (hide) {
-                                hidePostCellWithStub(cell, getBoardUri(cell), getPostId(cell), null, 'filteredNamePlus');
-                            } else {
-                                unhidePostCell(cell, getBoardUri(cell), getPostId(cell));
-                            }
+                        if (match && match[2] === currentId) {
+                            toHide.add(pid);
+                            queue.push(pid);
                             break;
                         }
                     }
                 });
             }
-            updateAllQuoteLinksFiltered();
+            return toHide;
         }
         async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
             const postIdsWithId = new Set();
@@ -3337,46 +3319,102 @@ onReady(async function () {
                     }
                 }
             });
+
             if (plus && postIdsWithId.size > 0) {
+                const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
+                let toHide = getDirectChildren(postIdsWithId);
+                if (recursiveHide) {
+                    const initial = new Set([...postIdsWithId, ...toHide]);
+                    toHide = getAllDescendants(initial);
+                    for (const pid of postIdsWithId) toHide.delete(pid);
+                }
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
-                    let isDirectReply = false;
-                    const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                    for (const link of quoteLinks) {
-                        const targetUri = link.getAttribute('data-target-uri');
-                        const match = targetUri && targetUri.match(/^([^#]+)#([a-z0-9]+)$/i);
-                        if (match && postIdsWithId.has(match[2])) {
-                            isDirectReply = true;
-                            break;
-                        }
-                    }
-                    if (!isDirectReply) {
-                        const panelBacklinks = cell.querySelector('.panelBacklinks');
-                        if (panelBacklinks) {
-                            const backLinks = panelBacklinks.querySelectorAll('.backLink[data-target-uri]');
-                            for (const link of backLinks) {
-                                const targetUri = link.getAttribute('data-target-uri');
-                                const match = targetUri && targetUri.match(/^([^#]+)#([a-z0-9]+)$/i);
-                                if (match && postIdsWithId.has(match[2])) {
-                                    isDirectReply = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (isDirectReply) {
-                        const replyBoardUri = getBoardUri(cell);
-                        const replyPostId = getPostId(cell);
+                    const pid = getPostId(cell);
+                    if (toHide.has(pid)) {
                         if (hide) {
-                            hidePostCellWithStub(cell, replyBoardUri, replyPostId, null, 'filteredIDPlus');
+                            hidePostCellWithStub(cell, getBoardUri(cell), pid, null, 'filteredIDPlus');
                         } else {
-                            unhidePostCell(cell, replyBoardUri, replyPostId);
+                            unhidePostCell(cell, getBoardUri(cell), pid);
                         }
                     }
                 });
             }
-            updateAllQuoteLinksFiltered();
+            if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
         }
+        async function setPostsWithNameHidden(name, hide = true, plus = false) {
+            const postIdsWithName = new Set();
+            document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                const nameElem = cell.querySelector('.linkName');
+                if (nameElem && nameElem.textContent.trim() === name) {
+                    const boardUri = getBoardUri(cell);
+                    const postId = getPostId(cell);
+                    postIdsWithName.add(postId);
+                    if (hide) {
+                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'filteredNamePlus' : 'filteredName');
+                    } else {
+                        unhidePostCell(cell, boardUri, postId);
+                    }
+                }
+            });
+
+            if (plus && postIdsWithName.size > 0) {
+                const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
+                let toHide = getDirectChildren(postIdsWithName);
+                if (recursiveHide) {
+                    const initial = new Set([...postIdsWithName, ...toHide]);
+                    toHide = getAllDescendants(initial);
+                    for (const pid of postIdsWithName) toHide.delete(pid);
+                }
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                    const pid = getPostId(cell);
+                    if (toHide.has(pid)) {
+                        if (hide) {
+                            hidePostCellWithStub(cell, getBoardUri(cell), pid, null, 'filteredNamePlus');
+                        } else {
+                            unhidePostCell(cell, getBoardUri(cell), pid);
+                        }
+                    }
+                });
+            }
+            if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
+        }
+        async function setPostHidden(boardUri, postId, hide = true, plus = false) {
+            const recursiveHide = await getSetting("enableHidingMenu_recursiveHide");
+            document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
+                if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                if (getPostId(cell) === postId) {
+                    if (hide) {
+                        hidePostCellWithStub(cell, boardUri, postId, null, plus ? 'hidePostPlus' : 'hidePost');
+                    } else {
+                        unhidePostCell(cell, boardUri, postId);
+                    }
+                }
+            });
+            if (plus) {
+                let toHide = getDirectChildren(new Set([postId]));
+                if (recursiveHide) {
+                    const initial = new Set([postId, ...toHide]);
+                    toHide = getAllDescendants(initial);
+                    toHide.delete(postId);
+                }
+                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                    if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
+                    const pid = getPostId(cell);
+                    if (toHide.has(pid)) {
+                        if (hide) {
+                            hidePostCellWithStub(cell, getBoardUri(cell), pid, null, 'hidePostPlus');
+                        } else {
+                            unhidePostCell(cell, getBoardUri(cell), pid);
+                        }
+                    }
+                });
+            }
+            if (typeof updateAllQuoteLinksFiltered === 'function') updateAllQuoteLinksFiltered();
+        }
+
         async function updateAllQuoteLinksFiltered() {
             const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
             let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
@@ -3385,16 +3423,13 @@ onReady(async function () {
             }
             if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
-            const filteredTargets = new Set();
+            const filteredPostIds = new Set();
             for (const boardUri in hiddenPostsObj) {
                 for (const postId of (hiddenPostsObj[boardUri]?.simple || [])) {
-                    filteredTargets.add(`${boardUri}#${postId}`);
+                    filteredPostIds.add(postId + ''); 
                 }
                 for (const postId of (hiddenPostsObj[boardUri]?.plus || [])) {
-                    filteredTargets.add(`${boardUri}#${postId}`);
-                    getAllRepliesRecursive(String(postId), boardUri).forEach(pid => {
-                        filteredTargets.add(`${boardUri}#${pid}`);
-                    });
+                    filteredPostIds.add(postId + '');
                 }
             }
             const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
@@ -3408,43 +3443,18 @@ onReady(async function () {
                     for (const id of threadObj.simple || []) {
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
-                            if (idElem && idElem.textContent.trim() === id) {
-                                const postId = getPostId(cell);
-                                filteredTargets.add(`${boardUri}#${postId}`);
+                            if (idElem && idElem.textContent.split(/[|\\(]/)[0].trim() === id) {
+                                filteredPostIds.add(getPostId(cell));
                             }
                         });
                     }
                     for (const id of threadObj.plus || []) {
-                        const postIdsWithId = new Set();
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
-                            if (idElem && idElem.textContent.trim() === id) {
-                                const postId = getPostId(cell);
-                                filteredTargets.add(`${boardUri}#${postId}`);
-                                postIdsWithId.add(postId);
+                            if (idElem && idElem.textContent.split(/[|\\(]/)[0].trim() === id) {
+                                filteredPostIds.add(getPostId(cell));
                             }
                         });
-                        if (postIdsWithId.size > 0) {
-                            document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                                const panelBacklinks = cell.querySelector('.panelBacklinks');
-                                if (!panelBacklinks) return;
-                                const backLinks = panelBacklinks.querySelectorAll('.backLink[data-target-uri]');
-                                let isDirectReply = false;
-                                for (const link of backLinks) {
-                                    const targetUri = link.getAttribute('data-target-uri');
-                                    const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                                    if (match && postIdsWithId.has(match[2])) {
-                                        isDirectReply = true;
-                                        break;
-                                    }
-                                }
-                                if (isDirectReply) {
-                                    const replyBoardUri = getBoardUri(cell);
-                                    const replyPostId = getPostId(cell);
-                                    filteredTargets.add(`${replyBoardUri}#${replyPostId}`);
-                                }
-                            });
-                        }
                     }
                 }
             }
@@ -3452,70 +3462,78 @@ onReady(async function () {
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     const nameElem = cell.querySelector('.linkName');
                     if (nameElem && nameElem.textContent.trim() === name) {
-                        const boardUri = getBoardUri(cell);
-                        const postId = getPostId(cell);
-                        filteredTargets.add(`${boardUri}#${postId}`);
+                        filteredPostIds.add(getPostId(cell));
                     }
                 });
             }
             for (const name of filteredNamesObj.plus) {
-                const postIdsWithName = new Set();
                 document.querySelectorAll('.postCell, .opCell').forEach(cell => {
                     const nameElem = cell.querySelector('.linkName');
                     if (nameElem && nameElem.textContent.trim() === name) {
-                        const boardUri = getBoardUri(cell);
-                        const postId = getPostId(cell);
-                        filteredTargets.add(`${boardUri}#${postId}`);
-                        postIdsWithName.add(postId);
+                        filteredPostIds.add(getPostId(cell));
                     }
-                });
-                postIdsWithName.forEach(pid => {
-                    getAllRepliesRecursive(pid).forEach(replyPid => {
-                        document.querySelectorAll('.postCell, .opCell').forEach(cell => {
-                            if (getPostId(cell) === replyPid) {
-                                const boardUri = getBoardUri(cell);
-                                filteredTargets.add(`${boardUri}#${replyPid}`);
-                            }
-                        });
-                    });
                 });
             }
             document.querySelectorAll('.quoteLink').forEach(link => {
                 let isFiltered = false;
                 const targetUri = link.getAttribute('data-target-uri');
-                if (targetUri && filteredTargets.has(targetUri)) {
-                    isFiltered = true;
-                } else {
-                    const href = link.getAttribute('href');
-                    if (href) {
-                        const match = href.match(/\/([^\/]+)\/res\/\d+\.html#(\d+)$/);
-                        if (match) {
-                            const boardUri = match[1];
-                            const postId = match[2];
-                            if (filteredTargets.has(`${boardUri}#${postId}`)) {
-                                isFiltered = true;
-                            }
-                        }
+                if (targetUri) {
+                    const match = targetUri.match(/^([^#]+)#(\w+)$/);
+                    if (match && filteredPostIds.has(match[2])) {
+                        isFiltered = true;
                     }
                 }
                 if (isFiltered) link.classList.add('filtered');
                 else link.classList.remove('filtered');
             });
         }
+        class CustomHideMenu {
+            constructor(hideButton, postCell, options) {
+                this.hideButton = hideButton;
+                this.postCell = postCell;
+                this.options = options;
+                this.menu = null;
+            }
+            render() {
+                this.remove();
+                this.menu = document.createElement('div');
+                this.menu.className = 'floatingList extraMenu';
+                this.menu.setAttribute('data-custom', '1');
+                const rect = this.hideButton.getBoundingClientRect();
+                this.menu.style.position = 'absolute';
+                this.menu.style.left = `${rect.left + window.scrollX}px`;
+                this.menu.style.top = `${rect.bottom + window.scrollY}px`;
+                this.menu.style.zIndex = 9999;
+                this.menu.style.fontSize = "10pt";
+                const list = document.createElement('ul');
+                this.menu.appendChild(list);
+                this.options.forEach(opt => {
+                    const li = document.createElement('li');
+                    li.textContent = opt.name;
+                    li.onclick = opt.callback;
+                    list.appendChild(li);
+                });
+                document.body.appendChild(this.menu);
+                setTimeout(() => {
+                    document.addEventListener('mousedown', this.handleOutsideClick.bind(this));
+                }, 0);
+            }
+            handleOutsideClick(e) {
+                if (!this.menu.contains(e.target)) {
+                    this.remove();
+                    document.removeEventListener('mousedown', this.handleOutsideClick.bind(this));
+                }
+            }
+            remove() {
+                if (this.menu && this.menu.parentNode) {
+                    this.menu.parentNode.removeChild(this.menu);
+                    this.menu = null;
+                }
+            }
+        }
+
         async function showCustomMenu(hideButton, postCell) {
             removeExistingMenu();
-            const extraMenu = document.createElement('div');
-            extraMenu.className = 'floatingList extraMenu';
-            extraMenu.setAttribute('data-custom', '1');
-            const rect = hideButton.getBoundingClientRect();
-            extraMenu.style.position = 'absolute';
-            extraMenu.style.left = `${rect.left + window.scrollX}px`;
-            extraMenu.style.top = `${rect.bottom + window.scrollY}px`;
-            extraMenu.style.zIndex = 9999;
-            extraMenu.style.fontSize = "10pt";
-            const list = document.createElement('ul');
-            extraMenu.appendChild(list);
-
             const boardUri = getBoardUri(postCell);
             const postId = getPostId(postCell);
             const inner = getInnerPostElem(postCell);
@@ -3546,8 +3564,8 @@ onReady(async function () {
             const isFilteredId = id && threadObj.simple.includes(id);
             const isFilteredIdPlus = id && threadObj.plus.includes(id);
             let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
-            if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
-                filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
+            if (!filteredNamesObj || typeof filteredNamesObj !== "object") {
+                filteredNamesObj = { simple: [], plus: [] };
             }
             if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
@@ -3607,8 +3625,8 @@ onReady(async function () {
                     name: isNameFiltered ? 'Unfilter name' : 'Filter name',
                     callback: async () => {
                         let obj = await getStoredObject(FILTERED_NAMES_KEY);
-                        if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
-                            obj = { simple: Array.isArray(obj) ? obj : [], plus: [] };
+                        if (!obj || typeof obj !== "object") {
+                            obj = { simple: [], plus: [] };
                         }
                         if (!Array.isArray(obj.simple)) obj.simple = [];
                         const idx = obj.simple.indexOf(name);
@@ -3628,8 +3646,8 @@ onReady(async function () {
                     name: isNameFilteredPlus ? 'Unfilter name+' : 'Filter name+',
                     callback: async () => {
                         let obj = await getStoredObject(FILTERED_NAMES_KEY);
-                        if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
-                            obj = { simple: Array.isArray(obj) ? obj : [], plus: [] };
+                        if (!obj || typeof obj !== "object") {
+                            obj = { simple: [], plus: [] };
                         }
                         if (!Array.isArray(obj.plus)) obj.plus = [];
                         const idx = obj.plus.indexOf(name);
@@ -3709,24 +3727,8 @@ onReady(async function () {
                 }
             );
 
-            options.forEach(opt => {
-                const li = document.createElement('li');
-                li.textContent = opt.name;
-                li.onclick = opt.callback;
-                list.appendChild(li);
-            });
-
-            document.body.appendChild(extraMenu);
-
-            function handleOutsideClick(e) {
-                if (!extraMenu.contains(e.target)) {
-                    removeExistingMenu();
-                    document.removeEventListener('mousedown', handleOutsideClick);
-                }
-            }
-            setTimeout(() => {
-                document.addEventListener('mousedown', handleOutsideClick);
-            }, 0);
+            const menu = new CustomHideMenu(hideButton, postCell, options);
+            menu.render();
         }
 
         function removeExistingMenu() {
@@ -3765,21 +3767,103 @@ onReady(async function () {
                 }
             }
             let namesObj = await getStoredObject(FILTERED_NAMES_KEY);
-            if (!namesObj || typeof namesObj !== "object" || Array.isArray(namesObj)) {
-                namesObj = { simple: Array.isArray(namesObj) ? namesObj : [], plus: [] };
+            if (!namesObj || typeof namesObj !== "object") {
+                namesObj = { simple: [], plus: [] };
             }
             (namesObj.simple || []).forEach(name => setPostsWithNameHidden(name, true, false));
             (namesObj.plus || []).forEach(name => setPostsWithNameHidden(name, true, true));
             updateAllQuoteLinksFiltered();
         }
+        const postMapCache = (() => {
+            let postParentMap = null;
+            let childMap = null;
+            let filteredNamePlusSet = null;
+            let plusHiddenSet = null;
+            return {
+                getParentMap: function () {
+                    if (!postParentMap) {
+                        postParentMap = {};
+                        document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                            const pid = postCell.id;
+                            const parentIds = [];
+                            postCell.querySelectorAll('.quoteLink[data-target-uri]').forEach(link => {
+                                const targetUri = link.getAttribute('data-target-uri');
+                                const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
+                                if (match) parentIds.push(match[2]);
+                            });
+                            postParentMap[pid] = parentIds;
+                        });
+                    }
+                    return postParentMap;
+                },
+                getChildMap: function () {
+                    if (!childMap) {
+                        childMap = {};
+                        const postParentMap = this.getParentMap();
+                        Object.entries(postParentMap).forEach(([childId, parentIds]) => {
+                            parentIds.forEach(parentId => {
+                                if (!childMap[parentId]) childMap[parentId] = [];
+                                childMap[parentId].push(childId);
+                            });
+                        });
+                    }
+                    return childMap;
+                },
+                getFilteredNamePlusSet: function (filteredNamesObj) {
+                    if (!filteredNamePlusSet) {
+                        filteredNamePlusSet = new Set();
+                        const initialFiltered = [];
+                        document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                            const nameElem = postCell.querySelector('.linkName');
+                            const name = nameElem ? nameElem.textContent.trim() : null;
+                            if (name && filteredNamesObj.plus.includes(name)) {
+                                filteredNamePlusSet.add(postCell.id);
+                                initialFiltered.push(postCell.id);
+                            }
+                        });
+                        const childMap = this.getChildMap();
+                        const queue = [...initialFiltered];
+                        while (queue.length > 0) {
+                            const current = queue.shift();
+                            const children = childMap[current] || [];
+                            for (const child of children) {
+                                if (!filteredNamePlusSet.has(child)) {
+                                    filteredNamePlusSet.add(child);
+                                    queue.push(child);
+                                }
+                            }
+                        }
+                    }
+                    return filteredNamePlusSet;
+                },
+                getPlusHiddenSet: function (plusHiddenMap) {
+                    if (!plusHiddenSet) {
+                        plusHiddenSet = new Set();
+                        for (const b in plusHiddenMap) {
+                            for (const hid of plusHiddenMap[b]) {
+                                plusHiddenSet.add(hid);
+                            }
+                        }
+                    }
+                    return plusHiddenSet;
+                },
+                invalidate: function () {
+                    postParentMap = null;
+                    childMap = null;
+                    filteredNamePlusSet = null;
+                    plusHiddenSet = null;
+                }
+            };
+        })();
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: false });
         if (divPostsObs) {
-            divPostsObs.addHandler(async function customPostHideMenuHandler(mutations) {
+            const debouncedHandler = debounce(async function customPostHideMenuHandler(mutations) {
+                postMapCache.invalidate();
                 const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
                 const filteredIdsObj = await getStoredObject(FILTERED_IDS_KEY);
                 let filteredNamesObj = await getStoredObject(FILTERED_NAMES_KEY);
-                if (!filteredNamesObj || typeof filteredNamesObj !== "object" || Array.isArray(filteredNamesObj)) {
-                    filteredNamesObj = { simple: Array.isArray(filteredNamesObj) ? filteredNamesObj : [], plus: [] };
+                if (!filteredNamesObj || typeof filteredNamesObj !== "object") {
+                    filteredNamesObj = { simple: [], plus: [] };
                 }
                 if (!Array.isArray(filteredNamesObj.simple)) filteredNamesObj.simple = [];
                 if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
@@ -3864,64 +3948,9 @@ onReady(async function () {
                             }
                             let shouldHidePlus = false;
                             const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
-                            if (!window._8chanSS_postParentMapCache) {
-                                const postParentMap = {};
-                                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-                                    const pid = postCell.id;
-                                    const parentIds = [];
-                                    postCell.querySelectorAll('.quoteLink[data-target-uri]').forEach(link => {
-                                        const targetUri = link.getAttribute('data-target-uri');
-                                        const match = targetUri && targetUri.match(/^([^#]+)#(\d+)$/);
-                                        if (match) parentIds.push(match[2]);
-                                    });
-                                    postParentMap[pid] = parentIds;
-                                });
-                                window._8chanSS_postParentMapCache = postParentMap;
-                            }
-                            const postParentMap = window._8chanSS_postParentMapCache;
-                            if (!window._8chanSS_plusHiddenSetCache) {
-                                const plusHiddenSet = new Set();
-                                for (const b in plusHiddenMap) {
-                                    for (const hid of plusHiddenMap[b]) {
-                                        plusHiddenSet.add(hid);
-                                    }
-                                }
-                                window._8chanSS_plusHiddenSetCache = plusHiddenSet;
-                            }
-                            const plusHiddenSet = window._8chanSS_plusHiddenSetCache;
-                            if (!window._8chanSS_filteredNamePlusSetCache) {
-                                const filteredNamePlusSet = new Set();
-                                const initialFiltered = [];
-                                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-                                    const nameElem = postCell.querySelector('.linkName');
-                                    const name = nameElem ? nameElem.textContent.trim() : null;
-                                    if (name && filteredNamesObj.plus.includes(name)) {
-                                        filteredNamePlusSet.add(postCell.id);
-                                        initialFiltered.push(postCell.id);
-                                    }
-                                });
-                                const postParentMap = window._8chanSS_postParentMapCache;
-                                const childMap = {};
-                                Object.entries(postParentMap).forEach(([childId, parentIds]) => {
-                                    parentIds.forEach(parentId => {
-                                        if (!childMap[parentId]) childMap[parentId] = [];
-                                        childMap[parentId].push(childId);
-                                    });
-                                });
-                                const queue = [...initialFiltered];
-                                while (queue.length > 0) {
-                                    const current = queue.shift();
-                                    const children = childMap[current] || [];
-                                    for (const child of children) {
-                                        if (!filteredNamePlusSet.has(child)) {
-                                            filteredNamePlusSet.add(child);
-                                            queue.push(child);
-                                        }
-                                    }
-                                }
-                                window._8chanSS_filteredNamePlusSetCache = filteredNamePlusSet;
-                            }
-                            const filteredNamePlusSet = window._8chanSS_filteredNamePlusSetCache;
+                            const postParentMap = postMapCache.getParentMap();
+                            const plusHiddenSet = postMapCache.getPlusHiddenSet(plusHiddenMap);
+                            const filteredNamePlusSet = postMapCache.getFilteredNamePlusSet(filteredNamesObj);
                             const visited = new Set();
                             function isDescendantOfPlusHiddenOrFilteredNamePlus(pid) {
                                 if (visited.has(pid)) return false;
@@ -3976,7 +4005,8 @@ onReady(async function () {
                     }
                 }
                 updateAllQuoteLinksFiltered();
-            });
+            }, 50); 
+            divPostsObs.addHandler(debouncedHandler);
         }
         hijackHideButtons();
         autoHideAll();
@@ -3991,55 +4021,81 @@ onReady(async function () {
         let activeFilterColor = null;
         const showIdLinks = await getSetting("enableIdFilters_idViewMode");
         let floatingDiv = null;
-        function removeFloatingDiv() {
-            if (floatingDiv && floatingDiv.parentNode) floatingDiv.parentNode.removeChild(floatingDiv);
-            floatingDiv = null;
+        function closeFloatingDiv() {
+            if (floatingDiv && floatingDiv.parentNode) {
+                floatingDiv.parentNode.removeChild(floatingDiv);
+                floatingDiv = null;
+            }
             document.removeEventListener("mousedown", outsideClickHandler, true);
         }
         function outsideClickHandler(e) {
-            if (floatingDiv && !floatingDiv.contains(e.target)) removeFloatingDiv();
+            if (floatingDiv && !floatingDiv.contains(e.target)) {
+                closeFloatingDiv();
+            }
         }
-        function getPostsById(id) {
-            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
-            return Array.from(divThreads.querySelectorAll(postCellSelector)).filter(postEl => {
-                const label = postEl.querySelector(labelIdSelector);
-                if (!label) return false;
-                const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
-                return labelId === idToMatch;
+        function removeNativeLabelIdOnClickHandlers() {
+            document.querySelectorAll('.labelId').forEach(label => {
+                if (label.hasAttribute('onclick')) {
+                    label.removeAttribute('onclick');
+                }
+                if (typeof label.onclick === 'function') {
+                    label.onclick = null;
+                }
             });
         }
         function showIdList(id, clickedLabel) {
-            removeFloatingDiv();
-            const matchingPosts = getPostsById(id);
+            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
+
+            const threadsContainer = document.getElementById('divThreads');
+            if (!threadsContainer) {
+                return [];
+            }
+
+            const allPosts = Array.from(threadsContainer.querySelectorAll('.postCell, .opCell, .innerOP'));
+
+            const matchingPosts = [];
+            allPosts.forEach(postEl => {
+                const label = postEl.querySelector('.labelId');
+                const postId = postEl.id;
+                if (label && postId) {
+                    const labelId = (label.textContent.match(/^[a-fA-F0-9]{6}/) || [label.textContent.trim()])[0];
+                    if (labelId === idToMatch) {
+                        matchingPosts.push(postEl);
+                    }
+                }
+            });
             const match = window.location.pathname.match(/^\/([^/]+)\/(res|last)\/(\d+)\.html/);
             const board = match ? match[1] : '';
             const thread = match ? match[3] : '';
-            floatingDiv = document.createElement('div');
+            const floatingDiv = document.createElement('div');
             floatingDiv.className = 'ss-idlinks-floating';
             const title = document.createElement('div');
-            title.style.fontWeight = 'bold';
-            title.style.marginBottom = '8px';
-            const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
-            if (showIdLinks == "showIdLinksOnly") {
-                title.textContent = `Posts by ID: ${idToMatch} (${getPostsById(id).length})`;
+            if (showIdLinks === "showIdLinksOnly") {
+                title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
+                title.style.fontWeight = 'bold';
+                title.style.marginBottom = '8px';
+                floatingDiv.appendChild(title);
             }
-            floatingDiv.appendChild(title);
             const linkContainer = document.createElement('div');
-            linkContainer.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'flex';
+            if (showIdLinks === "showIdLinksVertical") {
+                linkContainer.classList.add('ss-vertical-id-list');
+                linkContainer.style.display = 'block';
+            } else {
+                linkContainer.style.display = 'flex';
+            }
             linkContainer.style.flexWrap = 'wrap';
             linkContainer.style.gap = '0.3em';
+
             matchingPosts.forEach(postEl => {
                 const postId = postEl.id;
-                if (!postId) return; 
                 const link = document.createElement('a');
                 link.className = 'quoteLink postLink';
                 link.href = `/${board}/res/${thread}.html#${postId}`;
                 link.textContent = `>>${postId}`;
                 link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
-                link.style.display = showIdLinks == "showIdLinksVertical" ? 'block' : 'inline-block';
                 link.onclick = function (e) {
                     e.preventDefault();
-                    removeFloatingDiv();
+                    floatingDiv.remove();
                     const target = document.getElementById(postId);
                     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 };
@@ -4047,15 +4103,7 @@ onReady(async function () {
                 wrapper.className = 'innerPost';
                 wrapper.dataset.uri = `${board}/${thread}#${postId}`;
                 wrapper.appendChild(link);
-                if (showIdLinks == "showIdLinksVertical") {
-                    wrapper.style.boxShadow = 'none';
-                    wrapper.style.border = 'none';
-                    wrapper.style.outline = 'none';
-                    wrapper.style.backgroundColor = 'inherit';
-                    wrapper.style.display = 'block';
-                    wrapper.style.padding = 0;
-                    wrapper.style.margin = 0;
-                }
+
                 linkContainer.appendChild(wrapper);
             });
             floatingDiv.appendChild(linkContainer);
@@ -4073,13 +4121,19 @@ onReady(async function () {
             floatingDiv.style.top = `${top}px`;
             floatingDiv.style.left = `${left}px`;
             setTimeout(() => {
-                document.addEventListener('mousedown', outsideClickHandler, true);
+                function closeOnClick(e) {
+                    if (!floatingDiv.contains(e.target)) {
+                        floatingDiv.remove();
+                    }
+                }
+                document.addEventListener('mousedown', closeOnClick, { capture: true, once: true });
             }, 0);
             return matchingPosts;
         }
         function applyFilter(targetRgbColor) {
             activeFilterColor = targetRgbColor;
-            document.querySelectorAll(postCellSelector).forEach(cell => {
+            const cells = document.querySelectorAll(postCellSelector); 
+            cells.forEach(cell => {
                 const label = cell.querySelector(labelIdSelector);
                 const matches = label && window.getComputedStyle(label).backgroundColor === targetRgbColor;
                 cell.classList.toggle(hiddenClassName, !!targetRgbColor && !matches);
@@ -4088,8 +4142,14 @@ onReady(async function () {
         function handleClick(event) {
             const clickedLabel = event.target.closest(labelIdSelector);
             if (clickedLabel && clickedLabel.closest(postCellSelector) && !clickedLabel.closest(".de-pview")) {
-                event.preventDefault();
-                event.stopPropagation();
+                if (showIdLinks === "showIdLinksOnly" || showIdLinks === "showIdLinksVertical") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                    if (clickedLabel.hasAttribute('onclick')) clickedLabel.removeAttribute('onclick');
+                    if (typeof clickedLabel.onclick === 'function') clickedLabel.onclick = null;
+                }
+
                 const id = clickedLabel.textContent.trim();
                 if (showIdLinks != "showPostsOfIdOnly") {
                     showIdList(id, clickedLabel);
@@ -4107,7 +4167,11 @@ onReady(async function () {
                 }
             }
         }
-        document.body.addEventListener("click", handleClick);
+        const debouncedHandleClick = debounce(handleClick, 50);
+        document.body.addEventListener("click", debouncedHandleClick, true);
+        if (showIdLinks === "showIdLinksOnly" || showIdLinks === "showIdLinksVertical") {
+            removeNativeLabelIdOnClickHandlers();
+        }
     }
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
@@ -4228,30 +4292,32 @@ onReady(async function () {
                 tempSettings[key] = await getSetting(key);
             })
         );
+        const tabContentCache = {};
+        const shortcutsTabCache = { node: null };
         const tabs = {
             site: {
                 label: "Site",
-                content: createTabContent("site", tempSettings),
+                content: tabContentCache.site || (tabContentCache.site = createTabContent("site", tempSettings)),
             },
             threads: {
                 label: "Threads",
-                content: createTabContent("threads", tempSettings),
+                content: tabContentCache.threads || (tabContentCache.threads = createTabContent("threads", tempSettings)),
             },
             catalog: {
                 label: "Catalog",
-                content: createTabContent("catalog", tempSettings),
+                content: tabContentCache.catalog || (tabContentCache.catalog = createTabContent("catalog", tempSettings)),
             },
             styling: {
                 label: "Style",
-                content: createTabContent("styling", tempSettings),
+                content: tabContentCache.styling || (tabContentCache.styling = createTabContent("styling", tempSettings)),
             },
             miscel: {
                 label: "Misc.",
-                content: createTabContent("miscel", tempSettings),
+                content: tabContentCache.miscel || (tabContentCache.miscel = createTabContent("miscel", tempSettings)),
             },
             shortcuts: {
                 label: "⌨️",
-                content: createShortcutsTab(),
+                content: shortcutsTabCache.node || (shortcutsTabCache.node = createShortcutsTab()),
             },
         };
         Object.keys(tabs).forEach((tabId, index, arr) => {
@@ -4323,7 +4389,7 @@ onReady(async function () {
         saveBtn.style.fontSize = "15px";
         saveBtn.style.cursor = "pointer";
         saveBtn.style.flex = "1";
-        saveBtn.addEventListener("click", async function () {
+        saveBtn.addEventListener("click", debounce(async function () {
             for (const key of Object.keys(tempSettings)) {
                 await setSetting(key, tempSettings[key]);
             }
@@ -4334,7 +4400,7 @@ onReady(async function () {
             setTimeout(() => {
                 window.location.reload();
             }, 400);
-        });
+        }, 50));
         buttonContainer.appendChild(saveBtn);
         const resetBtn = document.createElement("button");
         resetBtn.textContent = "Reset";
@@ -4346,7 +4412,7 @@ onReady(async function () {
         resetBtn.style.fontSize = "15px";
         resetBtn.style.cursor = "pointer";
         resetBtn.style.flex = "1";
-        resetBtn.addEventListener("click", async function () {
+        resetBtn.addEventListener("click", debounce(async function () {
             if (confirm("Reset all 8chanSS settings to defaults?")) {
                 const keys = await GM.listValues();
                 for (const key of keys) {
@@ -4362,7 +4428,7 @@ onReady(async function () {
                     window.location.reload();
                 }, 400);
             }
-        });
+        }, 50));
         buttonContainer.appendChild(resetBtn);
 
         menu.appendChild(buttonContainer);
@@ -4380,6 +4446,7 @@ onReady(async function () {
     function createTabContent(category, tempSettings) {
         const container = document.createElement("div");
         const categorySettings = scriptSettings[category];
+        let hiddenListContainer;
 
         Object.keys(categorySettings).forEach((key) => {
             const setting = categorySettings[key];
@@ -4641,6 +4708,218 @@ onReady(async function () {
 
                 wrapper.appendChild(subOptionsContainer);
             }
+            if (key === "enableHidingMenu") {
+                hiddenListContainer = document.createElement("div");
+                hiddenListContainer.style.display = tempSettings["enableHidingMenu"] ? "block" : "none";
+                hiddenListContainer.style.margin = "10px 0";
+                hiddenListContainer.style.maxHeight = "220px";
+                hiddenListContainer.style.overflowY = "auto";
+                hiddenListContainer.style.background = "var(--menu-color)";
+                hiddenListContainer.style.border = "1px solid var(--border-color)";
+                hiddenListContainer.style.borderRadius = "6px";
+                hiddenListContainer.style.scrollbarWidth = "thin";
+                hiddenListContainer.style.padding = "8px";
+                hiddenListContainer.style.fontSize = "13px";
+                const tabRow = document.createElement("div");
+                tabRow.style.display = "flex";
+                tabRow.style.marginBottom = "8px";
+                tabRow.style.gap = "6px";
+                const tabs = [
+                    { key: "posts", label: "Hidden Posts" },
+                    { key: "names", label: "Filtered Names" },
+                    { key: "ids", label: "Filtered IDs" }
+                ];
+                let currentTab = "posts";
+                const tabButtons = {};
+
+                tabs.forEach(tab => {
+                    const btn = document.createElement("button");
+                    btn.textContent = tab.label;
+                    btn.style.flex = "1";
+                    btn.style.padding = "4px 8px";
+                    btn.style.border = "none";
+                    btn.style.borderRadius = "4px";
+                    btn.style.setProperty("background", tab.key === currentTab ? "var(--contrast-color)" : "#222", "important");
+                    btn.style.color = "#fff";
+                    btn.style.cursor = "pointer";
+                    btn.addEventListener("click", () => {
+                        currentTab = tab.key;
+                        Object.values(tabButtons).forEach(b => b.style.setProperty("background", "#222", "important"));
+                        btn.style.setProperty("background", "var(--contrast-color)", "important");
+                        renderList();
+                    });
+                    tabButtons[tab.key] = btn;
+                    tabRow.appendChild(btn);
+                });
+
+                hiddenListContainer.appendChild(tabRow);
+                const listArea = document.createElement("div");
+                listArea.style.overflowY = "auto";
+                listArea.style.maxHeight = "160px";
+                hiddenListContainer.appendChild(listArea);
+                async function renderList() {
+                    listArea.innerHTML = "<span style='color: #aaa; font-size: 12px;'>Loading...</span>";
+                    if (currentTab === "posts") {
+                        const hiddenPostsObj = await getStoredObject(HIDDEN_POSTS_KEY);
+                        const items = [];
+                        for (const boardUri in hiddenPostsObj) {
+                            for (const postId of (hiddenPostsObj[boardUri]?.simple || [])) {
+                                items.push({ boardUri, postId, type: "simple" });
+                            }
+                            for (const postId of (hiddenPostsObj[boardUri]?.plus || [])) {
+                                items.push({ boardUri, postId, type: "plus" });
+                            }
+                        }
+                        if (items.length === 0) {
+                            listArea.innerHTML = "<span style='color: #aaa;'>No hidden posts.</span>";
+                            return;
+                        }
+                        listArea.innerHTML = "";
+                        items.forEach(({ boardUri, postId, type }) => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.alignItems = "center";
+                            row.style.justifyContent = "space-between";
+                            row.style.marginBottom = "2px";
+                            row.innerHTML = `<span style="flex:1;">/${boardUri}/ #${postId} ${type === 'plus' ? '(+)' : ''}</span>`;
+                            const xBtn = document.createElement("button");
+                            xBtn.textContent = "✕";
+                            xBtn.style.background = "none";
+                            xBtn.style.border = "none";
+                            xBtn.style.color = "#c00";
+                            xBtn.style.cursor = "pointer";
+                            xBtn.style.fontWeight = "bold";
+                            xBtn.title = "Unhide";
+                            xBtn.onclick = async () => {
+                                const obj = await getStoredObject(HIDDEN_POSTS_KEY);
+                                if (obj[boardUri]) {
+                                    const arr = obj[boardUri][type] || [];
+                                    const idx = arr.indexOf(Number(postId));
+                                    if (idx !== -1) {
+                                        arr.splice(idx, 1);
+                                        obj[boardUri][type] = arr;
+                                        await setStoredObject(HIDDEN_POSTS_KEY, obj);
+                                        renderList();
+                                    }
+                                }
+                            };
+                            row.appendChild(xBtn);
+                            listArea.appendChild(row);
+                        });
+                    } else if (currentTab === "names") {
+                        const obj = await getStoredObject(FILTERED_NAMES_KEY);
+                        let simple = obj.simple || [];
+                        let plus = obj.plus || [];
+                        if (simple.length === 0 && plus.length === 0) {
+                            listArea.innerHTML = "<span style='color: #aaa;'>No filtered names.</span>";
+                            return;
+                        }
+                        listArea.innerHTML = "";
+                        simple.forEach(name => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.alignItems = "center";
+                            row.style.justifyContent = "space-between";
+                            row.style.marginBottom = "2px";
+                            row.innerHTML = `<span style="flex:1;">${name}</span>`;
+                            const xBtn = document.createElement("button");
+                            xBtn.textContent = "✕";
+                            xBtn.style.background = "none";
+                            xBtn.style.border = "none";
+                            xBtn.style.color = "#c00";
+                            xBtn.style.cursor = "pointer";
+                            xBtn.title = "Remove filter";
+                            xBtn.onclick = async () => {
+                                const obj = await getStoredObject(FILTERED_NAMES_KEY);
+                                obj.simple = (obj.simple || []).filter(n => n !== name);
+                                await setStoredObject(FILTERED_NAMES_KEY, obj);
+                                renderList();
+                            };
+                            row.appendChild(xBtn);
+                            listArea.appendChild(row);
+                        });
+                        plus.forEach(name => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.alignItems = "center";
+                            row.style.justifyContent = "space-between";
+                            row.style.marginBottom = "2px";
+                            row.innerHTML = `<span style="flex:1;">${name} (+)</span>`;
+                            const xBtn = document.createElement("button");
+                            xBtn.textContent = "✕";
+                            xBtn.style.background = "none";
+                            xBtn.style.border = "none";
+                            xBtn.style.color = "#c00";
+                            xBtn.style.cursor = "pointer";
+                            xBtn.title = "Remove filter+";
+                            xBtn.onclick = async () => {
+                                const obj = await getStoredObject(FILTERED_NAMES_KEY);
+                                obj.plus = (obj.plus || []).filter(n => n !== name);
+                                await setStoredObject(FILTERED_NAMES_KEY, obj);
+                                renderList();
+                            };
+                            row.appendChild(xBtn);
+                            listArea.appendChild(row);
+                        });
+                    } else if (currentTab === "ids") {
+                        const obj = await getStoredObject(FILTERED_IDS_KEY);
+                        const items = [];
+                        for (const boardUri in obj) {
+                            for (const threadId in obj[boardUri]) {
+                                let threadObj = obj[boardUri][threadId];
+                                if (Array.isArray(threadObj)) {
+                                    threadObj = { simple: threadObj, plus: [] };
+                                    obj[boardUri][threadId] = threadObj;
+                                }
+                                (threadObj.simple || []).forEach(id => {
+                                    items.push({ boardUri, threadId, id, type: 'simple' });
+                                });
+                                (threadObj.plus || []).forEach(id => {
+                                    items.push({ boardUri, threadId, id, type: 'plus' });
+                                });
+                            }
+                        }
+                        if (items.length === 0) {
+                            listArea.innerHTML = "<span style='color: #aaa;'>No filtered IDs.</span>";
+                            return;
+                        }
+                        listArea.innerHTML = "";
+                        items.forEach(({ boardUri, threadId, id, type }) => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.alignItems = "center";
+                            row.style.justifyContent = "space-between";
+                            row.style.marginBottom = "2px";
+                            row.innerHTML = `<span style="flex:1;">/${boardUri}/ [${threadId}] ${id} ${type === 'plus' ? '(+)' : ''}</span>`;
+                            const xBtn = document.createElement("button");
+                            xBtn.textContent = "✕";
+                            xBtn.style.background = "none";
+                            xBtn.style.border = "none";
+                            xBtn.style.color = "#c00";
+                            xBtn.style.cursor = "pointer";
+                            xBtn.title = "Remove filter";
+                            xBtn.onclick = async () => {
+                                const obj = await getStoredObject(FILTERED_IDS_KEY);
+                                let threadObj = obj[boardUri][threadId];
+                                if (Array.isArray(threadObj)) {
+                                    threadObj = { simple: threadObj, plus: [] };
+                                    obj[boardUri][threadId] = threadObj;
+                                }
+                                threadObj[type] = (threadObj[type] || []).filter(val => val !== id);
+                                await setStoredObject(FILTERED_IDS_KEY, obj);
+                                renderList();
+                            };
+                            row.appendChild(xBtn);
+                            listArea.appendChild(row);
+                        });
+                    }
+                }
+                checkbox.addEventListener('change', function () {
+                    hiddenListContainer.style.display = checkbox.checked ? "block" : "none";
+                    if (checkbox.checked) renderList();
+                });
+                wrapper.appendChild(hiddenListContainer);
+            }
 
             container.appendChild(wrapper);
         });
@@ -4767,7 +5046,6 @@ onReady(async function () {
         return container;
     }
     if (link) {
-        let menu = await createSettingsMenu();
         link.style.cursor = "pointer";
         link.title = "Open 8chanSS settings";
         link.addEventListener("click", async function (e) {
