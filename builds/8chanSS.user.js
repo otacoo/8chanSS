@@ -23,6 +23,7 @@
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAAZlBMVEUAAABdlloAhl758AH58AH58AcAhl758ADj4CYAh14AhV4AhV0Ahl748AcChl4Chl0Ab2H58AIAhl758AD58AAAhl757wL48AD47wL78QL47wcAh1748AF3oFfs5yEAh1/68QDz7BM5qSu8AAAAH3RSTlMA/lg/OYtM8g/onXtoXzAaCdzBsIFzczMeaCXXyrmp9ddA3QAAANpJREFUSMft0tkOgjAQheFjtVCQVVxwnfr+L+kWM5FOC73TxP/6fBedFJwpyx5CtSpqSHXWpns4qYxo1cDtkNp7GoOW9KgSwM4+09KeEhmw4H0IuGJDAbCw79a8nwJYFDQCuO1gT8oLWCiKAXavKA5cZ78I5n/wBx7wfb+1TwOggpD2gxxSpvWBrIbY3AcUPK1lkMNbJ4FV4wd964KsQqBF6oAEwcoh2GAk/QlyjNYx4AeHMicGxxoTOrRvIB5IPtULJJhY+QIFJrd9gCUi0tdZjqgu5yYOGAO5G/kyc3TkciPeAAAAAElFTkSuQmCC
 // ==/UserScript==
+
 function onReady(fn) {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", fn, { once: true });
@@ -4717,7 +4718,6 @@ onReady(async function () {
                 hiddenListContainer.style.background = "var(--menu-color)";
                 hiddenListContainer.style.border = "1px solid var(--border-color)";
                 hiddenListContainer.style.borderRadius = "6px";
-                hiddenListContainer.style.scrollbarWidth = "thin";
                 hiddenListContainer.style.padding = "8px";
                 hiddenListContainer.style.fontSize = "13px";
                 const tabRow = document.createElement("div");
@@ -4756,6 +4756,7 @@ onReady(async function () {
                 const listArea = document.createElement("div");
                 listArea.style.overflowY = "auto";
                 listArea.style.maxHeight = "160px";
+                listArea.style.scrollbarWidth = "thin";
                 hiddenListContainer.appendChild(listArea);
                 async function renderList() {
                     listArea.innerHTML = "<span style='color: #aaa; font-size: 12px;'>Loading...</span>";

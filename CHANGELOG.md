@@ -9,7 +9,7 @@
 - Prevent posts from being marked when an ID is clicked (floating lists only)
 - Improved Sauce links
 - Fix for small images inside nested posts not being hoverable
-- Fir for small videos not playing on hover if they were spoilered
+- Fix for small videos not playing on hover if they were spoilered
 - Fix for small videos having broken spoilers
 - Fix for audio files with generic thumbs not being playable on hover
 

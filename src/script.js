@@ -5553,7 +5553,6 @@ onReady(async function () {
                 hiddenListContainer.style.background = "var(--menu-color)";
                 hiddenListContainer.style.border = "1px solid var(--border-color)";
                 hiddenListContainer.style.borderRadius = "6px";
-                hiddenListContainer.style.scrollbarWidth = "thin";
                 hiddenListContainer.style.padding = "8px";
                 hiddenListContainer.style.fontSize = "13px";
 
@@ -5596,6 +5595,7 @@ onReady(async function () {
                 const listArea = document.createElement("div");
                 listArea.style.overflowY = "auto";
                 listArea.style.maxHeight = "160px";
+                listArea.style.scrollbarWidth = "thin";
                 hiddenListContainer.appendChild(listArea);
 
                 // Render the list for the current tab
