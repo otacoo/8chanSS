@@ -179,9 +179,16 @@
 }
 
 .ss-vertical-id-list .innerPost {
-    background: none;
-    border: none;
+  background: 0 0;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  background-color: inherit;
+  display: block;
+  padding: 0;
+  margin: 0;
 }
+
 
 .ss-idlinks-floating .innerPost {
     margin-bottom: 2px;
