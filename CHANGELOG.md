@@ -1,3 +1,9 @@
+### v1.53.2 (Patch)
+*2025-06-09*
+
+- Fix for Vertical ID list when Fit Replies is disabled
+- Fix for "Toggle ID as Yours" when used inside inlined posts toggling the outer post's ID instead
+
 ### v1.53.1 (Patch)
 *2025-06-09*
 
