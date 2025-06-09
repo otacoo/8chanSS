@@ -1516,6 +1516,13 @@ onReady(async function () {
                         wav: "audio/wav",
                     }[ext];
                 fullSrc = getFullMediaSrc(thumb, filemime);
+                // If the thumbnail is a generic spoiler, use the parent link's href as the preview source
+                if (
+                    /custom\.spoiler$|spoiler\.png$/i.test(thumb.getAttribute("src") || "") &&
+                    parentA && parentA.getAttribute("href")
+                ) {
+                    fullSrc = parentA.getAttribute("href");
+                }
                 isVideo = filemime && filemime.startsWith("video/");
                 isAudio = filemime && filemime.startsWith("audio/");
             }
@@ -4741,6 +4748,7 @@ onReady(async function () {
         // Get subOptions for view mode
         const showIdLinks = await getSetting("enableIdFilters_idViewMode");
         let floatingDiv = null;
+        let outsideClickHandler = null;
 
         // Remove any existing floating div
         function closeFloatingDiv() {
@@ -4748,11 +4756,9 @@ onReady(async function () {
                 floatingDiv.parentNode.removeChild(floatingDiv);
                 floatingDiv = null;
             }
-            document.removeEventListener("mousedown", outsideClickHandler, true);
-        }
-        function outsideClickHandler(e) {
-            if (floatingDiv && !floatingDiv.contains(e.target)) {
-                closeFloatingDiv();
+            if (outsideClickHandler) {
+                document.removeEventListener("mousedown", outsideClickHandler, true);
+                outsideClickHandler = null;
             }
         }
 
@@ -4771,7 +4777,7 @@ onReady(async function () {
         }
         // Show floating div with links to all posts by this ID
         function showIdList(id, clickedLabel) {
-            // Extract only the hex ID (first 6 hex chars) from the label
+            closeFloatingDiv();
             const idToMatch = (id.match(/^[a-fA-F0-9]{6}/) || [id.trim()])[0];
 
             const threadsContainer = document.getElementById('divThreads');
@@ -4799,7 +4805,7 @@ onReady(async function () {
             const thread = match ? match[3] : '';
 
             // Build the floating div
-            const floatingDiv = document.createElement('div');
+            floatingDiv = document.createElement('div');
             floatingDiv.className = 'ss-idlinks-floating';
 
             // Title
@@ -4831,7 +4837,7 @@ onReady(async function () {
                 link.setAttribute('data-target-uri', `${board}/${thread}#${postId}`);
                 link.onclick = function (e) {
                     e.preventDefault();
-                    floatingDiv.remove();
+                    closeFloatingDiv();
                     const target = document.getElementById(postId);
                     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 };
@@ -4862,13 +4868,13 @@ onReady(async function () {
             floatingDiv.style.top = `${top}px`;
             floatingDiv.style.left = `${left}px`;
             // Close on click outside
-            setTimeout(() => {
-                function closeOnClick(e) {
-                    if (!floatingDiv.contains(e.target)) {
-                        floatingDiv.remove();
-                    }
+            outsideClickHandler = function(e) {
+                if (floatingDiv && !floatingDiv.contains(e.target)) {
+                    closeFloatingDiv();
                 }
-                document.addEventListener('mousedown', closeOnClick, { capture: true, once: true });
+            };
+            setTimeout(() => {
+                document.addEventListener("mousedown", outsideClickHandler, true);
             }, 0);
             return matchingPosts;
         }
