@@ -181,6 +181,7 @@
 .ss-idlinks-floating .innerPost,
 .ss-vertical-id-list .innerPost {
     background: none;
+    display: block !important;
     border: none;
     box-shadow: none;
     outline: none;
@@ -189,5 +190,5 @@
 }
 
 .ss-idlinks-floating .innerPost {
-    margin-bottom: 2px;
+    padding: 0 1px 2px 0 !important;
 }
