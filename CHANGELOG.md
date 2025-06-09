@@ -1,3 +1,13 @@
+### v1.53.1 (Patch)
+*2025-06-09*
+
+- Compact floating ID lists
+- Fix bug with floating ID lists sometimes getting stuck
+- Newly added spoilered images with a custom spoiler will now work correctly for image hover
+
+**PR #7 by @KillAllBugsEatAllPotatos :**
+- Vertical list css update
+
 ## v1.53.0
 *2025-06-08*
 
@@ -13,7 +23,7 @@
 - Fix for small videos having broken spoilers
 - Fix for audio files with generic thumbs not being playable on hover
 
-**PR by @KillAllBugsEatAllPotatos :**
+**PR #6 by @KillAllBugsEatAllPotatos :**
 - Added toggle function to list post history by id in a vertical list
 
 ### v1.52.1 (Patch)
