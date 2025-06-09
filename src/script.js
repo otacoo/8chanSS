@@ -3503,10 +3503,26 @@ onReady(async function () {
                 const ul = menu.querySelector("ul");
                 if (!ul || ul.querySelector("." + MENU_ENTRY_CLASS)) return;
 
-                // Get the labelId for this menu (ensure raw ID)
-                let labelId = getLabelIdFromMenu(menu);
-                if (!labelId) return;
-                labelId = labelId.split(/[|\(]/)[0].trim();
+                // Get the correct labelId for this menu (ensure raw ID)
+                // Find the menu button that opened this menu
+                const menuButton = menu.closest('.extraMenuButton') || (menu.parentNode && menu.parentNode.querySelector('.extraMenuButton'));
+                let labelId = null;
+                if (menuButton) {
+                    // Find the closest .innerPost or .innerOP
+                    const innerPost = menuButton.closest('.innerPost, .innerOP');
+                    const labelIdSpan = innerPost ? innerPost.querySelector('.labelId') : null;
+                    if (labelIdSpan) {
+                        labelId = labelIdSpan.textContent.split(/[|\\(]/)[0].trim();
+                    }
+                }
+                // Fallback to old method if not found
+                if (!labelId) {
+                    labelId = getLabelIdFromMenu(menu);
+                    if (!labelId) return;
+                    labelId = labelId.split(/[|\\(]/)[0].trim();
+                }
+                // Store the correct labelId on the menu for robust toggling
+                menu.setAttribute('data-label-id', labelId);
 
                 // Check if any post with this ID is marked as "yours"
                 const yourPostNumbers = getYourPostNumbers();
@@ -3522,7 +3538,8 @@ onReady(async function () {
 
                 li.addEventListener("click", function (e) {
                     e.stopPropagation();
-                    let labelId = getLabelIdFromMenu(menu);
+                    // Use the labelId stored on the menu (from the correct .labelId)
+                    let labelId = menu.getAttribute('data-label-id');
                     if (!labelId) return;
                     labelId = labelId.split(/[|\(]/)[0].trim();
                     let yourPostNumbers = getYourPostNumbers();
@@ -4868,7 +4885,7 @@ onReady(async function () {
             floatingDiv.style.top = `${top}px`;
             floatingDiv.style.left = `${left}px`;
             // Close on click outside
-            outsideClickHandler = function(e) {
+            outsideClickHandler = function (e) {
                 if (floatingDiv && !floatingDiv.contains(e.target)) {
                     closeFloatingDiv();
                 }
