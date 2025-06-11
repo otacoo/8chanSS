@@ -3171,10 +3171,10 @@ onReady(async function () {
         const styleClass = styleClassMap[hlStyle] || "moeText"; // fallback to 'moetext'
 
         // Helper: Highlight IDs
-        function highlightIds(divPosts) {
+        function highlightIds(root = divPosts) {
             // Build frequency map
             const idFrequency = {};
-            const labelSpans = divPosts ? divPosts.querySelectorAll('.labelId') : [];
+            const labelSpans = root.querySelectorAll('.labelId');
             labelSpans.forEach(span => {
                 const id = span.textContent.split(/[|\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
