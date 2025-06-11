@@ -1,3 +1,8 @@
+### v1.53.4 (Patch)
+*2025-06-11*
+
+- Fix for the fix of ID post count going up when posts are inlined
+
 ### v1.53.3 (Patch)
 *2025-06-11*
 
