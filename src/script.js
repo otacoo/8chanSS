@@ -2053,16 +2053,34 @@ onReady(async function () {
         });
     }
 
+    // Initial highlight on page load
+    highlightMentions();
+
+    // --- Highlight active watched thread in thread watcher ---
+    function highlightActiveWatchedThread() {
+        const currentPath = window.pageType?.path;
+        if (!currentPath) return;
+        document.querySelectorAll('.watchedCellLabel').forEach(label => {
+            const link = label.querySelector('a[href]');
+            if (!link) return;
+            
+            const watchedPath = link.getAttribute('href').replace(/#.*$/, '');
+            if (watchedPath === currentPath) {
+                label.classList.add('ss-active');
+            } else {
+                label.classList.remove('ss-active');
+            }
+        });
+    }
+
     // Use the observer registry for #watchedMenu
     const watchedMenuObs = observeSelector('#watchedMenu', { childList: true, subtree: true });
     if (watchedMenuObs) {
         watchedMenuObs.addHandler(function highlightMentionsHandler() {
             highlightMentions();
+            highlightActiveWatchedThread();
         });
     }
-
-    // Initial highlight on page load
-    highlightMentions();
 
     // --- Feature: Watch Thread on Reply ---
     async function featureWatchThreadOnReply() {
@@ -3153,10 +3171,10 @@ onReady(async function () {
         const styleClass = styleClassMap[hlStyle] || "moeText"; // fallback to 'moetext'
 
         // Helper: Highlight IDs
-        function highlightIds(root = divPosts) {
+        function highlightIds(divPosts) {
             // Build frequency map
             const idFrequency = {};
-            const labelSpans = root.querySelectorAll('.labelId');
+            const labelSpans = divPosts ? divPosts.querySelectorAll('.labelId') : [];
             labelSpans.forEach(span => {
                 const id = span.textContent.split(/[|\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
@@ -3224,8 +3242,10 @@ onReady(async function () {
         function updateIdCounts(root = document) {
             // Build frequency map from the main thread
             const idFrequency = {};
-            document.querySelectorAll('.labelId').forEach(span => {
-                const id = span.textContent.split(/[|\\(]/)[0].trim();
+            if (!divPosts) return;
+            divPosts.querySelectorAll('.postCell .spanId').forEach(span => {
+                const id = span.textContent.trim();
+                if (!id) return;
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
             // Update all .labelId elements in the given root
