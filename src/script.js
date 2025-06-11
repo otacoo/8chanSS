@@ -3242,9 +3242,10 @@ onReady(async function () {
         function updateIdCounts(root = document) {
             // Build frequency map from the main thread
             const idFrequency = {};
-            if (!divPosts) return;
-            divPosts.querySelectorAll('.postCell .spanId').forEach(span => {
-                const id = span.textContent.trim();
+            divPosts.querySelectorAll('.postCell .labelId').forEach(span => {
+                // Exclude if this .postCell is inside an inlined/quoted container
+                if (span.closest('.inlineQuote, .quoteTooltip, .de-pview')) return;
+                const id = span.textContent.split('|')[0].trim();
                 if (!id) return;
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
