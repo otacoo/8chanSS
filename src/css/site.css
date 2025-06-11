@@ -169,6 +169,10 @@ nav.navHeader>.nav-boards:hover {
     scrollbar-color: var(--link-color) var(--contrast-color);
 }
 
+.ss-active {
+    font-weight: bold;
+}
+
 /* Up/Down Arrows */
 .scroll-arrow-btn {
     position: fixed;
