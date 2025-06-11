@@ -1,3 +1,9 @@
+### v1.53.3 (Patch)
+*2025-06-11*
+
+- Watched threads in the TW will now get a `.ss-active` class to highlight that they're currently being visited
+- Fix for ID post count going up when posts are inlined
+
 ### v1.53.2 (Patch)
 *2025-06-09*
 
