@@ -2063,7 +2063,7 @@ onReady(async function () {
         document.querySelectorAll('.watchedCellLabel').forEach(label => {
             const link = label.querySelector('a[href]');
             if (!link) return;
-            
+            // Stip anchors to compare
             const watchedPath = link.getAttribute('href').replace(/#.*$/, '');
             if (watchedPath === currentPath) {
                 label.classList.add('ss-active');
