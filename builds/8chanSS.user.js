@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.53.3
+// @version      1.53.4
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -105,7 +105,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.53.3";
+    const VERSION = "1.53.4";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -2642,9 +2642,9 @@ onReady(async function () {
             dotted: "id-dotted"
         };
         const styleClass = styleClassMap[hlStyle] || "moeText"; 
-        function highlightIds(divPosts) {
+        function highlightIds(root = divPosts) {
             const idFrequency = {};
-            const labelSpans = divPosts ? divPosts.querySelectorAll('.labelId') : [];
+            const labelSpans = root.querySelectorAll('.labelId');
             labelSpans.forEach(span => {
                 const id = span.textContent.split(/[|\(]/)[0].trim();
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
@@ -2695,9 +2695,9 @@ onReady(async function () {
         const alwaysShowIdCount = await getSetting("alwaysShowIdCount");
         function updateIdCounts(root = document) {
             const idFrequency = {};
-            if (!divPosts) return;
-            divPosts.querySelectorAll('.postCell .spanId').forEach(span => {
-                const id = span.textContent.trim();
+            divPosts.querySelectorAll('.postCell .labelId').forEach(span => {
+                if (span.closest('.inlineQuote, .quoteTooltip, .de-pview')) return;
+                const id = span.textContent.split('|')[0].trim();
                 if (!id) return;
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
