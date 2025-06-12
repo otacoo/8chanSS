@@ -1,5 +1,13 @@
-### v1.53.4
+### v1.53.5 (Patch)
+*2025-06-12*
+
+- Small menu changes
+- Fix for post count ID not updating ID post count for older posts
+
+### v1.53.4 (Patch)
 *2025-06-11*
+
+- Fix for the previous fixes
 
 ### v1.53.3 (Patch)
 *2025-06-11*
