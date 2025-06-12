@@ -249,7 +249,7 @@ onReady(async function () {
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
-            enableThreadHiding: { label: "Enable Thread Hiding", default: false },
+            enableThreadHiding: { label: "Enable Thread Hiding (Shift + Click to hide/unhide a thread)", default: false },
             openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false },
             enableLastFifty: { label: "Show Last 50 Posts button", default: false }
         },
@@ -274,11 +274,6 @@ onReady(async function () {
             hideJannyTools: { label: "Hide Janitor Forms", default: false },
             _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection2: { type: "separator" },
-            highlightOnYou: { label: "Style (You) posts", default: true },
-            opBackground: { label: "OP background", default: false },
-            enableStickyQR: { label: "Sticky Quick Reply", default: false },
-            fadeQuickReply: { label: "Fade Quick Reply", default: false },
-            enableFitReplies: { label: "Fit Replies", default: false },
             enableSidebar: {
                 label: "Enable Sidebar",
                 default: false,
@@ -289,6 +284,11 @@ onReady(async function () {
                     }
                 }
             },
+            enableFitReplies: { label: "Fit Replies", default: false },
+            highlightOnYou: { label: "Style (You) posts", default: true },
+            opBackground: { label: "OP background", default: false },
+            enableStickyQR: { label: "Sticky Quick Reply", default: false },
+            fadeQuickReply: { label: "Fade Quick Reply", default: false },
             threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
             hideCheckboxes: { label: "Hide Post Checkbox", default: false }
         },
@@ -5897,7 +5897,7 @@ onReady(async function () {
             { keys: ["Escape"], action: "Clear QR textarea and hide all dialogs" },
             { keys: ["ALT", "W"], action: "Watch Thread" },
             { keys: ["SHIFT", "T"], action: "Toggle Quote Threading" },
-            { keys: ["SHIFT", "M1"], action: "Hide Thread in Catalog" },
+            { keys: ["SHIFT", "CLICK"], action: "Hide Thread in Catalog" },
             { keys: ["CTRL", "UP/DOWN"], action: "Scroll between Your Replies" },
             { keys: ["CTRL", "SHIFT", "UP/DOWN"], action: "Scroll between Replies to You" },
             { keys: ["Ctrl", "B"], action: "Bold text" },
