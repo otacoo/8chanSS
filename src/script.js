@@ -3242,12 +3242,23 @@ onReady(async function () {
         function updateIdCounts(root = document) {
             // Build frequency map from the main thread
             const idFrequency = {};
+            // Frequency map
             divPosts.querySelectorAll('.postCell .labelId').forEach(span => {
                 // Exclude if this .postCell is inside an inlined/quoted container
                 if (span.closest('.inlineQuote, .quoteTooltip, .de-pview')) return;
                 const id = span.textContent.split('|')[0].trim();
                 if (!id) return;
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
+            });
+            // Update all .labelId elements for each ID
+            Object.keys(idFrequency).forEach(id => {
+                divPosts.querySelectorAll('.postCell .labelId').forEach(span => {
+                    // Exclude if this .postCell is inside an inlined/quoted container
+                    if (span.closest('.inlineQuote, .quoteTooltip, .de-pview')) return;
+                    if (span.textContent.split('|')[0].trim() === id) {
+                        span.textContent = `${id} | ${idFrequency[id]}`;
+                    }
+                });
             });
             // Update all .labelId elements in the given root
             root.querySelectorAll('.labelId').forEach(span => {
