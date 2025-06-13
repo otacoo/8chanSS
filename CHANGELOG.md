@@ -1,3 +1,8 @@
+### v1.53.6 (Patch)
+*2025-06-13*
+
+- Better implementation for ID post count by Anon
+
 ### v1.53.5 (Patch)
 *2025-06-12*
 
