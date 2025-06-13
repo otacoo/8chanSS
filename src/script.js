@@ -450,7 +450,8 @@ onReady(async function () {
             autoExpandTW: "auto-expand-tw",
             hideJannyTools: "hide-jannytools",
             opBackground: "op-background",
-            blurSpoilers: "ss-blur-spoilers"
+            blurSpoilers: "ss-blur-spoilers",
+            alwaysShowIdCount: "show-ID-count"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
@@ -3235,63 +3236,49 @@ onReady(async function () {
         if (!window.pageType?.isThread) return;
         // Early return if no .spanId exists on the page
         if (!document.querySelector('.spanId')) return;
+        // Only run if posting is defined
+        if (typeof posting === "undefined") return;
 
-        const alwaysShowIdCount = await getSetting("alwaysShowIdCount");
-
-        // Update only new or changed nodes 
-        function updateIdCounts(root = document) {
-            // Build frequency map from the main thread
-            const idFrequency = {};
-            // Frequency map
-            divPosts.querySelectorAll('.postCell .labelId').forEach(span => {
-                // Exclude if this .postCell is inside an inlined/quoted container
-                if (span.closest('.inlineQuote, .quoteTooltip, .de-pview')) return;
-                const id = span.textContent.split('|')[0].trim();
-                if (!id) return;
-                idFrequency[id] = (idFrequency[id] || 0) + 1;
-            });
-            // Update all .labelId elements for each ID
-            Object.keys(idFrequency).forEach(id => {
-                divPosts.querySelectorAll('.postCell .labelId').forEach(span => {
-                    // Exclude if this .postCell is inside an inlined/quoted container
-                    if (span.closest('.inlineQuote, .quoteTooltip, .de-pview')) return;
-                    if (span.textContent.split('|')[0].trim() === id) {
-                        span.textContent = `${id} | ${idFrequency[id]}`;
-                    }
-                });
-            });
-            // Update all .labelId elements in the given root
-            root.querySelectorAll('.labelId').forEach(span => {
-                const id = span.textContent.split(/[|\\(]/)[0].trim();
-                if (alwaysShowIdCount) {
-                    span.textContent = `${id} | ${idFrequency[id] || 1}`;
-                    span.onmouseover = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
-                    span.onmouseout = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
-                } else {
-                    span.textContent = id;
-                    span.onmouseover = null;
-                    span.onmouseout = null;
-                }
-            });
+        // Process all posts rendered before this script runs
+        for (const [id, posts] of Object.entries(posting.idsRelation)) {
+            for (const post of posts) {
+                const label = post.querySelector(".labelId");
+                if (!label) continue;
+                label.onmouseover = null;
+                label.onmouseout = null;
+                label.setAttribute("data-posts-by-this-id", posts.length);
+            }
         }
-        // Initial run
-        updateIdCounts(document);
-        // Observe for dynamic post additions
-        const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType === 1) {
-                        // Only update if the node or its subtree contains .labelId
-                        if (node.classList && node.classList.contains('labelId')) {
-                            updateIdCounts(node.parentNode || node);
-                        } else if (node.querySelectorAll && node.querySelector('.labelId')) {
-                            updateIdCounts(node);
-                        }
-                    }
+        // Override processIdLabel to update post counts and styles
+        posting.processIdLabel = function (label) {
+            if (!label) return;
+            const id = label.textContent;
+            const postsOfThisId = posting.idsRelation[id] || [];
+            const innerPost = label.closest(".innerPost, .innerOP");
+            if (innerPost.classList.contains("clone")) {
+                label.setAttribute("data-posts-by-this-id", postsOfThisId.length);
+            } else {
+                posting.idsRelation[id] = postsOfThisId;
+                postsOfThisId.push(innerPost);
+                for (let post of postsOfThisId) {
+                    const l = post.querySelector(".labelId");
+                    if (l) l.setAttribute("data-posts-by-this-id", postsOfThisId.length);
                 }
             }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
+            label.onclick = function () {
+                var index = posting.highLightedIds.indexOf(id);
+                window.location.hash = '_';
+                if (index > -1) {
+                    posting.highLightedIds.splice(index, 1);
+                } else {
+                    posting.highLightedIds.push(id);
+                }
+                for (const cellToChange of postsOfThisId) {
+                    if (cellToChange.className === 'innerOP') continue;
+                    cellToChange.classList.toggle("markedPost", index === -1);
+                }
+            };
+        };
     }
 
     // --- Feature: Quote Threading ---

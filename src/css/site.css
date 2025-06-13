@@ -51,6 +51,14 @@
     border-left-width: 0;
 }
 
+/* IDs */
+:root.show-ID-count .labelId::after {
+    content: attr(data-posts-by-this-id);
+    margin-left: 0.4em;
+    padding: 0 0 0 4px;
+    border-left: 1px solid;
+}
+
 /* Header */
 nav.navHeader {
     z-index: 300;
@@ -108,8 +116,8 @@ nav.navHeader>.nav-boards:hover {
 }
 
 /* Blur Spoilers Option, for quoteTooltip only */
-:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"], 
-:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"], 
+:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],
+:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"],
 :root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"] {
     filter: blur(5px) !important;
     transition: filter 0.3s ease;
