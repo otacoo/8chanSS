@@ -1,3 +1,8 @@
+### v1.53.7 (Patch)
+*2025-06-25*
+
+- Re-add file renaming feature
+
 ### v1.53.6 (Patch)
 *2025-06-13*
 
