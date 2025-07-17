@@ -1,3 +1,8 @@
+## v1.54.0
+*2025-07-17*
+
+- **New Option:** Prevent animated PNGs from playing (issue #10)
+
 ### v1.53.7 (Patch)
 *2025-06-25*
 
