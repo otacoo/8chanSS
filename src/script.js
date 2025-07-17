@@ -158,6 +158,7 @@ onReady(async function () {
                     }
                 }
             },
+            enablePNGstop: { label: "Prevent animated PNG images from playing.", default: false },
             enableMediaViewer: {
                 label: "Enable Advanced Media Viewer",
                 default: false,
@@ -687,6 +688,7 @@ onReady(async function () {
         { key: "enableUpdateNotif", fn: updateNotif },
         { key: "enableHidingMenu", fn: featureCustomPostHideMenu },
         { key: "alwaysShowIdCount", fn: featureShowIDCount },
+        { key: "enablePNGstop", fn: featureAPNGStop },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -1907,6 +1909,205 @@ onReady(async function () {
                 e.target.style.filter = "blur(5px)";
             }
         });
+    }
+
+    // --- Feature: Stop small APNG images from playing ---
+    function featureAPNGStop() {
+        // Helper: create a canvas snapshot of the first frame
+        function createCanvasSnapshot(img) {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            return canvas;
+        }
+        // Helper: create overlay element
+        function createSpoilerOverlay(width, height) {
+            const overlay = document.createElement('div');
+            overlay.className = 'apng-spoiler-overlay';
+            overlay.style.width = width + 'px';
+            overlay.style.height = height + 'px';
+            return overlay;
+        }
+        // Helper: determine if this is a PNG or APNG in case filemime is missing
+        function isAPNG(filemime, src) {
+            if (filemime) {
+                const mime = filemime.toLowerCase();
+                if (mime === 'image/apng' || mime === 'image/png') return true;
+            }
+            if (src && /\.(a?png)(\?.*)?$/i.test(src)) return true;
+            return false;
+        }
+        // Main logic: process a thumbnail image
+        function processThumb(thumb) {
+            if (thumb.dataset.apngSpoilerProcessed === "1") return;
+            const parentA = thumb.closest("a.linkThumb, a.imgLink");
+            if (!parentA) return;
+            let filemime = parentA.getAttribute("data-filemime");
+            if (!filemime) {
+                const href = parentA.getAttribute("href") || "";
+                const ext = href.split(".").pop().toLowerCase();
+                filemime = {
+                    png: "image/png",
+                    apng: "image/apng"
+                }[ext];
+            }
+            // Only process PNGs or APNGs
+            if (!isAPNG(filemime, parentA.getAttribute("href") || "")) return;
+
+            // Only process if data-filewidth and data-fileheight are <= 220px
+            const fileWidth = parseInt(parentA.getAttribute("data-filewidth"), 10);
+            const fileHeight = parseInt(parentA.getAttribute("data-fileheight"), 10);
+            if (
+                isNaN(fileWidth) || isNaN(fileHeight) ||
+                fileWidth > 220 || fileHeight > 220
+            ) {
+                return;
+            }
+
+            // Wait for image to load if not already
+            if (!thumb.complete || thumb.naturalWidth === 0) {
+                thumb.addEventListener('load', () => processThumb(thumb), { once: true });
+                return;
+            }
+            thumb.dataset.apngSpoilerProcessed = "1";
+
+            // Create canvas snapshot
+            const canvas = createCanvasSnapshot(thumb);
+            canvas.className = 'apng-canvas-snapshot';
+            canvas.style.display = 'block';
+            canvas.style.maxWidth = thumb.style.maxWidth || thumb.width + 'px';
+            canvas.style.maxHeight = thumb.style.maxHeight || thumb.height + 'px';
+            canvas.style.position = 'absolute';
+            canvas.style.left = '0';
+            canvas.style.top = '0';
+            canvas.style.zIndex = '1';
+
+            // Do NOT hide the original image; instead, set visibility: hidden so it still receives events
+            thumb.style.visibility = 'hidden';
+
+            // Create overlay
+            const overlay = createSpoilerOverlay(canvas.width, canvas.height);
+            overlay.style.position = 'absolute';
+            overlay.style.left = '0';
+            overlay.style.top = '0';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.cursor = 'pointer';
+            overlay.style.zIndex = '2';
+            overlay.style.width = canvas.width + 'px';
+            overlay.style.height = canvas.height + 'px';
+
+            // Wrap canvas and overlay in a container
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.style.display = 'inline-block';
+            wrapper.style.width = canvas.width + 'px';
+            wrapper.style.height = canvas.height + 'px';
+            wrapper.style.marginRight = '1em';
+            wrapper.style.marginBottom = '1em';
+
+            // Insert wrapper before thumb
+            thumb.parentNode.insertBefore(wrapper, thumb);
+            wrapper.appendChild(thumb);
+            wrapper.appendChild(canvas);
+            wrapper.appendChild(overlay);
+
+            // On click, reveal the original image
+            overlay.addEventListener('click', function () {
+                overlay.remove();
+                canvas.remove();
+                thumb.style.visibility = '';
+            });
+
+            // Forward mouseenter/mouseleave from overlay to the underlying image for hover preview
+            overlay.addEventListener('mouseenter', function (e) {
+                // Create and dispatch a mouseenter event to the image
+                const evt = new MouseEvent('mouseenter', {
+                    bubbles: false,
+                    cancelable: true,
+                    clientX: e.clientX,
+                    clientY: e.clientY
+                });
+                thumb.dispatchEvent(evt);
+            });
+            overlay.addEventListener('mouseleave', function (e) {
+                // Create and dispatch a mouseleave event to the image
+                const evt = new MouseEvent('mouseleave', {
+                    bubbles: false,
+                    cancelable: true,
+                    clientX: e.clientX,
+                    clientY: e.clientY
+                });
+                thumb.dispatchEvent(evt);
+            });
+        }
+
+        // IntersectionObserver for lazy processing
+        const observer = new IntersectionObserver((entries, io) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    processThumb(entry.target);
+                    io.unobserve(entry.target);
+                }
+            }
+        }, {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        });
+
+        // Attach observer to all existing thumbs at startup
+        function observeAPNGThumbs(root = document) {
+            root.querySelectorAll("a.linkThumb img, a.imgLink img").forEach(thumb => {
+                if (!thumb.dataset.apngSpoilerProcessed) {
+                    observer.observe(thumb);
+                }
+            });
+            // If root itself is an img inside a link, attach as well
+            if (
+                root.tagName === "IMG" &&
+                root.parentElement &&
+                (root.parentElement.closest("a.linkThumb") || root.parentElement.closest("a.imgLink")) &&
+                !root.dataset.apngSpoilerProcessed
+            ) {
+                observer.observe(root);
+            }
+        }
+        observeAPNGThumbs();
+
+        // Use the observer registry for #divThreads
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            divThreadsObs.addHandler(function apngOverlayHandler(mutations, node) {
+                for (const mutation of mutations) {
+                    for (const addedNode of mutation.addedNodes) {
+                        if (addedNode.nodeType === 1) {
+                            observeAPNGThumbs(addedNode);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Observe for .quoteTooltip additions and process APNGs inside
+        const bodyObs = observeSelector('body', { childList: true, subtree: true });
+        if (bodyObs) {
+            bodyObs.addHandler(function apngOverlayQuoteTooltipHandler(mutations) {
+                for (const mutation of mutations) {
+                    for (const addedNode of mutation.addedNodes) {
+                        if (addedNode.nodeType !== 1) continue;
+                        if (addedNode.classList && addedNode.classList.contains('quoteTooltip')) {
+                            addedNode.querySelectorAll('a.linkThumb img, a.imgLink img').forEach(thumb => observeAPNGThumbs(thumb));
+                        } else if (addedNode.querySelectorAll) {
+                            addedNode.querySelectorAll('.quoteTooltip a.linkThumb img, .quoteTooltip a.imgLink img').forEach(thumb => observeAPNGThumbs(thumb));
+                        }
+                    }
+                }
+            });
+        }
     }
 
     // --- Feature: Auto-hide Header on Scroll ---
