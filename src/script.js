@@ -1925,7 +1925,7 @@ onReady(async function () {
         // Helper: create overlay element
         function createSpoilerOverlay(width, height) {
             const overlay = document.createElement('div');
-            overlay.className = 'apng-spoiler-overlay';
+            overlay.className = 'apng-overlay';
             overlay.style.width = width + 'px';
             overlay.style.height = height + 'px';
             return overlay;
@@ -1977,24 +1977,15 @@ onReady(async function () {
             const canvas = createCanvasSnapshot(thumb);
             canvas.className = 'apng-canvas-snapshot';
             canvas.style.display = 'block';
-            canvas.style.maxWidth = thumb.style.maxWidth || thumb.width + 'px';
-            canvas.style.maxHeight = thumb.style.maxHeight || thumb.height + 'px';
             canvas.style.position = 'absolute';
-            canvas.style.left = '0';
-            canvas.style.top = '0';
             canvas.style.zIndex = '1';
 
-            // Do NOT hide the original image; instead, set visibility: hidden so it still receives events
+            // Set visibility: hidden so it still receives events
             thumb.style.visibility = 'hidden';
 
             // Create overlay
             const overlay = createSpoilerOverlay(canvas.width, canvas.height);
             overlay.style.position = 'absolute';
-            overlay.style.left = '0';
-            overlay.style.top = '0';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
             overlay.style.cursor = 'pointer';
             overlay.style.zIndex = '2';
             overlay.style.width = canvas.width + 'px';
