@@ -312,3 +312,17 @@ a.originalNameLink:hover .audio-preview-indicator {
 .id-dotted {
     border: 2px dotted white;
 }
+
+/* APNG */
+.apng-canvas-snapshot {
+    display: block;
+    position: absolute;
+    z-index: 1;
+}
+
+.apng-overlay {
+    position: absolute;
+    z-index: 2;
+    cursor: pointer;
+    user-select: none;
+}

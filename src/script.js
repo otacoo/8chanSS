@@ -1690,7 +1690,7 @@ onReady(async function () {
         // Use the observer registry for #divThreads
         const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
-            divThreadsObs.addHandler(function imageHoverHandler(mutations, node) {
+            divThreadsObs.addHandler(function imageHoverHandler(mutations) {
                 for (const mutation of mutations) {
                     for (const addedNode of mutation.addedNodes) {
                         if (addedNode.nodeType === 1) {
@@ -1922,178 +1922,101 @@ onReady(async function () {
             ctx.drawImage(img, 0, 0);
             return canvas;
         }
+
         // Helper: create overlay element
-        function createSpoilerOverlay(width, height) {
+        function createOverlay(width, height) {
             const overlay = document.createElement('div');
             overlay.className = 'apng-overlay';
             overlay.style.width = width + 'px';
             overlay.style.height = height + 'px';
             return overlay;
         }
-        // Helper: determine if this is a PNG or APNG in case filemime is missing
-        function isAPNG(filemime, src) {
-            if (filemime) {
-                const mime = filemime.toLowerCase();
-                if (mime === 'image/apng' || mime === 'image/png') return true;
+
+        // Detect APNG by MIME or extension
+        function isAPNG(mime, src) {
+            if (mime) {
+                const lower = mime.toLowerCase();
+                if (lower === 'image/apng' || lower === 'image/png') return true;
             }
             if (src && /\.(a?png)(\?.*)?$/i.test(src)) return true;
             return false;
         }
-        // Main logic: process a thumbnail image
-        function processThumb(thumb) {
-            if (thumb.dataset.apngSpoilerProcessed === "1") return;
-            const parentA = thumb.closest("a.linkThumb, a.imgLink");
-            if (!parentA) return;
-            let filemime = parentA.getAttribute("data-filemime");
-            if (!filemime) {
-                const href = parentA.getAttribute("href") || "";
-                const ext = href.split(".").pop().toLowerCase();
-                filemime = {
-                    png: "image/png",
-                    apng: "image/apng"
-                }[ext];
-            }
-            // Only process PNGs or APNGs
-            if (!isAPNG(filemime, parentA.getAttribute("href") || "")) return;
 
-            // Only process if data-filewidth and data-fileheight are <= 220px
-            const fileWidth = parseInt(parentA.getAttribute("data-filewidth"), 10);
-            const fileHeight = parseInt(parentA.getAttribute("data-fileheight"), 10);
-            if (
-                isNaN(fileWidth) || isNaN(fileHeight) ||
-                fileWidth > 220 || fileHeight > 220
-            ) {
+        // Process a single thumbnail image
+        function processThumb(img) {
+            if (img.dataset.apngProcessed === '1') return;
+
+            const link = img.closest('a.linkThumb, a.imgLink');
+            if (!link) return;
+
+            const mime = (link.getAttribute('data-filemime') || '').toLowerCase();
+            const href = link.getAttribute('href') || '';
+
+            if (!isAPNG(mime, href)) return;
+
+            const width = parseInt(link.getAttribute('data-filewidth'), 10);
+            const height = parseInt(link.getAttribute('data-fileheight'), 10);
+            if (width > 220 || height > 220) return;
+
+            if (!img.complete || img.naturalWidth === 0) {
+                img.addEventListener('load', () => processThumb(img), { once: true });
                 return;
             }
 
-            // Wait for image to load if not already
-            if (!thumb.complete || thumb.naturalWidth === 0) {
-                thumb.addEventListener('load', () => processThumb(thumb), { once: true });
-                return;
-            }
-            thumb.dataset.apngSpoilerProcessed = "1";
+            img.dataset.apngProcessed = '1';
 
-            // Create canvas snapshot
-            const canvas = createCanvasSnapshot(thumb);
+            const canvas = createCanvasSnapshot(img);
             canvas.className = 'apng-canvas-snapshot';
-            canvas.style.display = 'block';
-            canvas.style.position = 'absolute';
-            canvas.style.zIndex = '1';
 
-            // Set visibility: hidden so it still receives events
-            thumb.style.visibility = 'hidden';
+            img.style.visibility = 'hidden';
 
-            // Create overlay
-            const overlay = createSpoilerOverlay(canvas.width, canvas.height);
-            overlay.style.position = 'absolute';
-            overlay.style.cursor = 'pointer';
-            overlay.style.zIndex = '2';
-            overlay.style.width = canvas.width + 'px';
-            overlay.style.height = canvas.height + 'px';
+            const overlay = createOverlay(canvas.width, canvas.height);
 
-            // Wrap canvas and overlay in a container
             const wrapper = document.createElement('div');
-            wrapper.style.position = 'relative';
-            wrapper.style.display = 'inline-block';
-            wrapper.style.width = canvas.width + 'px';
-            wrapper.style.height = canvas.height + 'px';
-            wrapper.style.marginRight = '1em';
-            wrapper.style.marginBottom = '1em';
+            Object.assign(wrapper.style, {
+                position: 'relative',
+                display: 'inline-block',
+                width: canvas.width + 'px',
+                height: canvas.height + 'px',
+                marginRight: '1em',
+                marginBottom: '0.7em'
+            });
 
-            // Insert wrapper before thumb
-            thumb.parentNode.insertBefore(wrapper, thumb);
-            wrapper.appendChild(thumb);
-            wrapper.appendChild(canvas);
-            wrapper.appendChild(overlay);
+            img.parentNode.insertBefore(wrapper, img);
+            wrapper.append(img, canvas, overlay);
 
-            // On click, reveal the original image
-            overlay.addEventListener('click', function () {
+            overlay.addEventListener('click', () => {
                 overlay.remove();
                 canvas.remove();
-                thumb.style.visibility = '';
+                img.style.visibility = '';
             });
 
-            // Forward mouseenter/mouseleave from overlay to the underlying image for hover preview
-            overlay.addEventListener('mouseenter', function (e) {
-                // Create and dispatch a mouseenter event to the image
-                const evt = new MouseEvent('mouseenter', {
-                    bubbles: false,
-                    cancelable: true,
-                    clientX: e.clientX,
-                    clientY: e.clientY
+            ['mouseenter', 'mouseleave'].forEach(type => {
+                overlay.addEventListener(type, e => {
+                    img.dispatchEvent(new MouseEvent(type, {
+                        bubbles: false,
+                        cancelable: true,
+                        clientX: e.clientX,
+                        clientY: e.clientY
+                    }));
                 });
-                thumb.dispatchEvent(evt);
-            });
-            overlay.addEventListener('mouseleave', function (e) {
-                // Create and dispatch a mouseleave event to the image
-                const evt = new MouseEvent('mouseleave', {
-                    bubbles: false,
-                    cancelable: true,
-                    clientX: e.clientX,
-                    clientY: e.clientY
-                });
-                thumb.dispatchEvent(evt);
             });
         }
 
-        // IntersectionObserver for lazy processing
-        const observer = new IntersectionObserver((entries, io) => {
-            for (const entry of entries) {
-                if (entry.isIntersecting) {
-                    processThumb(entry.target);
-                    io.unobserve(entry.target);
-                }
-            }
-        }, {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        });
+        // Initial pass
+        document.querySelectorAll('a.linkThumb img, a.imgLink img').forEach(processThumb);
 
-        // Attach observer to all existing thumbs at startup
-        function observeAPNGThumbs(root = document) {
-            root.querySelectorAll("a.linkThumb img, a.imgLink img").forEach(thumb => {
-                if (!thumb.dataset.apngSpoilerProcessed) {
-                    observer.observe(thumb);
-                }
-            });
-            // If root itself is an img inside a link, attach as well
-            if (
-                root.tagName === "IMG" &&
-                root.parentElement &&
-                (root.parentElement.closest("a.linkThumb") || root.parentElement.closest("a.imgLink")) &&
-                !root.dataset.apngSpoilerProcessed
-            ) {
-                observer.observe(root);
-            }
-        }
-        observeAPNGThumbs();
-
-        // Use the observer registry for #divThreads
-        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
-        if (divThreadsObs) {
-            divThreadsObs.addHandler(function apngOverlayHandler(mutations, node) {
-                for (const mutation of mutations) {
-                    for (const addedNode of mutation.addedNodes) {
-                        if (addedNode.nodeType === 1) {
-                            observeAPNGThumbs(addedNode);
-                        }
-                    }
-                }
-            });
-        }
-
-        // Observe for .quoteTooltip additions and process APNGs inside
-        const bodyObs = observeSelector('body', { childList: true, subtree: true });
-        if (bodyObs) {
-            bodyObs.addHandler(function apngOverlayQuoteTooltipHandler(mutations) {
-                for (const mutation of mutations) {
-                    for (const addedNode of mutation.addedNodes) {
-                        if (addedNode.nodeType !== 1) continue;
-                        if (addedNode.classList && addedNode.classList.contains('quoteTooltip')) {
-                            addedNode.querySelectorAll('a.linkThumb img, a.imgLink img').forEach(thumb => observeAPNGThumbs(thumb));
-                        } else if (addedNode.querySelectorAll) {
-                            addedNode.querySelectorAll('.quoteTooltip a.linkThumb img, .quoteTooltip a.imgLink img').forEach(thumb => observeAPNGThumbs(thumb));
+        // Observe dynamically added thumbs using helper
+        const obs = observeSelector('body', { childList: true, subtree: true });
+        if (obs) {
+            obs.addHandler(function apngStopHandler(mutations) {
+                for (const m of mutations) {
+                    for (const node of m.addedNodes) {
+                        if (node.nodeType !== 1) continue;
+                        if (node.matches && node.matches('a.linkThumb img, a.imgLink img')) {
+                            processThumb(node);
+                        } else if (node.querySelectorAll) {
+                            node.querySelectorAll('a.linkThumb img, a.imgLink img').forEach(processThumb);
                         }
                     }
                 }
