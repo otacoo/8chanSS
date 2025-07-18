@@ -2004,7 +2004,8 @@ onReady(async function () {
         }
 
         // Initial pass
-        document.querySelectorAll('a.linkThumb img, a.imgLink img').forEach(processThumb);
+        const SEL = 'a.linkThumb img, a.imgLink img';
+        document.querySelectorAll(SEL).forEach(processThumb);
 
         // Observe dynamically added thumbs using helper
         const obs = observeSelector('body', { childList: true, subtree: true });
@@ -2013,10 +2014,10 @@ onReady(async function () {
                 for (const m of mutations) {
                     for (const node of m.addedNodes) {
                         if (node.nodeType !== 1) continue;
-                        if (node.matches && node.matches('a.linkThumb img, a.imgLink img')) {
+                        if (node.matches && node.matches(SEL)) {
                             processThumb(node);
                         } else if (node.querySelectorAll) {
-                            node.querySelectorAll('a.linkThumb img, a.imgLink img').forEach(processThumb);
+                            node.querySelectorAll(SEL).forEach(processThumb);
                         }
                     }
                 }
