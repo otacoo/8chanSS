@@ -1913,6 +1913,8 @@ onReady(async function () {
 
     // --- Feature: Stop small APNG images from playing ---
     function featureAPNGStop() {
+        if (window.pageType?.isCatalog) return;
+
         // Helper: create a canvas snapshot of the first frame
         function createCanvasSnapshot(img) {
             const canvas = document.createElement('canvas');
