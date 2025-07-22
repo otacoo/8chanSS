@@ -3815,14 +3815,30 @@ onReady(async function () {
 
         // Helper: Get the image URL from a .uploadDetails div
         function getImageUrl(detailDiv) {
-            const parentCell = detailDiv.closest('.postCell') || detailDiv.closest('.opCell');
-            const imgLink = parentCell?.querySelector('.imgLink');
-            const img = imgLink ? imgLink.querySelector('img') : null;
-            if (!img) {
+            let imgSrc = null;
+            const imageContainer = detailDiv.closest('.uploadCell, .postCell, .opCell');
+
+            if (imageContainer) {
+                // Try to get thumbnail first
+                const thumbImg = imageContainer.querySelector('.imgLink > img');
+                const thumbSrc = thumbImg?.getAttribute("src");
+                if (thumbImg && thumbSrc?.startsWith('/.media/t_')) {
+                    imgSrc = thumbSrc;
+                }
+
+                // If no thumbnail, get full image from the same container.
+                if (!imgSrc) {
+                    const imgLink = imageContainer.querySelector('.imgLink');
+                    if (imgLink) {
+                        imgSrc = imgLink.getAttribute('href');
+                    }
+                }
+            }
+
+            if (!imgSrc) {
                 return null;
             }
 
-            let imgSrc = img.getAttribute('src');
             let origin = window.location.origin;
 
             // Normalize the image URL
