@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.54.0
+// @version      1.54.1
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -105,7 +105,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.54.0";
+    const VERSION = "1.54.1";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -167,7 +167,7 @@ onReady(async function () {
                     }
                 }
             },
-            enablePNGstop: { label: "Prevent animated PNG images from playing.", default: false },
+            enablePNGstop: { label: "Prevent animated PNG images from playing", default: false },
             enableMediaViewer: {
                 label: "Enable Advanced Media Viewer",
                 default: false,
@@ -1643,6 +1643,7 @@ onReady(async function () {
         });
     }
     function featureAPNGStop() {
+        if (window.pageType?.isCatalog) return;
         function createCanvasSnapshot(img) {
             const canvas = document.createElement('canvas');
             canvas.width = img.naturalWidth;
@@ -1725,17 +1726,18 @@ onReady(async function () {
                 });
             });
         }
-        document.querySelectorAll('a.linkThumb img, a.imgLink img').forEach(processThumb);
+        const SEL = 'a.linkThumb img, a.imgLink img';
+        document.querySelectorAll(SEL).forEach(processThumb);
         const obs = observeSelector('body', { childList: true, subtree: true });
         if (obs) {
             obs.addHandler(function apngStopHandler(mutations) {
                 for (const m of mutations) {
                     for (const node of m.addedNodes) {
                         if (node.nodeType !== 1) continue;
-                        if (node.matches && node.matches('a.linkThumb img, a.imgLink img')) {
+                        if (node.matches && node.matches(SEL)) {
                             processThumb(node);
                         } else if (node.querySelectorAll) {
-                            node.querySelectorAll('a.linkThumb img, a.imgLink img').forEach(processThumb);
+                            node.querySelectorAll(SEL).forEach(processThumb);
                         }
                     }
                 }
@@ -3176,14 +3178,27 @@ onReady(async function () {
             },
         ];
         function getImageUrl(detailDiv) {
-            const parentCell = detailDiv.closest('.postCell') || detailDiv.closest('.opCell');
-            const imgLink = parentCell?.querySelector('.imgLink');
-            const img = imgLink ? imgLink.querySelector('img') : null;
-            if (!img) {
+            let imgSrc = null;
+            const imageContainer = detailDiv.closest('.uploadCell, .postCell, .opCell');
+
+            if (imageContainer) {
+                const thumbImg = imageContainer.querySelector('.imgLink > img');
+                const thumbSrc = thumbImg?.getAttribute("src");
+                if (thumbImg && thumbSrc?.startsWith('/.media/t_')) {
+                    imgSrc = thumbSrc;
+                }
+                if (!imgSrc) {
+                    const imgLink = imageContainer.querySelector('.imgLink');
+                    if (imgLink) {
+                        imgSrc = imgLink.getAttribute('href');
+                    }
+                }
+            }
+
+            if (!imgSrc) {
                 return null;
             }
 
-            let imgSrc = img.getAttribute('src');
             let origin = window.location.origin;
             if (imgSrc.startsWith("//")) {
                 return window.location.protocol + imgSrc;

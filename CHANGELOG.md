@@ -1,3 +1,9 @@
+### v1.54.1
+*2025-07-22*
+
+- Fix for sauce links not fetching the correct image
+- Minor changes
+
 ## v1.54.0
 *2025-07-17*
 
