@@ -1,3 +1,8 @@
+## v1.55.0
+*2025-07-26*
+
+- **New Options:** Add save & restore Watched Threads buttons
+
 ### v1.54.1
 *2025-07-22*
 

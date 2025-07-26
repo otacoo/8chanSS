@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.54.1
+// @version      1.55.0
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -105,7 +105,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.54.1";
+    const VERSION = "1.55.0";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -359,7 +359,17 @@ onReady(async function () {
                     }
                 }
             },
-            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, }
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
+            _miscelStorageTitle: { type: "title", label: ":: Storage & Sync" },
+            _miscelSection2: { type: "separator" },
+            saveWatchedThreads: {
+                label: "Save Current Watched Threads",
+                type: "button"
+            },
+            restoreWatchedThreads: {
+                label: "Restore Watched Threads",
+                type: "button"
+            },
         }
     };
 
@@ -4743,6 +4753,43 @@ onReady(async function () {
                 title.style.margin = "10px 0 6px 0";
                 title.style.opacity = "0.9";
                 container.appendChild(title);
+                return;
+            }
+            if (setting.type === "button") {
+                const button = document.createElement("button");
+                button.textContent = setting.label;
+                button.style.setProperty("background", "var(--contrast-color)", "important");
+                button.style.color = "#fff";
+                button.style.border = "none";
+                button.style.borderRadius = "4px";
+                button.style.padding = "8px 12px";
+                button.style.cursor = "pointer";
+                button.style.width = "100%";
+                button.style.marginBottom = "10px";
+
+                if (key === "saveWatchedThreads") {
+                    button.addEventListener('click', async () => {
+                        const watchedData = localStorage.getItem('watchedData');
+                        if (watchedData) {
+                            await GM.setValue('8chanSS_watchedData', watchedData);
+                            callPageToast('Watched threads saved!', 'green', 2000);
+                        } else {
+                            callPageToast('No watched threads found in localStorage.', 'orange', 2500);
+                        }
+                    });
+                } else if (key === "restoreWatchedThreads") {
+                    button.addEventListener('click', async () => {
+                        const savedData = await GM.getValue('8chanSS_watchedData', null);
+                        if (savedData) {
+                            localStorage.setItem('watchedData', savedData);
+                            callPageToast('Watched threads restored. Please reload the page.', 'blue', 3000);
+                        } else {
+                            callPageToast('No saved watched threads found.', 'orange', 2500);
+                        }
+                    });
+                }
+
+                container.appendChild(button);
                 return;
             }
             const parentRow = document.createElement("div");
