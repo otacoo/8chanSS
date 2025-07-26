@@ -15,6 +15,8 @@
   "permissions": [
     "storage",
     "*://8chan.moe/*",
-    "*://8chan.se/*"
+    "*://8chan.se/*",
+    "*://8chan.cc/*",
+    "*://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/*"
   ]
 }
