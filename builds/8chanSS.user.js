@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.55.0
+// @version      1.55.1
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -105,7 +105,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.55.0";
+    const VERSION = "1.55.1";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -4337,128 +4337,6 @@ onReady(async function () {
             removeNativeLabelIdOnClickHandlers();
         }
     }
-    function renameFileAtIndex(index) {
-        const currentFile = postCommon.selectedFiles[index];
-        if (!currentFile) return;
-        const currentName = currentFile.name;
-        const newName = prompt("Enter new file name:", currentName);
-
-        if (!newName || newName === currentName) return;
-
-        const extension = currentName.includes('.') ? currentName.substring(currentName.lastIndexOf('.')) : '';
-        const hasExtension = newName.includes('.');
-        const finalName = hasExtension ? newName : newName + extension;
-
-        if (hasExtension && newName.substring(newName.lastIndexOf('.')) !== extension) {
-            alert(`You cannot change the file extension. The extension must remain "${extension}".`);
-            return;
-        }
-        const renamedFile = new File([currentFile], finalName, {
-            type: currentFile.type,
-            lastModified: currentFile.lastModified,
-        });
-
-        postCommon.selectedFiles[index] = renamedFile;
-        updateFileLabels(finalName, index);
-    }
-
-    function getSelectedCellIndex(element) {
-        const cell = element.closest('.selectedCell');
-        if (!cell || !cell.parentElement) return -1;
-        const cells = Array.from(cell.parentElement.querySelectorAll(':scope > .selectedCell'));
-        return cells.indexOf(cell);
-    }
-    function updateFileLabels(finalName, index) {
-        const cssIndex = index + 1;
-        const selector = `form .selectedCell:nth-of-type(${cssIndex}) .nameLabel`;
-        const labels = document.querySelectorAll(selector);
-        labels.forEach(label => {
-            label.textContent = finalName;
-            label.title = finalName;
-        });
-    }
-    function handleNameLabelClick(event) {
-        const label = event.target.closest('.nameLabel');
-        if (!label) return;
-        const index = getSelectedCellIndex(label);
-        if (index !== -1) {
-            renameFileAtIndex(index);
-        }
-    }
-
-    function handleCustomRemoveClick(event) {
-        event.stopImmediatePropagation();
-
-        const button = event.currentTarget;
-        const index = getSelectedCellIndex(button);
-
-        if (index === -1) {
-            console.error("Could not determine index of the cell to remove.");
-            return;
-        }
-        const removedFiles = postCommon.selectedFiles.splice(index, 1);
-        if (removedFiles && removedFiles.length > 0 && removedFiles[0]) {
-            if (typeof postCommon.adjustBudget === 'function' && typeof removedFiles[0].size === 'number') {
-                postCommon.adjustBudget(-removedFiles[0].size);
-            } else {
-                console.warn("postCommon.adjustBudget function missing or removed file has no size property.");
-            }
-        } else {
-            console.warn("Spliced file array but got no result for index:", index);
-        }
-        const cssIndex = index + 1;
-        const selector = `form .selectedCell:nth-of-type(${cssIndex})`;
-        const fileCells = document.querySelectorAll(selector);
-        fileCells.forEach(cell => {
-            cell.remove();
-        });
-    }
-    function observePostForms(containerSelector) {
-        const container = document.querySelector(containerSelector);
-        if (!container) {
-            return;
-        }
-        if (!container.dataset.renameDelegationAttached) {
-            container.addEventListener('click', handleNameLabelClick, false); 
-            container.dataset.renameDelegationAttached = 'true';
-        }
-        const setupRemoveButton = (button) => {
-            if (!button.dataset.customRemoveAttached) {
-                if (typeof button.onclick === 'function') {
-                    button.onclick = null;
-                }
-                button.addEventListener('click', handleCustomRemoveClick);
-                button.dataset.customRemoveAttached = 'true'; 
-            }
-        };
-        if (!container.dataset.removeObserverAttached) {
-            const removeBtnObserver = (mutationsList, observer) => {
-                for (const mutation of mutationsList) {
-                    if (mutation.type === 'childList') {
-                        mutation.addedNodes.forEach(node => {
-                            if (
-                                node.nodeType === Node.ELEMENT_NODE &&
-                                node.matches('div.selectedCell')
-                            ) {
-                                node.querySelectorAll('.removeButton').forEach(setupRemoveButton);
-                            }
-                        });
-                    }
-                }
-            };
-            const rmvObserver = new MutationObserver(removeBtnObserver);
-            rmvObserver.observe(container, {
-                childList: true,
-                subtree: true
-            });
-            container.dataset.removeObserverAttached = 'true';
-        }
-    }
-    function startObservingPostForms() {
-        observePostForms('#qrFilesBody');
-        observePostForms('#postingFormContents');
-    }
-    startObservingPostForms();
     async function createSettingsMenu() {
         let menu = document.getElementById("8chanSS-menu");
         if (menu) return menu;

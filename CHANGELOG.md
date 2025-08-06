@@ -1,3 +1,8 @@
+### v1.55.1
+*2025-08-06*
+
+- Remove file renaming feature
+
 ## v1.55.0
 *2025-07-26*
 
