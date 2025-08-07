@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.55.1
+// @version      1.55.2
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -9,8 +9,12 @@
 // @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
 // @match        *://8chan.moe/*
 // @match        *://8chan.se/*
+// @match        *://8chan.cc/*
+// @match        *://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/*
 // @exclude      *://8chan.moe/login.html
 // @exclude      *://8chan.se/login.html
+// @exclude      *://8chan.cc/login.html
+// @exclude      *://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/login.html
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.deleteValue

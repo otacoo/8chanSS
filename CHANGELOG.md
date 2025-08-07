@@ -1,3 +1,9 @@
+### v1.55.2
+*2025-08-07*
+
+- Fix for BBCode tags being lost on reply
+- Add 8chan.cc and .onion domains for 8chanSS
+
 ### v1.55.1
 *2025-08-06*
 

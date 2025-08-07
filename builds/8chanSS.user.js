@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.55.1
+// @version      1.55.2
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -9,8 +9,12 @@
 // @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
 // @match        *://8chan.moe/*
 // @match        *://8chan.se/*
+// @match        *://8chan.cc/*
+// @match        *://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/*
 // @exclude      *://8chan.moe/login.html
 // @exclude      *://8chan.se/login.html
+// @exclude      *://8chan.cc/login.html
+// @exclude      *://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/login.html
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.deleteValue
@@ -105,7 +109,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.55.1";
+    const VERSION = "1.55.2";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -5285,6 +5289,7 @@ onReady(async function () {
             textBox.selectionStart = selectionStart + openTag.length;
             textBox.selectionEnd = selectionEnd + openTag.length;
         }
+        textBox.dispatchEvent(new Event('input', { bubbles: true }));
     }
     let lastHighlighted = null;
     let lastType = null; 
@@ -5490,11 +5495,11 @@ onReady(async function () {
             return;
         }
     });
-    const replyTextarea = document.getElementById("qrbody");
+    const bbTextareas = document.querySelectorAll("#qrbody, #fieldMessage");
     if (!(await shortcutsGloballyEnabled())) {
         return;
-    } else if (replyTextarea) {
-        replyTextarea.addEventListener("keydown", async function (event) {
+    } else bbTextareas.forEach((textarea) => {
+        textarea.addEventListener("keydown", async function (event) {
             if (event.ctrlKey && event.key === "Enter") {
                 event.preventDefault();
                 const submitButton = document.getElementById("qrbutton");
@@ -5513,8 +5518,6 @@ onReady(async function () {
                     }
                 }
             }
-        });
-        replyTextarea.addEventListener("keydown", function (event) {
             const key = event.key.toLowerCase();
             if (key === "c" && event.altKey && !event.ctrlKey && bbCodeCombinations.has(key)) {
                 event.preventDefault();
@@ -5527,7 +5530,7 @@ onReady(async function () {
                 return;
             }
         });
-    }
+    });
     function featureCatalogHiding() {
         const STORAGE_KEY = "8chanSS_hiddenCatalogThreads";
         let showHiddenMode = false;
