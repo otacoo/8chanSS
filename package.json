@@ -11,11 +11,15 @@
     "mainBranch": "main",
     "matches": [
       "*://8chan.moe/*",
-      "*://8chan.se/*"
+      "*://8chan.se/*",
+      "*://8chan.cc/*",
+      "*://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/*"
     ],
     "exclude_matches": [
       "*://8chan.moe/login.html",
-      "*://8chan.se/login.html"
+      "*://8chan.se/login.html",
+      "*://8chan.cc/login.html",
+      "*://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/login.html"
     ],
     "files": {
       "metajs": "8chanSS.meta.js",
