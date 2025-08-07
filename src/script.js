@@ -6189,6 +6189,9 @@ onReady(async function () {
             textBox.selectionStart = selectionStart + openTag.length;
             textBox.selectionEnd = selectionEnd + openTag.length;
         }
+
+        // Dispatch an input event so QR listener is notified
+        textBox.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     // --- Feature: Scroll between posts functionality ---
@@ -6454,12 +6457,13 @@ onReady(async function () {
     });
 
     // (CTRL + Enter) and BBCodes - Only for QR textarea
-    const replyTextarea = document.getElementById("qrbody");
+    const bbTextareas = document.querySelectorAll("#qrbody, #fieldMessage");
+
     // Check if global toggle is enabled first
     if (!(await shortcutsGloballyEnabled())) {
         return;
-    } else if (replyTextarea) {
-        replyTextarea.addEventListener("keydown", async function (event) {
+    } else bbTextareas.forEach((textarea) => {
+        textarea.addEventListener("keydown", async function (event) {
             if (event.ctrlKey && event.key === "Enter") {
                 event.preventDefault();
                 const submitButton = document.getElementById("qrbutton");
@@ -6478,10 +6482,8 @@ onReady(async function () {
                     }
                 }
             }
-        });
 
         // BBCODE Combination keys and Tags - Keep with the textarea
-        replyTextarea.addEventListener("keydown", function (event) {
             const key = event.key.toLowerCase();
 
             // Special case: alt+c for [code] tag
@@ -6498,7 +6500,7 @@ onReady(async function () {
                 return;
             }
         });
-    }
+    });
 
     // --- Feature: Hide catalog threads with SHIFT+click, per-board storage ---
     function featureCatalogHiding() {
