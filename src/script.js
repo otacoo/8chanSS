@@ -3364,49 +3364,105 @@ onReady(async function () {
         if (!window.pageType?.isThread) return;
         // Early return if no .spanId exists on the page
         if (!document.querySelector('.spanId')) return;
-        // Only run if posting is defined
-        if (typeof posting === "undefined") return;
 
-        // Process all posts rendered before this script runs
-        for (const [id, posts] of Object.entries(posting.idsRelation)) {
-            for (const post of posts) {
-                const label = post.querySelector(".labelId");
-                if (!label) continue;
-                label.onmouseover = null;
-                label.onmouseout = null;
-                label.setAttribute("data-posts-by-this-id", posts.length);
-            }
+        // Track processed labels to avoid reprocessing
+        const processedLabels = new WeakSet();
+
+        function processIDLabels() {
+            document.querySelectorAll('.labelId').forEach(label => {
+                // Skip if already processed
+                if (processedLabels.has(label) && label.querySelector('.ss-id-separator')) {
+                    return;
+                }
+                // Store original events
+                const originalMouseover = label.onmouseover;
+                // Trigger site mouseover to get the count
+                if (originalMouseover) {
+                    originalMouseover.call(label);
+                }
+
+                const text = label.textContent;
+                const match = text.match(/^(.+?)\s*\((\d+)\)$/);
+
+                if (match) {
+                    const idText = match[1].trim();
+                    const count = match[2];
+
+                    // Format display
+                    const separator = document.createElement('span');
+                    separator.className = 'ss-id-separator';
+                    separator.textContent = ' | ';
+
+                    const countSpan = document.createElement('span');
+                    countSpan.className = 'ss-id-count';
+                    countSpan.textContent = count;
+
+                    // Clear existing content and rebuild with custom format
+                    label.textContent = idText;
+                    label.appendChild(separator);
+                    label.appendChild(countSpan);
+
+                    // Mark as processed
+                    processedLabels.add(label);
+
+                    // Disable hover events to prevent interference
+                    label.onmouseover = null;
+                    label.onmouseout = null;
+
+                    // Add event listeners that maintain format
+                    label.addEventListener('mouseover', function (e) {
+                        e.stopPropagation();
+                        // Ensure our format is maintained
+                        if (!this.querySelector('.ss-id-separator')) {
+                            // Re-apply our format if it was somehow lost
+                            this.textContent = idText;
+                            this.appendChild(separator.cloneNode(true));
+                            this.appendChild(countSpan.cloneNode(true));
+                        }
+                    });
+
+                    label.addEventListener('mouseout', function (e) {
+                        e.stopPropagation();
+                        // Do nothing on mouseout
+                    });
+                }
+            });
         }
-        // Override processIdLabel to update post counts and styles
-        posting.processIdLabel = function (label) {
-            if (!label) return;
-            const id = label.textContent;
-            const postsOfThisId = posting.idsRelation[id] || [];
-            const innerPost = label.closest(".innerPost, .innerOP");
-            if (innerPost.classList.contains("clone")) {
-                label.setAttribute("data-posts-by-this-id", postsOfThisId.length);
-            } else {
-                posting.idsRelation[id] = postsOfThisId;
-                postsOfThisId.push(innerPost);
-                for (let post of postsOfThisId) {
-                    const l = post.querySelector(".labelId");
-                    if (l) l.setAttribute("data-posts-by-this-id", postsOfThisId.length);
+
+        // Initial processing
+        setTimeout(processIDLabels, 50);
+
+        // Use the global observer registry
+        const bodyObs = observeSelector('body', { childList: true, subtree: true });
+        if (bodyObs) {
+            const debouncedProcess = debounce(processIDLabels, 50);
+
+            bodyObs.addHandler(function showIDCountHandler(mutations) {
+                let hasNewLabels = false;
+
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.classList?.contains('labelId')) {
+                                hasNewLabels = true;
+                                break;
+                            } else if (node.querySelectorAll) {
+                                const newLabels = node.querySelectorAll('.labelId');
+                                if (newLabels.length > 0) {
+                                    hasNewLabels = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (hasNewLabels) break;
                 }
-            }
-            label.onclick = function () {
-                var index = posting.highLightedIds.indexOf(id);
-                window.location.hash = '_';
-                if (index > -1) {
-                    posting.highLightedIds.splice(index, 1);
-                } else {
-                    posting.highLightedIds.push(id);
+
+                if (hasNewLabels) {
+                    debouncedProcess();
                 }
-                for (const cellToChange of postsOfThisId) {
-                    if (cellToChange.className === 'innerOP') continue;
-                    cellToChange.classList.toggle("markedPost", index === -1);
-                }
-            };
-        };
+            });
+        }
     }
 
     // --- Feature: Quote Threading ---
@@ -6483,7 +6539,7 @@ onReady(async function () {
                 }
             }
 
-        // BBCODE Combination keys and Tags - Keep with the textarea
+            // BBCODE Combination keys and Tags - Keep with the textarea
             const key = event.key.toLowerCase();
 
             // Special case: alt+c for [code] tag

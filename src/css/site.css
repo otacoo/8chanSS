@@ -51,14 +51,6 @@
     border-left-width: 0;
 }
 
-/* IDs */
-:root.show-ID-count .labelId::after {
-    content: attr(data-posts-by-this-id);
-    margin-left: 0.4em;
-    padding: 0 0 0 4px;
-    border-left: 1px solid;
-}
-
 /* Header */
 nav.navHeader {
     z-index: 300;
