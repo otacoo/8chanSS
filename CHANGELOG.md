@@ -1,20 +1,20 @@
-### v1.55.4
+### v1.55.4 (Patch)
 *2025-08-10*
 
 - Remove notification API due to site CSP rules
 
-### v1.55.3
+### v1.55.3 (Patch)
 *2025-08-10*
 
 - Fix for show ID count being broken (re-implementation)
 
-### v1.55.2
+### v1.55.2 (Patch)
 *2025-08-07*
 
 - Fix for BBCode tags being lost on reply
 - Add 8chan.cc and .onion domains for 8chanSS
 
-### v1.55.1
+### v1.55.1 (Patch)
 *2025-08-06*
 
 - Remove file renaming feature
@@ -24,7 +24,7 @@
 
 - **New Options:** Add save & restore Watched Threads buttons
 
-### v1.54.1
+### v1.54.1 (Patch)
 *2025-07-22*
 
 - Fix for sauce links not fetching the correct image
