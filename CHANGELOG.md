@@ -1,3 +1,8 @@
+### v1.55.4
+*2025-08-10*
+
+- Remove notification API due to site CSP rules
+
 ### v1.55.3
 *2025-08-10*
 

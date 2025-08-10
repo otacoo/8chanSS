@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.55.3
+// @version      1.55.4
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -109,7 +109,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.55.3";
+    const VERSION = "1.55.4";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -729,79 +729,73 @@ onReady(async function () {
 
             return html;
         }
+        function showToast(htmlMessage, color = "black", duration = 1200) {
+            if (document.querySelector('.global-toast-notification')) {
+                return;
+            }
 
-        const script = document.createElement('script');
-        script.textContent = '(' + function (sanitizeToastHTML) {
-            window.showGlobalToast = function (htmlMessage, color = "black", duration = 1200) {
-                if (document.querySelector('.global-toast-notification')) {
-                    return;
-                }
-
-                const colorMap = {
-                    black: "#222",
-                    orange: "#cc7a00",
-                    green: "#339933",
-                    blue: "#1976d2",
-                    red: "#c62828"
-                };
-                const bgColor = colorMap[color] || color;
-
-                const icon = document.getElementById("8chanSS-icon");
-                let toast = document.createElement("span");
-                toast.className = "global-toast-notification";
-                toast.innerHTML = sanitizeToastHTML(htmlMessage);
-                toast.style.position = "absolute";
-                toast.style.background = bgColor;
-                toast.style.color = "#fff";
-                toast.style.padding = "2px 12px";
-                toast.style.borderRadius = "4px";
-                toast.style.fontSize = "13px";
-                toast.style.zIndex = 99999;
-                toast.style.opacity = "1";
-                toast.style.transition = "opacity 0.3s";
-                toast.style.pointerEvents = "auto";
-                toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.18)";
-                let closeBtn = document.createElement("span");
-                closeBtn.textContent = "✕";
-                closeBtn.style.marginLeft = "10px";
-                closeBtn.style.cursor = "pointer";
-                closeBtn.style.fontWeight = "bold";
-                closeBtn.style.fontSize = "15px";
-                closeBtn.style.opacity = "0.7";
-                closeBtn.style.float = "right";
-                closeBtn.style.userSelect = "none";
-                closeBtn.onclick = function (e) {
-                    e.stopPropagation();
-                    if (toast.parentNode) toast.parentNode.removeChild(toast);
-                    if (timeout1) clearTimeout(timeout1);
-                    if (timeout2) clearTimeout(timeout2);
-                };
-                closeBtn.onmouseover = function () { closeBtn.style.opacity = "1"; };
-                closeBtn.onmouseout = function () { closeBtn.style.opacity = "0.7"; };
-                toast.appendChild(closeBtn);
-
-                if (icon && icon.parentNode) {
-                    toast.style.left = (icon.offsetLeft - 50) + "px";
-                    toast.style.top = "28px";
-                    icon.parentNode.appendChild(toast);
-                } else {
-                    toast.style.right = "25px";
-                    toast.style.top = "25px";
-                    toast.style.position = "fixed";
-                    document.body.appendChild(toast);
-                }
-
-                let timeout1 = setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
-                let timeout2 = setTimeout(() => { toast.remove(); }, duration);
+            const colorMap = {
+                black: "#222",
+                orange: "#cc7a00",
+                green: "#339933",
+                blue: "#1976d2",
+                red: "#c62828"
             };
-        } + ')(' + sanitizeToastHTML.toString() + ');';
-        document.documentElement.appendChild(script);
-        script.remove();
+            const bgColor = colorMap[color] || color;
+
+            const icon = document.getElementById("8chanSS-icon");
+            let toast = document.createElement("span");
+            toast.className = "global-toast-notification";
+            toast.innerHTML = sanitizeToastHTML(htmlMessage);
+            toast.style.position = "absolute";
+            toast.style.background = bgColor;
+            toast.style.color = "#fff";
+            toast.style.padding = "2px 12px";
+            toast.style.borderRadius = "4px";
+            toast.style.fontSize = "13px";
+            toast.style.zIndex = 99999;
+            toast.style.opacity = "1";
+            toast.style.transition = "opacity 0.3s";
+            toast.style.pointerEvents = "auto";
+            toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.18)";
+            let closeBtn = document.createElement("span");
+            closeBtn.textContent = "✕";
+            closeBtn.style.marginLeft = "10px";
+            closeBtn.style.cursor = "pointer";
+            closeBtn.style.fontWeight = "bold";
+            closeBtn.style.fontSize = "15px";
+            closeBtn.style.opacity = "0.7";
+            closeBtn.style.float = "right";
+            closeBtn.style.userSelect = "none";
+            
+            closeBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+                if (timeout1) clearTimeout(timeout1);
+                if (timeout2) clearTimeout(timeout2);
+            });
+            closeBtn.addEventListener('mouseover', function () { closeBtn.style.opacity = "1"; });
+            closeBtn.addEventListener('mouseout', function () { closeBtn.style.opacity = "0.7"; });
+            
+            toast.appendChild(closeBtn);
+
+            if (icon && icon.parentNode) {
+                toast.style.left = (icon.offsetLeft - 50) + "px";
+                toast.style.top = "28px";
+                icon.parentNode.appendChild(toast);
+            } else {
+                toast.style.right = "25px";
+                toast.style.top = "25px";
+                toast.style.position = "fixed";
+                document.body.appendChild(toast);
+            }
+
+            let timeout1 = setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
+            let timeout2 = setTimeout(() => { toast.remove(); }, duration);
+        }
+
         window.callPageToast = function (msg, color = 'black', duration = 1200) {
-            const script = document.createElement('script');
-            script.textContent = `window.showGlobalToast && window.showGlobalToast(${JSON.stringify(msg)}, ${JSON.stringify(color)}, ${duration});`;
-            document.documentElement.appendChild(script);
-            script.remove();
+            showToast(msg, color, duration);
         };
     })();
     async function featureSaveScroll() {
@@ -4386,7 +4380,7 @@ onReady(async function () {
         menu.id = "8chanSS-menu";
         menu.style.position = "fixed";
         menu.style.top = "3rem"; 
-        menu.style.left = "20rem"; 
+        menu.style.left = "35rem"; 
         menu.style.zIndex = "99999";
         menu.style.background = "var(--menu-color)";
         menu.style.color = "var(--text-color)";
