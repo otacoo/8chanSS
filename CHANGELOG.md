@@ -1,3 +1,8 @@
+### v1.55.3
+*2025-08-10*
+
+- Fix for show ID count being broken (re-implementation)
+
 ### v1.55.2
 *2025-08-07*
 
