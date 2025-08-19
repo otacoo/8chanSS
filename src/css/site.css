@@ -318,3 +318,20 @@ a.originalNameLink:hover .audio-preview-indicator {
     cursor: pointer;
     user-select: none;
 }
+
+/* Mascots */
+.chSS-mascot {
+    position: fixed;
+    height: auto;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: -1;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* Mascot settings textarea */
+#setting_enableMascots_mascotUrls {
+    resize: vertical;
+    min-height: 80px;
+}

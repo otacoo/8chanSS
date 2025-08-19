@@ -291,7 +291,29 @@ onReady(async function () {
             enableStickyQR: { label: "Sticky Quick Reply", default: false },
             fadeQuickReply: { label: "Fade Quick Reply", default: false },
             threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
-            hideCheckboxes: { label: "Hide Post Checkbox", default: false }
+            hideCheckboxes: { label: "Hide Post Checkbox", default: false },
+            _stylingMascotTitle: { type: "title", label: ":: Mascots" },
+            _stylingSection3: { type: "separator" },
+            enableMascots: {
+                label: "Enable Mascots",
+                default: false,
+                subOptions: {
+                    mascotOpacity: {
+                        label: "Mascot Opacity (0-100%)",
+                        default: 30,
+                        type: "number",
+                        min: 0,
+                        max: 100
+                    },
+                    mascotUrls: {
+                        label: "Mascot Image URLs (one per line)",
+                        type: "textarea",
+                        default: "",
+                        placeholder: "Enter image URLs, one per line\nExample:\n/.media/mascot1.png\n/.media/mascot2.png",
+                        rows: 4
+                    }
+                }
+            }
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
@@ -699,6 +721,7 @@ onReady(async function () {
         { key: "enableHidingMenu", fn: featureCustomPostHideMenu },
         { key: "alwaysShowIdCount", fn: featureShowIDCount },
         { key: "enablePNGstop", fn: featureAPNGStop },
+        { key: "enableMascots", fn: featureMascots },
     ];
     // Enable settings
     for (const { key, fn } of featureMap) {
@@ -827,7 +850,7 @@ onReady(async function () {
             closeBtn.style.opacity = "0.7";
             closeBtn.style.float = "right";
             closeBtn.style.userSelect = "none";
-            
+
             closeBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 if (toast.parentNode) toast.parentNode.removeChild(toast);
@@ -836,7 +859,7 @@ onReady(async function () {
             });
             closeBtn.addEventListener('mouseover', function () { closeBtn.style.opacity = "1"; });
             closeBtn.addEventListener('mouseout', function () { closeBtn.style.opacity = "0.7"; });
-            
+
             toast.appendChild(closeBtn);
 
             if (icon && icon.parentNode) {
@@ -2029,6 +2052,75 @@ onReady(async function () {
                 }
             });
         }
+    }
+
+    // --- Feature: Background Mascots ---
+    async function featureMascots() {
+        // Only show mascots on catalog, thread, and index pages
+        if (!(window.pageType?.isCatalog || window.pageType?.isThread || window.pageType?.isIndex)) {
+            return;
+        }
+
+        // Get settings
+        const opacity = await getSetting("enableMascots_mascotOpacity") || 30;
+        const urlsText = await getSetting("enableMascots_mascotUrls") || "";
+
+        if (!urlsText.trim()) return;
+
+        // Parse URLs from textarea (one per line)
+        const urlLines = urlsText.split('\n');
+        const trimmedUrls = urlLines.map(url => url.trim());
+        const validUrls = trimmedUrls.filter(url => url && (url.startsWith('/') || url.startsWith('http')));
+        const urls = validUrls.filter(url => /\.(png|apng|jpg|jpeg|gif|webp)$/i.test(url));
+
+        if (urls.length === 0) {
+            console.log('8chanSS: No valid mascot URLs found. Check that URLs start with / or http and have valid image extensions (.png, .jpg, .gif, etc.)');
+            return;
+        }
+
+        // Check if sidebar is enabled
+        const enableSidebar = await getSetting("enableSidebar");
+        const leftSidebar = await getSetting("enableSidebar_leftSidebar");
+
+        // Pick random mascot from the list
+        const randomIndex = Math.floor(Math.random() * urls.length);
+        const selectedUrl = urls[randomIndex];
+
+        const mascot = document.createElement('img');
+        mascot.className = 'chSS-mascot';
+        mascot.src = selectedUrl;
+        mascot.style.opacity = opacity / 100;
+
+        // Position mascot
+        if (enableSidebar) {
+            if (leftSidebar) {
+                // Left sidebar
+                mascot.style.left = '0px';
+                mascot.style.bottom = '0px';
+                mascot.style.maxWidth = '312px';
+            } else {
+                // Right sidebar
+                mascot.style.right = '0px';
+                mascot.style.bottom = '0px';
+                mascot.style.maxWidth = '312px';
+            }
+        } else {
+            // No sidebar
+            mascot.style.right = '0px';
+            mascot.style.bottom = '0px';
+            mascot.style.maxWidth = '70vh';
+        }
+
+        document.body.appendChild(mascot);
+
+        // Cleanup if mascot already exists
+        return () => {
+            document.querySelectorAll('.chSS-mascot').forEach(mascot => {
+                if (mascot.parentNode) {
+                    mascot.parentNode.removeChild(mascot);
+                }
+            });
+        };
     }
 
     // --- Feature: Auto-hide Header on Scroll ---
@@ -5711,7 +5803,8 @@ onReady(async function () {
                         subTextarea.id = "setting_" + fullKey;
                         subTextarea.value = tempSettings[fullKey] || "";
                         subTextarea.rows = subSetting.rows || 4;
-                        subTextarea.style.width = "90%";
+                        subTextarea.style.width = "100%";
+                        subTextarea.style.maxWidth = "385px";
                         subTextarea.style.margin = "5px 0 0";
                         subTextarea.placeholder = subSetting.placeholder || "";
 
