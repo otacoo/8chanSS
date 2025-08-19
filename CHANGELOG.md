@@ -1,3 +1,11 @@
+## v1.56.0
+*2025-08-19*
+
+- **New Option:** Mascots
+  One URL per line, will pick one mascot at random on page load
+  
+- Enhanced Youtube Links will now correctly work for hover posts
+
 ### v1.55.4 (Patch)
 *2025-08-10*
 
