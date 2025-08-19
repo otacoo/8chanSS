@@ -24,11 +24,6 @@
     "files": {
       "metajs": "8chanSS.meta.js",
       "userjs": "8chanSS.user.js"
-    },
-    "min": {
-      "chrome": "105",
-      "firefox": "121",
-      "greasemonkey": "4.3"
     }
   },
   "devDependencies": {

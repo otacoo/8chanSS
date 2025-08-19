@@ -4,8 +4,6 @@
 // @namespace    <%= name %>
 // @description  <%= description %>
 // @author       <%= author %>
-// @minGMVer     <%= meta.min.greasemonkey %>
-// @minFFVer     <%= meta.min.firefox %>
 // @license      <%= license %>; <%= meta.repo %>blob/<%= meta.mainBranch %>/LICENSE 
 <%=
   (function() {
