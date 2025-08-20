@@ -195,6 +195,7 @@ onReady(async function () {
             },
             _threadsNavTitle: { type: "title", label: ":: Navigation & Others" },
             _threadsSection3: { type: "separator" },
+            enableBacklinkIcons: { label: "Enable Backlink Icons", default: false },
             enableScrollSave: {
                 label: "Save Scroll Position",
                 default: true,
@@ -255,45 +256,8 @@ onReady(async function () {
             enableLastFifty: { label: "Show Last 50 Posts button", default: false }
         },
         styling: {
-            _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
-            _stylingSection1: { type: "separator" },
-            hideAnnouncement: { label: "Hide Announcement", default: false },
-            hidePanelMessage: { label: "Hide Panel Message", default: false },
-            hidePostingForm: {
-                label: "Hide Posting Form",
-                default: false,
-                subOptions: {
-                    showCatalogForm: {
-                        label: "Don't Hide in Catalog",
-                        default: false
-                    }
-                }
-            },
-            hideBanner: { label: "Hide Board Banners", default: false },
-            hideDefaultBL: { label: "Hide Default Board List", default: true },
-            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
-            hideJannyTools: { label: "Hide Janitor Forms", default: false },
-            _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
-            _stylingSection2: { type: "separator" },
-            enableSidebar: {
-                label: "Enable Sidebar",
-                default: false,
-                subOptions: {
-                    leftSidebar: {
-                        label: "Sidebar on Left",
-                        default: false
-                    }
-                }
-            },
-            enableFitReplies: { label: "Fit Replies", default: false },
-            highlightOnYou: { label: "Style (You) posts", default: true },
-            opBackground: { label: "OP background", default: false },
-            enableStickyQR: { label: "Sticky Quick Reply", default: false },
-            fadeQuickReply: { label: "Fade Quick Reply", default: false },
-            threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
-            hideCheckboxes: { label: "Hide Post Checkbox", default: false },
             _stylingMascotTitle: { type: "title", label: ":: Mascots" },
-            _stylingSection3: { type: "separator" },
+            _stylingSection1: { type: "separator" },
             enableMascots: {
                 label: "Enable Mascots",
                 default: false,
@@ -313,7 +277,44 @@ onReady(async function () {
                         rows: 4
                     }
                 }
-            }
+            },
+            _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
+            _stylingSection2: { type: "separator" },
+            hideAnnouncement: { label: "Hide Announcement", default: false },
+            hidePanelMessage: { label: "Hide Panel Message", default: false },
+            hidePostingForm: {
+                label: "Hide Posting Form",
+                default: false,
+                subOptions: {
+                    showCatalogForm: {
+                        label: "Don't Hide in Catalog",
+                        default: false
+                    }
+                }
+            },
+            hideBanner: { label: "Hide Board Banners", default: false },
+            hideDefaultBL: { label: "Hide Default Board List", default: true },
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
+            hideJannyTools: { label: "Hide Janitor Forms", default: false },
+            _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
+            _stylingSection3: { type: "separator" },
+            enableSidebar: {
+                label: "Enable Sidebar",
+                default: false,
+                subOptions: {
+                    leftSidebar: {
+                        label: "Sidebar on Left",
+                        default: false
+                    }
+                }
+            },
+            enableFitReplies: { label: "Fit Replies", default: false },
+            highlightOnYou: { label: "Style (You) posts", default: true },
+            opBackground: { label: "OP background", default: false },
+            enableStickyQR: { label: "Sticky Quick Reply", default: false },
+            fadeQuickReply: { label: "Fade Quick Reply", default: false },
+            threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
+            hideCheckboxes: { label: "Hide Post Checkbox", default: false }
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
@@ -484,7 +485,8 @@ onReady(async function () {
             hideJannyTools: "hide-jannytools",
             opBackground: "op-background",
             blurSpoilers: "ss-blur-spoilers",
-            alwaysShowIdCount: "show-ID-count"
+            alwaysShowIdCount: "show-ID-count",
+            enableBacklinkIcons: "backlink-icon"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
