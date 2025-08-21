@@ -251,7 +251,16 @@ onReady(async function () {
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
-            enableThreadHiding: { label: "Enable Thread Hiding (Shift + Click to hide/unhide a thread)", default: false },
+            enableThreadHiding: { 
+                label: "Enable Thread Hiding (Shift + Click to hide/unhide a thread)", 
+                default: false,
+                subOptions: {
+                    enableCatalogFiltering: {
+                        label: "Enable Catalog Thread Filtering",
+                        default: false
+                    }
+                }
+            },
             openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false },
             enableLastFifty: { label: "Show Last 50 Posts button", default: false }
         },
@@ -5742,6 +5751,16 @@ onReady(async function () {
                 chevron.style.transform = checkbox.checked
                     ? "rotate(90deg)"
                     : "rotate(0deg)";
+
+                // Handle catalog filtering UI visibility
+                if (key === "enableThreadHiding") {
+                    const catalogFilterContainer = wrapper.querySelector("div[style*='background: var(--menu-color)']");
+                    if (catalogFilterContainer) {
+                        // Only show if both main option and subOption are enabled
+                        const subOptionEnabled = tempSettings["enableThreadHiding_enableCatalogFiltering"];
+                        catalogFilterContainer.style.display = (checkbox.checked && subOptionEnabled) ? "block" : "none";
+                    }
+                }
             });
 
             parentRow.appendChild(checkbox);
@@ -5888,7 +5907,7 @@ onReady(async function () {
                         subWrapper.appendChild(subLabel);
                         subWrapper.appendChild(subSelect);
                     } else {
-                        // Checkbox for boolean suboptions (existing code)
+                        // Checkbox for boolean suboptions
                         const subCheckbox = document.createElement("input");
                         subCheckbox.type = "checkbox";
                         subCheckbox.id = "setting_" + fullKey;
@@ -5897,6 +5916,16 @@ onReady(async function () {
 
                         subCheckbox.addEventListener("change", function () {
                             tempSettings[fullKey] = subCheckbox.checked;
+                            
+                            // Catalog filtering container visibility
+                            if (fullKey === "enableThreadHiding_enableCatalogFiltering") {
+                                const catalogFilterContainer = wrapper.querySelector("div[style*='background: var(--menu-color)']");
+                                if (catalogFilterContainer) {
+                                    // Only show if both main option and subOption are enabled
+                                    const mainOptionEnabled = tempSettings["enableThreadHiding"];
+                                    catalogFilterContainer.style.display = (mainOptionEnabled && subCheckbox.checked) ? "block" : "none";
+                                }
+                            }
                         });
 
                         const subLabel = document.createElement("label");
@@ -5910,6 +5939,160 @@ onReady(async function () {
                 });
 
                 wrapper.appendChild(subOptionsContainer);
+            }
+
+            // Create Catalog Filtering UI
+            if (key === "enableThreadHiding" && setting?.subOptions?.enableCatalogFiltering) {
+                const catalogFilterContainer = document.createElement("div");
+                catalogFilterContainer.style.display = (tempSettings["enableThreadHiding"] 
+                    && tempSettings["enableThreadHiding_enableCatalogFiltering"]) ? "block" : "none";
+                catalogFilterContainer.style.margin = "10px 0";
+                catalogFilterContainer.style.maxHeight = "300px";
+                catalogFilterContainer.style.overflowY = "auto";
+                catalogFilterContainer.style.background = "var(--menu-color)";
+                catalogFilterContainer.style.border = "1px solid var(--border-color)";
+                catalogFilterContainer.style.borderRadius = "6px";
+                catalogFilterContainer.style.padding = "8px";
+                catalogFilterContainer.style.fontSize = "13px";
+
+                // Help text explaining wildcards
+                const filterTitle = document.createElement("div");
+                filterTitle.innerHTML = "Use <strong>*</strong> as wildcard: <strong>word</strong> (exact), <strong>word*</strong> (starts with), <strong>*word</strong> (ends with), <strong>*word*</strong> (contains)";
+                filterTitle.style.fontSize = "10px";
+                filterTitle.style.marginBottom = "5px";
+                filterTitle.style.color = "var(--text-color)";
+                catalogFilterContainer.appendChild(filterTitle);
+
+                // Filters container
+                const filtersContainer = document.createElement("div");
+                filtersContainer.id = "catalog-filters-container";
+                catalogFilterContainer.appendChild(filtersContainer);
+
+                // Add new filter button
+                const addFilterBtn = document.createElement("button");
+                addFilterBtn.textContent = "Add New Filter";
+                addFilterBtn.style.background = "var(--contrast-color)";
+                addFilterBtn.style.color = "#fff";
+                addFilterBtn.style.border = "none";
+                addFilterBtn.style.borderRadius = "4px";
+                addFilterBtn.style.padding = "6px 12px";
+                addFilterBtn.style.cursor = "pointer";
+                addFilterBtn.style.marginTop = "8px";
+                addFilterBtn.style.width = "100%";
+
+                // Function to create a filter row
+                function createFilterRow(filterData = null) {
+                    const filterRow = document.createElement("div");
+                    filterRow.style.display = "flex";
+                    filterRow.style.alignItems = "center";
+                    filterRow.style.gap = "6px";
+
+                    // Word input
+                    const wordInput = document.createElement("input");
+                    wordInput.type = "text";
+                    wordInput.placeholder = "Filter word (use * as wildcard)";
+                    wordInput.style.flex = "1";
+                    wordInput.style.padding = "4px 8px";
+                    wordInput.style.border = "1px solid var(--border-color)";
+                    wordInput.style.borderRadius = "4px";
+                    wordInput.style.background = "var(--background-color)";
+                    wordInput.style.color = "var(--text-color)";
+                    if (filterData) wordInput.value = filterData.word;
+
+                    // Boards input
+                    const boardsInput = document.createElement("input");
+                    boardsInput.type = "text";
+                    boardsInput.placeholder = "Boards (comma-separated, leave empty for all)";
+                    boardsInput.style.flex = "2";
+                    boardsInput.style.padding = "4px 8px";
+                    boardsInput.style.border = "1px solid var(--border-color)";
+                    boardsInput.style.borderRadius = "4px";
+                    boardsInput.style.background = "var(--background-color)";
+                    boardsInput.style.color = "var(--text-color)";
+                    if (filterData) boardsInput.value = filterData.boards;
+
+                    // Remove button
+                    const removeBtn = document.createElement("button");
+                    removeBtn.textContent = "✕";
+                    removeBtn.style.background = "none";
+                    removeBtn.style.border = "none";
+                    removeBtn.style.color = "#c00";
+                    removeBtn.style.cursor = "pointer";
+
+                    // Save filter data
+                    function saveFilterData() {
+                        const word = wordInput.value.trim();
+                        const boards = boardsInput.value.trim();
+                        if (word) {
+                            const filterKey = `filter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            const filterData = { word, boards, key: filterKey };
+                            tempSettings[filterKey] = filterData;
+                            // Also save to storage for persistence
+                            saveCatalogFilters();
+                        }
+                    }
+
+                    // Add event listeners
+                    wordInput.addEventListener("blur", saveFilterData);
+                    boardsInput.addEventListener("blur", saveFilterData);
+                    removeBtn.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        filterRow.remove();
+                        saveCatalogFilters();
+                    });
+
+                    filterRow.appendChild(wordInput);
+                    filterRow.appendChild(boardsInput);
+                    filterRow.appendChild(removeBtn);
+
+                    return filterRow;
+                }
+
+                // Load existing filters
+                async function loadCatalogFilters() {
+                    const filters = await getStoredObject("8chanSS_catalogFilters");
+                    filtersContainer.innerHTML = "";
+                    if (filters && Object.keys(filters).length > 0) {
+                        Object.values(filters).forEach(filterData => {
+                            const filterRow = createFilterRow(filterData);
+                            filtersContainer.appendChild(filterRow);
+                        });
+                    }
+                }
+
+                // Save filters to storage
+                async function saveCatalogFilters() {
+                    const filters = {};
+                    const filterRows = filtersContainer.querySelectorAll("div[style*='display: flex']");
+                    filterRows.forEach(row => {
+                        const wordInput = row.querySelector("input:first-child");
+                        const boardsInput = row.querySelector("input:nth-child(2)");
+                        if (wordInput && wordInput.value.trim()) {
+                            const filterKey = `filter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            filters[filterKey] = {
+                                word: wordInput.value.trim(),
+                                boards: boardsInput.value.trim(),
+                                key: filterKey
+                            };
+                        }
+                    });
+                    await setStoredObject("8chanSS_catalogFilters", filters);
+                }
+
+                // Add new filter button handler
+                addFilterBtn.addEventListener("click", () => {
+                    const filterRow = createFilterRow();
+                    filtersContainer.appendChild(filterRow);
+                });
+
+                catalogFilterContainer.appendChild(addFilterBtn);
+
+                // Load filters on init
+                loadCatalogFilters();
+
+                // Insert after the enableThreadHiding option
+                wrapper.appendChild(catalogFilterContainer);
             }
 
             // Create Filter lists
@@ -6688,15 +6871,69 @@ onReady(async function () {
                 hiddenThreadsObj = {};
             }
 
+            // Get catalog filters if enabled
+            let catalogFilters = [];
+            const enableCatalogFiltering = await getSetting("enableThreadHiding_enableCatalogFiltering");
+            if (enableCatalogFiltering) {
+                const filtersObj = await getStoredObject("8chanSS_catalogFilters");
+                catalogFilters = Object.values(filtersObj || {});
+            }
+
             // Loop through all catalog cells
             document.querySelectorAll(".catalogCell").forEach(cell => {
                 const { board, threadNum } = getBoardAndThreadNumFromCell(cell);
                 if (!board || !threadNum) return;
                 const hiddenThreads = hiddenThreadsObj[board] || [];
 
+                // Check if thread should be filtered based on catalog filters
+                let shouldFilter = false;
+                if (catalogFilters.length > 0) {
+                    const subject = cell.querySelector('.labelSubject')?.textContent || '';
+                    const message = cell.querySelector('.divMessage')?.textContent || '';
+                    const threadText = (subject + ' ' + message).toLowerCase();
+                    
+                    for (const filter of catalogFilters) {
+                        const word = filter.word.toLowerCase();
+                        const boards = filter.boards.toLowerCase().split(',').map(b => b.trim());
+                        
+                        // Check if word matches thread text using wildcard patterns
+                        let matches = false;
+                        if (word.includes('*')) {
+                            // Handle wildcard patterns
+                            if (word === '*') {
+                                // Just * matches everything
+                                matches = true;
+                            } else if (word.startsWith('*') && word.endsWith('*')) {
+                                // *word* - contains the pattern
+                                const pattern = word.slice(1, -1);
+                                matches = threadText.includes(pattern);
+                            } else if (word.startsWith('*')) {
+                                // *word - ends with the pattern
+                                const pattern = word.slice(1);
+                                matches = threadText.endsWith(pattern) || threadText.includes(' ' + pattern);
+                            } else if (word.endsWith('*')) {
+                                // word* - starts with the pattern
+                                const pattern = word.slice(0, -1);
+                                matches = threadText.startsWith(pattern) || threadText.includes(pattern + ' ');
+                            }
+                        } else {
+                            // No wildcards - exact match
+                            matches = threadText.includes(word);
+                        }
+                        
+                        if (matches) {
+                            // Check if board restriction applies
+                            if (boards.length === 0 || boards[0] === '' || boards.includes(board)) {
+                                shouldFilter = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 if (typeof showHiddenMode !== "undefined" && showHiddenMode) {
                     // Show only hidden threads, hide all others
-                    if (hiddenThreads.includes(threadNum)) {
+                    if (hiddenThreads.includes(threadNum) || shouldFilter) {
                         cell.style.display = "";
                         cell.classList.add("ss-unhide-thread");
                         cell.classList.remove("ss-hidden-thread");
@@ -6705,8 +6942,8 @@ onReady(async function () {
                         cell.classList.remove("ss-unhide-thread", "ss-hidden-thread");
                     }
                 } else {
-                    // Normal mode: hide hidden threads, show all others
-                    if (hiddenThreads.includes(threadNum)) {
+                    // Normal mode: hide hidden threads and filtered threads, show all others
+                    if (hiddenThreads.includes(threadNum) || shouldFilter) {
                         cell.style.display = "none";
                         cell.classList.add("ss-hidden-thread");
                         cell.classList.remove("ss-unhide-thread");
