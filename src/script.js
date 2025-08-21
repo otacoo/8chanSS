@@ -195,7 +195,7 @@ onReady(async function () {
             },
             _threadsNavTitle: { type: "title", label: ":: Navigation & Others" },
             _threadsSection3: { type: "separator" },
-            enableBacklinkIcons: { label: "Enable Backlink Icons", default: false },
+            enableBacklinkIcons: { label: "Backlink Icons", default: false },
             enableScrollSave: {
                 label: "Save Scroll Position",
                 default: true,
