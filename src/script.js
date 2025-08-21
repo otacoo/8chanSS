@@ -389,8 +389,16 @@ onReady(async function () {
                 label: "Save Current Watched Threads",
                 type: "button"
             },
+            saveFavoriteBoards: {
+                label: "Save Current Favorite Boards",
+                type: "button"
+            },
             restoreWatchedThreads: {
                 label: "Restore Watched Threads",
+                type: "button"
+            },
+            restoreFavoriteBoards: {
+                label: "Restore Favorite Boards",
                 type: "button"
             },
         }
@@ -5644,9 +5652,64 @@ onReady(async function () {
                             callPageToast('No saved watched threads found.', 'orange', 2500);
                         }
                     });
+                } else if (key === "saveFavoriteBoards") {
+                    button.addEventListener('click', async () => {
+                        const favoriteBoardsData = localStorage.getItem('savedFavoriteBoards');
+                        if (favoriteBoardsData) {
+                            await GM.setValue('8chanSS_savedFavoriteBoards', favoriteBoardsData);
+                            callPageToast('Favorite boards saved!', 'green', 2000);
+                        } else {
+                            callPageToast('No favorite boards found in localStorage.', 'orange', 2500);
+                        }
+                    });
+                } else if (key === "restoreFavoriteBoards") {
+                    button.addEventListener('click', async () => {
+                        const savedData = await GM.getValue('8chanSS_savedFavoriteBoards', null);
+                        if (savedData) {
+                            localStorage.setItem('savedFavoriteBoards', savedData);
+                            callPageToast('Favorite boards restored. Please reload the page.', 'blue', 3000);
+                        } else {
+                            callPageToast('No saved favorite boards found.', 'orange', 2500);
+                        }
+                    });
                 }
 
-                container.appendChild(button);
+                // Check if this is a storage button for special layout
+                const isStorageButton = ["saveWatchedThreads", "restoreWatchedThreads", "saveFavoriteBoards", "restoreFavoriteBoards"].includes(key);
+                
+                if (isStorageButton) {
+                    // Get or create storage buttons container
+                    let storageContainer = container.querySelector('.storage-buttons-container');
+                    if (!storageContainer) {
+                        storageContainer = document.createElement("div");
+                        storageContainer.className = "storage-buttons-container";
+                        storageContainer.style.display = "grid";
+                        storageContainer.style.gridTemplateColumns = "1fr 1fr";
+                        storageContainer.style.gap = "10px";
+                        storageContainer.style.marginBottom = "10px";
+                        container.appendChild(storageContainer);
+                        
+                        // Add a separator line between the two columns
+                        const separator = document.createElement("div");
+                        separator.style.position = "absolute";
+                        separator.style.left = "50%";
+                        separator.style.top = "0";
+                        separator.style.bottom = "0";
+                        separator.style.width = "1px";
+                        separator.style.background = "var(--border-color)";
+                        separator.style.opacity = "0.6";
+                        storageContainer.style.position = "relative";
+                        storageContainer.appendChild(separator);
+                    }
+                    
+                    // Style the button for grid layout
+                    button.style.width = "100%";
+                    button.style.marginBottom = "0";
+                    
+                    storageContainer.appendChild(button);
+                } else {
+                    container.appendChild(button);
+                }
                 return;
             }
 
@@ -5990,7 +6053,7 @@ onReady(async function () {
                     // Word input
                     const wordInput = document.createElement("input");
                     wordInput.type = "text";
-                    wordInput.placeholder = "Filter word (use * as wildcard)";
+                    wordInput.placeholder = "Filter word";
                     wordInput.style.flex = "1";
                     wordInput.style.padding = "4px 8px";
                     wordInput.style.border = "1px solid var(--border-color)";
