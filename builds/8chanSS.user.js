@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.56.0
+// @version      1.57.0
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -108,7 +108,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.56.0";
+    const VERSION = "1.57.0";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -207,6 +207,7 @@ onReady(async function () {
             },
             _threadsNavTitle: { type: "title", label: ":: Navigation & Others" },
             _threadsSection3: { type: "separator" },
+            enableBacklinkIcons: { label: "Backlink Icons", default: false },
             enableScrollSave: {
                 label: "Save Scroll Position",
                 default: true,
@@ -262,50 +263,22 @@ onReady(async function () {
         },
         catalog: {
             enableCatalogImageHover: { label: "Catalog Image Hover", default: true },
-            enableThreadHiding: { label: "Enable Thread Hiding (Shift + Click to hide/unhide a thread)", default: false },
+            enableThreadHiding: { 
+                label: "Enable Thread Hiding (Shift + Click to hide/unhide a thread)", 
+                default: false,
+                subOptions: {
+                    enableCatalogFiltering: {
+                        label: "Enable Catalog Thread Filtering",
+                        default: false
+                    }
+                }
+            },
             openCatalogThreadNewTab: { label: "Always Open Threads in New Tab", default: false },
             enableLastFifty: { label: "Show Last 50 Posts button", default: false }
         },
         styling: {
-            _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
-            _stylingSection1: { type: "separator" },
-            hideAnnouncement: { label: "Hide Announcement", default: false },
-            hidePanelMessage: { label: "Hide Panel Message", default: false },
-            hidePostingForm: {
-                label: "Hide Posting Form",
-                default: false,
-                subOptions: {
-                    showCatalogForm: {
-                        label: "Don't Hide in Catalog",
-                        default: false
-                    }
-                }
-            },
-            hideBanner: { label: "Hide Board Banners", default: false },
-            hideDefaultBL: { label: "Hide Default Board List", default: true },
-            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
-            hideJannyTools: { label: "Hide Janitor Forms", default: false },
-            _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
-            _stylingSection2: { type: "separator" },
-            enableSidebar: {
-                label: "Enable Sidebar",
-                default: false,
-                subOptions: {
-                    leftSidebar: {
-                        label: "Sidebar on Left",
-                        default: false
-                    }
-                }
-            },
-            enableFitReplies: { label: "Fit Replies", default: false },
-            highlightOnYou: { label: "Style (You) posts", default: true },
-            opBackground: { label: "OP background", default: false },
-            enableStickyQR: { label: "Sticky Quick Reply", default: false },
-            fadeQuickReply: { label: "Fade Quick Reply", default: false },
-            threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
-            hideCheckboxes: { label: "Hide Post Checkbox", default: false },
             _stylingMascotTitle: { type: "title", label: ":: Mascots" },
-            _stylingSection3: { type: "separator" },
+            _stylingSection1: { type: "separator" },
             enableMascots: {
                 label: "Enable Mascots",
                 default: false,
@@ -325,7 +298,44 @@ onReady(async function () {
                         rows: 4
                     }
                 }
-            }
+            },
+            _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
+            _stylingSection2: { type: "separator" },
+            hideAnnouncement: { label: "Hide Announcement", default: false },
+            hidePanelMessage: { label: "Hide Panel Message", default: false },
+            hidePostingForm: {
+                label: "Hide Posting Form",
+                default: false,
+                subOptions: {
+                    showCatalogForm: {
+                        label: "Don't Hide in Catalog",
+                        default: false
+                    }
+                }
+            },
+            hideBanner: { label: "Hide Board Banners", default: false },
+            hideDefaultBL: { label: "Hide Default Board List", default: true },
+            hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
+            hideJannyTools: { label: "Hide Janitor Forms", default: false },
+            _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
+            _stylingSection3: { type: "separator" },
+            enableSidebar: {
+                label: "Enable Sidebar",
+                default: false,
+                subOptions: {
+                    leftSidebar: {
+                        label: "Sidebar on Left",
+                        default: false
+                    }
+                }
+            },
+            enableFitReplies: { label: "Fit Replies", default: false },
+            highlightOnYou: { label: "Style (You) posts", default: true },
+            opBackground: { label: "OP background", default: false },
+            enableStickyQR: { label: "Sticky Quick Reply", default: false },
+            fadeQuickReply: { label: "Fade Quick Reply", default: false },
+            threadHideCloseBtn: { label: "Hide Inline Close Button", default: false },
+            hideCheckboxes: { label: "Hide Post Checkbox", default: false }
         },
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
@@ -391,8 +401,16 @@ onReady(async function () {
                 label: "Save Current Watched Threads",
                 type: "button"
             },
+            saveFavoriteBoards: {
+                label: "Save Current Favorite Boards",
+                type: "button"
+            },
             restoreWatchedThreads: {
                 label: "Restore Watched Threads",
+                type: "button"
+            },
+            restoreFavoriteBoards: {
+                label: "Restore Favorite Boards",
                 type: "button"
             },
         }
@@ -486,7 +504,8 @@ onReady(async function () {
             hideJannyTools: "hide-jannytools",
             opBackground: "op-background",
             blurSpoilers: "ss-blur-spoilers",
-            alwaysShowIdCount: "show-ID-count"
+            alwaysShowIdCount: "show-ID-count",
+            enableBacklinkIcons: "backlink-icon"
         };
         if (enableSidebar && !enableSidebar_leftSidebar) {
             document.documentElement.classList.add("ss-sidebar");
@@ -542,7 +561,7 @@ onReady(async function () {
 
         let css = "";
         if (window.pageType?.is8chan) {
-            css += "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:visible}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}:root.is-thread footer{visibility:hidden;height:0}:root.op-background .opCell>.innerOP{padding-top:.25em;width:100%;background:var(--contrast-color);border:1px solid var(--horizon-sep-color);border-top-width:0;border-left-width:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-yous .innerOP:has(> .opHead.title > .youName),:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),:root.highlight-yous .yourPost{border-left:dashed #68b723 2px!important}:root.highlight-yous .innerPost:has(>.divMessage>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>:not(div)>.you),:root.highlight-yous .quotesYou{border-left:solid var(--subject-color) 2px!important}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"]{filter:blur(5px)!important;transition:filter .3s ease}:not(#media-viewer)>.imgExpanded,:not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.ss-active{font-weight:700}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}.apng-canvas-snapshot{display:block;position:absolute;z-index:1}.apng-overlay{position:absolute;z-index:2;cursor:pointer;user-select:none}.chSS-mascot{position:fixed;height:auto;object-fit:contain;pointer-events:none;z-index:-1;user-select:none;-webkit-user-drag:none}#setting_enableMascots_mascotUrls{resize:vertical;min-height:80px}";
+            css += "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:visible}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}:root.hide-defaultBL #navTopBoardsSpan{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}:root.is-thread footer{visibility:hidden;height:0}:root.op-background .opCell>.innerOP{padding-top:.25em;width:100%;background:var(--contrast-color);border:1px solid var(--horizon-sep-color);border-top-width:0;border-left-width:0}nav.navHeader{z-index:300}nav.navHeader>.nav-boards:hover{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-yous .innerOP:has(> .opHead.title > .youName),:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),:root.highlight-yous .yourPost{border-left:dashed #68b723 2px!important}:root.highlight-yous .innerPost:has(>.divMessage>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>:not(div)>.you),:root.highlight-yous .quotesYou{border-left:solid var(--subject-color) 2px!important}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.originalNameLink{display:inline;overflow-wrap:anywhere;white-space:normal}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"]{filter:blur(5px)!important;transition:filter .3s ease}:not(#media-viewer)>.imgExpanded,:not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{min-width:200px;max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.ss-active{font-weight:700}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}.apng-canvas-snapshot{display:block;position:absolute;z-index:1}.apng-overlay{position:absolute;z-index:2;cursor:pointer;user-select:none}.chSS-mascot{position:fixed;height:auto;object-fit:contain;pointer-events:none;z-index:-1;user-select:none;-webkit-user-drag:none}#setting_enableMascots_mascotUrls{resize:vertical;min-height:80px}:root.backlink-icon .panelBacklinks>a{display:inline-block;width:12px;height:12px;margin:0 2px;text-decoration:none;font-size:0;vertical-align:middle;color:var(--link-color)}:root.backlink-icon .panelBacklinks>a::before{content:'▶';font-size:12px;display:inline-block;line-height:.6;color:var(--link-color);transform:rotate(0);transition:transform .1s ease-in-out,opacity .1s ease-in-out;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Symbol',Roboto,Ubuntu,Cantarell,sans-serif}:root.backlink-icon .panelBacklinks>a.inlined::before{transform:rotate(90deg);opacity:.7;color:var(--link-hover-color);line-height:.9}";
         }
         if (window.pageType?.isThread) {
             css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto -3px auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}.ss-idlinks-floating{position:absolute;background:var(--background-color);color:var(--text-color);border:1px solid var(--navbar-text-color);padding:8px 15px 10px 10px;box-shadow:0 2px 12px rgba(0,0,0,.25);max-height:60vh;overflow-y:auto;font-size:14px;max-width:56vw;z-index:990;scrollbar-width:thin}.ss-idlinks-floating .innerPost,.ss-vertical-id-list .innerPost{background:0 0;display:block!important;border:none;box-shadow:none;outline:0;padding:0;margin:0}.ss-idlinks-floating .innerPost{padding:0 1px 2px 0!important}";
@@ -4774,9 +4793,57 @@ onReady(async function () {
                             callPageToast('No saved watched threads found.', 'orange', 2500);
                         }
                     });
+                } else if (key === "saveFavoriteBoards") {
+                    button.addEventListener('click', async () => {
+                        const favoriteBoardsData = localStorage.getItem('savedFavoriteBoards');
+                        if (favoriteBoardsData) {
+                            await GM.setValue('8chanSS_savedFavoriteBoards', favoriteBoardsData);
+                            callPageToast('Favorite boards saved!', 'green', 2000);
+                        } else {
+                            callPageToast('No favorite boards found in localStorage.', 'orange', 2500);
+                        }
+                    });
+                } else if (key === "restoreFavoriteBoards") {
+                    button.addEventListener('click', async () => {
+                        const savedData = await GM.getValue('8chanSS_savedFavoriteBoards', null);
+                        if (savedData) {
+                            localStorage.setItem('savedFavoriteBoards', savedData);
+                            callPageToast('Favorite boards restored. Please reload the page.', 'blue', 3000);
+                        } else {
+                            callPageToast('No saved favorite boards found.', 'orange', 2500);
+                        }
+                    });
                 }
-
-                container.appendChild(button);
+                const isStorageButton = ["saveWatchedThreads", "restoreWatchedThreads", "saveFavoriteBoards", "restoreFavoriteBoards"].includes(key);
+                
+                if (isStorageButton) {
+                    let storageContainer = container.querySelector('.storage-buttons-container');
+                    if (!storageContainer) {
+                        storageContainer = document.createElement("div");
+                        storageContainer.className = "storage-buttons-container";
+                        storageContainer.style.display = "grid";
+                        storageContainer.style.gridTemplateColumns = "1fr 1fr";
+                        storageContainer.style.gap = "10px";
+                        storageContainer.style.marginBottom = "10px";
+                        container.appendChild(storageContainer);
+                        const separator = document.createElement("div");
+                        separator.style.position = "absolute";
+                        separator.style.left = "50%";
+                        separator.style.top = "0";
+                        separator.style.bottom = "0";
+                        separator.style.width = "1px";
+                        separator.style.background = "var(--border-color)";
+                        separator.style.opacity = "0.6";
+                        storageContainer.style.position = "relative";
+                        storageContainer.appendChild(separator);
+                    }
+                    button.style.width = "100%";
+                    button.style.marginBottom = "0";
+                    
+                    storageContainer.appendChild(button);
+                } else {
+                    container.appendChild(button);
+                }
                 return;
             }
             const parentRow = document.createElement("div");
@@ -4867,6 +4934,13 @@ onReady(async function () {
                 chevron.style.transform = checkbox.checked
                     ? "rotate(90deg)"
                     : "rotate(0deg)";
+                if (key === "enableThreadHiding") {
+                    const catalogFilterContainer = wrapper.querySelector("div[style*='background: var(--menu-color)']");
+                    if (catalogFilterContainer) {
+                        const subOptionEnabled = tempSettings["enableThreadHiding_enableCatalogFiltering"];
+                        catalogFilterContainer.style.display = (checkbox.checked && subOptionEnabled) ? "block" : "none";
+                    }
+                }
             });
 
             parentRow.appendChild(checkbox);
@@ -5005,6 +5079,13 @@ onReady(async function () {
 
                         subCheckbox.addEventListener("change", function () {
                             tempSettings[fullKey] = subCheckbox.checked;
+                            if (fullKey === "enableThreadHiding_enableCatalogFiltering") {
+                                const catalogFilterContainer = wrapper.querySelector("div[style*='background: var(--menu-color)']");
+                                if (catalogFilterContainer) {
+                                    const mainOptionEnabled = tempSettings["enableThreadHiding"];
+                                    catalogFilterContainer.style.display = (mainOptionEnabled && subCheckbox.checked) ? "block" : "none";
+                                }
+                            }
                         });
 
                         const subLabel = document.createElement("label");
@@ -5018,6 +5099,129 @@ onReady(async function () {
                 });
 
                 wrapper.appendChild(subOptionsContainer);
+            }
+            if (key === "enableThreadHiding" && setting?.subOptions?.enableCatalogFiltering) {
+                const catalogFilterContainer = document.createElement("div");
+                catalogFilterContainer.style.display = (tempSettings["enableThreadHiding"] 
+                    && tempSettings["enableThreadHiding_enableCatalogFiltering"]) ? "block" : "none";
+                catalogFilterContainer.style.margin = "10px 0";
+                catalogFilterContainer.style.maxHeight = "300px";
+                catalogFilterContainer.style.overflowY = "auto";
+                catalogFilterContainer.style.background = "var(--menu-color)";
+                catalogFilterContainer.style.border = "1px solid var(--border-color)";
+                catalogFilterContainer.style.borderRadius = "6px";
+                catalogFilterContainer.style.padding = "8px";
+                catalogFilterContainer.style.fontSize = "13px";
+                const filterTitle = document.createElement("div");
+                filterTitle.innerHTML = "Use <strong>*</strong> as wildcard: <strong>word</strong> (exact), <strong>word*</strong> (starts with), <strong>*word</strong> (ends with), <strong>*word*</strong> (contains)";
+                filterTitle.style.fontSize = "10px";
+                filterTitle.style.marginBottom = "5px";
+                filterTitle.style.color = "var(--text-color)";
+                catalogFilterContainer.appendChild(filterTitle);
+                const filtersContainer = document.createElement("div");
+                filtersContainer.id = "catalog-filters-container";
+                catalogFilterContainer.appendChild(filtersContainer);
+                const addFilterBtn = document.createElement("button");
+                addFilterBtn.textContent = "Add New Filter";
+                addFilterBtn.style.background = "var(--contrast-color)";
+                addFilterBtn.style.color = "#fff";
+                addFilterBtn.style.border = "none";
+                addFilterBtn.style.borderRadius = "4px";
+                addFilterBtn.style.padding = "6px 12px";
+                addFilterBtn.style.cursor = "pointer";
+                addFilterBtn.style.marginTop = "8px";
+                addFilterBtn.style.width = "100%";
+                function createFilterRow(filterData = null) {
+                    const filterRow = document.createElement("div");
+                    filterRow.style.display = "flex";
+                    filterRow.style.alignItems = "center";
+                    filterRow.style.gap = "6px";
+                    const wordInput = document.createElement("input");
+                    wordInput.type = "text";
+                    wordInput.placeholder = "Filter word";
+                    wordInput.style.flex = "1";
+                    wordInput.style.padding = "4px 8px";
+                    wordInput.style.border = "1px solid var(--border-color)";
+                    wordInput.style.borderRadius = "4px";
+                    wordInput.style.background = "var(--background-color)";
+                    wordInput.style.color = "var(--text-color)";
+                    if (filterData) wordInput.value = filterData.word;
+                    const boardsInput = document.createElement("input");
+                    boardsInput.type = "text";
+                    boardsInput.placeholder = "Boards (comma-separated, leave empty for all)";
+                    boardsInput.style.flex = "2";
+                    boardsInput.style.padding = "4px 8px";
+                    boardsInput.style.border = "1px solid var(--border-color)";
+                    boardsInput.style.borderRadius = "4px";
+                    boardsInput.style.background = "var(--background-color)";
+                    boardsInput.style.color = "var(--text-color)";
+                    if (filterData) boardsInput.value = filterData.boards;
+                    const removeBtn = document.createElement("button");
+                    removeBtn.textContent = "✕";
+                    removeBtn.style.background = "none";
+                    removeBtn.style.border = "none";
+                    removeBtn.style.color = "#c00";
+                    removeBtn.style.cursor = "pointer";
+                    function saveFilterData() {
+                        const word = wordInput.value.trim();
+                        const boards = boardsInput.value.trim();
+                        if (word) {
+                            const filterKey = `filter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            const filterData = { word, boards, key: filterKey };
+                            tempSettings[filterKey] = filterData;
+                            saveCatalogFilters();
+                        }
+                    }
+                    wordInput.addEventListener("blur", saveFilterData);
+                    boardsInput.addEventListener("blur", saveFilterData);
+                    removeBtn.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        filterRow.remove();
+                        saveCatalogFilters();
+                    });
+
+                    filterRow.appendChild(wordInput);
+                    filterRow.appendChild(boardsInput);
+                    filterRow.appendChild(removeBtn);
+
+                    return filterRow;
+                }
+                async function loadCatalogFilters() {
+                    const filters = await getStoredObject("8chanSS_catalogFilters");
+                    filtersContainer.innerHTML = "";
+                    if (filters && Object.keys(filters).length > 0) {
+                        Object.values(filters).forEach(filterData => {
+                            const filterRow = createFilterRow(filterData);
+                            filtersContainer.appendChild(filterRow);
+                        });
+                    }
+                }
+                async function saveCatalogFilters() {
+                    const filters = {};
+                    const filterRows = filtersContainer.querySelectorAll("div[style*='display: flex']");
+                    filterRows.forEach(row => {
+                        const wordInput = row.querySelector("input:first-child");
+                        const boardsInput = row.querySelector("input:nth-child(2)");
+                        if (wordInput && wordInput.value.trim()) {
+                            const filterKey = `filter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            filters[filterKey] = {
+                                word: wordInput.value.trim(),
+                                boards: boardsInput.value.trim(),
+                                key: filterKey
+                            };
+                        }
+                    });
+                    await setStoredObject("8chanSS_catalogFilters", filters);
+                }
+                addFilterBtn.addEventListener("click", () => {
+                    const filterRow = createFilterRow();
+                    filtersContainer.appendChild(filterRow);
+                });
+
+                catalogFilterContainer.appendChild(addFilterBtn);
+                loadCatalogFilters();
+                wrapper.appendChild(catalogFilterContainer);
             }
             if (key === "enableHidingMenu") {
                 hiddenListContainer = document.createElement("div");
@@ -5668,13 +5872,54 @@ onReady(async function () {
             } catch {
                 hiddenThreadsObj = {};
             }
+            let catalogFilters = [];
+            const enableCatalogFiltering = await getSetting("enableThreadHiding_enableCatalogFiltering");
+            if (enableCatalogFiltering) {
+                const filtersObj = await getStoredObject("8chanSS_catalogFilters");
+                catalogFilters = Object.values(filtersObj || {});
+            }
             document.querySelectorAll(".catalogCell").forEach(cell => {
                 const { board, threadNum } = getBoardAndThreadNumFromCell(cell);
                 if (!board || !threadNum) return;
                 const hiddenThreads = hiddenThreadsObj[board] || [];
+                let shouldFilter = false;
+                if (catalogFilters.length > 0) {
+                    const subject = cell.querySelector('.labelSubject')?.textContent || '';
+                    const message = cell.querySelector('.divMessage')?.textContent || '';
+                    const threadText = (subject + ' ' + message).toLowerCase();
+                    
+                    for (const filter of catalogFilters) {
+                        const word = filter.word.toLowerCase();
+                        const boards = filter.boards.toLowerCase().split(',').map(b => b.trim());
+                        let matches = false;
+                        if (word.includes('*')) {
+                            if (word === '*') {
+                                matches = true;
+                            } else if (word.startsWith('*') && word.endsWith('*')) {
+                                const pattern = word.slice(1, -1);
+                                matches = threadText.includes(pattern);
+                            } else if (word.startsWith('*')) {
+                                const pattern = word.slice(1);
+                                matches = threadText.endsWith(pattern) || threadText.includes(' ' + pattern);
+                            } else if (word.endsWith('*')) {
+                                const pattern = word.slice(0, -1);
+                                matches = threadText.startsWith(pattern) || threadText.includes(pattern + ' ');
+                            }
+                        } else {
+                            matches = threadText.includes(word);
+                        }
+                        
+                        if (matches) {
+                            if (boards.length === 0 || boards[0] === '' || boards.includes(board)) {
+                                shouldFilter = true;
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 if (typeof showHiddenMode !== "undefined" && showHiddenMode) {
-                    if (hiddenThreads.includes(threadNum)) {
+                    if (hiddenThreads.includes(threadNum) || shouldFilter) {
                         cell.style.display = "";
                         cell.classList.add("ss-unhide-thread");
                         cell.classList.remove("ss-hidden-thread");
@@ -5683,7 +5928,7 @@ onReady(async function () {
                         cell.classList.remove("ss-unhide-thread", "ss-hidden-thread");
                     }
                 } else {
-                    if (hiddenThreads.includes(threadNum)) {
+                    if (hiddenThreads.includes(threadNum) || shouldFilter) {
                         cell.style.display = "none";
                         cell.classList.add("ss-hidden-thread");
                         cell.classList.remove("ss-unhide-thread");

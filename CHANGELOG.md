@@ -1,3 +1,11 @@
+## v1.57.0
+*2025-08-21*
+
+- **New Option:** Backlink icons (Threads > Navigation)
+- **New Option:** Catalog Thread Filtering (Catalog > Enable Thread Hiding)
+- **New Option:** Save & restore Favorite boards buttons
+- Shuffled some options around
+
 ## v1.56.0
 *2025-08-19*
 
