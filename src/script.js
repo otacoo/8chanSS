@@ -148,6 +148,7 @@ onReady(async function () {
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
             enableThreadImageHover: { label: "Thread Image Hover", default: true },
+            enableFitImage: { label: "Fit Expanded Images and Videos", default: true },
             blurSpoilers: {
                 label: "Blur Spoilers",
                 default: false,
@@ -503,7 +504,8 @@ onReady(async function () {
             opBackground: "op-background",
             blurSpoilers: "ss-blur-spoilers",
             alwaysShowIdCount: "show-ID-count",
-            enableBacklinkIcons: "backlink-icon"
+            enableBacklinkIcons: "backlink-icon",
+            enableFitImage: "fit-images"
         };
 
         // Special logic for Sidebar: only add if enableSidebar is true and leftSidebar is false
