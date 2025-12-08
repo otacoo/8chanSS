@@ -1,3 +1,8 @@
+### v1.57.1
+*2025-12-08*
+
+- **New Option:** Fit Expanded Images and Videos (Site > Media)
+
 ## v1.57.0
 *2025-08-21*
 
