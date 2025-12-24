@@ -6392,21 +6392,25 @@ onReady(async function () {
     // --- Menu Icon ---
     const themeSelector = document.getElementById("themeSelector");
     let link = null;
-    let bracketSpan = null;
+    let openBracketSpan = null;
+    let closeBracketSpan = null;
     if (themeSelector) {
-        bracketSpan = document.createElement("span");
-        bracketSpan.textContent = "] [ ";
+        openBracketSpan = document.createElement("span");
+        openBracketSpan.textContent = " [";
         link = document.createElement("a");
         link.id = "8chanSS-icon";
         link.href = "#";
         link.textContent = "8chanSS";
         link.style.fontWeight = "bold";
+        closeBracketSpan = document.createElement("span");
+        closeBracketSpan.textContent = "\u00A0]";
 
         themeSelector.parentNode.insertBefore(
-            bracketSpan,
+            openBracketSpan,
             themeSelector.nextSibling
         );
-        themeSelector.parentNode.insertBefore(link, bracketSpan.nextSibling);
+        themeSelector.parentNode.insertBefore(link, openBracketSpan.nextSibling);
+        themeSelector.parentNode.insertBefore(closeBracketSpan, link.nextSibling);
     }
 
     // --- Shortcuts tab ---

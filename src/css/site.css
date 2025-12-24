@@ -28,7 +28,8 @@
 }
 
 /* Deal with FchX */
-:root.hide-defaultBL #navTopBoardsSpan {
+:root.hide-defaultBL #navBoardsTop,
+:root.hide-defaultBL #navBoardsTopEnd {
     display: none !important;
 }
 
@@ -54,12 +55,6 @@
 /* Header */
 nav.navHeader {
     z-index: 300;
-}
-
-nav.navHeader>.nav-boards:hover {
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
 }
 
 :not(:root.bottom-header) .navHeader {
