@@ -1,3 +1,11 @@
+### v1.57.2
+*2025-12-24*
+
+- Preliminary fixes for site changes
+- Added 8chan.st domain
+- Fix 8chanSS button
+- Fixes for navigation and favorite board list
+
 ### v1.57.1
 *2025-12-08*
 
