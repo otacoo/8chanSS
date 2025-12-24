@@ -60,7 +60,7 @@ window.pageType = (() => {
         isThread: /\/(res|last)\/[^/]+\.html$/i.test(path),
         isLast: /\/last\/[^/]+\.html$/i.test(path),
         isIndex: /\/[^/]+\/$/i.test(path),
-        is8chan: /^8chan\.(se|moe)$/.test(currentHost),
+        is8chan: /^8chan\.(moe|st|cc)$/.test(currentHost),
         host: currentHost,
         path: path
     };
@@ -1219,7 +1219,7 @@ onReady(async function () {
     // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
         async function appendCatalogToLinks() {
-            const navboardsSpan = document.getElementById("navBoardsSpan");
+            const navboardsSpan = document.getElementById("navBoardsTop");
             if (navboardsSpan) {
                 const links = navboardsSpan.getElementsByTagName("a");
                 const openInNewTab = await getSetting("enableHeaderCatalogLinks_openInNewTab");
@@ -1254,7 +1254,7 @@ onReady(async function () {
         const debouncedAppend = debounce(appendCatalogToLinks, 100);
 
         // Use the observer registry for #navBoardsSpan
-        const navboardsObs = observeSelector('#navBoardsSpan', { childList: true, subtree: true });
+        const navboardsObs = observeSelector('#navBoardsTop', { childList: true, subtree: true });
         if (navboardsObs) {
             navboardsObs.addHandler(function headerCatalogLinksHandler() {
                 debouncedAppend();
@@ -6390,7 +6390,7 @@ onReady(async function () {
     }
 
     // --- Menu Icon ---
-    const themeSelector = document.getElementById("themesBefore");
+    const themeSelector = document.getElementById("themeSelector");
     let link = null;
     let bracketSpan = null;
     if (themeSelector) {
