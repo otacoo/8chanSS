@@ -127,6 +127,7 @@ nav.navHeader {
 :root.auto-expand-tw #watchedMenu .floatingContainer {
     height: fit-content !important;
     padding-bottom: 10px;
+    resize: horizontal;
 }
 
 .watchedCellLabel a::before {
