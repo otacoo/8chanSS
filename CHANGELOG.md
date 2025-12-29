@@ -1,3 +1,14 @@
+## v1.58.0
+*2025-12-29*
+
+- Better 8chanSS menu positioning on mobile
+- Fix for **Pin Thread Watcher** option
+- Pinning the Thread Watcher will now also save its position into memory
+- Fix for reveal spoilers option not working correctly after site update
+- Fix for **Mark All Threads As Read** button
+- Fix for **Catalog Links** option
+- Minor fixes
+
 ### v1.57.2
 *2025-12-24*
 
