@@ -2418,7 +2418,7 @@ onReady(async function () {
         function hasUnreadThreads() {
             const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
             if (!watchedMenu) return false;
-            return watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]').length > 0;
+            return watchedMenu.querySelectorAll('a.watchedCellDismissButton[title="Mark Read"]').length > 0;
         }
 
         // Helper to update button state
@@ -2436,7 +2436,7 @@ onReady(async function () {
 
         // Reusable function to find and click all 'Mark as read' buttons
         function clickAllMarkAsReadButtons(watchedMenu) {
-            const markButtons = watchedMenu.querySelectorAll('td.watchedCellDismissButton.glowOnHover.coloredIcon[title="Mark as read"]');
+            const markButtons = watchedMenu.querySelectorAll('a.watchedCellDismissButton[title="Mark Read"]');
             markButtons.forEach(btn => {
                 try {
                     btn.click();
