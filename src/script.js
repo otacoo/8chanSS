@@ -3216,52 +3216,74 @@ onReady(async function () {
     }
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
-    function featureLabelCreated12h() {
+    async function featureLabelCreated12h() {
         if (window.pageType?.isCatalog) {
+            return;
+        }
+        
+        if (!(await getSetting("switchTimeFormat"))) {
             return;
         }
 
         function convertLabelCreatedSpan(span) {
             if (span.dataset.timeConverted === "1") return;
 
-            const text = span.textContent;
-            const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
-            if (!match) return;
+            // Get datetime attribute (UTC string)
+            const datetimeAttr = span.getAttribute('datetime');
+            if (!datetimeAttr) return;
 
-            const [_, datePart, hourStr, minStr, secStr] = match;
-            let hour = parseInt(hourStr, 10);
-            const min = minStr;
-            const sec = secStr;
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            let hour12 = hour % 12;
-            if (hour12 === 0) hour12 = 12;
+            try {
+                const date = new Date(datetimeAttr);
+                if (isNaN(date.getTime())) return;
 
-            const newText = `${datePart} ${hour12}:${min}:${sec} ${ampm}`;
-            span.textContent = newText;
-            span.dataset.timeConverted = "1";
+                // Time is displayed in local timezone
+                let hour = date.getHours();
+                const min = date.getMinutes().toString().padStart(2, '0');
+                const sec = date.getSeconds().toString().padStart(2, '0');
+
+                // Convert to 12-hour format
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                let hour12 = hour % 12;
+                if (hour12 === 0) hour12 = 12;
+
+                // Get the whole text to preserve the date part
+                const originalText = span.textContent.trim();
+                const datePartMatch = originalText.match(/^(.+?)\s+\d{1,2}:\d{2}:\d{2}/);
+                if (!datePartMatch) {
+                    span.textContent = `${hour12}:${min}:${sec} ${ampm}`;
+                    span.dataset.timeConverted = "1";
+                    return;
+                }
+                const datePart = datePartMatch[1].trim();
+
+                // Reconstruct text with 12-hour time
+                const newText = datePart ? `${datePart} ${hour12}:${min}:${sec} ${ampm}` : `${hour12}:${min}:${sec} ${ampm}`;
+                span.textContent = newText;
+                span.dataset.timeConverted = "1";
+            } catch (e) {
+                console.error("Error converting labelCreated time:", e);
+            }
         }
 
         // Initial conversion on page load
         function convertAllLabelCreated(root = document) {
-            const spans = root.querySelectorAll
-                ? root.querySelectorAll('.labelCreated')
-                : [];
-            spans.forEach(convertLabelCreatedSpan);
+            const timeElements = root.querySelectorAll('time.labelCreated');
+            timeElements.forEach(convertLabelCreatedSpan);
         }
+        // Short timeout for page to load
+        setTimeout(convertAllLabelCreated, 100);
 
-        convertAllLabelCreated();
-
-        // Use the observer registry for .divPosts
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
         if (divPostsObs) {
             divPostsObs.addHandler(function labelCreated12hHandler(mutations) {
                 for (const mutation of mutations) {
                     for (const addedNode of mutation.addedNodes) {
                         if (addedNode.nodeType !== 1) continue;
-                        if (addedNode.classList && addedNode.classList.contains('labelCreated')) {
+                        if (addedNode.tagName === 'TIME' && 
+                            addedNode.classList && addedNode.classList.contains('labelCreated')) {
                             convertLabelCreatedSpan(addedNode);
                         } else if (addedNode.querySelectorAll) {
-                            addedNode.querySelectorAll('.labelCreated').forEach(convertLabelCreatedSpan);
+                            addedNode.querySelectorAll('time.labelCreated').forEach(convertLabelCreatedSpan);
                         }
                     }
                 }
