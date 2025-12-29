@@ -92,12 +92,6 @@ nav.navHeader {
 }
 
 /* Filename & Thumbs */
-.originalNameLink {
-    display: inline;
-    overflow-wrap: anywhere;
-    white-space: normal;
-}
-
 .multipleUploads .uploadCell:not(.expandedCell) {
     max-width: 215px;
 }
