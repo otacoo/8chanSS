@@ -1403,7 +1403,11 @@ onReady(async function () {
 
         // --- Helper: Get full media URL from thumbnail and MIME type ---
         function getFullMediaSrc(thumbNode, filemime) {
-            const thumbnailSrc = thumbNode.getAttribute("src");
+            let thumbnailSrc = thumbNode.getAttribute("src");
+            // Strip hash fragment (e.g., #spoiler) for processing
+            if (thumbnailSrc) {
+                thumbnailSrc = thumbnailSrc.split('#')[0];
+            }
             const parentA = thumbNode.closest("a.linkThumb, a.imgLink");
             const href = parentA ? parentA.getAttribute("href") : "";
             // Try to get width/height from data attributes, else fallback to image's natural size
@@ -1864,7 +1868,7 @@ onReady(async function () {
                                 const parsedWidth = parseInt(dimensions[0].trim(), 10);
                                 const parsedHeight = parseInt(dimensions[1].trim(), 10);
                                 if ((parsedWidth <= 220 || parsedHeight <= 220)) {
-                                    img.src = href;
+                                    img.src = href + "#spoiler";
                                     link.dataset.blurSpoilerProcessed = "1";
                                     applyBlurOrRemoveSpoilers(img, removeSpoilers);
                                     return;
@@ -1881,7 +1885,7 @@ onReady(async function () {
                 img.style.height = initialHeight + "px";
 
                 // Change the src
-                img.src = transformedSrc;
+                img.src = transformedSrc + "#spoiler";
 
                 // Set width/height to its initial thumbnail size when loading img again
                 img.addEventListener('load', function () {
