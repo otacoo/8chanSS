@@ -1219,28 +1219,36 @@ onReady(async function () {
     // --- Feature: Header Catalog Links ---
     async function featureHeaderCatalogLinks() {
         async function appendCatalogToLinks() {
-            const navboardsSpan = document.getElementById("navBoardsTop");
-            if (navboardsSpan) {
-                const links = navboardsSpan.getElementsByTagName("a");
-                const openInNewTab = await getSetting("enableHeaderCatalogLinks_openInNewTab");
+            const openInNewTab = await getSetting("enableHeaderCatalogLinks_openInNewTab");
+            
+            // Process both board lists
+            const boardLists = [
+                document.getElementById("navBoardsTop"),
+                document.getElementById("navBoardsFavorite")
+            ];
 
-                for (let link of links) {
-                    // Prevent duplicate appends and only process once
-                    if (
-                        link.href &&
-                        !link.href.endsWith("/catalog.html") &&
-                        !link.dataset.catalogLinkProcessed
-                    ) {
-                        link.href += "/catalog.html";
-                        link.dataset.catalogLinkProcessed = "1";
+            for (const navboardsSpan of boardLists) {
+                if (navboardsSpan) {
+                    const links = navboardsSpan.getElementsByTagName("a");
 
-                        // Set target="_blank" if the option is enabled
-                        if (openInNewTab) {
-                            link.target = "_blank";
-                            link.rel = "noopener noreferrer"; // Security best practice
-                        } else {
-                            link.target = "";
-                            link.rel = "";
+                    for (let link of links) {
+                        // Prevent duplicate appends and only process once
+                        if (
+                            link.href &&
+                            !link.href.endsWith("/catalog.html") &&
+                            !link.dataset.catalogLinkProcessed
+                        ) {
+                            link.href += "/catalog.html";
+                            link.dataset.catalogLinkProcessed = "1";
+
+                            // Set target="_blank" if the option is enabled
+                            if (openInNewTab) {
+                                link.target = "_blank";
+                                link.rel = "noopener noreferrer"; // Security best practice
+                            } else {
+                                link.target = "";
+                                link.rel = "";
+                            }
                         }
                     }
                 }
@@ -1253,10 +1261,17 @@ onReady(async function () {
         // Debounced handler for observer
         const debouncedAppend = debounce(appendCatalogToLinks, 100);
 
-        // Use the observer registry for #navBoardsSpan
-        const navboardsObs = observeSelector('#navBoardsTop', { childList: true, subtree: true });
-        if (navboardsObs) {
-            navboardsObs.addHandler(function headerCatalogLinksHandler() {
+        // Use the observer registry for both board lists
+        const navboardsTopObs = observeSelector('#navBoardsTop', { childList: true, subtree: true });
+        if (navboardsTopObs) {
+            navboardsTopObs.addHandler(function headerCatalogLinksHandler() {
+                debouncedAppend();
+            });
+        }
+
+        const navboardsFavoriteObs = observeSelector('#navBoardsFavorite', { childList: true, subtree: true });
+        if (navboardsFavoriteObs) {
+            navboardsFavoriteObs.addHandler(function headerCatalogLinksHandler() {
                 debouncedAppend();
             });
         }
