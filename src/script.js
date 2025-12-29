@@ -2400,10 +2400,43 @@ onReady(async function () {
         if (!(await getSetting("alwaysShowTW"))) return;
         if ((await getSetting("alwaysShowTW_noPinInCatalog")) && window.pageType.isCatalog) return;
 
+        const POSITION_STORAGE_KEY = "8chanSS_threadWatcherPosition";
+
+        async function restorePosition() {
+            const watchedMenu = document.getElementById("watchedMenu");
+            if (!watchedMenu) return;
+
+            try {
+                const position = await getStoredObject(POSITION_STORAGE_KEY);
+                if (position.left !== undefined && position.top !== undefined) {
+                    watchedMenu.style.left = position.left + "px";
+                    watchedMenu.style.top = position.top + "px";
+                }
+            } catch (err) {
+                console.error("Failed to restore thread watcher position:", err);
+            }
+        }
+
+        async function savePosition() {
+            const watchedMenu = document.getElementById("watchedMenu");
+            if (!watchedMenu) return;
+
+            try {
+                const left = parseInt(watchedMenu.style.left) || 0;
+                const top = parseInt(watchedMenu.style.top) || 0;
+                if (left > 0 || top > 0) {
+                    await setStoredObject(POSITION_STORAGE_KEY, { left, top });
+                }
+            } catch (err) {
+                console.error("Failed to save thread watcher position:", err);
+            }
+        }
+
         function showThreadWatcher() {
             const watchedMenu = document.getElementById("watchedMenu");
             if (watchedMenu) {
                 watchedMenu.style.display = "flex";
+                restorePosition();
             }
         }
 
@@ -2413,6 +2446,19 @@ onReady(async function () {
             watcherButton.click();
         }
         setTimeout(showThreadWatcher, 100);
+        // Also restore position after a longer delay in case the site resets it during population
+        setTimeout(restorePosition, 500);
+
+        // Watch for position changes and save them
+        const watchedMenuObs = observeSelector('#watchedMenu', { attributes: true, attributeFilter: ['style'] });
+        if (watchedMenuObs) {
+            let saveTimeout = null;
+            watchedMenuObs.addHandler(function positionSaveHandler() {
+                // Debounce saves to avoid excessive storage writes
+                if (saveTimeout) clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(savePosition, 500);
+            });
+        }
     }
 
     // --- Feature: Mark All Threads as Read Button ---
