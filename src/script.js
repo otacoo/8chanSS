@@ -5353,8 +5353,6 @@ onReady(async function () {
         menu = document.createElement("div");
         menu.id = "8chanSS-menu";
         menu.style.position = "fixed";
-        menu.style.top = "3rem"; // Position of menu
-        menu.style.left = "35rem"; // Position of menu
         menu.style.zIndex = "99999";
         menu.style.background = "var(--menu-color)";
         menu.style.color = "var(--text-color)";
@@ -5367,6 +5365,32 @@ onReady(async function () {
         menu.style.maxWidth = "470px";
         menu.style.fontFamily = "sans-serif";
         menu.style.userSelect = "none";
+
+        // Responsive menu positioning
+        function positionMenu() {
+            const viewportWidth = window.innerWidth;
+            const isMobile = viewportWidth < 768;
+            
+            if (isMobile) {
+                // Center with some padding
+                menu.style.left = "50%";
+                menu.style.transform = "translateX(-50%)";
+                menu.style.top = "3rem";
+                menu.style.maxWidth = "90vw"; // Use more of the viewport on mobile
+            } else {
+                // Desktop positioning
+                menu.style.left = "35rem";
+                menu.style.transform = "none";
+                menu.style.top = "3rem";
+                menu.style.maxWidth = "470px";
+            }
+        }
+        
+        // Set initial position
+        positionMenu();
+        
+        // Update position on window resize
+        window.addEventListener("resize", positionMenu);
 
         // Draggable
         let isDragging = false,
@@ -5447,8 +5471,9 @@ onReady(async function () {
                 const oldValue = this.getPropertyValue('display');
                 this.setProperty('display', value);
 
-                // If changing from hidden to visible, add listener
+                // If changing from hidden to visible, add listener and reposition
                 if (oldValue === 'none' && value !== 'none') {
+                    positionMenu(); // Reposition when shown
                     setTimeout(() => { // Use timeout to avoid immediate triggering
                         document.addEventListener('click', closeOnOutsideClick);
                     }, 10);
