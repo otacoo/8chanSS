@@ -2455,9 +2455,10 @@ onReady(async function () {
 
         // Helper to check if there are unread threads
         function hasUnreadThreads() {
-            const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+            const watchedMenu = document.querySelector('#watchedMenu');
             if (!watchedMenu) return false;
-            return watchedMenu.querySelectorAll('.watchedNotification:not(.hidden) .watchedCellDismissButton').length > 0;
+            // Only count buttons inside visible watchedNotification spans, exclude markAllRead button
+            return watchedMenu.querySelectorAll('.watchedNotification:not(.hidden) .watchedCellDismissButton:not(.markAllRead)').length > 0;
         }
 
         // Helper to update button state
@@ -2475,7 +2476,8 @@ onReady(async function () {
 
         // Reusable function to find and click all 'Mark as read' buttons
         function clickAllMarkAsReadButtons(watchedMenu) {
-            const markButtons = watchedMenu.querySelectorAll('.watchedNotification:not(.hidden) .watchedCellDismissButton');
+            // Only click buttons inside visible watchedNotification spans, exclude markAllRead button
+            const markButtons = watchedMenu.querySelectorAll('.watchedNotification:not(.hidden) .watchedCellDismissButton:not(.markAllRead)');
             markButtons.forEach(btn => {
                 try {
                     btn.click();
@@ -2489,7 +2491,7 @@ onReady(async function () {
         // Function to mark all threads with retry capability
         function markAllThreadsAsReadWithRetry(retriesLeft, callback) {
             setTimeout(function () {
-                const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+                const watchedMenu = document.querySelector('#watchedMenu');
                 if (!watchedMenu) {
                     if (callback) callback();
                     return;
