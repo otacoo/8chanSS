@@ -2392,7 +2392,12 @@ onReady(async function () {
             }
         }
 
-        showThreadWatcher();
+        // After update need to click the watcher button to populate the thread watcher
+        const watcherButton = document.querySelector("#navLinkSpan > .jsOnly > .watcherButton");
+        if (watcherButton) {
+            watcherButton.click();
+        }
+        setTimeout(showThreadWatcher, 100);
     }
 
     // --- Feature: Mark All Threads as Read Button ---
