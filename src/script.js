@@ -852,7 +852,7 @@ onReady(async function () {
             toast.style.position = "absolute";
             toast.style.background = bgColor;
             toast.style.color = "#fff";
-            toast.style.padding = "2px 12px";
+            toast.style.padding = "4px 12px";
             toast.style.borderRadius = "4px";
             toast.style.fontSize = "13px";
             toast.style.zIndex = 99999;
