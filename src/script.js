@@ -2358,17 +2358,6 @@ onReady(async function () {
             }
         }
 
-        // Update the watch button's class to reflect watched state
-        function updateWatchButtonClass() {
-            const btn = getWatchButton();
-            if (!btn) return;
-            if (btn.classList.contains("watched-active")) {
-                btn.classList.add("watched-active");
-            } else {
-                btn.classList.remove("watched-active");
-            }
-        }
-
         // Handle reply submit: watch thread if setting enabled
         const submitButton = document.getElementById("qrbutton");
         if (submitButton) {
@@ -2382,17 +2371,6 @@ onReady(async function () {
             submitButton.addEventListener("click", submitButton._watchThreadHandler);
         }
 
-        // On page load, sync the watch button UI
-        updateWatchButtonClass();
-
-        // Keep UI in sync when user manually clicks the watch button
-        const btn = getWatchButton();
-        if (btn) {
-            // Remove any previous handler to avoid duplicates
-            btn.removeEventListener("click", btn._updateWatchHandler || (() => { }));
-            btn._updateWatchHandler = () => setTimeout(updateWatchButtonClass, 100);
-            btn.addEventListener("click", btn._updateWatchHandler);
-        }
     }
 
     // --- Feature: Pin Thread Watcher ---
