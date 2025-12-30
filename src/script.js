@@ -207,7 +207,7 @@ onReady(async function () {
                     }
                 }
             },
-            quoteThreading: { label: "Quote Threading", default: false },
+            quoteThreading: { label: "Quote Threading (Shift + T to toggle)", default: false },
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -3666,6 +3666,8 @@ onReady(async function () {
                     if (!targetUri) return;
 
                     const targetPostId = targetUri.split('#')[1];
+                    if (!targetPostId) return;
+                    
                     const targetPost = document.getElementById(targetPostId);
 
                     if (targetPost) {
@@ -3729,7 +3731,10 @@ onReady(async function () {
         }
 
         // --- Initialization ---
-        threadAllPosts();  // Process all posts on initial load
+        // Wait a bit for backlinks to be populated
+        setTimeout(() => {
+            threadAllPosts();  // Process all posts on initial load
+        }, 500);
         addRefreshButton();
     }
 
