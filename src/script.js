@@ -2241,10 +2241,10 @@ onReady(async function () {
 
         // Process all cells in a single pass
         watchedCells.forEach((cell) => {
-            const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
+            const notification = cell.querySelector(".watchedNotification");
             if (!notification) return; // Skip if no notification
 
-            const labelLink = cell.querySelector(".watchedCellLabel a");
+            const labelLink = cell.querySelector(".watchedCellAnchor");
             if (!labelLink) return; // Skip if no link
 
             // Process board data only once per link
@@ -2271,40 +2271,41 @@ onReady(async function () {
                 }
             }
 
-            // Process notification text
-            const notificationText = notification.textContent.trim();
+            // Get notification elements
+            const repliesSpan = notification.querySelector(".watchedNotificationReplies");
+            const yousSpan = notification.querySelector(".watchedNotificationYous");
+            const hasYou = yousSpan && !yousSpan.classList.contains("hidden");
+            const replyCount = repliesSpan ? repliesSpan.textContent.trim() : "";
 
-            function styleMentionYou(labelLink, notification, totalReplies) {
-                labelLink.style.color = "var(--board-title-color)";
-                notification.style.color = "var(--board-title-color)";
-                notification.textContent = ` (${totalReplies}) (You)`;
-                notification.style.fontWeight = "bold";
-            }
-
-            function styleMentionNumber(notification, notificationText) {
-                notification.textContent = ` (${notificationText})`;
-                notification.style.color = "var(--link-color)";
-                notification.style.fontWeight = "bold";
-            }
-
-            // Skip if already processed (starts with parenthesis)
-            if (notificationText.startsWith("(") === true) {
+            // Skip if already processed
+            if (labelLink.dataset.mentionProcessed === "true") {
                 return;
             }
 
-            // Case 1: Has "(you)" - format "2, 1 (you)"
-            if (notificationText.includes("(you)") === true) {
-                const parts = notificationText.split(", ");
-                const totalReplies = parts[0];
-                styleMentionYou(labelLink, notification, totalReplies);
+            // Case 1: Has "(You)" mention - color link, replies span, and yous span
+            if (hasYou) {
+                labelLink.style.color = "var(--board-title-color)";
+                labelLink.style.fontWeight = "bold";
+                if (repliesSpan) {
+                    repliesSpan.style.color = "var(--board-title-color)";
+                    repliesSpan.style.fontWeight = "";
+                }
+                if (yousSpan) {
+                    yousSpan.style.color = "var(--board-title-color)";
+                    yousSpan.style.fontWeight = "";
+                }
             }
-            // Case 2: Just a number - format "2"
-            else if (/^\d+$/.test(notificationText)) {
-                styleMentionNumber(notification, notificationText);
+            // Case 2: Just replies (no You) - color link and replies span
+            else if (replyCount && /^\d+$/.test(replyCount)) {
+                labelLink.style.color = "var(--link-color)";
+                if (repliesSpan) {
+                    repliesSpan.style.color = "var(--link-color)";
+                    repliesSpan.style.fontWeight = "";
+                }
             }
 
             // Mark as processed
-            notification.dataset.processed = "true";
+            labelLink.dataset.mentionProcessed = "true";
         });
     }
 
@@ -2315,15 +2316,33 @@ onReady(async function () {
     function highlightActiveWatchedThread() {
         const currentPath = window.pageType?.path;
         if (!currentPath) return;
-        document.querySelectorAll('.watchedCellLabel').forEach(label => {
-            const link = label.querySelector('a[href]');
-            if (!link) return;
-            // Stip anchors to compare
+        document.querySelectorAll('.watchedCellAnchor').forEach(link => {
+            // Strip anchors to compare
             const watchedPath = link.getAttribute('href').replace(/#.*$/, '');
+            const cell = link.closest('.watchedCell');
+            const repliesSpan = cell?.querySelector('.watchedNotificationReplies');
+            const yousSpan = cell?.querySelector('.watchedNotificationYous');
+            
             if (watchedPath === currentPath) {
-                label.classList.add('ss-active');
+                link.classList.add('ss-active');
+                link.style.fontWeight = "bold";
+                // Make notification spans bold when thread is open
+                if (repliesSpan) {
+                    repliesSpan.style.fontWeight = "bold";
+                }
+                if (yousSpan) {
+                    yousSpan.style.fontWeight = "bold";
+                }
             } else {
-                label.classList.remove('ss-active');
+                link.classList.remove('ss-active');
+                link.style.fontWeight = "";
+                // Remove bold from notification spans when thread is not open
+                if (repliesSpan) {
+                    repliesSpan.style.fontWeight = "";
+                }
+                if (yousSpan) {
+                    yousSpan.style.fontWeight = "";
+                }
             }
         });
     }
