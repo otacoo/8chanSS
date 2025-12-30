@@ -6513,10 +6513,52 @@ onReady(async function () {
 
     // --- Menu Icon ---
     const themeSelector = document.getElementById("themeSelector");
+    const sidebarMenu = document.querySelector("#hamburger-menu-icon #sidebar-menu");
     let link = null;
     let openBracketSpan = null;
     let closeBracketSpan = null;
-    if (themeSelector) {
+    
+    // Detect mobile: check if desktop themeSelector is visible
+    // If themeSelector exists and is visible, use desktop; otherwise use mobile
+    const isDesktop = themeSelector && window.getComputedStyle(themeSelector).display !== "none";
+    
+    // Mobile: append as list item in sidebar menu
+    if (!isDesktop && sidebarMenu) {
+        // Check if mobile button already exists to avoid duplicates
+        if (!document.getElementById("8chanSS-icon-mobile")) {
+            const listItem = document.createElement("li");
+            listItem.className = "jsOnly";
+            const mobileLink = document.createElement("a");
+            mobileLink.id = "8chanSS-icon-mobile";
+            mobileLink.href = "#";
+            mobileLink.className = "coloredIcon settingsButton";
+            mobileLink.textContent = "8chanSS";
+            mobileLink.title = "Open 8chanSS settings";
+            listItem.appendChild(mobileLink);
+            
+            // Insert after settingsButton
+            const settingsButton = sidebarMenu.querySelector("a.settingsButton");
+            if (settingsButton && settingsButton.id !== "8chanSS-icon-mobile" && settingsButton.parentElement) {
+                settingsButton.parentElement.insertAdjacentElement("afterend", listItem);
+            } else {
+                const firstUl = sidebarMenu.querySelector("ul");
+                if (firstUl) {
+                    firstUl.appendChild(listItem);
+                }
+            }
+            
+            // Hook up mobile icon to open/close the menu
+            mobileLink.style.cursor = "pointer";
+            mobileLink.addEventListener("click", async function (e) {
+                e.preventDefault();
+                let menu = await createSettingsMenu();
+                menu.style.display = menu.style.display === "none" ? "block" : "none";
+            });
+        }
+    }
+    
+    // Desktop: append after themeSelector
+    if (isDesktop && themeSelector) {
         openBracketSpan = document.createElement("span");
         openBracketSpan.textContent = " [";
         link = document.createElement("a");
@@ -6524,14 +6566,15 @@ onReady(async function () {
         link.href = "#";
         link.textContent = "8chanSS";
         link.style.fontWeight = "bold";
-        closeBracketSpan = document.createElement("span");
-        closeBracketSpan.textContent = "\u00A0]";
 
         themeSelector.parentNode.insertBefore(
             openBracketSpan,
             themeSelector.nextSibling
         );
         themeSelector.parentNode.insertBefore(link, openBracketSpan.nextSibling);
+        
+        closeBracketSpan = document.createElement("span");
+        closeBracketSpan.textContent = "\u00A0]";
         themeSelector.parentNode.insertBefore(closeBracketSpan, link.nextSibling);
     }
 
