@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.58.1
+// @version      1.58.2
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -108,7 +108,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.58.1";
+    const VERSION = "1.58.2";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -1918,10 +1918,10 @@ onReady(async function () {
         const watchButton = document.querySelector(".opHead .watchButton");
         if (!watchedCells.length) return; 
         watchedCells.forEach((cell) => {
-            const notification = cell.querySelector(".watchedCellLabel span.watchedNotification");
+            const notification = cell.querySelector(".watchedNotification");
             if (!notification) return; 
 
-            const labelLink = cell.querySelector(".watchedCellLabel a");
+            const labelLink = cell.querySelector(".watchedCellAnchor");
             if (!labelLink) return; 
             if (!labelLink.dataset.board) {
                 const href = labelLink.getAttribute("href");
@@ -1941,46 +1941,63 @@ onReady(async function () {
                     labelLink.textContent = decodedText;
                 }
             }
-            const notificationText = notification.textContent.trim();
-
-            function styleMentionYou(labelLink, notification, totalReplies) {
-                labelLink.style.color = "var(--board-title-color)";
-                notification.style.color = "var(--board-title-color)";
-                notification.textContent = ` (${totalReplies}) (You)`;
-                notification.style.fontWeight = "bold";
-            }
-
-            function styleMentionNumber(notification, notificationText) {
-                notification.textContent = ` (${notificationText})`;
-                notification.style.color = "var(--link-color)";
-                notification.style.fontWeight = "bold";
-            }
-            if (notificationText.startsWith("(") === true) {
+            const repliesSpan = notification.querySelector(".watchedNotificationReplies");
+            const yousSpan = notification.querySelector(".watchedNotificationYous");
+            const hasYou = yousSpan && !yousSpan.classList.contains("hidden");
+            const replyCount = repliesSpan ? repliesSpan.textContent.trim() : "";
+            if (labelLink.dataset.mentionProcessed === "true") {
                 return;
             }
-            if (notificationText.includes("(you)") === true) {
-                const parts = notificationText.split(", ");
-                const totalReplies = parts[0];
-                styleMentionYou(labelLink, notification, totalReplies);
+            if (hasYou) {
+                labelLink.style.color = "var(--board-title-color)";
+                labelLink.style.fontWeight = "bold";
+                if (repliesSpan) {
+                    repliesSpan.style.color = "var(--board-title-color)";
+                    repliesSpan.style.fontWeight = "";
+                }
+                if (yousSpan) {
+                    yousSpan.style.color = "var(--board-title-color)";
+                    yousSpan.style.fontWeight = "";
+                }
             }
-            else if (/^\d+$/.test(notificationText)) {
-                styleMentionNumber(notification, notificationText);
+            else if (replyCount && /^\d+$/.test(replyCount)) {
+                labelLink.style.color = "var(--link-color)";
+                if (repliesSpan) {
+                    repliesSpan.style.color = "var(--link-color)";
+                    repliesSpan.style.fontWeight = "";
+                }
             }
-            notification.dataset.processed = "true";
+            labelLink.dataset.mentionProcessed = "true";
         });
     }
     highlightMentions();
     function highlightActiveWatchedThread() {
         const currentPath = window.pageType?.path;
         if (!currentPath) return;
-        document.querySelectorAll('.watchedCellLabel').forEach(label => {
-            const link = label.querySelector('a[href]');
-            if (!link) return;
+        document.querySelectorAll('.watchedCellAnchor').forEach(link => {
             const watchedPath = link.getAttribute('href').replace(/#.*$/, '');
+            const cell = link.closest('.watchedCell');
+            const repliesSpan = cell?.querySelector('.watchedNotificationReplies');
+            const yousSpan = cell?.querySelector('.watchedNotificationYous');
+            
             if (watchedPath === currentPath) {
-                label.classList.add('ss-active');
+                link.classList.add('ss-active');
+                link.style.fontWeight = "bold";
+                if (repliesSpan) {
+                    repliesSpan.style.fontWeight = "bold";
+                }
+                if (yousSpan) {
+                    yousSpan.style.fontWeight = "bold";
+                }
             } else {
-                label.classList.remove('ss-active');
+                link.classList.remove('ss-active');
+                link.style.fontWeight = "";
+                if (repliesSpan) {
+                    repliesSpan.style.fontWeight = "";
+                }
+                if (yousSpan) {
+                    yousSpan.style.fontWeight = "";
+                }
             }
         });
     }
@@ -5524,10 +5541,40 @@ onReady(async function () {
         return container;
     }
     const themeSelector = document.getElementById("themeSelector");
+    const sidebarMenu = document.querySelector("#hamburger-menu-icon #sidebar-menu");
     let link = null;
     let openBracketSpan = null;
     let closeBracketSpan = null;
-    if (themeSelector) {
+    const isDesktop = themeSelector && window.getComputedStyle(themeSelector).display !== "none";
+    if (!isDesktop && sidebarMenu) {
+        if (!document.getElementById("8chanSS-icon-mobile")) {
+            const listItem = document.createElement("li");
+            listItem.className = "jsOnly";
+            const mobileLink = document.createElement("a");
+            mobileLink.id = "8chanSS-icon-mobile";
+            mobileLink.href = "#";
+            mobileLink.className = "coloredIcon settingsButton";
+            mobileLink.textContent = "8chanSS";
+            mobileLink.title = "Open 8chanSS settings";
+            listItem.appendChild(mobileLink);
+            const settingsButton = sidebarMenu.querySelector("a.settingsButton");
+            if (settingsButton && settingsButton.id !== "8chanSS-icon-mobile" && settingsButton.parentElement) {
+                settingsButton.parentElement.insertAdjacentElement("afterend", listItem);
+            } else {
+                const firstUl = sidebarMenu.querySelector("ul");
+                if (firstUl) {
+                    firstUl.appendChild(listItem);
+                }
+            }
+            mobileLink.style.cursor = "pointer";
+            mobileLink.addEventListener("click", async function (e) {
+                e.preventDefault();
+                let menu = await createSettingsMenu();
+                menu.style.display = menu.style.display === "none" ? "block" : "none";
+            });
+        }
+    }
+    if (isDesktop && themeSelector) {
         openBracketSpan = document.createElement("span");
         openBracketSpan.textContent = " [";
         link = document.createElement("a");
@@ -5535,14 +5582,15 @@ onReady(async function () {
         link.href = "#";
         link.textContent = "8chanSS";
         link.style.fontWeight = "bold";
-        closeBracketSpan = document.createElement("span");
-        closeBracketSpan.textContent = "\u00A0]";
 
         themeSelector.parentNode.insertBefore(
             openBracketSpan,
             themeSelector.nextSibling
         );
         themeSelector.parentNode.insertBefore(link, openBracketSpan.nextSibling);
+        
+        closeBracketSpan = document.createElement("span");
+        closeBracketSpan.textContent = "\u00A0]";
         themeSelector.parentNode.insertBefore(closeBracketSpan, link.nextSibling);
     }
     function createShortcutsTab() {
