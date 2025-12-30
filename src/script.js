@@ -4156,8 +4156,8 @@ onReady(async function () {
 
             const container = document.createElement('div');
             container.className = 'sauceLinksContainer';
-            container.style.marginTop = '3px';
-            container.style.display = 'flex';
+            container.style.marginBottom = '3px';
+            container.style.display = 'inline-flex';
             container.style.flexWrap = 'wrap';
             container.style.gap = '6px';
 
@@ -4203,7 +4203,8 @@ onReady(async function () {
 
             if (anyLink) {
                 detailDiv.classList.add('sauceLinksProcessed');
-                detailDiv.appendChild(container);
+                // Append after .uploadDetails instead of inside it
+                detailDiv.after(container);
             }
         }
 
