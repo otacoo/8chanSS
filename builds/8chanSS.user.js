@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.58.0
+// @version      1.58.1
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -108,7 +108,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.58.0";
+    const VERSION = "1.58.1";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -219,7 +219,7 @@ onReady(async function () {
                     }
                 }
             },
-            quoteThreading: { label: "Quote Threading", default: false },
+            quoteThreading: { label: "Quote Threading (Shift + T to toggle)", default: false },
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
@@ -2005,15 +2005,6 @@ onReady(async function () {
                 }, 100);
             }
         }
-        function updateWatchButtonClass() {
-            const btn = getWatchButton();
-            if (!btn) return;
-            if (btn.classList.contains("watched-active")) {
-                btn.classList.add("watched-active");
-            } else {
-                btn.classList.remove("watched-active");
-            }
-        }
         const submitButton = document.getElementById("qrbutton");
         if (submitButton) {
             submitButton.removeEventListener("click", submitButton._watchThreadHandler || (() => { }));
@@ -2024,13 +2015,7 @@ onReady(async function () {
             };
             submitButton.addEventListener("click", submitButton._watchThreadHandler);
         }
-        updateWatchButtonClass();
-        const btn = getWatchButton();
-        if (btn) {
-            btn.removeEventListener("click", btn._updateWatchHandler || (() => { }));
-            btn._updateWatchHandler = () => setTimeout(updateWatchButtonClass, 100);
-            btn.addEventListener("click", btn._updateWatchHandler);
-        }
+
     }
     async function featureAlwaysShowTW() {
         if (!(await getSetting("alwaysShowTW"))) return;
@@ -2100,9 +2085,9 @@ onReady(async function () {
         btn.style.float = 'right';
         btn.style.paddingTop = '3px';
         function hasUnreadThreads() {
-            const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+            const watchedMenu = document.querySelector('#watchedMenu');
             if (!watchedMenu) return false;
-            return watchedMenu.querySelectorAll('a.watchedCellDismissButton[title="Mark Read"]').length > 0;
+            return watchedMenu.querySelectorAll('.watchedNotification:not(.hidden) .watchedCellDismissButton:not(.markAllRead)').length > 0;
         }
         function updateButtonState() {
             if (hasUnreadThreads()) {
@@ -2116,7 +2101,7 @@ onReady(async function () {
             }
         }
         function clickAllMarkAsReadButtons(watchedMenu) {
-            const markButtons = watchedMenu.querySelectorAll('a.watchedCellDismissButton[title="Mark Read"]');
+            const markButtons = watchedMenu.querySelectorAll('.watchedNotification:not(.hidden) .watchedCellDismissButton:not(.markAllRead)');
             markButtons.forEach(btn => {
                 try {
                     btn.click();
@@ -2128,7 +2113,7 @@ onReady(async function () {
         }
         function markAllThreadsAsReadWithRetry(retriesLeft, callback) {
             setTimeout(function () {
-                const watchedMenu = document.querySelector('#watchedMenu > div.floatingContainer');
+                const watchedMenu = document.querySelector('#watchedMenu');
                 if (!watchedMenu) {
                     if (callback) callback();
                     return;
@@ -2718,48 +2703,61 @@ onReady(async function () {
             });
         }
     }
-    function featureLabelCreated12h() {
+    async function featureLabelCreated12h() {
         if (window.pageType?.isCatalog) {
+            return;
+        }
+        
+        if (!(await getSetting("switchTimeFormat"))) {
             return;
         }
 
         function convertLabelCreatedSpan(span) {
             if (span.dataset.timeConverted === "1") return;
+            const datetimeAttr = span.getAttribute('datetime');
+            if (!datetimeAttr) return;
 
-            const text = span.textContent;
-            const match = text.match(/^(.+\))\s+(\d{2}):(\d{2}):(\d{2})$/);
-            if (!match) return;
-
-            const [_, datePart, hourStr, minStr, secStr] = match;
-            let hour = parseInt(hourStr, 10);
-            const min = minStr;
-            const sec = secStr;
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            let hour12 = hour % 12;
-            if (hour12 === 0) hour12 = 12;
-
-            const newText = `${datePart} ${hour12}:${min}:${sec} ${ampm}`;
-            span.textContent = newText;
-            span.dataset.timeConverted = "1";
+            try {
+                const date = new Date(datetimeAttr);
+                if (isNaN(date.getTime())) return;
+                let hour = date.getHours();
+                const min = date.getMinutes().toString().padStart(2, '0');
+                const sec = date.getSeconds().toString().padStart(2, '0');
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                let hour12 = hour % 12;
+                if (hour12 === 0) hour12 = 12;
+                const originalText = span.textContent.trim();
+                const datePartMatch = originalText.match(/^(.+?)\s+\d{1,2}:\d{2}:\d{2}/);
+                if (!datePartMatch) {
+                    span.textContent = `${hour12}:${min}:${sec} ${ampm}`;
+                    span.dataset.timeConverted = "1";
+                    return;
+                }
+                const datePart = datePartMatch[1].trim();
+                const newText = datePart ? `${datePart} ${hour12}:${min}:${sec} ${ampm}` : `${hour12}:${min}:${sec} ${ampm}`;
+                span.textContent = newText;
+                span.dataset.timeConverted = "1";
+            } catch (e) {
+                console.error("Error converting labelCreated time:", e);
+            }
         }
         function convertAllLabelCreated(root = document) {
-            const spans = root.querySelectorAll
-                ? root.querySelectorAll('.labelCreated')
-                : [];
-            spans.forEach(convertLabelCreatedSpan);
+            const timeElements = root.querySelectorAll('time.labelCreated');
+            timeElements.forEach(convertLabelCreatedSpan);
         }
+        setTimeout(convertAllLabelCreated, 100);
 
-        convertAllLabelCreated();
         const divPostsObs = observeSelector('.divPosts', { childList: true, subtree: true });
         if (divPostsObs) {
             divPostsObs.addHandler(function labelCreated12hHandler(mutations) {
                 for (const mutation of mutations) {
                     for (const addedNode of mutation.addedNodes) {
                         if (addedNode.nodeType !== 1) continue;
-                        if (addedNode.classList && addedNode.classList.contains('labelCreated')) {
+                        if (addedNode.tagName === 'TIME' && 
+                            addedNode.classList && addedNode.classList.contains('labelCreated')) {
                             convertLabelCreatedSpan(addedNode);
                         } else if (addedNode.querySelectorAll) {
-                            addedNode.querySelectorAll('.labelCreated').forEach(convertLabelCreatedSpan);
+                            addedNode.querySelectorAll('time.labelCreated').forEach(convertLabelCreatedSpan);
                         }
                     }
                 }
@@ -3055,6 +3053,8 @@ onReady(async function () {
                     if (!targetUri) return;
 
                     const targetPostId = targetUri.split('#')[1];
+                    if (!targetPostId) return;
+                    
                     const targetPost = document.getElementById(targetPostId);
 
                     if (targetPost) {
@@ -3106,7 +3106,9 @@ onReady(async function () {
                 threadAllPosts();
             });
         }
-        threadAllPosts();  
+        setTimeout(() => {
+            threadAllPosts();  
+        }, 500);
         addRefreshButton();
     }
     function featureLastFifty() {
@@ -3457,8 +3459,8 @@ onReady(async function () {
 
             const container = document.createElement('div');
             container.className = 'sauceLinksContainer';
-            container.style.marginTop = '3px';
-            container.style.display = 'flex';
+            container.style.marginBottom = '3px';
+            container.style.display = 'inline-flex';
             container.style.flexWrap = 'wrap';
             container.style.gap = '6px';
 
@@ -3504,7 +3506,7 @@ onReady(async function () {
 
             if (anyLink) {
                 detailDiv.classList.add('sauceLinksProcessed');
-                detailDiv.appendChild(container);
+                detailDiv.after(container);
             }
         }
         function observeAllUploadDetails(container = document) {

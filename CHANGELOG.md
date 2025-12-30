@@ -1,3 +1,11 @@
+### v1.58.1
+*2025-12-30*
+
+- Fix for 12-hour clock (AM/PM) option
+- Fix for Sauce links
+- Fix Quote Threading
+- Small code optimizations
+
 ## v1.58.0
 *2025-12-29*
 
