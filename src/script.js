@@ -2483,13 +2483,11 @@ onReady(async function () {
             if (hasUnreadThreads()) {
                 btn.classList.remove('disabled');
                 btn.style.opacity = '1';
-                btn.style.pointerEvents = 'auto';
                 btn.style.cursor = 'pointer';
                 btn.title = 'Mark all threads as read';
             } else {
                 btn.classList.add('disabled');
                 btn.style.opacity = '0.5';
-                btn.style.pointerEvents = 'none';
                 btn.style.cursor = 'default';
                 btn.title = 'No unread threads';
             }
