@@ -4297,13 +4297,42 @@ onReady(async function () {
         function getInnerPostElem(cell) {
             return cell.querySelector('.innerPost') || cell.querySelector('.innerOP');
         }
+        // Cache thread ID from URL for thread pages
+        let cachedThreadIdFromUrl = null;
+        function getThreadIdFromUrl() {
+            if (cachedThreadIdFromUrl !== null) return cachedThreadIdFromUrl;
+            if (window.pageType?.isThread) {
+                const match = window.location.pathname.match(/\/(res|last)\/(\d+)\.html$/i);
+                if (match && match[2]) {
+                    cachedThreadIdFromUrl = match[2];
+                    return cachedThreadIdFromUrl;
+                }
+            }
+            return null;
+        }
+        
         function getThreadIdFromInnerPost(inner) {
-            if (!inner) return null;
-            const dataUri = inner.getAttribute('data-uri');
-            if (!dataUri) return null;
-            const parts = dataUri.split('/');
-            if (parts.length < 2) return null;
-            return parts[1].split('#')[0];
+            // First try to get from data-uri attribute
+            if (inner) {
+                const dataUri = inner.getAttribute('data-uri');
+                if (dataUri) {
+                    // Handle both "board/thread#postId" and "/board/thread#postId" formats
+                    const normalizedUri = dataUri.startsWith('/') ? dataUri.slice(1) : dataUri;
+                    const parts = normalizedUri.split('/');
+                    if (parts.length >= 2) {
+                        const threadId = parts[1].split('#')[0];
+                        return threadId;
+                    }
+                }
+            }
+            
+            // Fallback: get thread ID from URL if on a thread page
+            const threadIdFromUrl = getThreadIdFromUrl();
+            if (threadIdFromUrl) {
+                return threadIdFromUrl;
+            }
+            
+            return null;
         }
         function getPostId(cell) {
             return cell.id ? cell.id.replace(/\D/g, '') : '';
@@ -4393,13 +4422,26 @@ onReady(async function () {
         // --- Hide/unhide by ID (simple/plus/recursive) ---
         async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
             const postIdsWithId = new Set();
-            if (!/^[a-z0-9]+$/i.test(id)) return;
+            if (!id || !/^[a-z0-9]+$/i.test(id)) return;
+            if (!boardUri || !threadId) return;
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 const inner = getInnerPostElem(cell);
                 const cellThreadId = getThreadIdFromInnerPost(inner);
                 const idElem = cell.querySelector('.labelId');
-                const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+                // Extract ID: handle various formats like "15faa1", "15faa1 (5)", "15faa1 | something"
+                let cellId = null;
+                if (idElem) {
+                    const text = idElem.textContent.trim();
+                    // Try to match hex ID pattern (6+ hex chars) or alphanumeric
+                    const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                    if (idMatch) {
+                        cellId = idMatch[1];
+                    } else {
+                        // Fallback to original method
+                        cellId = text.split(/[|\(]/)[0].trim();
+                    }
+                }
                 if (
                     cellThreadId === threadId &&
                     cellId &&
@@ -4551,8 +4593,13 @@ onReady(async function () {
                     for (const id of threadObj.simple || []) {
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
-                            if (idElem && idElem.textContent.split(/[|\\(]/)[0].trim() === id) {
-                                filteredPostIds.add(getPostId(cell));
+                            if (idElem) {
+                                const text = idElem.textContent.trim();
+                                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                                const cellId = idMatch ? idMatch[1] : text.split(/[|\(]/)[0].trim();
+                                if (cellId === id) {
+                                    filteredPostIds.add(getPostId(cell));
+                                }
                             }
                         });
                     }
@@ -4560,8 +4607,13 @@ onReady(async function () {
                     for (const id of threadObj.plus || []) {
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
-                            if (idElem && idElem.textContent.split(/[|\\(]/)[0].trim() === id) {
-                                filteredPostIds.add(getPostId(cell));
+                            if (idElem) {
+                                const text = idElem.textContent.trim();
+                                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                                const cellId = idMatch ? idMatch[1] : text.split(/[|\(]/)[0].trim();
+                                if (cellId === id) {
+                                    filteredPostIds.add(getPostId(cell));
+                                }
                             }
                         });
                     }
@@ -4654,7 +4706,19 @@ onReady(async function () {
             const inner = getInnerPostElem(postCell);
             const threadId = getThreadIdFromInnerPost(inner);
             const idElem = postCell.querySelector('.labelId');
-            const id = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+            // Extract ID: handle various formats like "15faa1", "15faa1 (5)", "15faa1 | something"
+            let id = null;
+            if (idElem) {
+                const text = idElem.textContent.trim();
+                // Try to match hex ID pattern (6+ hex chars) or alphanumeric
+                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                if (idMatch) {
+                    id = idMatch[1];
+                } else {
+                    // Fallback to original method
+                    id = text.split(/[|\(]/)[0].trim();
+                }
+            }
             const nameElem = postCell.querySelector('.linkName');
             const name = nameElem ? nameElem.textContent.trim() : null;
             const isOP = postCell.classList.contains('opCell') || postCell.classList.contains('innerOP');
@@ -4691,6 +4755,9 @@ onReady(async function () {
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
             const isNameFiltered = name && filteredNamesObj.simple.includes(name);
             const isNameFilteredPlus = name && filteredNamesObj.plus.includes(name);
+
+            // Check if IDs are used in this thread/board
+            const hasIdsInThread = document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"] .labelId, .opCell[data-boarduri="${boardUri}"] .labelId`).length > 0;
 
             // Menu entries
             const options = [];
@@ -4784,24 +4851,35 @@ onReady(async function () {
                         }
                         removeExistingMenu();
                     }
-                },
-                {
-                    name: isFilteredId ? 'Unfilter ID' : 'Filter ID',
-                    callback: async () => {
+                }
+            );
+
+            // Only add Filter ID options if IDs are used in this thread/board
+            if (hasIdsInThread) {
+                options.push(
+                    {
+                        name: isFilteredId ? 'Unfilter ID' : 'Filter ID',
+                        callback: async () => {
+                        if (!id || !boardUri || !threadId) {
+                            console.error("8chanSS: Missing required data for Filter ID", { id, boardUri, threadId });
+                            removeExistingMenu();
+                            return;
+                        }
                         let obj = await getStoredObject(FILTERED_IDS_KEY);
-                        if (!obj[boardUri]) obj[boardUri] = {};
+                        if (!obj || typeof obj !== 'object') obj = {};
+                        if (!obj[boardUri] || typeof obj[boardUri] !== 'object') obj[boardUri] = {};
                         let threadObj = obj[boardUri][threadId];
                         if (Array.isArray(threadObj)) {
                             threadObj = { simple: threadObj, plus: [] };
                             obj[boardUri][threadId] = threadObj;
-                        } else if (!threadObj) {
+                        } else if (!threadObj || typeof threadObj !== 'object') {
                             threadObj = { simple: [], plus: [] };
                             obj[boardUri][threadId] = threadObj;
                         }
                         if (!Array.isArray(threadObj.simple)) threadObj.simple = [];
                         let arr = threadObj.simple;
-                        // Use the raw ID for storage and comparison
-                        const rawId = id ? id.split(/[|\(]/)[0].trim() : id;
+                        // Use the extracted ID (already cleaned)
+                        const rawId = id;
                         const idx = arr.indexOf(rawId);
                         if (idx !== -1) {
                             arr.splice(idx, 1);
@@ -4820,19 +4898,26 @@ onReady(async function () {
                 {
                     name: isFilteredIdPlus ? 'Unfilter ID+' : 'Filter ID+',
                     callback: async () => {
+                        if (!id || !boardUri || !threadId) {
+                            console.error("8chanSS: Missing required data for Filter ID+", { id, boardUri, threadId });
+                            removeExistingMenu();
+                            return;
+                        }
                         let obj = await getStoredObject(FILTERED_IDS_KEY);
-                        if (!obj[boardUri]) obj[boardUri] = {};
+                        if (!obj || typeof obj !== 'object') obj = {};
+                        if (!obj[boardUri] || typeof obj[boardUri] !== 'object') obj[boardUri] = {};
                         let threadObj = obj[boardUri][threadId];
                         if (Array.isArray(threadObj)) {
                             threadObj = { simple: threadObj, plus: [] };
                             obj[boardUri][threadId] = threadObj;
-                        } else if (!threadObj) {
+                        } else if (!threadObj || typeof threadObj !== 'object') {
                             threadObj = { simple: [], plus: [] };
                             obj[boardUri][threadId] = threadObj;
                         }
                         if (!Array.isArray(threadObj.plus)) threadObj.plus = [];
                         let arr = threadObj.plus;
-                        const rawId = id ? id.split(/[|\(]/)[0].trim() : id;
+                        // Use the extracted ID (already cleaned)
+                        const rawId = id;
                         const idx = arr.indexOf(rawId);
                         if (idx !== -1) {
                             arr.splice(idx, 1);
@@ -4848,7 +4933,8 @@ onReady(async function () {
                         removeExistingMenu();
                     }
                 }
-            );
+                );
+            }
 
             const menu = new CustomHideMenu(hideButton, postCell, options);
             menu.render();
@@ -5030,8 +5116,18 @@ onReady(async function () {
                             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                                 const inner = getInnerPostElem(cell);
                                 const cellThreadId = getThreadIdFromInnerPost(inner);
-                                const idElem = cell.querySelector('.labelId');
-                                const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+                            const idElem = cell.querySelector('.labelId');
+                            // Extract ID: handle various formats
+                            let cellId = null;
+                            if (idElem) {
+                                const text = idElem.textContent.trim();
+                                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                                if (idMatch) {
+                                    cellId = idMatch[1];
+                                } else {
+                                    cellId = text.split(/[|\(]/)[0].trim();
+                                }
+                            }
                                 if (
                                     cellThreadId === threadId &&
                                     cellId &&
@@ -5061,7 +5157,17 @@ onReady(async function () {
                             const inner = getInnerPostElem(cell);
                             const threadId = getThreadIdFromInnerPost(inner);
                             const idElem = cell.querySelector('.labelId');
-                            const id = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+                            // Extract ID: handle various formats
+                            let id = null;
+                            if (idElem) {
+                                const text = idElem.textContent.trim();
+                                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                                if (idMatch) {
+                                    id = idMatch[1];
+                                } else {
+                                    id = text.split(/[|\(]/)[0].trim();
+                                }
+                            }
                             const nameElem = cell.querySelector('.linkName');
                             const name = nameElem ? nameElem.textContent.trim() : null;
 
@@ -5074,20 +5180,22 @@ onReady(async function () {
                             }
 
                             // Hide by filtered ID (simple and plus)
-                            let threadObj = filteredIdsObj[boardUri] && filteredIdsObj[boardUri][threadId];
-                            if (Array.isArray(threadObj)) {
-                                threadObj = { simple: threadObj, plus: [] };
-                                filteredIdsObj[boardUri][threadId] = threadObj;
-                            } else if (!threadObj) {
-                                threadObj = { simple: [], plus: [] };
-                                if (!filteredIdsObj[boardUri]) filteredIdsObj[boardUri] = {};
-                                filteredIdsObj[boardUri][threadId] = threadObj;
-                            }
-                            if (id && threadObj.simple.includes(id)) {
-                                setPostsWithIdHidden(boardUri, threadId, id, true, false);
-                            }
-                            if (id && threadObj.plus.includes(id)) {
-                                setPostsWithIdHidden(boardUri, threadId, id, true, true);
+                            if (boardUri && threadId && filteredIdsObj[boardUri] && filteredIdsObj[boardUri][threadId]) {
+                                let threadObj = filteredIdsObj[boardUri][threadId];
+                                if (Array.isArray(threadObj)) {
+                                    threadObj = { simple: threadObj, plus: [] };
+                                    filteredIdsObj[boardUri][threadId] = threadObj;
+                                } else if (!threadObj) {
+                                    threadObj = { simple: [], plus: [] };
+                                    if (!filteredIdsObj[boardUri]) filteredIdsObj[boardUri] = {};
+                                    filteredIdsObj[boardUri][threadId] = threadObj;
+                                }
+                                if (id && threadObj.simple && threadObj.simple.includes(id)) {
+                                    setPostsWithIdHidden(boardUri, threadId, id, true, false);
+                                }
+                                if (id && threadObj.plus && threadObj.plus.includes(id)) {
+                                    setPostsWithIdHidden(boardUri, threadId, id, true, true);
+                                }
                             }
 
                             // Hide by filtered name (simple and plus)
