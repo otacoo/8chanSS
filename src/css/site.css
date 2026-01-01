@@ -162,6 +162,9 @@ nav.navHeader {
     font-weight: bold;
 }
 
+.markAllRead::before {
+    content: \"\\e065\";
+}
 /* Up/Down Arrows */
 .scroll-arrow-btn {
     position: fixed;

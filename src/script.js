@@ -2429,12 +2429,51 @@ onReady(async function () {
             }
         }
 
-        function showThreadWatcher() {
+        // Track if user manually closed the thread watcher
+        const CLOSED_STORAGE_KEY = "8chanSS_threadWatcherClosed";
+        
+        async function isManuallyClosed() {
+            try {
+                const closed = await getStoredObject(CLOSED_STORAGE_KEY);
+                return closed === true;
+            } catch (err) {
+                return false;
+            }
+        }
+        
+        async function setManuallyClosed(closed) {
+            try {
+                await setStoredObject(CLOSED_STORAGE_KEY, closed);
+            } catch (err) {
+                console.error("Failed to save thread watcher closed state:", err);
+            }
+        }
+
+        async function showThreadWatcher() {
             const watchedMenu = document.getElementById("watchedMenu");
             if (watchedMenu) {
-                watchedMenu.style.display = "flex";
-                restorePosition();
+                // Only show if not manually closed
+                const manuallyClosed = await isManuallyClosed();
+                if (!manuallyClosed) {
+                    watchedMenu.style.display = "flex";
+                    restorePosition();
+                }
             }
+        }
+
+        // Watch for when user opens the thread watcher manually (clears the closed flag)
+        const watchedMenuObsForOpen = observeSelector('#watchedMenu', { attributes: true, attributeFilter: ['style'] });
+        if (watchedMenuObsForOpen) {
+            watchedMenuObsForOpen.addHandler(async function openHandler() {
+                const watchedMenu = document.getElementById("watchedMenu");
+                if (watchedMenu && watchedMenu.style.display !== "none" && watchedMenu.style.display !== "") {
+                    // User opened it, clear the manually closed flag
+                    const manuallyClosed = await isManuallyClosed();
+                    if (manuallyClosed) {
+                        await setManuallyClosed(false);
+                    }
+                }
+            });
         }
 
         // After update need to click the watcher button to populate the thread watcher
@@ -2463,14 +2502,12 @@ onReady(async function () {
         const handleDiv = document.querySelector('#watchedMenu > div.handle');
         if (!handleDiv) return;
         // Check if the button already exists to avoid duplicates
-        if (handleDiv.querySelector('.watchedCellDismissButton.markAllRead')) return;
+        if (handleDiv.querySelector('.markAllRead')) return;
 
-        // Create the "Mark all threads as read" button
-        const btn = document.createElement('a');
-        btn.className = 'watchedCellDismissButton glowOnHover coloredIcon markAllRead';
+        // Create the button
+        const btn = document.createElement('span');
+        btn.className = 'coloredIcon glowOnHover markAllRead';
         btn.title = 'Mark all threads as read';
-        btn.style.float = 'right';
-        btn.style.paddingTop = '3px';
 
         // Helper to check if there are unread threads
         function hasUnreadThreads() {
@@ -2483,12 +2520,16 @@ onReady(async function () {
         // Helper to update button state
         function updateButtonState() {
             if (hasUnreadThreads()) {
+                btn.classList.remove('disabled');
                 btn.style.opacity = '1';
                 btn.style.pointerEvents = 'auto';
+                btn.style.cursor = 'pointer';
                 btn.title = 'Mark all threads as read';
             } else {
+                btn.classList.add('disabled');
                 btn.style.opacity = '0.5';
                 btn.style.pointerEvents = 'none';
+                btn.style.cursor = 'default';
                 btn.title = 'No unread threads';
             }
         }
@@ -2541,23 +2582,34 @@ onReady(async function () {
         // Set initial state
         updateButtonState();
 
-        // Append the button as the last child of div.handle
-        handleDiv.appendChild(btn);
+        // Insert button before close-btn
+        const closeBtn = handleDiv.querySelector('.close-btn');
+        if (closeBtn) {
+            handleDiv.insertBefore(btn, closeBtn);
+        } else {
+            // Fallback: append if close-btn not found
+            handleDiv.appendChild(btn);
+        }
 
         // Event delegation for close button and mark-all-read button
-        document.body.addEventListener('click', function (e) {
+        document.body.addEventListener('click', async function (e) {
             // Close button delegation
             const closeBtn = e.target.closest('#watchedMenu .close-btn');
             if (closeBtn) {
                 const watchedMenu = document.getElementById("watchedMenu");
-                if (watchedMenu) watchedMenu.style.display = "none";
+                if (watchedMenu) {
+                    watchedMenu.style.display = "none";
+                    // Mark as manually closed so pin feature respects it
+                    await setManuallyClosed(true);
+                }
                 return;
             }
             // Mark all as read button delegation
-            const markAllBtn = e.target.closest('.watchedCellDismissButton.markAllRead');
+            const markAllBtn = e.target.closest('.markAllRead');
             if (markAllBtn) {
                 e.preventDefault();
-                if (markAllBtn.style.pointerEvents === 'none' || markAllBtn.dataset.processing === 'true') return;
+                e.stopPropagation();
+                if (markAllBtn.style.pointerEvents === 'none' || markAllBtn.classList.contains('disabled') || markAllBtn.dataset.processing === 'true') return;
                 markAllBtn.dataset.processing = 'true';
                 markAllBtn.style.opacity = '0.5';
                 markAllThreadsAsReadWithRetry(3, function () {
