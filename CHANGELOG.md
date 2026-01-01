@@ -1,9 +1,16 @@
+### v1.58.3
+*2026-01-01*
+
+- Add support 8chan nodes
+- Fixes for Filter ID option not working correctly on page reload
+- Change how **Mark All Threads As Read* button is added
+- The Thread Watcher dialog can now be closed even if TW pinning is enabled
+
 ### v1.58.2
 *2025-12-30*
 
 - Detect mobile/desktop version of site on page load to correctly add 8chanSS menu button
 - Fixes for Thread Watcher (You) mentions and highlights
-
 
 ### v1.58.1
 *2025-12-30*

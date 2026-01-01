@@ -1,17 +1,17 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.58.2
+// @version      1.58.3
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
 // @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
-// @match        *://8chan.moe/*
-// @match        *://8chan.st/*
-// @match        *://8chan.cc/*
+// @match        *://*.8chan.moe/*
+// @match        *://*.8chan.st/*
+// @match        *://*.8chan.cc/*
 // @match        *://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/*
-// @exclude      *://8chan.moe/login.html
-// @exclude      *://8chan.st/login.html
-// @exclude      *://8chan.cc/login.html
+// @exclude      *://*.8chan.moe/login.html
+// @exclude      *://*.8chan.st/login.html
+// @exclude      *://*.8chan.cc/login.html
 // @exclude      *://alephchvkipd2houttjirmgivro5pxullvcgm4c47ptm7mhubbja6kad.onion/login.html
 // @grant        GM.getValue
 // @grant        GM.setValue
@@ -108,7 +108,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.58.2";
+    const VERSION = "1.58.3";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -563,7 +563,7 @@ onReady(async function () {
 
         let css = "";
         if (window.pageType?.is8chan) {
-            css += "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:visible}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}:root.hide-defaultBL #navBoardsTop,:root.hide-defaultBL #navBoardsTopEnd{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}:root.is-thread footer{visibility:hidden;height:0}:root.op-background .opCell>.innerOP{padding-top:.25em;width:100%;background:var(--contrast-color);border:1px solid var(--horizon-sep-color);border-top-width:0;border-left-width:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-yous .innerOP:has(> .opHead.title > .youName),:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),:root.highlight-yous .yourPost{border-left:dashed #68b723 2px!important}:root.highlight-yous .innerPost:has(>.divMessage>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>:not(div)>.you),:root.highlight-yous .quotesYou{border-left:solid var(--subject-color) 2px!important}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"]{filter:blur(5px)!important;transition:filter .3s ease}:root.fit-images :not(#media-viewer)>.imgExpanded,:root.fit-images :not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px;resize:horizontal}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.ss-active{font-weight:700}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}.apng-canvas-snapshot{display:block;position:absolute;z-index:1}.apng-overlay{position:absolute;z-index:2;cursor:pointer;user-select:none}.chSS-mascot{position:fixed;height:auto;object-fit:contain;pointer-events:none;z-index:-1;user-select:none;-webkit-user-drag:none}#setting_enableMascots_mascotUrls{resize:vertical;min-height:80px}:root.backlink-icon .panelBacklinks>a{display:inline-block;width:12px;height:12px;margin:0 2px;text-decoration:none;font-size:0;vertical-align:middle;color:var(--link-color)}:root.backlink-icon .panelBacklinks>a::before{content:'▶';font-size:12px;display:inline-block;line-height:.6;color:var(--link-color);transform:rotate(0);transition:transform .1s ease-in-out,opacity .1s ease-in-out;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Symbol',Roboto,Ubuntu,Cantarell,sans-serif}:root.backlink-icon .panelBacklinks>a.inlined::before{transform:rotate(90deg);opacity:.7;color:var(--link-hover-color);line-height:.9}";
+            css += "#dynamicAnnouncement,#panelMessage,#postingForm{visibility:visible}#navFadeEnd,#navFadeMid,.watchedNotification::before,:root.disable-banner #bannerImage,:root.hide-announcement #dynamicAnnouncement,:root.hide-checkboxes .deletionCheckBox,:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:first-child,:root.hide-jannytools #actionsForm,:root.hide-jannytools #boardContentLinks,:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:first-child>tr:nth-child(2),:root.hide-panelmessage #panelMessage,:root.hide-posting-form #postingForm{display:none}#sideCatalogDiv{z-index:200;background:var(--background-gradient)}:root.hide-defaultBL #navBoardsTop,:root.hide-defaultBL #navBoardsTopEnd{display:none!important}:root.is-catalog.show-catalog-form #postingForm{display:block!important}:root.is-thread footer{visibility:hidden;height:0}:root.op-background .opCell>.innerOP{padding-top:.25em;width:100%;background:var(--contrast-color);border:1px solid var(--horizon-sep-color);border-top-width:0;border-left-width:0}nav.navHeader{z-index:300}:not(:root.bottom-header) .navHeader{box-shadow:0 1px 2px rgba(0,0,0,.15)}:root.bottom-header nav.navHeader{top:auto!important;bottom:0!important;box-shadow:0 -1px 2px rgba(0,0,0,.15)}:root.highlight-yous .innerOP:has(> .opHead.title > .youName),:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),:root.highlight-yous .yourPost{border-left:dashed #68b723 2px!important}:root.highlight-yous .innerPost:has(>.divMessage>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>.you),:root.highlight-yous .innerPost:has(>.divMessage>:not(div)>:not(div)>.you),:root.highlight-yous .quotesYou{border-left:solid var(--subject-color) 2px!important}:root.fit-replies :not(.hidden).innerPost{margin-left:10px;display:flow-root}:root.fit-replies :not(.hidden,.inlineQuote).innerPost{margin-left:0}.multipleUploads .uploadCell:not(.expandedCell){max-width:215px}:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"]{filter:blur(5px)!important;transition:filter .3s ease}:root.fit-images :not(#media-viewer)>.imgExpanded,:root.fit-images :not(#media-viewer)>video{max-height:90vh!important;object-fit:contain;width:auto!important}:not(:root.auto-expand-tw) #watchedMenu .floatingContainer{overflow-x:hidden;overflow-wrap:break-word}:root.auto-expand-tw #watchedMenu .floatingContainer{height:fit-content!important;padding-bottom:10px;resize:horizontal}.watchedCellLabel a::before{content:attr(data-board);color:#aaa;margin-right:4px;font-weight:700}.watchButton.watched-active::before{color:#dd003e!important}#media-viewer,#multiboardMenu,#settingsMenu,#watchedMenu{font-size:smaller;padding:5px!important;box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#watchedMenu,#watchedMenu .floatingContainer{max-width:100vw}.watchedNotification::before{padding-right:2px}#watchedMenu .floatingContainer{scrollbar-width:thin;scrollbar-color:var(--link-color) var(--contrast-color)}.ss-active{font-weight:700}.markAllRead::before{content:\"\\e065\"}.scroll-arrow-btn{position:fixed;right:50px;width:36px;height:35px;background:#222;color:#fff;border:none;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:22px;cursor:pointer;opacity:.7;z-index:800;display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}:root:not(.is-index,.is-catalog).ss-sidebar .scroll-arrow-btn{right:330px!important}.scroll-arrow-btn:hover{opacity:1;background:#444}#scroll-arrow-up{bottom:80px}#scroll-arrow-down{bottom:32px}.bumpLockIndicator::after{padding-right:3px}.floatingMenu.focused{z-index:305!important}#quick-reply{padding:0}#media-viewer{padding:20px 0 0!important}#media-viewer.topright{top:26px!important;right:0!important;left:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topleft{top:26px!important;left:0!important;right:auto!important;max-height:97%!important;max-width:max-content!important}#media-viewer.topright::after{pointer-events:none}#media-viewer.topleft::after{pointer-events:none}.ss-chevron{transition:transform .2s;margin-left:6px;font-size:12px;display:inline-block}a.imgLink[data-filemime^='audio/'],a.originalNameLink[href$='.m4a'],a.originalNameLink[href$='.mp3'],a.originalNameLink[href$='.ogg'],a.originalNameLink[href$='.wav']{position:relative}.audio-preview-indicator{display:none;position:absolute;background:rgba(0,0,0,.7);color:#fff;padding:5px;font-size:12px;border-radius:3px;z-index:1000;left:0;top:0;white-space:nowrap;pointer-events:none}a.originalNameLink:hover .audio-preview-indicator,a[data-filemime^='audio/']:hover .audio-preview-indicator{display:block}.yt-icon{width:16px;height:13px;vertical-align:middle;margin-right:2px}.id-glow{box-shadow:0 0 12px var(--subject-color)}.id-dotted{border:2px dotted #fff}.apng-canvas-snapshot{display:block;position:absolute;z-index:1}.apng-overlay{position:absolute;z-index:2;cursor:pointer;user-select:none}.chSS-mascot{position:fixed;height:auto;object-fit:contain;pointer-events:none;z-index:-1;user-select:none;-webkit-user-drag:none}#setting_enableMascots_mascotUrls{resize:vertical;min-height:80px}:root.backlink-icon .panelBacklinks>a{display:inline-block;width:12px;height:12px;margin:0 2px;text-decoration:none;font-size:0;vertical-align:middle;color:var(--link-color)}:root.backlink-icon .panelBacklinks>a::before{content:'▶';font-size:12px;display:inline-block;line-height:.6;color:var(--link-color);transform:rotate(0);transition:transform .1s ease-in-out,opacity .1s ease-in-out;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI Symbol',Roboto,Ubuntu,Cantarell,sans-serif}:root.backlink-icon .panelBacklinks>a.inlined::before{transform:rotate(90deg);opacity:.7;color:var(--link-hover-color);line-height:.9}";
         }
         if (window.pageType?.isThread) {
             css += ":root.sticky-qr #quick-reply{display:block;top:auto!important;bottom:0}:root.sticky-qr.ss-sidebar #quick-reply{left:auto!important;right:0!important}:root.sticky-qr.ss-leftsidebar #quick-reply{left:0!important;right:auto!important}:root.sticky-qr #qrbody{resize:vertical;max-height:50vh;height:130px}#selectedDivQr,:root.sticky-qr #selectedDiv{display:inline-flex;overflow:scroll hidden;max-width:300px}#qrbody{min-width:300px}:root.bottom-header #quick-reply{bottom:28px!important}:root.fade-qr #quick-reply{padding:0;opacity:.7;transition:opacity .3s ease}:root.fade-qr #quick-reply:focus-within,:root.fade-qr #quick-reply:hover{opacity:1}#qrFilesBody{max-width:310px}#quick-reply{box-shadow:-3px 3px 2px 0 rgba(0,0,0,.19)}#unread-line{height:2px;border:none!important;pointer-events:none!important;background-image:linear-gradient(to left,rgba(185,185,185,.2),var(--text-color),rgba(185,185,185,.2));margin:-3px auto -3px auto;width:60%}:root.ss-sidebar #bannerImage{width:19rem;right:0;position:fixed;top:26px}:root.ss-sidebar.bottom-header #bannerImage{top:0!important}:root.ss-leftsidebar #bannerImage{width:19rem;left:0;position:fixed;top:26px}:root.ss-leftsidebar.bottom-header #bannerImage{top:0!important}.quoteTooltip{z-index:999}.nestedQuoteLink{text-decoration:underline dashed!important}:root.hide-stub .unhideButton{display:none}.quoteTooltip .innerPost{overflow:hidden}.inlineQuote .innerPost,.quoteTooltip .innerPost{box-shadow:-1px 1px 2px 0 rgba(0,0,0,.19)}.inlineQuote{margin-top:4px}.postInfo.title>.inlineQuote{margin-left:15px}.postCell.is-hidden-by-filter{display:none}.reply-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.quote-inlined{opacity:.5;text-decoration:underline dashed!important;text-underline-offset:2px}.target-highlight{background:var(--marked-color);border-color:var(--marked-border-color);color:var(--marked-text-color)}.statLabel{color:var(--link-color)}.statNumb{color:var(--text-color)}.postCell::before{display:inline!important;height:auto!important}.threadedReplies{border-left:1px solid #ccc;padding-left:15px}.ss-idlinks-floating{position:absolute;background:var(--background-color);color:var(--text-color);border:1px solid var(--navbar-text-color);padding:8px 15px 10px 10px;box-shadow:0 2px 12px rgba(0,0,0,.25);max-height:60vh;overflow-y:auto;font-size:14px;max-width:56vw;z-index:990;scrollbar-width:thin}.ss-idlinks-floating .innerPost,.ss-vertical-id-list .innerPost{background:0 0;display:block!important;border:none;box-shadow:none;outline:0;padding:0;margin:0}.ss-idlinks-floating .innerPost{padding:0 1px 2px 0!important}";
@@ -2073,7 +2073,6 @@ onReady(async function () {
         function showThreadWatcher() {
             const watchedMenu = document.getElementById("watchedMenu");
             if (watchedMenu) {
-                watchedMenu.style.display = "flex";
                 restorePosition();
             }
         }
@@ -2095,12 +2094,10 @@ onReady(async function () {
     (function markAllThreadsAsRead() {
         const handleDiv = document.querySelector('#watchedMenu > div.handle');
         if (!handleDiv) return;
-        if (handleDiv.querySelector('.watchedCellDismissButton.markAllRead')) return;
-        const btn = document.createElement('a');
-        btn.className = 'watchedCellDismissButton glowOnHover coloredIcon markAllRead';
+        if (handleDiv.querySelector('.markAllRead')) return;
+        const btn = document.createElement('span');
+        btn.className = 'coloredIcon glowOnHover markAllRead';
         btn.title = 'Mark all threads as read';
-        btn.style.float = 'right';
-        btn.style.paddingTop = '3px';
         function hasUnreadThreads() {
             const watchedMenu = document.querySelector('#watchedMenu');
             if (!watchedMenu) return false;
@@ -2108,12 +2105,14 @@ onReady(async function () {
         }
         function updateButtonState() {
             if (hasUnreadThreads()) {
+                btn.classList.remove('disabled');
                 btn.style.opacity = '1';
-                btn.style.pointerEvents = 'auto';
+                btn.style.cursor = 'pointer';
                 btn.title = 'Mark all threads as read';
             } else {
+                btn.classList.add('disabled');
                 btn.style.opacity = '0.5';
-                btn.style.pointerEvents = 'none';
+                btn.style.cursor = 'default';
                 btn.title = 'No unread threads';
             }
         }
@@ -2156,7 +2155,12 @@ onReady(async function () {
             });
         }
         updateButtonState();
-        handleDiv.appendChild(btn);
+        const closeBtn = handleDiv.querySelector('.close-btn');
+        if (closeBtn) {
+            handleDiv.insertBefore(btn, closeBtn);
+        } else {
+            handleDiv.appendChild(btn);
+        }
         document.body.addEventListener('click', function (e) {
             const closeBtn = e.target.closest('#watchedMenu .close-btn');
             if (closeBtn) {
@@ -2164,10 +2168,11 @@ onReady(async function () {
                 if (watchedMenu) watchedMenu.style.display = "none";
                 return;
             }
-            const markAllBtn = e.target.closest('.watchedCellDismissButton.markAllRead');
+            const markAllBtn = e.target.closest('.markAllRead');
             if (markAllBtn) {
                 e.preventDefault();
-                if (markAllBtn.style.pointerEvents === 'none' || markAllBtn.dataset.processing === 'true') return;
+                e.stopPropagation();
+                if (markAllBtn.style.pointerEvents === 'none' || markAllBtn.classList.contains('disabled') || markAllBtn.dataset.processing === 'true') return;
                 markAllBtn.dataset.processing = 'true';
                 markAllBtn.style.opacity = '0.5';
                 markAllThreadsAsReadWithRetry(3, function () {
@@ -3584,13 +3589,37 @@ onReady(async function () {
         function getInnerPostElem(cell) {
             return cell.querySelector('.innerPost') || cell.querySelector('.innerOP');
         }
+        let cachedThreadIdFromUrl = null;
+        function getThreadIdFromUrl() {
+            if (cachedThreadIdFromUrl !== null) return cachedThreadIdFromUrl;
+            if (window.pageType?.isThread) {
+                const match = window.location.pathname.match(/\/(res|last)\/(\d+)\.html$/i);
+                if (match && match[2]) {
+                    cachedThreadIdFromUrl = match[2];
+                    return cachedThreadIdFromUrl;
+                }
+            }
+            return null;
+        }
+        
         function getThreadIdFromInnerPost(inner) {
-            if (!inner) return null;
-            const dataUri = inner.getAttribute('data-uri');
-            if (!dataUri) return null;
-            const parts = dataUri.split('/');
-            if (parts.length < 2) return null;
-            return parts[1].split('#')[0];
+            if (inner) {
+                const dataUri = inner.getAttribute('data-uri');
+                if (dataUri) {
+                    const normalizedUri = dataUri.startsWith('/') ? dataUri.slice(1) : dataUri;
+                    const parts = normalizedUri.split('/');
+                    if (parts.length >= 2) {
+                        const threadId = parts[1].split('#')[0];
+                        return threadId;
+                    }
+                }
+            }
+            const threadIdFromUrl = getThreadIdFromUrl();
+            if (threadIdFromUrl) {
+                return threadIdFromUrl;
+            }
+            
+            return null;
         }
         function getPostId(cell) {
             return cell.id ? cell.id.replace(/\D/g, '') : '';
@@ -3672,13 +3701,23 @@ onReady(async function () {
         }
         async function setPostsWithIdHidden(boardUri, threadId, id, hide = true, plus = false) {
             const postIdsWithId = new Set();
-            if (!/^[a-z0-9]+$/i.test(id)) return;
+            if (!id || !/^[a-z0-9]+$/i.test(id)) return;
+            if (!boardUri || !threadId) return;
             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 const inner = getInnerPostElem(cell);
                 const cellThreadId = getThreadIdFromInnerPost(inner);
                 const idElem = cell.querySelector('.labelId');
-                const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+                let cellId = null;
+                if (idElem) {
+                    const text = idElem.textContent.trim();
+                    const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                    if (idMatch) {
+                        cellId = idMatch[1];
+                    } else {
+                        cellId = text.split(/[|\(]/)[0].trim();
+                    }
+                }
                 if (
                     cellThreadId === threadId &&
                     cellId &&
@@ -3817,16 +3856,26 @@ onReady(async function () {
                     for (const id of threadObj.simple || []) {
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
-                            if (idElem && idElem.textContent.split(/[|\\(]/)[0].trim() === id) {
-                                filteredPostIds.add(getPostId(cell));
+                            if (idElem) {
+                                const text = idElem.textContent.trim();
+                                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                                const cellId = idMatch ? idMatch[1] : text.split(/[|\(]/)[0].trim();
+                                if (cellId === id) {
+                                    filteredPostIds.add(getPostId(cell));
+                                }
                             }
                         });
                     }
                     for (const id of threadObj.plus || []) {
                         document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                             const idElem = cell.querySelector('.labelId');
-                            if (idElem && idElem.textContent.split(/[|\\(]/)[0].trim() === id) {
-                                filteredPostIds.add(getPostId(cell));
+                            if (idElem) {
+                                const text = idElem.textContent.trim();
+                                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                                const cellId = idMatch ? idMatch[1] : text.split(/[|\(]/)[0].trim();
+                                if (cellId === id) {
+                                    filteredPostIds.add(getPostId(cell));
+                                }
                             }
                         });
                     }
@@ -3913,7 +3962,16 @@ onReady(async function () {
             const inner = getInnerPostElem(postCell);
             const threadId = getThreadIdFromInnerPost(inner);
             const idElem = postCell.querySelector('.labelId');
-            const id = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+            let id = null;
+            if (idElem) {
+                const text = idElem.textContent.trim();
+                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                if (idMatch) {
+                    id = idMatch[1];
+                } else {
+                    id = text.split(/[|\(]/)[0].trim();
+                }
+            }
             const nameElem = postCell.querySelector('.linkName');
             const name = nameElem ? nameElem.textContent.trim() : null;
             const isOP = postCell.classList.contains('opCell') || postCell.classList.contains('innerOP');
@@ -3945,6 +4003,7 @@ onReady(async function () {
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
             const isNameFiltered = name && filteredNamesObj.simple.includes(name);
             const isNameFilteredPlus = name && filteredNamesObj.plus.includes(name);
+            const hasIdsInThread = document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"] .labelId, .opCell[data-boarduri="${boardUri}"] .labelId`).length > 0;
             const options = [];
 
             if (!isOP) {
@@ -4036,23 +4095,32 @@ onReady(async function () {
                         }
                         removeExistingMenu();
                     }
-                },
-                {
-                    name: isFilteredId ? 'Unfilter ID' : 'Filter ID',
-                    callback: async () => {
+                }
+            );
+            if (hasIdsInThread) {
+                options.push(
+                    {
+                        name: isFilteredId ? 'Unfilter ID' : 'Filter ID',
+                        callback: async () => {
+                        if (!id || !boardUri || !threadId) {
+                            console.error("8chanSS: Missing required data for Filter ID", { id, boardUri, threadId });
+                            removeExistingMenu();
+                            return;
+                        }
                         let obj = await getStoredObject(FILTERED_IDS_KEY);
-                        if (!obj[boardUri]) obj[boardUri] = {};
+                        if (!obj || typeof obj !== 'object') obj = {};
+                        if (!obj[boardUri] || typeof obj[boardUri] !== 'object') obj[boardUri] = {};
                         let threadObj = obj[boardUri][threadId];
                         if (Array.isArray(threadObj)) {
                             threadObj = { simple: threadObj, plus: [] };
                             obj[boardUri][threadId] = threadObj;
-                        } else if (!threadObj) {
+                        } else if (!threadObj || typeof threadObj !== 'object') {
                             threadObj = { simple: [], plus: [] };
                             obj[boardUri][threadId] = threadObj;
                         }
                         if (!Array.isArray(threadObj.simple)) threadObj.simple = [];
                         let arr = threadObj.simple;
-                        const rawId = id ? id.split(/[|\(]/)[0].trim() : id;
+                        const rawId = id;
                         const idx = arr.indexOf(rawId);
                         if (idx !== -1) {
                             arr.splice(idx, 1);
@@ -4071,19 +4139,25 @@ onReady(async function () {
                 {
                     name: isFilteredIdPlus ? 'Unfilter ID+' : 'Filter ID+',
                     callback: async () => {
+                        if (!id || !boardUri || !threadId) {
+                            console.error("8chanSS: Missing required data for Filter ID+", { id, boardUri, threadId });
+                            removeExistingMenu();
+                            return;
+                        }
                         let obj = await getStoredObject(FILTERED_IDS_KEY);
-                        if (!obj[boardUri]) obj[boardUri] = {};
+                        if (!obj || typeof obj !== 'object') obj = {};
+                        if (!obj[boardUri] || typeof obj[boardUri] !== 'object') obj[boardUri] = {};
                         let threadObj = obj[boardUri][threadId];
                         if (Array.isArray(threadObj)) {
                             threadObj = { simple: threadObj, plus: [] };
                             obj[boardUri][threadId] = threadObj;
-                        } else if (!threadObj) {
+                        } else if (!threadObj || typeof threadObj !== 'object') {
                             threadObj = { simple: [], plus: [] };
                             obj[boardUri][threadId] = threadObj;
                         }
                         if (!Array.isArray(threadObj.plus)) threadObj.plus = [];
                         let arr = threadObj.plus;
-                        const rawId = id ? id.split(/[|\(]/)[0].trim() : id;
+                        const rawId = id;
                         const idx = arr.indexOf(rawId);
                         if (idx !== -1) {
                             arr.splice(idx, 1);
@@ -4099,7 +4173,8 @@ onReady(async function () {
                         removeExistingMenu();
                     }
                 }
-            );
+                );
+            }
 
             const menu = new CustomHideMenu(hideButton, postCell, options);
             menu.render();
@@ -4259,8 +4334,17 @@ onReady(async function () {
                             document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"], .opCell[data-boarduri="${boardUri}"]`).forEach(cell => {
                                 const inner = getInnerPostElem(cell);
                                 const cellThreadId = getThreadIdFromInnerPost(inner);
-                                const idElem = cell.querySelector('.labelId');
-                                const cellId = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+                            const idElem = cell.querySelector('.labelId');
+                            let cellId = null;
+                            if (idElem) {
+                                const text = idElem.textContent.trim();
+                                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                                if (idMatch) {
+                                    cellId = idMatch[1];
+                                } else {
+                                    cellId = text.split(/[|\(]/)[0].trim();
+                                }
+                            }
                                 if (
                                     cellThreadId === threadId &&
                                     cellId &&
@@ -4290,7 +4374,16 @@ onReady(async function () {
                             const inner = getInnerPostElem(cell);
                             const threadId = getThreadIdFromInnerPost(inner);
                             const idElem = cell.querySelector('.labelId');
-                            const id = idElem ? idElem.textContent.split(/[|\(]/)[0].trim() : null;
+                            let id = null;
+                            if (idElem) {
+                                const text = idElem.textContent.trim();
+                                const idMatch = text.match(/^([a-f0-9]{6,}|[a-z0-9]+)/i);
+                                if (idMatch) {
+                                    id = idMatch[1];
+                                } else {
+                                    id = text.split(/[|\(]/)[0].trim();
+                                }
+                            }
                             const nameElem = cell.querySelector('.linkName');
                             const name = nameElem ? nameElem.textContent.trim() : null;
                             if (hiddenPostsObj[boardUri]?.simple?.includes(Number(postId))) {
@@ -4299,20 +4392,22 @@ onReady(async function () {
                             if (hiddenPostsObj[boardUri]?.plus?.includes(Number(postId))) {
                                 setPostHidden(boardUri, postId, true, true);
                             }
-                            let threadObj = filteredIdsObj[boardUri] && filteredIdsObj[boardUri][threadId];
-                            if (Array.isArray(threadObj)) {
-                                threadObj = { simple: threadObj, plus: [] };
-                                filteredIdsObj[boardUri][threadId] = threadObj;
-                            } else if (!threadObj) {
-                                threadObj = { simple: [], plus: [] };
-                                if (!filteredIdsObj[boardUri]) filteredIdsObj[boardUri] = {};
-                                filteredIdsObj[boardUri][threadId] = threadObj;
-                            }
-                            if (id && threadObj.simple.includes(id)) {
-                                setPostsWithIdHidden(boardUri, threadId, id, true, false);
-                            }
-                            if (id && threadObj.plus.includes(id)) {
-                                setPostsWithIdHidden(boardUri, threadId, id, true, true);
+                            if (boardUri && threadId && filteredIdsObj[boardUri] && filteredIdsObj[boardUri][threadId]) {
+                                let threadObj = filteredIdsObj[boardUri][threadId];
+                                if (Array.isArray(threadObj)) {
+                                    threadObj = { simple: threadObj, plus: [] };
+                                    filteredIdsObj[boardUri][threadId] = threadObj;
+                                } else if (!threadObj) {
+                                    threadObj = { simple: [], plus: [] };
+                                    if (!filteredIdsObj[boardUri]) filteredIdsObj[boardUri] = {};
+                                    filteredIdsObj[boardUri][threadId] = threadObj;
+                                }
+                                if (id && threadObj.simple && threadObj.simple.includes(id)) {
+                                    setPostsWithIdHidden(boardUri, threadId, id, true, false);
+                                }
+                                if (id && threadObj.plus && threadObj.plus.includes(id)) {
+                                    setPostsWithIdHidden(boardUri, threadId, id, true, true);
+                                }
                             }
                             if (name && filteredNamesObj.simple.includes(name)) {
                                 setPostsWithNameHidden(name, true, false);
