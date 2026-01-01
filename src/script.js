@@ -2432,7 +2432,6 @@ onReady(async function () {
         function showThreadWatcher() {
             const watchedMenu = document.getElementById("watchedMenu");
             if (watchedMenu) {
-                watchedMenu.style.display = "flex";
                 restorePosition();
             }
         }
