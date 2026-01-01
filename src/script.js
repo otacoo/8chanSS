@@ -2429,51 +2429,12 @@ onReady(async function () {
             }
         }
 
-        // Track if user manually closed the thread watcher
-        const CLOSED_STORAGE_KEY = "8chanSS_threadWatcherClosed";
-        
-        async function isManuallyClosed() {
-            try {
-                const closed = await getStoredObject(CLOSED_STORAGE_KEY);
-                return closed === true;
-            } catch (err) {
-                return false;
-            }
-        }
-        
-        async function setManuallyClosed(closed) {
-            try {
-                await setStoredObject(CLOSED_STORAGE_KEY, closed);
-            } catch (err) {
-                console.error("Failed to save thread watcher closed state:", err);
-            }
-        }
-
-        async function showThreadWatcher() {
+        function showThreadWatcher() {
             const watchedMenu = document.getElementById("watchedMenu");
             if (watchedMenu) {
-                // Only show if not manually closed
-                const manuallyClosed = await isManuallyClosed();
-                if (!manuallyClosed) {
-                    watchedMenu.style.display = "flex";
-                    restorePosition();
-                }
+                watchedMenu.style.display = "flex";
+                restorePosition();
             }
-        }
-
-        // Watch for when user opens the thread watcher manually (clears the closed flag)
-        const watchedMenuObsForOpen = observeSelector('#watchedMenu', { attributes: true, attributeFilter: ['style'] });
-        if (watchedMenuObsForOpen) {
-            watchedMenuObsForOpen.addHandler(async function openHandler() {
-                const watchedMenu = document.getElementById("watchedMenu");
-                if (watchedMenu && watchedMenu.style.display !== "none" && watchedMenu.style.display !== "") {
-                    // User opened it, clear the manually closed flag
-                    const manuallyClosed = await isManuallyClosed();
-                    if (manuallyClosed) {
-                        await setManuallyClosed(false);
-                    }
-                }
-            });
         }
 
         // After update need to click the watcher button to populate the thread watcher
@@ -2592,16 +2553,12 @@ onReady(async function () {
         }
 
         // Event delegation for close button and mark-all-read button
-        document.body.addEventListener('click', async function (e) {
+        document.body.addEventListener('click', function (e) {
             // Close button delegation
             const closeBtn = e.target.closest('#watchedMenu .close-btn');
             if (closeBtn) {
                 const watchedMenu = document.getElementById("watchedMenu");
-                if (watchedMenu) {
-                    watchedMenu.style.display = "none";
-                    // Mark as manually closed so pin feature respects it
-                    await setManuallyClosed(true);
-                }
+                if (watchedMenu) watchedMenu.style.display = "none";
                 return;
             }
             // Mark all as read button delegation
