@@ -808,7 +808,7 @@ onReady(async function () {
             imageHoverEnabled = await getSetting("enableThreadImageHover");
         }
         if (imageHoverEnabled) {
-            localStorage.removeItem("hoveringImage");
+            localStorage.setItem("hoveringImage", "false");
             featureImageHover();
         }
     } catch (e) {
