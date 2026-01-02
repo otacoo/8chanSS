@@ -1,9 +1,16 @@
+### v1.58.4
+*2026-01-02*
+
+- Code optimizations
+- Fix for **Save Favorite Boards** not using the correct localStorage key after site update
+- Fix for character icon duplication on /gacha/ when using **Quote Threading**
+
 ### v1.58.3
 *2026-01-01*
 
-- Add support 8chan nodes
+- Add support for 8chan nodes
 - Fixes for Filter ID option not working correctly on page reload
-- Change how **Mark All Threads As Read* button is added
+- Change how **Mark All Threads As Read** button is added
 - The Thread Watcher dialog can now be closed even if TW pinning is enabled
 
 ### v1.58.2

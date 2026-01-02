@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.58.3
+// @version      1.58.4
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -41,6 +41,7 @@ const debounce = (fn, delay) => {
     };
 };
 const observerRegistry = {};
+let unloadListenerAdded = false;
 
 function observeSelector(selector, options = { childList: true, subtree: false }) {
     if (observerRegistry[selector]) return observerRegistry[selector];
@@ -60,7 +61,14 @@ function observeSelector(selector, options = { childList: true, subtree: false }
     });
 
     observer.observe(node, options);
-    window.addEventListener('beforeunload', () => observer.disconnect());
+    if (!unloadListenerAdded) {
+        unloadListenerAdded = true;
+        window.addEventListener('beforeunload', () => {
+            for (const key in observerRegistry) {
+                observerRegistry[key].observer.disconnect();
+            }
+        }, { once: true });
+    }
 
     observerRegistry[selector] = {
         node,
@@ -108,7 +116,7 @@ onReady(async function () {
     const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
     const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
     const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
-    const VERSION = "1.58.3";
+    const VERSION = "1.58.4";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -480,6 +488,9 @@ onReady(async function () {
             await GM.setValue(key, obj);
         }
     }
+    function getRawIdFromLabelId(labelIdSpan) {
+        return labelIdSpan ? labelIdSpan.textContent.split(/[|\(]/)[0].trim() : null;
+    }
     (async function featureCssClassToggles() {
         document.documentElement.classList.add("8chanSS");
         const enableSidebar = await getSetting("enableSidebar");
@@ -748,7 +759,7 @@ onReady(async function () {
             imageHoverEnabled = await getSetting("enableThreadImageHover");
         }
         if (imageHoverEnabled) {
-            localStorage.removeItem("hoveringImage");
+            localStorage.setItem("hoveringImage", "false");
             featureImageHover();
         }
     } catch (e) {
@@ -1660,8 +1671,12 @@ onReady(async function () {
         let pendingImgLinks = new WeakSet();
         let debounceTimeout = null;
         function processPendingImgLinks() {
-            const linksToProcess = Array.from(document.querySelectorAll("a.imgLink")).filter(link => pendingImgLinks.has(link));
-            linksToProcess.forEach(link => processImgLink(link));
+            const allLinks = document.querySelectorAll("a.imgLink");
+            allLinks.forEach(link => {
+                if (pendingImgLinks.has(link)) {
+                    processImgLink(link);
+                }
+            });
             pendingImgLinks = new WeakSet(); 
             debounceTimeout = null;
         }
@@ -1795,7 +1810,7 @@ onReady(async function () {
         }
         const SEL = 'a.linkThumb img, a.imgLink img';
         document.querySelectorAll(SEL).forEach(processThumb);
-        const obs = observeSelector('body', { childList: true, subtree: true });
+        const obs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (obs) {
             obs.addHandler(function apngStopHandler(mutations) {
                 for (const m of mutations) {
@@ -2101,7 +2116,7 @@ onReady(async function () {
         function hasUnreadThreads() {
             const watchedMenu = document.querySelector('#watchedMenu');
             if (!watchedMenu) return false;
-            return watchedMenu.querySelectorAll('.watchedNotification:not(.hidden) .watchedCellDismissButton:not(.markAllRead)').length > 0;
+            return watchedMenu.querySelector('.watchedNotification:not(.hidden) .watchedCellDismissButton:not(.markAllRead)') !== null;
         }
         function updateButtonState() {
             if (hasUnreadThreads()) {
@@ -2712,7 +2727,7 @@ onReady(async function () {
             });
         }
         processLinks(document);
-        const divThreadsObs = observeSelector('body', { childList: true, subtree: true });
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
             divThreadsObs.addHandler(function enhanceYoutubeLinksHandler(mutations) {
                 for (const mutation of mutations) {
@@ -2934,12 +2949,12 @@ onReady(async function () {
             const idFrequency = {};
             const labelSpans = root.querySelectorAll('.labelId');
             labelSpans.forEach(span => {
-                const id = span.textContent.split(/[|\(]/)[0].trim();
+                const id = getRawIdFromLabelId(span);
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
             const seen = {};
             labelSpans.forEach(span => {
-                const id = span.textContent.split(/[|\(]/)[0].trim();
+                const id = getRawIdFromLabelId(span);
                 span.classList.remove('moetext', 'id-glow', 'id-dotted');
                 if (!seen[id]) {
                     seen[id] = true;
@@ -2983,7 +2998,7 @@ onReady(async function () {
 
         function processIDLabels() {
             document.querySelectorAll('.labelId').forEach(label => {
-                if (processedLabels.has(label) && label.querySelector('.ss-id-separator')) {
+                if (processedLabels.has(label)) {
                     return;
                 }
                 const originalMouseover = label.onmouseover;
@@ -3026,11 +3041,11 @@ onReady(async function () {
             });
         }
         setTimeout(processIDLabels, 50);
-        const bodyObs = observeSelector('body', { childList: true, subtree: true });
-        if (bodyObs) {
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
             const debouncedProcess = debounce(processIDLabels, 50);
 
-            bodyObs.addHandler(function showIDCountHandler(mutations) {
+            divThreadsObs.addHandler(function showIDCountHandler(mutations) {
                 let hasNewLabels = false;
 
                 for (const mutation of mutations) {
@@ -3066,7 +3081,27 @@ onReady(async function () {
             document.querySelector('.quoteThreadingRefresh')?.remove();
             return;
         }
+        function deduplicateCharacterIcons(movedPosts = null) {
+            if (!document.querySelector('.characterIdIcon')) {
+                return;
+            }
+            const postsToCheck = movedPosts || document.querySelectorAll('.postCell, .opCell');
+            
+            postsToCheck.forEach(post => {
+                const spanIds = post.querySelectorAll('.spanId');
+                spanIds.forEach(spanId => {
+                    const icons = spanId.querySelectorAll('.characterIdIcon');
+                    if (icons.length > 1) {
+                        for (let i = 1; i < icons.length; i++) {
+                            icons[i].remove();
+                        }
+                    }
+                });
+            });
+        }
         function processPosts(posts) {
+            const movedPosts = [];
+            
             posts.forEach(post => {
                 const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
 
@@ -3088,10 +3123,12 @@ onReady(async function () {
                         }
                         if (!repliesContainer.contains(targetPost)) {
                             repliesContainer.appendChild(targetPost);
+                            movedPosts.push(targetPost);
                         }
                     }
                 });
             });
+            setTimeout(() => deduplicateCharacterIcons(movedPosts.length > 0 ? movedPosts : null), 50);
         }
         function threadAllPosts() {
             processPosts(document.querySelectorAll('.divPosts .postCell'));
@@ -3211,7 +3248,7 @@ onReady(async function () {
                         menu.setAttribute('data-post-id', postCell.id);
                         const labelIdSpan = postCell.querySelector('.labelId');
                         if (labelIdSpan) {
-                            menu.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
+                            menu.setAttribute('data-label-id', getRawIdFromLabelId(labelIdSpan));
                         }
                         addMenuEntries(menu.parentNode || menu);
                     }
@@ -3225,7 +3262,7 @@ onReady(async function () {
         function toggleYouNameClassForId(labelId, add) {
             document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
-                const rawId = labelIdSpan ? labelIdSpan.textContent.split(/[|\(]/)[0].trim() : null;
+                const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
                     const nameLink = postCell.querySelector(".linkName.noEmailName");
                     if (nameLink) {
@@ -3238,7 +3275,7 @@ onReady(async function () {
             const postNumbers = [];
             document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
-                const rawId = labelIdSpan ? labelIdSpan.textContent.split(/[|\(]/)[0].trim() : null;
+                const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
                     const num = Number(postCell.id);
                     if (!isNaN(num)) postNumbers.push(num);
@@ -3257,7 +3294,7 @@ onReady(async function () {
                     const innerPost = menuButton.closest('.innerPost, .innerOP');
                     const labelIdSpan = innerPost ? innerPost.querySelector('.labelId') : null;
                     if (labelIdSpan) {
-                        labelId = labelIdSpan.textContent.split(/[|\\(]/)[0].trim();
+                        labelId = getRawIdFromLabelId(labelIdSpan);
                     }
                 }
                 if (!labelId) {
@@ -3328,7 +3365,7 @@ onReady(async function () {
                                 if (postCell) {
                                     const labelIdSpan = postCell.querySelector('.labelId');
                                     if (labelIdSpan) {
-                                        node.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
+                                        node.setAttribute('data-label-id', getRawIdFromLabelId(labelIdSpan));
                                     }
                                 }
                             }
@@ -3341,7 +3378,7 @@ onReady(async function () {
                                     if (postCell) {
                                         const labelIdSpan = postCell.querySelector('.labelId');
                                         if (labelIdSpan) {
-                                            menu.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
+                                            menu.setAttribute('data-label-id', getRawIdFromLabelId(labelIdSpan));
                                         }
                                     }
                                 }
@@ -3661,7 +3698,8 @@ onReady(async function () {
         }
         function getDirectChildren(rootIds) {
             const children = new Set();
-            document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+            const allCells = document.querySelectorAll('.postCell, .opCell');
+            allCells.forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 const pid = getPostId(cell);
                 const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
@@ -3679,9 +3717,10 @@ onReady(async function () {
         function getAllDescendants(initialSet) {
             const toHide = new Set(initialSet);
             const queue = Array.from(initialSet);
+            const allCells = Array.from(document.querySelectorAll('.postCell, .opCell'));
             while (queue.length > 0) {
                 const currentId = queue.shift();
-                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                allCells.forEach(cell => {
                     if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                     const pid = getPostId(cell);
                     if (toHide.has(pid)) return;
@@ -4003,7 +4042,7 @@ onReady(async function () {
             if (!Array.isArray(filteredNamesObj.plus)) filteredNamesObj.plus = [];
             const isNameFiltered = name && filteredNamesObj.simple.includes(name);
             const isNameFilteredPlus = name && filteredNamesObj.plus.includes(name);
-            const hasIdsInThread = document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"] .labelId, .opCell[data-boarduri="${boardUri}"] .labelId`).length > 0;
+            const hasIdsInThread = document.querySelector(`.postCell[data-boarduri="${boardUri}"] .labelId, .opCell[data-boarduri="${boardUri}"] .labelId`) !== null;
             const options = [];
 
             if (!isOP) {
@@ -4989,7 +5028,7 @@ onReady(async function () {
                     });
                 } else if (key === "saveFavoriteBoards") {
                     button.addEventListener('click', async () => {
-                        const favoriteBoardsData = localStorage.getItem('savedFavoriteBoards');
+                        const favoriteBoardsData = localStorage.getItem('navBoardData');
                         if (favoriteBoardsData) {
                             await GM.setValue('8chanSS_savedFavoriteBoards', favoriteBoardsData);
                             callPageToast('Favorite boards saved!', 'green', 2000);
@@ -5001,7 +5040,7 @@ onReady(async function () {
                     button.addEventListener('click', async () => {
                         const savedData = await GM.getValue('8chanSS_savedFavoriteBoards', null);
                         if (savedData) {
-                            localStorage.setItem('savedFavoriteBoards', savedData);
+                            localStorage.setItem('navBoardData', savedData);
                             callPageToast('Favorite boards restored. Please reload the page.', 'blue', 3000);
                         } else {
                             callPageToast('No saved favorite boards found.', 'orange', 2500);
