@@ -5892,7 +5892,7 @@ onReady(async function () {
                     });
                 } else if (key === "saveFavoriteBoards") {
                     button.addEventListener('click', async () => {
-                        const favoriteBoardsData = localStorage.getItem('savedFavoriteBoards');
+                        const favoriteBoardsData = localStorage.getItem('navBoardData');
                         if (favoriteBoardsData) {
                             await GM.setValue('8chanSS_savedFavoriteBoards', favoriteBoardsData);
                             callPageToast('Favorite boards saved!', 'green', 2000);
@@ -5904,7 +5904,7 @@ onReady(async function () {
                     button.addEventListener('click', async () => {
                         const savedData = await GM.getValue('8chanSS_savedFavoriteBoards', null);
                         if (savedData) {
-                            localStorage.setItem('savedFavoriteBoards', savedData);
+                            localStorage.setItem('navBoardData', savedData);
                             callPageToast('Favorite boards restored. Please reload the page.', 'blue', 3000);
                         } else {
                             callPageToast('No saved favorite boards found.', 'orange', 2500);
