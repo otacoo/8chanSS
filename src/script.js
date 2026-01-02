@@ -2085,7 +2085,7 @@ onReady(async function () {
         document.querySelectorAll(SEL).forEach(processThumb);
 
         // Observe dynamically added thumbs using helper
-        const obs = observeSelector('body', { childList: true, subtree: true });
+        const obs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (obs) {
             obs.addHandler(function apngStopHandler(mutations) {
                 for (const m of mutations) {
@@ -3236,7 +3236,7 @@ onReady(async function () {
         processLinks(document);
 
         // Use the observer registry for #divThreads
-        const divThreadsObs = observeSelector('body', { childList: true, subtree: true });
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
         if (divThreadsObs) {
             divThreadsObs.addHandler(function enhanceYoutubeLinksHandler(mutations) {
                 for (const mutation of mutations) {
@@ -3645,11 +3645,11 @@ onReady(async function () {
         setTimeout(processIDLabels, 50);
 
         // Use the global observer registry
-        const bodyObs = observeSelector('body', { childList: true, subtree: true });
-        if (bodyObs) {
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
             const debouncedProcess = debounce(processIDLabels, 50);
 
-            bodyObs.addHandler(function showIDCountHandler(mutations) {
+            divThreadsObs.addHandler(function showIDCountHandler(mutations) {
                 let hasNewLabels = false;
 
                 for (const mutation of mutations) {
