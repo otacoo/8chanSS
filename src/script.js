@@ -3681,6 +3681,19 @@ onReady(async function () {
             return;
         }
 
+        // Deduplicate character ID icons that get duplicated when posts are moved
+        function deduplicateCharacterIcons() {
+            document.querySelectorAll('.spanId').forEach(spanId => {
+                const icons = spanId.querySelectorAll('.characterIdIcon');
+                if (icons.length > 1) {
+                    // Keep only the first icon, remove duplicates
+                    for (let i = 1; i < icons.length; i++) {
+                        icons[i].remove();
+                    }
+                }
+            });
+        }
+
         // Core Threading Logic
         function processPosts(posts) {
             posts.forEach(post => {
@@ -3712,6 +3725,9 @@ onReady(async function () {
                     }
                 });
             });
+            
+            // Deduplicate character ID icons after moving posts (with small delay)
+            setTimeout(deduplicateCharacterIcons, 50);
         }
 
         // Threading Handlers
