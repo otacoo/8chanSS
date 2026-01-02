@@ -3690,20 +3690,33 @@ onReady(async function () {
         }
 
         // Deduplicate character ID icons that get duplicated when posts are moved
-        function deduplicateCharacterIcons() {
-            document.querySelectorAll('.spanId').forEach(spanId => {
-                const icons = spanId.querySelectorAll('.characterIdIcon');
-                if (icons.length > 1) {
-                    // Keep only the first icon, remove duplicates
-                    for (let i = 1; i < icons.length; i++) {
-                        icons[i].remove();
+        function deduplicateCharacterIcons(movedPosts = null) {
+            // Skip if no character icons
+            if (!document.querySelector('.characterIdIcon')) {
+                return;
+            }
+            
+            // If specific posts were moved, only check those; otherwise check all
+            const postsToCheck = movedPosts || document.querySelectorAll('.postCell, .opCell');
+            
+            postsToCheck.forEach(post => {
+                const spanIds = post.querySelectorAll('.spanId');
+                spanIds.forEach(spanId => {
+                    const icons = spanId.querySelectorAll('.characterIdIcon');
+                    if (icons.length > 1) {
+                        // Keep only the first icon, remove duplicates
+                        for (let i = 1; i < icons.length; i++) {
+                            icons[i].remove();
+                        }
                     }
-                }
+                });
             });
         }
 
         // Core Threading Logic
         function processPosts(posts) {
+            const movedPosts = [];
+            
             posts.forEach(post => {
                 const backlinks = post.querySelectorAll('.panelBacklinks .backLink.postLink');
 
@@ -3729,13 +3742,14 @@ onReady(async function () {
                         // Move post if not already in container
                         if (!repliesContainer.contains(targetPost)) {
                             repliesContainer.appendChild(targetPost);
+                            movedPosts.push(targetPost);
                         }
                     }
                 });
             });
             
-            // Deduplicate character ID icons after moving posts (with small delay)
-            setTimeout(deduplicateCharacterIcons, 50);
+            // Deduplicate character ID icons only in moved posts (with small delay)
+            setTimeout(() => deduplicateCharacterIcons(movedPosts.length > 0 ? movedPosts : null), 50);
         }
 
         // Threading Handlers
@@ -4409,7 +4423,8 @@ onReady(async function () {
         // --- Helper: Get all direct children (posts that quote any in rootIds) ---
         function getDirectChildren(rootIds) {
             const children = new Set();
-            document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+            const allCells = document.querySelectorAll('.postCell, .opCell');
+            allCells.forEach(cell => {
                 if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                 const pid = getPostId(cell);
                 const quoteLinks = cell.querySelectorAll('.quoteLink[data-target-uri]');
@@ -4428,9 +4443,10 @@ onReady(async function () {
         function getAllDescendants(initialSet) {
             const toHide = new Set(initialSet);
             const queue = Array.from(initialSet);
+            const allCells = Array.from(document.querySelectorAll('.postCell, .opCell'));
             while (queue.length > 0) {
                 const currentId = queue.shift();
-                document.querySelectorAll('.postCell, .opCell').forEach(cell => {
+                allCells.forEach(cell => {
                     if (cell.classList.contains('opCell') || cell.classList.contains('innerOP')) return;
                     const pid = getPostId(cell);
                     if (toHide.has(pid)) return;
