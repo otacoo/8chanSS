@@ -18,6 +18,7 @@ const debounce = (fn, delay) => {
 };
 // Observer registry helper
 const observerRegistry = {};
+let unloadListenerAdded = false;
 
 function observeSelector(selector, options = { childList: true, subtree: false }) {
     if (observerRegistry[selector]) return observerRegistry[selector];
@@ -38,8 +39,15 @@ function observeSelector(selector, options = { childList: true, subtree: false }
 
     observer.observe(node, options);
 
-    // Disconnect on unload
-    window.addEventListener('beforeunload', () => observer.disconnect());
+    // Disconnect on unload, use a single shared listener for all observers
+    if (!unloadListenerAdded) {
+        unloadListenerAdded = true;
+        window.addEventListener('beforeunload', () => {
+            for (const key in observerRegistry) {
+                observerRegistry[key].observer.disconnect();
+            }
+        }, { once: true });
+    }
 
     observerRegistry[selector] = {
         node,
@@ -3575,7 +3583,7 @@ onReady(async function () {
         function processIDLabels() {
             document.querySelectorAll('.labelId').forEach(label => {
                 // Skip if already processed
-                if (processedLabels.has(label) && label.querySelector('.ss-id-separator')) {
+                if (processedLabels.has(label)) {
                     return;
                 }
                 // Store original events
