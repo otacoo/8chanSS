@@ -484,6 +484,11 @@ onReady(async function () {
         }
     }
 
+    // --- Helper: Extract raw ID from labelId element textContent ---
+    function getRawIdFromLabelId(labelIdSpan) {
+        return labelIdSpan ? labelIdSpan.textContent.split(/[|\(]/)[0].trim() : null;
+    }
+
     // --- Root CSS Class Toggles ---
     (async function featureCssClassToggles() {
         document.documentElement.classList.add("8chanSS");
@@ -3517,14 +3522,14 @@ onReady(async function () {
             const idFrequency = {};
             const labelSpans = root.querySelectorAll('.labelId');
             labelSpans.forEach(span => {
-                const id = span.textContent.split(/[|\(]/)[0].trim();
+                const id = getRawIdFromLabelId(span);
                 idFrequency[id] = (idFrequency[id] || 0) + 1;
             });
 
             // Track first occurrence and apply class
             const seen = {};
             labelSpans.forEach(span => {
-                const id = span.textContent.split(/[|\(]/)[0].trim();
+                const id = getRawIdFromLabelId(span);
                 // Remove all possible highlight classes in case of re-run
                 span.classList.remove('moetext', 'id-glow', 'id-dotted');
                 if (!seen[id]) {
@@ -3904,7 +3909,7 @@ onReady(async function () {
                         menu.setAttribute('data-post-id', postCell.id);
                         const labelIdSpan = postCell.querySelector('.labelId');
                         if (labelIdSpan) {
-                            menu.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
+                            menu.setAttribute('data-label-id', getRawIdFromLabelId(labelIdSpan));
                         }
                         // Immediately add the Toggle ID as Yours entry if not present
                         addMenuEntries(menu.parentNode || menu);
@@ -3921,7 +3926,7 @@ onReady(async function () {
         function toggleYouNameClassForId(labelId, add) {
             document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
-                const rawId = labelIdSpan ? labelIdSpan.textContent.split(/[|\(]/)[0].trim() : null;
+                const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
                     const nameLink = postCell.querySelector(".linkName.noEmailName");
                     if (nameLink) {
@@ -3936,7 +3941,7 @@ onReady(async function () {
             const postNumbers = [];
             document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
-                const rawId = labelIdSpan ? labelIdSpan.textContent.split(/[|\(]/)[0].trim() : null;
+                const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
                     const num = Number(postCell.id);
                     if (!isNaN(num)) postNumbers.push(num);
@@ -3962,7 +3967,7 @@ onReady(async function () {
                     const innerPost = menuButton.closest('.innerPost, .innerOP');
                     const labelIdSpan = innerPost ? innerPost.querySelector('.labelId') : null;
                     if (labelIdSpan) {
-                        labelId = labelIdSpan.textContent.split(/[|\\(]/)[0].trim();
+                        labelId = getRawIdFromLabelId(labelIdSpan);
                     }
                 }
                 // Fallback to old method if not found
@@ -4044,7 +4049,7 @@ onReady(async function () {
                                 if (postCell) {
                                     const labelIdSpan = postCell.querySelector('.labelId');
                                     if (labelIdSpan) {
-                                        node.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
+                                        node.setAttribute('data-label-id', getRawIdFromLabelId(labelIdSpan));
                                     }
                                 }
                             }
@@ -4057,7 +4062,7 @@ onReady(async function () {
                                     if (postCell) {
                                         const labelIdSpan = postCell.querySelector('.labelId');
                                         if (labelIdSpan) {
-                                            menu.setAttribute('data-label-id', labelIdSpan.textContent.split(/[|\(]/)[0].trim());
+                                            menu.setAttribute('data-label-id', getRawIdFromLabelId(labelIdSpan));
                                         }
                                     }
                                 }
