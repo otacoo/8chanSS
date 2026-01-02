@@ -1935,8 +1935,12 @@ onReady(async function () {
         let pendingImgLinks = new WeakSet();
         let debounceTimeout = null;
         function processPendingImgLinks() {
-            const linksToProcess = Array.from(document.querySelectorAll("a.imgLink")).filter(link => pendingImgLinks.has(link));
-            linksToProcess.forEach(link => processImgLink(link));
+            const allLinks = document.querySelectorAll("a.imgLink");
+            allLinks.forEach(link => {
+                if (pendingImgLinks.has(link)) {
+                    processImgLink(link);
+                }
+            });
             pendingImgLinks = new WeakSet(); // Reset the WeakSet
             debounceTimeout = null;
         }
@@ -2486,8 +2490,8 @@ onReady(async function () {
         function hasUnreadThreads() {
             const watchedMenu = document.querySelector('#watchedMenu');
             if (!watchedMenu) return false;
-            // Only count buttons inside visible watchedNotification spans, exclude markAllRead button
-            return watchedMenu.querySelectorAll('.watchedNotification:not(.hidden) .watchedCellDismissButton:not(.markAllRead)').length > 0;
+            // Check if any buttons exist
+            return watchedMenu.querySelector('.watchedNotification:not(.hidden) .watchedCellDismissButton:not(.markAllRead)') !== null;
         }
 
         // Helper to update button state
@@ -4808,7 +4812,7 @@ onReady(async function () {
             const isNameFilteredPlus = name && filteredNamesObj.plus.includes(name);
 
             // Check if IDs are used in this thread/board
-            const hasIdsInThread = document.querySelectorAll(`.postCell[data-boarduri="${boardUri}"] .labelId, .opCell[data-boarduri="${boardUri}"] .labelId`).length > 0;
+            const hasIdsInThread = document.querySelector(`.postCell[data-boarduri="${boardUri}"] .labelId, .opCell[data-boarduri="${boardUri}"] .labelId`) !== null;
 
             // Menu entries
             const options = [];
