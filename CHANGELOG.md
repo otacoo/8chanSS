@@ -1,3 +1,18 @@
+### v1.58.5
+*2026-01-03*
+
+**REMOVED OPTIONS:**
+- **Alternative Post Hiding Menu** and associated features
+
+*Note: Broken after the site update and I'm unable to fix. Please use the site's own filtering system. Thank you for your consideration.*
+
+- Don't Scroll to Bottom on Reply
+- Hide Default Board List
+- Hide Stubs of Hidden Posts
+- Dashed underline for inlined reply backlinks and quotelinks
+
+*Note: These features are now available in the site's script and are thus redundant.*
+
 ### v1.58.4
 *2026-01-02*
 
