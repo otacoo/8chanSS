@@ -27,12 +27,6 @@
     background: var(--background-gradient);
 }
 
-/* Deal with FchX */
-:root.hide-defaultBL #navBoardsTop,
-:root.hide-defaultBL #navBoardsTopEnd {
-    display: none !important;
-}
-
 :root.is-catalog.show-catalog-form #postingForm {
     display: block !important;
 }
