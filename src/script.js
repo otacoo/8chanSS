@@ -155,7 +155,6 @@ onReady(async function () {
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
-            enableThreadImageHover: { label: "Thread Image Hover", default: true },
             enableFitImage: { label: "Fit Expanded Images and Videos", default: true },
             blurSpoilers: {
                 label: "Blur Spoilers",
@@ -204,6 +203,7 @@ onReady(async function () {
             },
             _threadsNavTitle: { type: "title", label: ":: Navigation & Others" },
             _threadsSection3: { type: "separator" },
+            enableThreadImageHover: { label: "Thread Image Hover", default: true },
             enableBacklinkIcons: { label: "Backlink Icons", default: false },
             enableScrollSave: {
                 label: "Save Scroll Position",
@@ -219,6 +219,7 @@ onReady(async function () {
             enableHashNav: { label: "Hash Navigation", default: false },
             threadStatsInHeader: { label: "Thread Stats in Header", default: false },
             watchThreadOnReply: { label: "Watch Thread on Reply", default: true },
+            hideHiddenPostStub: { label: "Hide Stubs of Hidden Posts", default: false, },
             _miscelIDTitle: { type: "title", label: ":: IDs" },
             _miscelSection2: { type: "separator" },
             highlightNewIds: {
@@ -487,6 +488,7 @@ onReady(async function () {
             enableStickyQR: "sticky-qr",
             fadeQuickReply: "fade-qr",
             enableBottomHeader: "bottom-header",
+            hideHiddenPostStub: "hide-stub",
             hideBanner: "disable-banner",
             hidePostingForm: "hide-posting-form",
             hidePostingForm_showCatalogForm: "show-catalog-form",

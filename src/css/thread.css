@@ -98,6 +98,10 @@
     text-decoration: underline dashed !important;
 }
 
+:root.hide-stub .unhideButton {
+    display: none;
+}
+
 .quoteTooltip .innerPost {
     overflow: hidden;
 }
