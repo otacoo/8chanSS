@@ -1,3 +1,8 @@
+### v1.58.6
+*2026-01-13*
+
+- Bring back **Hide Stubs of Hidden Posts** (under Threads > Navigation & Others now)
+
 ### v1.58.5
 *2026-01-03*
 
