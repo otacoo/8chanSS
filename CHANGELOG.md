@@ -1,3 +1,8 @@
+### v1.58.7
+*2026-01-15*
+
+- Use GM.xmlHttpRequest to fetch Youtube titles
+
 ### v1.58.6
 *2026-01-13*
 
