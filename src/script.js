@@ -3245,18 +3245,27 @@ onReady(async function () {
         // Initial run
         processLinks(document);
 
-        // Use the observer registry for body
-        const bodyObs = observeSelector('body', { childList: true, subtree: true });
-        if (bodyObs) {
-            bodyObs.addHandler(function enhanceYoutubeLinksHandler(mutations) {
-                for (const mutation of mutations) {
-                    for (const addedNode of mutation.addedNodes) {
-                        if (addedNode.nodeType === 1) {
-                            processLinks(addedNode);
-                        }
+        // Shared observer handler for processing YouTube links
+        function enhanceYoutubeLinksHandler(mutations) {
+            for (const mutation of mutations) {
+                for (const addedNode of mutation.addedNodes) {
+                    if (addedNode.nodeType === 1) {
+                        processLinks(addedNode);
                     }
                 }
-            });
+            }
+        }
+
+        // Use the observer registry for #divThreads
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            divThreadsObs.addHandler(enhanceYoutubeLinksHandler);
+        }
+
+        // Use the observer registry for .quoteTooltip
+        const quoteTooltipObs = observeSelector('.quoteTooltip', { childList: true, subtree: true });
+        if (quoteTooltipObs) {
+            quoteTooltipObs.addHandler(enhanceYoutubeLinksHandler);
         }
     }
 
