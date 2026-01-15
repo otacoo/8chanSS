@@ -3245,10 +3245,10 @@ onReady(async function () {
         // Initial run
         processLinks(document);
 
-        // Use the observer registry for #divThreads
-        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
-        if (divThreadsObs) {
-            divThreadsObs.addHandler(function enhanceYoutubeLinksHandler(mutations) {
+        // Use the observer registry for body
+        const bodyObs = observeSelector('body', { childList: true, subtree: true });
+        if (bodyObs) {
+            bodyObs.addHandler(function enhanceYoutubeLinksHandler(mutations) {
                 for (const mutation of mutations) {
                     for (const addedNode of mutation.addedNodes) {
                         if (addedNode.nodeType === 1) {
