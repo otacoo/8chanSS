@@ -3055,9 +3055,27 @@ onReady(async function () {
                 return ytTitleCache[cleanId];
             }
             try {
-                const r = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`);
-                if (!r.ok) return null;
-                const data = await r.json();
+                const data = await new Promise((resolve, reject) => {
+                    GM.xmlHttpRequest({
+                        method: "GET",
+                        url: `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`,
+                        timeout: 8000,
+                        onload: (response) => {
+                            if (response.status === 200) {
+                                try {
+                                    const jsonData = JSON.parse(response.responseText);
+                                    resolve(jsonData);
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            } else {
+                                reject(new Error(`HTTP ${response.status}`));
+                            }
+                        },
+                        onerror: () => reject(new Error('Network error')),
+                        ontimeout: () => reject(new Error('Timeout'))
+                    });
+                });
                 const title = data ? data.title : null;
                 if (title) {
                     ytTitleCache[cleanId] = title;
