@@ -155,7 +155,7 @@ onReady(async function () {
             enableScrollArrows: { label: "Show Up/Down Arrows", default: false },
             _siteMediaTitle: { type: "title", label: ":: Media" },
             _siteSection3: { type: "separator" },
-            enableFitImage: { label: "Fit Expanded Images and Videos", default: true },
+            enableFitImage: { label: "Fit expanded Images and Videos", default: true },
             blurSpoilers: {
                 label: "Blur Spoilers",
                 default: false,
@@ -298,7 +298,7 @@ onReady(async function () {
             },
             _stylingSiteTitle: { type: "title", label: ":: Site Styling" },
             _stylingSection2: { type: "separator" },
-            hideAnnouncement: { label: "Hide Announcement", default: false },
+            hideAnnouncement: { label: "Hide Announcement (unhides if new announcement posted)", default: false },
             hidePanelMessage: { label: "Hide Panel Message", default: false },
             hidePostingForm: {
                 label: "Hide Posting Form",
@@ -336,16 +336,6 @@ onReady(async function () {
         miscel: {
             enableShortcuts: { label: "Enable Keyboard Shortcuts", type: "checkbox", default: true },
             enableUpdateNotif: { label: "8chanSS update notifications", default: true },
-            enhanceYoutube: {
-                label: "Enhanced Youtube Links",
-                default: true,
-                subOptions: {
-                    ytThumbs: {
-                        label: "Show Thumbnails on Hover",
-                        default: true,
-                    }
-                }
-            },
             switchTimeFormat: { label: "Enable 12-hour Clock (AM/PM)", default: false },
             truncFilenames: {
                 label: "Truncate filenames",
@@ -358,6 +348,36 @@ onReady(async function () {
                         min: 5,
                         max: 50
                     }
+                }
+            },
+            _miscelThreadTitle: { type: "title", label: ":: Linkification" },
+            _miscelSection1: { type: "separator" },
+            enhanceLinks_showIcons: {
+                label: "Show Icons and Titles",
+                default: true,
+                subOptions: {
+                    showIconsYoutube: { label: "Youtube", default: true },
+                    showIconsTwitch: { label: "Twitch", default: true },
+                    showIconsX: { label: "X.com", default: true },
+                    showIconsBsky: { label: "Bluesky", default: true },
+                    showIconsRentry: { label: "Rentry", default: true },
+                    showIconsCatbox: { label: "Catbox", default: true }
+                }
+            },
+            enhanceLinks_showThumbnails: {
+                label: "Show Thumbnails on Hover",
+                default: true,
+                subOptions: {
+                    showThumbnailsYoutube: { label: "Youtube", default: true },
+                    showThumbnailsTwitch: { label: "Twitch", default: true }
+                }
+            },
+            enhanceLinks_enableEmbeds: {
+                label: "Enable Embedding",
+                default: false,
+                subOptions: {
+                    enableEmbedsX: { label: "X.com", default: true },
+                    enableEmbedsBsky: { label: "Bluesky", default: true }
                 }
             },
             enableTheSauce: {
@@ -404,17 +424,19 @@ onReady(async function () {
     // Flatten settings for backward compatibility with existing functions
     function flattenSettings() {
         const result = {};
-        Object.keys(scriptSettings).forEach((category) => {
-            Object.keys(scriptSettings[category]).forEach((key) => {
+        function flattenRecursive(obj, prefix = '') {
+            Object.keys(obj).forEach((key) => {
                 if (key.startsWith('_')) return;
-                result[key] = scriptSettings[category][key];
-                const subOptions = scriptSettings[category][key].subOptions;
-                if (!subOptions || typeof subOptions !== "object") return;
-                Object.keys(subOptions).forEach((subKey) => {
-                    const fullKey = `${key}_${subKey}`;
-                    result[fullKey] = subOptions[subKey];
-                });
+                const fullKey = prefix ? `${prefix}_${key}` : key;
+                result[fullKey] = obj[key];
+                const subOptions = obj[key].subOptions;
+                if (subOptions && typeof subOptions === "object") {
+                    flattenRecursive(subOptions, fullKey);
+                }
             });
+        }
+        Object.keys(scriptSettings).forEach((category) => {
+            flattenRecursive(scriptSettings[category]);
         });
         return Object.freeze(result);
     }
@@ -723,7 +745,6 @@ onReady(async function () {
         { key: "enableThreadHiding", fn: featureCatalogHiding },
         { key: "switchTimeFormat", fn: featureLabelCreated12h },
         { key: "enableIdFilters", fn: featureIdFiltering },
-        { key: "enhanceYoutube", fn: enhanceYouTubeLinks },
         { key: "threadStatsInHeader", fn: threadInfoHeader },
         { key: "enableHashNav", fn: hashNavigation },
         { key: "hideAnnouncement", fn: featureHideAnnouncement },
@@ -2931,16 +2952,38 @@ onReady(async function () {
         });
     })();
 
-    // --- Feature: Enhanced Youtube links ---
-    async function enhanceYouTubeLinks() {
+    // --- Feature: Enhanced Links (YouTube, Twitch, X.com, Bluesky, Rentry, Catbox) ---
+    (async function enhanceLinks() {
         // Only run on thread or index pages
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
             return;
         }
-        // Check if thumbnail hover is enabled
-        const ytThumbsEnabled = await getSetting("enhanceYoutube_ytThumbs");
-        // Title cache
-        const ytTitleCache = {};
+
+        // Load parent settings first
+        const enableShowIcons = await getSetting("enhanceLinks_showIcons");
+        const enableShowThumbnails = await getSetting("enhanceLinks_showThumbnails");
+        const enableEmbeds = await getSetting("enhanceLinks_enableEmbeds");
+        
+        // Load subOptions only if parent is enabled
+        const showIconsYoutube = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsYoutube");
+        const showIconsTwitch = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsTwitch");
+        const showIconsX = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsX");
+        const showIconsBsky = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsBsky");
+        const showIconsRentry = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsRentry");
+        const showIconsCatbox = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsCatbox");
+        
+        const showThumbnailsYoutube = enableShowThumbnails && await getSetting("enhanceLinks_showThumbnails_showThumbnailsYoutube");
+        const showThumbnailsTwitch = enableShowThumbnails && await getSetting("enhanceLinks_showThumbnails_showThumbnailsTwitch");
+        
+        const enableEmbedsX = enableEmbeds && await getSetting("enhanceLinks_enableEmbeds_enableEmbedsX");
+        const enableEmbedsBsky = enableEmbeds && await getSetting("enhanceLinks_enableEmbeds_enableEmbedsBsky");
+
+        // If no features are enabled, return early
+        if (!showIconsYoutube && !showIconsTwitch && !showIconsX && !showIconsBsky && !showIconsRentry && !showIconsCatbox &&
+            !showThumbnailsYoutube && !showThumbnailsTwitch &&
+            !enableEmbedsX && !enableEmbedsBsky) {
+            return;
+        }
         const MAX_CACHE_SIZE = 350;
         const ORDER_KEY = "_order";
         const TRACKING_PARAMS = [
@@ -2948,50 +2991,68 @@ onReady(async function () {
             "utm_source", "utm_medium", "utm_campaign", "gclid", "gclsrc", "fbclid"
         ];
 
-        // Thumbnail cache (videoId -> dataURL or null)
-        const ytThumbCache = {};
+        // SVG icons
+        const YT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#FF0000" d="M549.7 124.1c-6.3-23.7-24.9-42.4-48.6-48.6C456.5 64 288 64 288 64s-168.5 0-213.1 11.5c-23.7 6.3-42.4 24.9-48.6 48.6C16 168.5 16 256 16 256s0 87.5 10.3 131.9c6.3 23.7 24.9 42.4 48.6 48.6C119.5 448 288 448 288 448s168.5 0 213.1-11.5c23.7-6.3 42.4-24.9 48.6-48.6 10.3-44.4 10.3-131.9 10.3-131.9s0-87.5-10.3-131.9zM232 334.1V177.9L361 256 232 334.1z"/></svg>`;
+        const TWITCH_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#9146FF" d="M391.17,103.47H352.54v109.7h38.63ZM285,103H246.37V212.75H285ZM120.83,0,24.31,91.42V420.58H140.14V512l96.53-91.42h77.25L487.69,256V0ZM449.07,237.75l-77.22,73.12H294.61l-67.6,64v-64H140.14V36.58H449.07Z"/></svg>`;
 
         // Try to load cache and order from localStorage
-        function loadCache() {
+        function loadCache(cacheKey) {
             try {
-                const data = localStorage.getItem('ytTitleCache');
+                const data = localStorage.getItem(cacheKey);
                 if (data) {
                     const parsed = JSON.parse(data);
-                    Object.assign(ytTitleCache, parsed);
-                    if (!Array.isArray(ytTitleCache[ORDER_KEY])) {
-                        ytTitleCache[ORDER_KEY] = [];
+                    if (!Array.isArray(parsed[ORDER_KEY])) {
+                        parsed[ORDER_KEY] = [];
                     }
-                } else {
-                    ytTitleCache[ORDER_KEY] = [];
+                    return parsed;
                 }
-            } catch (e) {
-                ytTitleCache[ORDER_KEY] = [];
-            }
+            } catch (e) { }
+            return { [ORDER_KEY]: [] };
         }
-        function saveCache() {
+        function saveCache(cacheKey, cache) {
             try {
-                localStorage.setItem('ytTitleCache', JSON.stringify(ytTitleCache));
+                localStorage.setItem(cacheKey, JSON.stringify(cache));
             } catch (e) { }
         }
-        loadCache();
 
-        // Helper to extract YouTube video ID from URL
-        function getYouTubeId(url) {
+        // Initialize caches
+        const ytTitleCache = loadCache('ytTitleCache');
+
+        function getYouTubeInfo(url) {
             try {
-                // youtu.be short links
                 const u = new URL(url);
+                // youtu.be short links
                 if (u.hostname === 'youtu.be') {
-                    return u.pathname.slice(1);
+                    const id = u.pathname.slice(1);
+                    return { type: 'video', id: id };
                 }
-                // Standard watch links
+                // Standard YouTube links
                 if (u.hostname.endsWith('youtube.com')) {
+                    // Standard watch links
                     if (u.pathname === '/watch') {
-                        return u.searchParams.get('v');
+                        const videoId = u.searchParams.get('v');
+                        if (videoId) {
+                            return { type: 'video', id: videoId };
+                        }
                     }
                     // /live/VIDEOID or /embed/VIDEOID or /shorts/VIDEOID
                     const liveMatch = u.pathname.match(/^\/(live|embed|shorts)\/([a-zA-Z0-9_-]{11})/);
                     if (liveMatch) {
-                        return liveMatch[2];
+                        return { type: 'video', id: liveMatch[2] };
+                    }
+                    // /post/POSTID or /@channelname/post/POSTID
+                    const postMatch = u.pathname.match(/^(?:\/@([a-zA-Z0-9_-]+))?\/post\/([a-zA-Z0-9_-]+)/);
+                    if (postMatch) {
+                        return { 
+                            type: 'post', 
+                            id: postMatch[2],
+                            channel: postMatch[1] || null
+                        };
+                    }
+                    // /@channelname or /c/channelname or /channel/channelid or /user/username
+                    const channelMatch = u.pathname.match(/^\/(?:@|c\/|channel\/|user\/)([a-zA-Z0-9_-]+)/);
+                    if (channelMatch) {
+                        return { type: 'channel', id: channelMatch[1] };
                     }
                 }
             } catch (e) { }
@@ -3051,7 +3112,7 @@ onReady(async function () {
                     ytTitleCache[ORDER_KEY].splice(idx, 1);
                 }
                 ytTitleCache[ORDER_KEY].push(cleanId);
-                saveCache();
+                saveCache('ytTitleCache', ytTitleCache);
                 return ytTitleCache[cleanId];
             }
             try {
@@ -3063,8 +3124,7 @@ onReady(async function () {
                         onload: (response) => {
                             if (response.status === 200) {
                                 try {
-                                    const jsonData = JSON.parse(response.responseText);
-                                    resolve(jsonData);
+                                    resolve(JSON.parse(response.responseText));
                                 } catch (e) {
                                     reject(e);
                                 }
@@ -3084,7 +3144,7 @@ onReady(async function () {
                         const oldest = ytTitleCache[ORDER_KEY].shift();
                         delete ytTitleCache[oldest];
                     }
-                    saveCache();
+                    saveCache('ytTitleCache', ytTitleCache);
                 }
                 return title;
             } catch {
@@ -3093,49 +3153,44 @@ onReady(async function () {
         }
 
         // Fetch as data URL using GM.xmlHttpRequest
+        function getYouTubeThumbnailUrl(videoId) {
+            return `https://i.ytimg.com/vi_webp/${videoId}/hqdefault.webp`;
+        }
+
         async function fetchAsDataURL(url) {
             return new Promise((resolve) => {
-                GM.xmlHttpRequest({
-                    method: "GET",
-                    url: url,
-                    responseType: "blob",
-                    timeout: 8000,
-                    onload: (response) => {
-                        if (response.status === 200 && response.response) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result);
-                            reader.onerror = () => resolve(null);
-                            reader.readAsDataURL(response.response);
-                        } else {
-                            resolve(null);
-                        }
-                    },
-                    onerror: () => resolve(null),
-                    ontimeout: () => resolve(null)
-                });
+                try {
+                    GM.xmlHttpRequest({
+                        method: "GET",
+                        url: url,
+                        responseType: "blob",
+                        timeout: 10000,
+                        onload: (response) => {
+                            if (response.status === 200 && response.response) {
+                                try {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.onerror = () => resolve(null);
+                                    reader.readAsDataURL(response.response);
+                                } catch (e) {
+                                    resolve(null);
+                                }
+                            } else {
+                                resolve(null);
+                            }
+                        },
+                        onerror: () => resolve(null),
+                        ontimeout: () => resolve(null)
+                    });
+                } catch (e) {
+                    resolve(null);
+                }
             });
         }
 
-        // Thumbnail fetch with per-videoId cache and DOM safety
-        async function fetchYouTubeThumbnailAsDataURL(videoId) {
-            if (ytThumbCache.hasOwnProperty(videoId)) {
-                return ytThumbCache[videoId];
-            }
-            const webpUrl = `https://i.ytimg.com/vi_webp/${videoId}/hqdefault.webp`;
-            const jpgUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-
-            let dataUrl = await fetchAsDataURL(webpUrl);
-            if (!dataUrl) {
-                dataUrl = await fetchAsDataURL(jpgUrl);
-            }
-            ytThumbCache[videoId] = dataUrl;
-            return dataUrl;
-        }
-
-        // Show thumbnail on hover (CSP-safe, webp/jpg fallback)
-        function addThumbnailHover(link, videoId) {
-            if (link.dataset.ytThumbHover) return;
-            link.dataset.ytThumbHover = "1";
+        function addThumbnailHover(link, thumbnailUrl, altText = "Thumbnail") {
+            if (link.dataset.thumbHover) return;
+            link.dataset.thumbHover = "1";
             let thumbDiv = null;
             let lastImg = null;
             let lastHoverToken = 0;
@@ -3161,13 +3216,13 @@ onReady(async function () {
                     img.style.maxWidth = '280px';
                     img.style.maxHeight = '200px';
                     img.style.borderRadius = '3px';
-                    img.alt = "YouTube thumbnail";
+                    img.alt = altText;
                     img.src = "data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQv///wAAACH5BAEAAAMALAAAAAAQABAAAAIgjI+py+0Po5yUFQA7"; // spinner
 
                     lastImg = img;
                     const hoverToken = ++lastHoverToken;
 
-                    fetchYouTubeThumbnailAsDataURL(videoId).then(dataUrl => {
+                    fetchAsDataURL(thumbnailUrl).then(dataUrl => {
                         if (lastImg === img && hoverToken === lastHoverToken) {
                             if (dataUrl) {
                                 img.src = dataUrl;
@@ -3214,39 +3269,467 @@ onReady(async function () {
             link.addEventListener('mouseleave', hideThumb);
         }
 
-        function processLinks(root = document) {
-            root.querySelectorAll('a[href*="youtu"]').forEach(link => {
-                if (link.dataset.ytEnhanced) return;
-                const videoId = getYouTubeId(link.href);
-                const cleanId = sanitizeYouTubeId(videoId);
-                if (!cleanId) return;
-                link.dataset.ytEnhanced = "1";
+        // YouTube handlers
+        function processYouTubeLink(link) {
+            if (link.dataset.enhanced) return;
+            const ytInfo = getYouTubeInfo(link.href);
+            if (!ytInfo) return;
+            link.dataset.enhanced = "1";
 
-                // Strip tracking params from href
-                const cleanUrl = stripTrackingParams(link.href);
-                if (cleanUrl !== link.href) {
-                    link.href = cleanUrl;
-                }
+            const cleanUrl = stripTrackingParams(link.href);
+            if (cleanUrl !== link.href) {
+                link.href = cleanUrl;
+            }
 
-                // Replace link text with SVG icon and video title
-                fetchYouTubeTitle(cleanId).then(title => {
-                    if (title) {
-                        link.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#FF0000" d="M549.7 124.1c-6.3-23.7-24.9-42.4-48.6-48.6C456.5 64 288 64 288 64s-168.5 0-213.1 11.5c-23.7 6.3-42.4 24.9-48.6 48.6C16 168.5 16 256 16 256s0 87.5 10.3 131.9c6.3 23.7 24.9 42.4 48.6 48.6C119.5 448 288 448 288 448s168.5 0 213.1-11.5c23.7-6.3 42.4-24.9 48.6-48.6 10.3-44.4 10.3-131.9 10.3-131.9s0-87.5-10.3-131.9zM232 334.1V177.9L361 256 232 334.1z"/></svg><span></span> ${title}`;
+            if (showIconsYoutube) {
+                if (ytInfo.type === 'video') {
+                    const cleanId = sanitizeYouTubeId(ytInfo.id);
+                    if (cleanId) {
+                        fetchYouTubeTitle(cleanId).then(title => {
+                            if (title) link.innerHTML = `${YT_ICON} ${title}`;
+                        });
                     }
-                });
+                } else if (ytInfo.type === 'post') {
+                    link.innerHTML = `${YT_ICON} ${link.textContent.trim()}`;
+                } else if (ytInfo.type === 'channel') {
+                    const channelName = ytInfo.id.startsWith('@') ? ytInfo.id : `@${ytInfo.id}`;
+                    link.innerHTML = `${YT_ICON} ${channelName}`;
+                }
+            }
 
-                // Add thumbnail hover only if enabled
-                if (ytThumbsEnabled) {
-                    addThumbnailHover(link, cleanId);
+            if (showThumbnailsYoutube && ytInfo.type === 'video') {
+                const cleanId = sanitizeYouTubeId(ytInfo.id);
+                if (cleanId) {
+                    const thumbUrl = getYouTubeThumbnailUrl(cleanId);
+                    addThumbnailHover(link, thumbUrl, "YouTube thumbnail");
+                }
+            }
+        }
+
+        function extractTitleAndThumbnail(html) {
+            const result = { title: null, thumbnail: null };
+            const jsonLdMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+            if (jsonLdMatch) {
+                try {
+                    const jsonLd = JSON.parse(jsonLdMatch[1]);
+                    if (jsonLd.name) result.title = jsonLd.name.trim();
+                } catch (e) {}
+            }
+            if (!result.title) {
+                const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+                if (ogTitleMatch && ogTitleMatch[1]) {
+                    const title = ogTitleMatch[1].trim();
+                    if (title !== 'Twitch') result.title = title;
+                }
+            }
+            if (!result.title) {
+                const twitterTitleMatch = html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i);
+                if (twitterTitleMatch && twitterTitleMatch[1]) {
+                    const title = twitterTitleMatch[1].trim();
+                    if (title !== 'Twitch') result.title = title;
+                }
+            }
+            const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+            if (ogImageMatch && ogImageMatch[1]) result.thumbnail = ogImageMatch[1].trim();
+            if (!result.thumbnail) {
+                const twitterImageMatch = html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i);
+                if (twitterImageMatch && twitterImageMatch[1]) result.thumbnail = twitterImageMatch[1].trim();
+            }
+            return result;
+        }
+
+        function getTwitchInfo(url) {
+            try {
+                const u = new URL(url);
+                if (u.hostname.includes('twitch.tv')) {
+                    // Video: /videos/1234567890
+                    const videoMatch = u.pathname.match(/^\/videos?\/(\d+)/);
+                    if (videoMatch) {
+                        return { type: 'video', id: videoMatch[1] };
+                    }
+                    // Clip: /username/clip/clipId (clipId can contain hyphens)
+                    const clipMatch = u.pathname.match(/^\/([a-zA-Z0-9_]+)\/clip\/([a-zA-Z0-9_-]+)/);
+                    if (clipMatch) {
+                        return { type: 'clip', id: clipMatch[2], username: clipMatch[1] };
+                    }
+                    // Channel: /username
+                    const channelMatch = u.pathname.match(/^\/([a-zA-Z0-9_]+)\/?$/);
+                    if (channelMatch) {
+                        return { type: 'channel', id: channelMatch[1] };
+                    }
+                }
+            } catch (e) { }
+            return null;
+        }
+
+
+        function getTwitchThumbnailUrl(twitchInfo) {
+            if (!twitchInfo) return null;
+            if (twitchInfo.type === 'clip') {
+                const clipParts = twitchInfo.id.split('-');
+                const slug = clipParts.length > 1 ? clipParts.slice(0, -1).join('-') : twitchInfo.id;
+                return `https://clips-media-assets2.twitch.tv/${slug}-preview-480x272.jpg`;
+            } else if (twitchInfo.type === 'channel') {
+                return `https://static-cdn.jtvnw.net/previews-ttv/live_user_${twitchInfo.id}-320x180.jpg`;
+            }
+            return null;
+        }
+
+        async function fetchTwitchPageInfo(url) {
+            try {
+                const response = await new Promise((resolve, reject) => {
+                    GM.xmlHttpRequest({
+                        method: 'GET',
+                        url: url,
+                        onload: (r) => r.status === 200 ? resolve(r.responseText) : reject(new Error(`HTTP ${r.status}`)),
+                        onerror: reject
+                    });
+                });
+                return extractTitleAndThumbnail(response);
+            } catch (e) {
+                return { title: null, thumbnail: null };
+            }
+        }
+
+        function processTwitchLink(link) {
+            if (link.dataset.enhanced) return;
+            const twitchInfo = getTwitchInfo(link.href);
+            if (!twitchInfo) return;
+            
+            if (link.closest('.embedContainer, .embed-wrapper, [data-embed], .embed') || 
+                link.hasAttribute('data-embed') || 
+                link.classList.contains('embed-link')) {
+                return;
+            }
+            
+            link.dataset.enhanced = "1";
+
+            if (showIconsTwitch) {
+                const originalText = link.textContent.trim();
+                let displayText = twitchInfo.type === 'channel' ? twitchInfo.id : 
+                                 twitchInfo.type === 'clip' ? twitchInfo.username : 
+                                 `Video ${twitchInfo.id}`;
+                link.innerHTML = `${TWITCH_ICON} ${displayText}`;
+                
+                if (twitchInfo.type === 'clip') {
+                    const pageUrl = `https://www.twitch.tv/${twitchInfo.username}/clip/${twitchInfo.id}`;
+                    fetchTwitchPageInfo(pageUrl).then(info => {
+                        if (info.title) link.innerHTML = `${TWITCH_ICON} ${info.title}`;
+                        if (showThumbnailsTwitch) {
+                            const thumbUrl = info.thumbnail || getTwitchThumbnailUrl(twitchInfo);
+                            if (thumbUrl) addThumbnailHover(link, thumbUrl, "Twitch thumbnail");
+                        }
+                    });
+                } else if (twitchInfo.type === 'video') {
+                    const pageUrl = `https://www.twitch.tv/videos/${twitchInfo.id}`;
+                    fetchTwitchPageInfo(pageUrl).then(info => {
+                        if (info.title) link.innerHTML = `${TWITCH_ICON} ${info.title}`;
+                    });
+                }
+            }
+
+            if (showThumbnailsTwitch && twitchInfo.type === 'channel') {
+                const thumbUrl = getTwitchThumbnailUrl(twitchInfo);
+                if (thumbUrl) addThumbnailHover(link, thumbUrl, "Twitch thumbnail");
+            }
+        }
+
+        function isRentryLink(url) {
+            try {
+                const u = new URL(url);
+                return u.hostname === 'rentry.co' || u.hostname === 'rentry.org';
+            } catch (e) { }
+            return false;
+        }
+
+        function processRentryLink(link) {
+            if (link.dataset.enhanced) return;
+            if (!isRentryLink(link.href)) return;
+            link.dataset.enhanced = "1";
+
+            if (showIconsRentry) {
+                const originalText = link.textContent.trim();
+                link.innerHTML = `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAATlBMVEUAAABpaWlkZGQnJydOTk6ampqhoaFVVVUeHh4AAAAfHx9GRkYAAABWVlY0NDQAAAD////09PT39/fq6urW1tbm5ub4+Pjb29vJycmlpaVxvf/cAAAAEHRSTlMAtryBp/30nnLnwby5uLRc+iRAsgAAAGNJREFUGNNlj1kOgCAMRKWi4m4HcLn/RYVgaoD3+dJOZpqalpRAbRBkwR+wFITCIUBFwb9gEeh7ZIKXifOLzsWXs8hw95qLZ9yLl0tL6Daz9EAUwyAiVofX2iNVT+PIGErjKl4JVwl/6XPAZgAAAABJRU5ErkJggg==" width="18" height="16" style="vertical-align:middle;margin-right:2px;" alt="Rentry"> ${originalText}`;
+            }
+        }
+
+        function isCatboxLink(url) {
+            try {
+                const u = new URL(url);
+                return u.hostname === 'catbox.moe' || u.hostname.endsWith('.catbox.moe');
+            } catch (e) { }
+            return false;
+        }
+
+        function processCatboxLink(link) {
+            if (link.dataset.enhanced) return;
+            if (!isCatboxLink(link.href)) return;
+            link.dataset.enhanced = "1";
+
+            if (showIconsCatbox) {
+                const originalText = link.textContent.trim();
+                link.innerHTML = `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAApVBMVEUAAAD59/by7+3y6ebx7er03dfz3dfw4t/yzcTvxb325N7y2tPw1M7x5OH59PLu4OHKsavvy8vg0c729PKvmZP05+T34drpyMPy4dzpzsjizMfz5eHv29b29PH19PXk3Nrq19X+8+787un55eD0w7r93ND618v329Pp3tn3yL7t4dz94db2zsr5zsLSycHgyMHTv7i4sK2noZ2znZeKhHuQcWt1ZWM1yKHZAAAAIXRSTlMABw9CIv6Tiv784M/LXzEe/fr48O/q5+fYyMCzoJeFbFh1mpGHAAAApElEQVQY02WPVxKDMAxECTa9pfcmyTY1vdz/aMEEZshk/1azkt4arQbGj0xnY/YsY0simgeDLmdbSIhoRca+2XZ8ANTy40kTCcFCAAIoLdSX+BRqX1wIS3erB2yYAcDjlZKsZjv9cvyE273IFCmXWD1IRoDZGSCVJ5s3UOn1DVVthYi+0IFSUqpcCLvl4qHIc+F5C9ahJ+ujs4oPnBu9ql23f30AG0UPKlXkC0QAAAAASUVORK5CYII=" width="18" height="16" style="vertical-align:middle;margin-right:2px;" alt="Catbox"> ${originalText}`;
+            }
+        }
+
+        function isXLink(url) {
+            try {
+                const u = new URL(url);
+                return u.hostname.includes('x.com') || u.hostname.includes('twitter.com');
+            } catch (e) { }
+            return false;
+        }
+
+        function getXPostId(url) {
+            try {
+                const u = new URL(url);
+                const match = u.pathname.match(/\/status\/(\d+)/);
+                return match ? match[1] : null;
+            } catch (e) { }
+            return null;
+        }
+
+        function applyEmbedStyles(container) {
+            container.style.marginTop = '10px';
+            container.style.border = '1px solid #444';
+            container.style.padding = '5px';
+            container.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+        }
+
+        function createAuthorDiv(authorName, authorUrl, handlePrefix = '@') {
+            if (!authorName && !authorUrl) return null;
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.gap = '8px';
+            if (authorName) {
+                const name = document.createElement('strong');
+                name.textContent = authorName;
+                name.style.color = 'var(--text-color, #fff)';
+                div.appendChild(name);
+            }
+            if (authorUrl) {
+                const link = document.createElement('a');
+                link.href = authorUrl;
+                link.textContent = `${handlePrefix}${authorUrl.split('/').pop()}`;
+                link.target = '_blank';
+                link.style.color = 'var(--link-color, #00E)';
+                div.appendChild(link);
+            }
+            return div;
+        }
+
+        function createEmbedCard(oembedData, viewLinkText, originalUrl) {
+            const card = document.createElement('div');
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.gap = '10px';
+            
+            const authorDiv = createAuthorDiv(oembedData.author_name, oembedData.author_url);
+            if (authorDiv) card.appendChild(authorDiv);
+            
+            if (oembedData.html) {
+                const contentDiv = document.createElement('div');
+                contentDiv.innerHTML = oembedData.html;
+                contentDiv.style.color = 'var(--text-color, #fff)';
+                contentDiv.querySelectorAll('script').forEach(script => script.remove());
+                card.appendChild(contentDiv);
+            }
+            
+            if (oembedData.thumbnail_url) {
+                const img = document.createElement('img');
+                img.src = oembedData.thumbnail_url;
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.style.borderRadius = '4px';
+                img.style.cursor = 'pointer';
+                img.onclick = () => window.open(originalUrl, '_blank');
+                card.appendChild(img);
+            }
+            
+            const linkDiv = document.createElement('div');
+            const link = document.createElement('a');
+            link.href = originalUrl;
+            link.textContent = viewLinkText;
+            link.target = '_blank';
+            link.style.color = 'var(--link-color, #00E)';
+            linkDiv.appendChild(link);
+            card.appendChild(linkDiv);
+            
+            return card;
+        }
+
+        async function createXEmbed(url) {
+            const embedContainer = document.createElement('div');
+            embedContainer.className = 'embedContainer';
+            applyEmbedStyles(embedContainer);
+            
+            try {
+                const response = await new Promise((resolve, reject) => {
+                    GM.xmlHttpRequest({
+                        method: 'GET',
+                        url: `https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&theme=dark`,
+                        onload: (r) => {
+                            if (r.status === 200) {
+                                try {
+                                    resolve(JSON.parse(r.responseText));
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            } else {
+                                reject(new Error(`HTTP ${r.status}`));
+                            }
+                        },
+                        onerror: reject
+                    });
+                });
+                embedContainer.appendChild(createEmbedCard(response, 'View on X.com', url));
+            } catch (e) {
+                embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+            }
+            return embedContainer;
+        }
+
+        function addEmbedButton(link, createEmbedFn) {
+            if (link.nextSibling?.classList?.contains('embedButton') ||
+                link.closest('.embedContainer, .embed-wrapper, [data-embed], .embed')) {
+                return;
+            }
+            
+            const embedButton = document.createElement('span');
+            embedButton.className = 'embedButton glowOnHover';
+            embedButton.textContent = '[Embed]';
+            
+            embedButton.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const embedContainer = embedButton.nextElementSibling;
+                if (embedContainer?.classList.contains('embedContainer')) {
+                    embedContainer.remove();
+                    embedButton.textContent = '[Embed]';
+                } else {
+                    embedButton.textContent = '[Loading...]';
+                    embedButton.style.pointerEvents = 'none';
+                    try {
+                        const newContainer = await createEmbedFn(link.href);
+                        embedButton.parentNode.insertBefore(newContainer, embedButton.nextSibling);
+                        embedButton.textContent = '[Remove]';
+                    } catch (error) {
+                        embedButton.textContent = '[Embed]';
+                        console.error('Failed to create embed:', error);
+                    } finally {
+                        embedButton.style.pointerEvents = 'auto';
+                    }
                 }
             });
+            
+            link.nextSibling 
+                ? link.parentNode.insertBefore(embedButton, link.nextSibling)
+                : link.parentNode.appendChild(embedButton);
+        }
+
+        function processXLink(link) {
+            if (link.dataset.enhanced) return;
+            if (!isXLink(link.href)) return;
+            link.dataset.enhanced = "1";
+
+            if (showIconsX) {
+                link.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="16" style="vertical-align:middle;margin-right:2px;" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.48 11.25H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> ${link.textContent.trim()}`;
+            }
+            
+            if (enableEmbedsX && getXPostId(link.href)) {
+                addEmbedButton(link, createXEmbed);
+            }
+        }
+
+        function isBskyLink(url) {
+            try {
+                const u = new URL(url);
+                return u.hostname.includes('bsky.app');
+            } catch (e) { }
+            return false;
+        }
+
+        function getBskyPostId(url) {
+            try {
+                const u = new URL(url);
+                const match = u.pathname.match(/\/profile\/[^\/]+\/post\/([a-zA-Z0-9_-]+)/);
+                return match ? match[1] : null;
+            } catch (e) { }
+            return null;
+        }
+
+        async function createBskyEmbed(url) {
+            const embedContainer = document.createElement('div');
+            embedContainer.className = 'embedContainer';
+            applyEmbedStyles(embedContainer);
+            
+            try {
+                const response = await new Promise((resolve, reject) => {
+                    GM.xmlHttpRequest({
+                        method: 'GET',
+                        url: `https://embed.bsky.app/oembed?url=${encodeURIComponent(url)}`,
+                        onload: (r) => {
+                            if (r.status === 200) {
+                                try {
+                                    resolve(JSON.parse(r.responseText));
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            } else {
+                                reject(new Error(`HTTP ${r.status}`));
+                            }
+                        },
+                        onerror: reject
+                    });
+                });
+                embedContainer.appendChild(createEmbedCard(response, 'View on Bluesky', url));
+            } catch (e) {
+                embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+            }
+            return embedContainer;
+        }
+
+        function processBskyLink(link) {
+            if (link.dataset.enhanced) return;
+            if (!isBskyLink(link.href)) return;
+            link.dataset.enhanced = "1";
+
+            if (showIconsBsky) {
+                link.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 57" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#0085FF" d="M13.873 3.805C21.21 9.332 29.103 20.537 32 26.55v15.882c0-.338-.13.044-.41.867-1.512 4.456-7.418 21.847-20.923 7.944-7.111-7.32-3.819-14.64 9.125-16.85-7.405 1.264-15.73-.825-18.014-9.015C1.12 23.022 0 8.51 0 6.55 0-3.268 8.579-.182 13.873 3.805ZM50.127 3.805C42.79 9.332 34.897 20.537 32 26.55v15.882c0-.338.130.044.410.867 1.512 4.456 7.418 21.847 20.923 7.944 7.111-7.32 3.819-14.64-9.125-16.85 7.405 1.264 15.73-.825 18.014-9.015C62.88 23.022 64 8.51 64 6.55c0-9.818-8.578-6.732-13.873-2.745Z"/></svg> ${link.textContent.trim()}`;
+            }
+            
+            if (enableEmbedsBsky && getBskyPostId(link.href)) {
+                addEmbedButton(link, createBskyEmbed);
+            }
+        }
+
+        function processLinks(root = document) {
+            if (showIconsYoutube || showThumbnailsYoutube) {
+                root.querySelectorAll('a[href*="youtu"]').forEach(processYouTubeLink);
+            }
+            if (showIconsTwitch || showThumbnailsTwitch) {
+                root.querySelectorAll('a[href*="twitch"]').forEach(processTwitchLink);
+            }
+            if (showIconsRentry) {
+                root.querySelectorAll('a[href*="rentry.co"], a[href*="rentry.org"]').forEach(processRentryLink);
+            }
+            if (showIconsCatbox) {
+                root.querySelectorAll('a[href*="catbox.moe"]').forEach(processCatboxLink);
+            }
+            if (showIconsX || enableEmbedsX) {
+                root.querySelectorAll('a[href*="x.com"], a[href*="twitter.com"]').forEach(processXLink);
+            }
+            if (showIconsBsky || enableEmbedsBsky) {
+                root.querySelectorAll('a[href*="bsky.app"]').forEach(processBskyLink);
+            }
         }
 
         // Initial run
         processLinks(document);
 
-        // Shared observer handler for processing YouTube links
-        function enhanceYoutubeLinksHandler(mutations) {
+        function enhanceLinksHandler(mutations) {
             for (const mutation of mutations) {
                 for (const addedNode of mutation.addedNodes) {
                     if (addedNode.nodeType === 1) {
@@ -3256,18 +3739,12 @@ onReady(async function () {
             }
         }
 
-        // Use the observer registry for #divThreads
         const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
-        if (divThreadsObs) {
-            divThreadsObs.addHandler(enhanceYoutubeLinksHandler);
-        }
+        if (divThreadsObs) divThreadsObs.addHandler(enhanceLinksHandler);
 
-        // Use the observer registry for .quoteTooltip
         const quoteTooltipObs = observeSelector('.quoteTooltip', { childList: true, subtree: true });
-        if (quoteTooltipObs) {
-            quoteTooltipObs.addHandler(enhanceYoutubeLinksHandler);
-        }
-    }
+        if (quoteTooltipObs) quoteTooltipObs.addHandler(enhanceLinksHandler);
+    })();
 
     // --- Feature: Convert to 12-hour format (AM/PM) ---
     async function featureLabelCreated12h() {
