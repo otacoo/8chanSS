@@ -313,6 +313,7 @@ onReady(async function () {
             hideBanner: { label: "Hide Board Banners", default: false },
             hideNoCookieLink: { label: "Hide No Cookie? Link", default: false },
             hideJannyTools: { label: "Hide Janitor Forms", default: false },
+            hlCurrentBoard: { label: "Highlight Current Board", default: false },
             _stylingThreadTitle: { type: "title", label: ":: Thread Styling" },
             _stylingSection3: { type: "separator" },
             enableSidebar: {
@@ -516,6 +517,7 @@ onReady(async function () {
             hidePostingForm_showCatalogForm: "show-catalog-form",
             hidePanelMessage: "hide-panelmessage",
             highlightOnYou: "highlight-yous",
+            hlCurrentBoard: "hl-currentBoard",
             threadHideCloseBtn: "hide-close-btn",
             hideCheckboxes: "hide-checkboxes",
             hideNoCookieLink: "hide-nocookie",
