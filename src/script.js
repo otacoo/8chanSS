@@ -4143,35 +4143,42 @@ onReady(async function () {
         setTimeout(processIDLabels, 50);
 
         // Use the global observer registry
-        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
-        if (divThreadsObs) {
-            const debouncedProcess = debounce(processIDLabels, 50);
+        const debouncedProcess = debounce(processIDLabels, 50);
 
-            divThreadsObs.addHandler(function showIDCountHandler(mutations) {
-                let hasNewLabels = false;
+        function showIDCountHandler(mutations) {
+            let hasNewLabels = false;
 
-                for (const mutation of mutations) {
-                    for (const node of mutation.addedNodes) {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            if (node.classList?.contains('labelId')) {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.classList?.contains('labelId')) {
+                            hasNewLabels = true;
+                            break;
+                        } else if (node.querySelectorAll) {
+                            const newLabels = node.querySelectorAll('.labelId');
+                            if (newLabels.length > 0) {
                                 hasNewLabels = true;
                                 break;
-                            } else if (node.querySelectorAll) {
-                                const newLabels = node.querySelectorAll('.labelId');
-                                if (newLabels.length > 0) {
-                                    hasNewLabels = true;
-                                    break;
-                                }
                             }
                         }
                     }
-                    if (hasNewLabels) break;
                 }
+                if (hasNewLabels) break;
+            }
 
-                if (hasNewLabels) {
-                    debouncedProcess();
-                }
-            });
+            if (hasNewLabels) {
+                debouncedProcess();
+            }
+        }
+
+        const divThreadsObs = observeSelector('#divThreads', { childList: true, subtree: true });
+        if (divThreadsObs) {
+            divThreadsObs.addHandler(showIDCountHandler);
+        }
+
+        const quoteTooltipObs = observeSelector('.quoteTooltip', { childList: true, subtree: true });
+        if (quoteTooltipObs) {
+            quoteTooltipObs.addHandler(showIDCountHandler);
         }
     }
 
