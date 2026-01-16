@@ -32,6 +32,11 @@
 // @grant        GM.xmlHttpRequest
 // @connect      youtube.com
 // @connect      i.ytimg.com
+// @connect      twitch.tv
+// @connect      static-cdn.jtvnw.net
+// @connect      clips-media-assets2.twitch.tv
+// @connect      publish.twitter.com
+// @connect      embed.bsky.app
 // @run-at       document-start
 // @updateURL    <%= meta.downloads %><%= meta.files.metajs %>
 // @downloadURL  <%= meta.downloads %><%= meta.files.userjs %>
