@@ -3491,10 +3491,21 @@ onReady(async function () {
             return null;
         }
 
+        function getXPostInfo(url) {
+            try {
+                const u = new URL(url);
+                const match = u.pathname.match(/\/([^\/]+)\/status\/(\d+)/);
+                if (match) {
+                    return { username: match[1], statusId: match[2] };
+                }
+            } catch (e) { }
+            return null;
+        }
+
         function applyEmbedStyles(container) {
             container.style.marginTop = '10px';
             container.style.border = '1px solid #444';
-            container.style.padding = '5px';
+            container.style.padding = '15px';
             container.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
         }
 
@@ -3561,16 +3572,177 @@ onReady(async function () {
             return card;
         }
 
+        function createFxEmbedCard(fxData, viewLinkText, originalUrl) {
+            const card = document.createElement('div');
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.gap = '10px';
+            
+            // FxEmbed API response structure: { code: 200, tweet: {...} } or { code: 200, post: {...} }
+            if (fxData.code !== 200) {
+                card.innerHTML = `<a href="${originalUrl}" target="_blank">${originalUrl}</a>`;
+                return card;
+            }
+            
+            // Handle both Twitter/X and Bluesky response formats
+            const post = fxData.tweet || fxData.post || fxData;
+            
+            // Author info
+            if (post.author) {
+                const authorUrl = post.author.url || 
+                    (post.author.screen_name ? `https://x.com/${post.author.screen_name}` : null) ||
+                    (post.author.handle ? `https://bsky.app/profile/${post.author.handle}` : null);
+                const authorDiv = createAuthorDiv(post.author.name, authorUrl);
+                if (authorDiv) card.appendChild(authorDiv);
+            }
+            
+            // Text content
+            const text = post.text || post.content || '';
+            if (text) {
+                const textDiv = document.createElement('div');
+                textDiv.style.color = 'var(--text-color, #fff)';
+                textDiv.style.whiteSpace = 'pre-wrap';
+                textDiv.style.wordWrap = 'break-word';
+                textDiv.textContent = text;
+                card.appendChild(textDiv);
+            }
+            
+            // Media (images and videos)
+            if (post.media) {
+                const photos = post.media.photos || post.media.images || [];
+                if (photos.length > 0) {
+                    const mediaContainer = document.createElement('div');
+                    mediaContainer.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
+                    photos.forEach(photo => {
+                        mediaContainer.appendChild(createMediaImage(photo.url || photo));
+                    });
+                    card.appendChild(mediaContainer);
+                }
+                
+                const videos = post.media.videos || [];
+                if (videos.length > 0) {
+                    const video = videos[0];
+                    const videoContainer = document.createElement('div');
+                    videoContainer.style.cssText = 'margin-top:8px;position:relative';
+                    
+                    if (video.url) {
+                        const videoEl = document.createElement('video');
+                        videoEl.controls = true;
+                        videoEl.style.cssText = 'max-width:100%;height:auto;border-radius:4px;display:block';
+                        fetchMediaAsBlob(video.url).then(blobUrl => {
+                            videoEl.src = blobUrl;
+                        }).catch(() => {
+                            videoEl.style.display = 'none';
+                            if (video.thumbnail_url) {
+                                videoContainer.appendChild(createVideoThumbnail(video.thumbnail_url, originalUrl));
+                            }
+                        });
+                        videoEl.onerror = () => {
+                            videoEl.style.display = 'none';
+                            if (video.thumbnail_url) {
+                                videoContainer.appendChild(createVideoThumbnail(video.thumbnail_url, originalUrl));
+                            }
+                        };
+                        videoContainer.appendChild(videoEl);
+                    } else if (video.thumbnail_url) {
+                        videoContainer.appendChild(createVideoThumbnail(video.thumbnail_url, originalUrl));
+                    }
+                    card.appendChild(videoContainer);
+                }
+            }
+            
+            return card;
+        }
+
+        function getContentTypeFromUrl(url) {
+            const match = url.match(/\.(jpg|jpeg|png|gif|webp|mp4|webm)$/i);
+            if (!match) return 'application/octet-stream';
+            const ext = match[1].toLowerCase();
+            const types = {
+                jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+                gif: 'image/gif', webp: 'image/webp',
+                mp4: 'video/mp4', webm: 'video/webm'
+            };
+            return types[ext] || 'application/octet-stream';
+        }
+
+        async function fetchMediaAsBlob(url) {
+            return new Promise((resolve, reject) => {
+                GM.xmlHttpRequest({
+                    method: 'GET',
+                    url: url,
+                    responseType: 'arraybuffer',
+                    onload: (r) => {
+                        if (r.status === 200) {
+                            try {
+                                let contentType = 'application/octet-stream';
+                                if (typeof r.getResponseHeader === 'function') {
+                                    contentType = r.getResponseHeader('Content-Type') || getContentTypeFromUrl(url);
+                                } else if (r.responseHeaders) {
+                                    const match = r.responseHeaders.match(/content-type:\s*([^\r\n]+)/i);
+                                    contentType = match ? match[1].trim() : getContentTypeFromUrl(url);
+                                } else {
+                                    contentType = getContentTypeFromUrl(url);
+                                }
+                                const blob = new Blob([r.response], { type: contentType });
+                                resolve(URL.createObjectURL(blob));
+                            } catch (e) {
+                                reject(e);
+                            }
+                        } else {
+                            reject(new Error(`HTTP ${r.status}`));
+                        }
+                    },
+                    onerror: reject,
+                    ontimeout: () => reject(new Error('Timeout'))
+                });
+            });
+        }
+
+        function createMediaImage(url, onClick) {
+            const img = document.createElement('img');
+            img.style.cssText = 'max-width:100%;max-height:400px;height:auto;border-radius:4px;cursor:pointer';
+            img.onclick = onClick || (() => window.open(url, '_blank'));
+            img.onerror = () => { img.style.display = 'none'; };
+            fetchMediaAsBlob(url).then(blobUrl => {
+                img.src = blobUrl;
+            }).catch(() => {
+                img.style.display = 'none';
+            });
+            return img;
+        }
+
+        function createVideoThumbnail(thumbnailUrl, originalUrl) {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;cursor:pointer';
+            wrapper.onclick = () => window.open(originalUrl, '_blank');
+            
+            const img = createMediaImage(thumbnailUrl);
+            wrapper.appendChild(img);
+            
+            const playBtn = document.createElement('div');
+            playBtn.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff';
+            playBtn.innerHTML = '▶';
+            wrapper.appendChild(playBtn);
+            
+            return wrapper;
+        }
+
         async function createXEmbed(url) {
             const embedContainer = document.createElement('div');
             embedContainer.className = 'embedContainer';
             applyEmbedStyles(embedContainer);
             
             try {
+                const postInfo = getXPostInfo(url);
+                if (!postInfo) {
+                    throw new Error('Invalid X.com URL');
+                }
+                
                 const response = await new Promise((resolve, reject) => {
                     GM.xmlHttpRequest({
                         method: 'GET',
-                        url: `https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&theme=dark`,
+                        url: `https://api.fxtwitter.com/${encodeURIComponent(postInfo.username)}/status/${postInfo.statusId}`,
                         onload: (r) => {
                             if (r.status === 200) {
                                 try {
@@ -3582,10 +3754,11 @@ onReady(async function () {
                                 reject(new Error(`HTTP ${r.status}`));
                             }
                         },
-                        onerror: reject
+                        onerror: reject,
+                        ontimeout: () => reject(new Error('Timeout'))
                     });
                 });
-                embedContainer.appendChild(createEmbedCard(response, 'View on X.com', url));
+                embedContainer.appendChild(createFxEmbedCard(response, 'View on X.com', url));
             } catch (e) {
                 embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
             }
@@ -3662,32 +3835,192 @@ onReady(async function () {
             return null;
         }
 
+        function extractBskyMedia(html) {
+            const result = { images: [], videos: [], title: null, author: null };
+            
+            // Extract title
+            const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+            if (ogTitleMatch && ogTitleMatch[1]) {
+                result.title = ogTitleMatch[1].trim();
+            }
+            if (!result.title) {
+                const twitterTitleMatch = html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i);
+                if (twitterTitleMatch && twitterTitleMatch[1]) {
+                    result.title = twitterTitleMatch[1].trim();
+                }
+            }
+            
+            // Extract author
+            const ogSiteNameMatch = html.match(/<meta\s+property=["']og:site_name["']\s+content=["']([^"']+)["']/i);
+            if (ogSiteNameMatch && ogSiteNameMatch[1]) {
+                result.author = ogSiteNameMatch[1].trim();
+            }
+            
+            // Extract images - check for multiple og:image tags
+            const ogImageMatches = html.matchAll(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/gi);
+            for (const match of ogImageMatches) {
+                if (match[1] && !match[1].includes('embed.bsky.app')) {
+                    result.images.push(match[1].trim());
+                }
+            }
+            
+            // Fallback to twitter:image
+            if (result.images.length === 0) {
+                const twitterImageMatch = html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i);
+                if (twitterImageMatch && twitterImageMatch[1] && !twitterImageMatch[1].includes('embed.bsky.app')) {
+                    result.images.push(twitterImageMatch[1].trim());
+                }
+            }
+            
+            // Extract video - check for og:video
+            const ogVideoMatch = html.match(/<meta\s+property=["']og:video["']\s+content=["']([^"']+)["']/i);
+            if (ogVideoMatch && ogVideoMatch[1]) {
+                result.videos.push(ogVideoMatch[1].trim());
+            }
+            
+            // Extract video thumbnail
+            const ogVideoImageMatch = html.match(/<meta\s+property=["']og:video:image["']\s+content=["']([^"']+)["']/i);
+            if (ogVideoImageMatch && ogVideoImageMatch[1] && result.videos.length > 0) {
+                result.videos[0] = { url: result.videos[0], thumbnail: ogVideoImageMatch[1].trim() };
+            }
+            
+            // Try to extract from JSON-LD
+            const jsonLdMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+            if (jsonLdMatch) {
+                try {
+                    const jsonLd = JSON.parse(jsonLdMatch[1]);
+                    if (jsonLd.image && !result.images.length) {
+                        if (Array.isArray(jsonLd.image)) {
+                            result.images = jsonLd.image.map(img => typeof img === 'string' ? img : img.url || img.contentUrl).filter(Boolean);
+                        } else if (typeof jsonLd.image === 'string') {
+                            result.images.push(jsonLd.image);
+                        } else if (jsonLd.image.url || jsonLd.image.contentUrl) {
+                            result.images.push(jsonLd.image.url || jsonLd.image.contentUrl);
+                        }
+                    }
+                } catch (e) {}
+            }
+            
+            return result;
+        }
+
         async function createBskyEmbed(url) {
             const embedContainer = document.createElement('div');
             embedContainer.className = 'embedContainer';
             applyEmbedStyles(embedContainer);
             
             try {
-                const response = await new Promise((resolve, reject) => {
-                    GM.xmlHttpRequest({
-                        method: 'GET',
-                        url: `https://embed.bsky.app/oembed?url=${encodeURIComponent(url)}`,
-                        onload: (r) => {
-                            if (r.status === 200) {
-                                try {
-                                    resolve(JSON.parse(r.responseText));
-                                } catch (e) {
-                                    reject(e);
+                // Fetch both oEmbed and the actual post page
+                const [oembedResponse, pageHtml] = await Promise.all([
+                    new Promise((resolve, reject) => {
+                        GM.xmlHttpRequest({
+                            method: 'GET',
+                            url: `https://embed.bsky.app/oembed?url=${encodeURIComponent(url)}&maxwidth=600`,
+                            onload: (r) => {
+                                if (r.status === 200) {
+                                    try {
+                                        resolve(JSON.parse(r.responseText));
+                                    } catch (e) {
+                                        resolve(null);
+                                    }
+                                } else {
+                                    resolve(null);
                                 }
-                            } else {
-                                reject(new Error(`HTTP ${r.status}`));
-                            }
-                        },
-                        onerror: reject
+                            },
+                            onerror: () => resolve(null),
+                            ontimeout: () => resolve(null)
+                        });
+                    }),
+                    new Promise((resolve, reject) => {
+                        GM.xmlHttpRequest({
+                            method: 'GET',
+                            url: url,
+                            onload: (r) => {
+                                if (r.status === 200) {
+                                    resolve(r.responseText);
+                                } else {
+                                    resolve(null);
+                                }
+                            },
+                            onerror: () => resolve(null),
+                            ontimeout: () => resolve(null)
+                        });
+                    })
+                ]);
+                
+                const card = document.createElement('div');
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.gap = '10px';
+                
+                // Extract media from page HTML
+                let mediaData = { images: [], videos: [], title: null, author: null };
+                if (pageHtml) {
+                    mediaData = extractBskyMedia(pageHtml);
+                }
+                
+                // Extract author info from oEmbed or page
+                const authorName = oembedResponse?.author_name || mediaData.author || 'Bluesky';
+                const authorUrl = oembedResponse?.author_url || url;
+                const authorDiv = createAuthorDiv(authorName, authorUrl);
+                if (authorDiv) card.appendChild(authorDiv);
+                
+                // Extract text content from oEmbed
+                if (oembedResponse?.html) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = oembedResponse.html;
+                    const blockquote = tempDiv.querySelector('blockquote');
+                    if (blockquote) {
+                        const textDiv = document.createElement('div');
+                        textDiv.style.color = 'var(--text-color, #fff)';
+                        textDiv.style.whiteSpace = 'pre-wrap';
+                        textDiv.style.wordWrap = 'break-word';
+                        const textContent = blockquote.cloneNode(true);
+                        textContent.querySelectorAll('script').forEach(s => s.remove());
+                        textDiv.textContent = textContent.textContent || blockquote.textContent;
+                        card.appendChild(textDiv);
+                    }
+                }
+                
+                if (mediaData.images.length > 0) {
+                    const mediaContainer = document.createElement('div');
+                    mediaContainer.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
+                    mediaData.images.forEach(imageUrl => {
+                        mediaContainer.appendChild(createMediaImage(imageUrl));
                     });
-                });
-                embedContainer.appendChild(createEmbedCard(response, 'View on Bluesky', url));
+                    card.appendChild(mediaContainer);
+                }
+                
+                if (mediaData.videos.length > 0) {
+                    mediaData.videos.forEach(video => {
+                        const videoContainer = document.createElement('div');
+                        videoContainer.style.marginTop = '8px';
+                        
+                        if (typeof video === 'object' && video.thumbnail) {
+                            videoContainer.appendChild(createVideoThumbnail(video.thumbnail, url));
+                        } else if (typeof video === 'string') {
+                            const videoEl = document.createElement('video');
+                            videoEl.controls = true;
+                            videoEl.style.cssText = 'max-width:100%;height:auto;border-radius:4px;display:block';
+                            fetchMediaAsBlob(video).then(blobUrl => {
+                                videoEl.src = blobUrl;
+                            }).catch(() => {
+                                videoEl.style.display = 'none';
+                            });
+                            videoEl.onerror = () => { videoEl.style.display = 'none'; };
+                            videoContainer.appendChild(videoEl);
+                        }
+                        card.appendChild(videoContainer);
+                    });
+                }
+                
+                if (oembedResponse?.thumbnail_url && mediaData.images.length === 0 && mediaData.videos.length === 0) {
+                    card.appendChild(createMediaImage(oembedResponse.thumbnail_url, () => window.open(url, '_blank')));
+                }
+                
+                embedContainer.appendChild(card);
             } catch (e) {
+                console.error('Bluesky embed error:', e);
                 embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
             }
             return embedContainer;
