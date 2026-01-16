@@ -1,3 +1,16 @@
+## v1.59.0
+*2026-01-16*
+
+- **Reworked Enhanced Links:** Linkification
+  - Adds icons for the following services: Twitch, Youtube, X.com, Bluesky, Rentry, Catbox
+  - Fetches titles for: Twitch, Youtube
+  - Allows embedding for: X.com, Bluesky
+  
+- **New Option:** Highlight Current Board (in Header)
+  
+- Moved and reworded some options in the settings menu
+- Fix for ID count not showing in quote tooltip posts
+
 ### v1.58.7
 *2026-01-15*
 

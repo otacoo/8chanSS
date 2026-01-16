@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.58.7
+// @version      1.59.0
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -19,7 +19,14 @@
 // @grant        GM.listValues
 // @grant        GM.xmlHttpRequest
 // @connect      youtube.com
-// @connect      i.ytimg.com
+// @connect      twitch.tv
+// @connect      static-cdn.jtvnw.net
+// @connect      clips-media-assets2.twitch.tv
+// @connect      api.fxtwitter.com
+// @connect      embed.bsky.app
+// @connect      bsky.app
+// @connect      cdn.bsky.app
+// @connect      *.twimg.com
 // @run-at       document-start
 // @updateURL    https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.meta.js
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js
