@@ -3273,7 +3273,7 @@ onReady(async function () {
 
         // Check if link is inside a codeblock
         function isInsideCodeblock(link) {
-            return link.closest('.inlineCode') !== null;
+            return link.closest('.inlineCode, .aa, .katex, .katex-html, .hljs-built_in, .hljs-string') !== null;
         }
 
         // YouTube handlers
