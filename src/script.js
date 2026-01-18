@@ -3271,9 +3271,15 @@ onReady(async function () {
             link.addEventListener('mouseleave', hideThumb);
         }
 
+        // Check if link is inside a codeblock
+        function isInsideCodeblock(link) {
+            return link.closest('.inlineCode') !== null;
+        }
+
         // YouTube handlers
         function processYouTubeLink(link) {
             if (link.dataset.enhanced) return;
+            if (isInsideCodeblock(link)) return;
             const ytInfo = getYouTubeInfo(link.href);
             if (!ytInfo) return;
             link.dataset.enhanced = "1";
@@ -3395,6 +3401,7 @@ onReady(async function () {
 
         function processTwitchLink(link) {
             if (link.dataset.enhanced) return;
+            if (isInsideCodeblock(link)) return;
             const twitchInfo = getTwitchInfo(link.href);
             if (!twitchInfo) return;
             
@@ -3446,6 +3453,7 @@ onReady(async function () {
 
         function processRentryLink(link) {
             if (link.dataset.enhanced) return;
+            if (isInsideCodeblock(link)) return;
             if (!isRentryLink(link.href)) return;
             link.dataset.enhanced = "1";
 
@@ -3465,6 +3473,7 @@ onReady(async function () {
 
         function processCatboxLink(link) {
             if (link.dataset.enhanced) return;
+            if (isInsideCodeblock(link)) return;
             if (!isCatboxLink(link.href)) return;
             link.dataset.enhanced = "1";
 
@@ -3806,6 +3815,7 @@ onReady(async function () {
 
         function processXLink(link) {
             if (link.dataset.enhanced) return;
+            if (isInsideCodeblock(link)) return;
             if (!isXLink(link.href)) return;
             link.dataset.enhanced = "1";
 
@@ -4028,6 +4038,7 @@ onReady(async function () {
 
         function processBskyLink(link) {
             if (link.dataset.enhanced) return;
+            if (isInsideCodeblock(link)) return;
             if (!isBskyLink(link.href)) return;
             link.dataset.enhanced = "1";
 
