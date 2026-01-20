@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.59.0
+// @version      1.59.1
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -27,6 +27,9 @@
 // @connect      bsky.app
 // @connect      cdn.bsky.app
 // @connect      *.twimg.com
+// @connect      pastebin.com
+// @connect      rentry.co
+// @connect      rentry.org
 // @run-at       document-start
 // @updateURL    https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.meta.js
 // @downloadURL  https://github.com/otacoo/8chanSS/releases/latest/download/8chanSS.user.js

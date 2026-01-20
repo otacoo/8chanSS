@@ -39,6 +39,9 @@
 // @connect      bsky.app
 // @connect      cdn.bsky.app
 // @connect      *.twimg.com
+// @connect      pastebin.com
+// @connect      rentry.co
+// @connect      rentry.org
 // @run-at       document-start
 // @updateURL    <%= meta.downloads %><%= meta.files.metajs %>
 // @downloadURL  <%= meta.downloads %><%= meta.files.userjs %>

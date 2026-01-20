@@ -1,3 +1,12 @@
+### v1.59.1
+*2026-01-20*
+
+- Add embedding for Pastebin and Rentry
+- Add icons for Pastebin
+- Replace Rentry and Catbox base64 icons with SVG icons
+- Improve Rentry URL detection
+- Prevent linkification inside of code blocks, Latex, Shift JIS and embeddings
+
 ## v1.59.0
 *2026-01-16*
 
