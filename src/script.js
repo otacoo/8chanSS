@@ -528,7 +528,6 @@ onReady(async function () {
             hideJannyTools: "hide-jannytools",
             opBackground: "op-background",
             blurSpoilers: "ss-blur-spoilers",
-            alwaysShowIdCount: "show-ID-count",
             enableBacklinkIcons: "backlink-icon",
             enableFitImage: "fit-images"
         };
@@ -4628,47 +4627,73 @@ onReady(async function () {
 
     // --- Feature: Always show post count for IDs ---
     async function featureShowIDCount() {
-        // Early return if not on thread page
-        if (!window.pageType?.isThread) return;
+        // Skip if /gacha/ board
+        if (window.pageType?.path?.includes('/gacha/')) return;
+        
         // Early return if no .spanId exists on the page
         if (!document.querySelector('.spanId')) return;
 
-        // Track processed labels to avoid reprocessing
+        // Add CSS class to root
+        document.documentElement.classList.add('show-ID-count');
+
+        // Cache processed labels to avoid reprocessing
         const processedLabels = new WeakSet();
+        // Cache label data to avoid re-triggering mouseover
+        const labelDataCache = new WeakMap();
 
         function processIDLabels() {
-            document.querySelectorAll('.labelId').forEach(label => {
-                // Skip if already processed
-                if (processedLabels.has(label)) {
-                    return;
-                }
-                // Store original events
-                const originalMouseover = label.onmouseover;
-                // Trigger site mouseover to get the count
-                if (originalMouseover) {
-                    originalMouseover.call(label);
-                }
+            const allLabels = Array.from(document.querySelectorAll('.labelId'));
+            const unprocessedLabels = allLabels.filter(label => !processedLabels.has(label));
+            
+            if (unprocessedLabels.length === 0) return;
 
-                const text = label.textContent;
-                const match = text.match(/^(.+?)\s*\((\d+)\)$/);
+            // Process in batches
+            let index = 0;
+            const batchSize = 50;
 
-                if (match) {
-                    const idText = match[1].trim();
-                    const count = match[2];
+            function processBatch() {
+                const end = Math.min(index + batchSize, unprocessedLabels.length);
+                
+                for (let i = index; i < end; i++) {
+                    const label = unprocessedLabels[i];
+                    
+                    // Skip if already processed
+                    if (processedLabels.has(label)) {
+                        continue;
+                    }
 
-                    // Format display
-                    const separator = document.createElement('span');
-                    separator.className = 'ss-id-separator';
-                    separator.textContent = ' | ';
+                    // Check cache first
+                    let cachedData = labelDataCache.get(label);
+                    if (!cachedData) {
+                        // Store original events
+                        const originalMouseover = label.onmouseover;
+                        // Trigger site mouseover to get the count
+                        if (originalMouseover) {
+                            originalMouseover.call(label);
+                        }
 
-                    const countSpan = document.createElement('span');
-                    countSpan.className = 'ss-id-count';
-                    countSpan.textContent = count;
+                        const text = label.textContent;
+                        const match = text.match(/^(.+?)\s*\((\d+)\)$/);
 
-                    // Clear existing content and rebuild with custom format
+                        if (match) {
+                            const idText = match[1].trim();
+                            const count = match[2];
+                            cachedData = { idText, count };
+                            labelDataCache.set(label, cachedData);
+                        } else {
+                            // No match, mark as processed to skip in future
+                            processedLabels.add(label);
+                            continue;
+                        }
+                    }
+
+                    const { idText, count } = cachedData;
+
+                    // Restore original textContent (ID only) - CSS displays the count
                     label.textContent = idText;
-                    label.appendChild(separator);
-                    label.appendChild(countSpan);
+
+                    // Store count in data attribute
+                    label.setAttribute('data-posts-by-this-id', count);
 
                     // Mark as processed
                     processedLabels.add(label);
@@ -4677,24 +4702,26 @@ onReady(async function () {
                     label.onmouseover = null;
                     label.onmouseout = null;
 
-                    // Add event listeners that maintain format
+                    // Add event listeners that do nothing to prevent interference
                     label.addEventListener('mouseover', function (e) {
                         e.stopPropagation();
-                        // Ensure our format is maintained
-                        if (!this.querySelector('.ss-id-separator')) {
-                            // Re-apply our format if it was somehow lost
-                            this.textContent = idText;
-                            this.appendChild(separator.cloneNode(true));
-                            this.appendChild(countSpan.cloneNode(true));
-                        }
+                        // Do nothing
                     });
 
                     label.addEventListener('mouseout', function (e) {
                         e.stopPropagation();
-                        // Do nothing on mouseout
+                        // Do nothing
                     });
                 }
-            });
+
+                index = end;
+
+                if (index < unprocessedLabels.length) {
+                    requestAnimationFrame(processBatch);
+                }
+            }
+
+            processBatch();
         }
 
         // Initial processing
