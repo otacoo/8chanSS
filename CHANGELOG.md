@@ -1,3 +1,10 @@
+### v1.59.2
+*2026-01-22*
+
+- Improve Youtube channel name parsing
+- Better visibility for info text in hover thumbnails
+- Change how ID post count is added so it doesn't interfere with the site's filtering
+
 ### v1.59.1
 *2026-01-20*
 
