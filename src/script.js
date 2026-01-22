@@ -3228,6 +3228,7 @@ onReady(async function () {
                     thumbDiv.style.opacity = '0';
                     thumbDiv.style.maxWidth = '280px';
                     thumbDiv.style.maxHeight = '200px';
+                    thumbDiv.style.color = '#fff';
 
                     const img = document.createElement('img');
                     img.style.display = 'block';
