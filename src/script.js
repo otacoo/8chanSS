@@ -3054,7 +3054,7 @@ onReady(async function () {
                         return { type: 'video', id: liveMatch[2] };
                     }
                     // /post/POSTID or /@channelname/post/POSTID
-                    const postMatch = u.pathname.match(/^(?:\/@([a-zA-Z0-9_-]+))?\/post\/([a-zA-Z0-9_-]+)/);
+                    const postMatch = u.pathname.match(/^(?:\/@([a-zA-Z0-9_.-]+))?\/post\/([a-zA-Z0-9_-]+)/);
                     if (postMatch) {
                         return { 
                             type: 'post', 
@@ -3062,10 +3062,15 @@ onReady(async function () {
                             channel: postMatch[1] || null
                         };
                     }
-                    // /@channelname or /c/channelname or /channel/channelid or /user/username
-                    const channelMatch = u.pathname.match(/^\/(?:@|c\/|channel\/|user\/)([a-zA-Z0-9_-]+)/);
+                    // /@channelname or /c/channelname or /channel/channelid or /user/username or /channelname (bare)
+                    const channelMatch = u.pathname.match(/^\/(?:@([a-zA-Z0-9_.-]+)|c\/([a-zA-Z0-9_.-]+)|channel\/([a-zA-Z0-9_-]+)|user\/([a-zA-Z0-9_-]+)|([a-zA-Z0-9_.-]+))(?:\/|$)/);
                     if (channelMatch) {
-                        return { type: 'channel', id: channelMatch[1] };
+                        // Extract the channel identifier (one of the capture groups will match)
+                        const channelId = channelMatch[1] || channelMatch[2] || channelMatch[3] || channelMatch[4] || channelMatch[5];
+                        if (channelId) {
+                            // Store without @ prefix - display code will add it
+                            return { type: 'channel', id: channelId };
+                        }
                     }
                 }
             } catch (e) { }
