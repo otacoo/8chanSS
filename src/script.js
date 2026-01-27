@@ -2963,30 +2963,50 @@ onReady(async function () {
             return;
         }
 
-        // Load parent settings first
-        const enableShowIcons = await getSetting("enhanceLinks_showIcons");
-        const enableShowThumbnails = await getSetting("enhanceLinks_showThumbnails");
-        const enableEmbeds = await getSetting("enhanceLinks_enableEmbeds");
+        // Load all settings in parallel
+        const [
+            enableShowIcons, enableShowThumbnails, enableEmbeds,
+            showIconsYoutubeRaw, showIconsTwitchRaw, showIconsXRaw, showIconsBskyRaw,
+            showIconsRentryRaw, showIconsCatboxRaw, showIconsPastebinRaw,
+            showThumbnailsYoutubeRaw, showThumbnailsTwitchRaw,
+            enableEmbedsXRaw, enableEmbedsBskyRaw, enableEmbedsRentryRaw, enableEmbedsPastebinRaw
+        ] = await Promise.all([
+            getSetting("enhanceLinks_showIcons"),
+            getSetting("enhanceLinks_showThumbnails"),
+            getSetting("enhanceLinks_enableEmbeds"),
+            getSetting("enhanceLinks_showIcons_showIconsYoutube"),
+            getSetting("enhanceLinks_showIcons_showIconsTwitch"),
+            getSetting("enhanceLinks_showIcons_showIconsX"),
+            getSetting("enhanceLinks_showIcons_showIconsBsky"),
+            getSetting("enhanceLinks_showIcons_showIconsRentry"),
+            getSetting("enhanceLinks_showIcons_showIconsCatbox"),
+            getSetting("enhanceLinks_showIcons_showIconsPastebin"),
+            getSetting("enhanceLinks_showThumbnails_showThumbnailsYoutube"),
+            getSetting("enhanceLinks_showThumbnails_showThumbnailsTwitch"),
+            getSetting("enhanceLinks_enableEmbeds_enableEmbedsX"),
+            getSetting("enhanceLinks_enableEmbeds_enableEmbedsBsky"),
+            getSetting("enhanceLinks_enableEmbeds_enableEmbedsRentry"),
+            getSetting("enhanceLinks_enableEmbeds_enableEmbedsPastebin")
+        ]);
         
-        // Load subOptions only if parent is enabled
-        const showIconsYoutube = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsYoutube");
-        const showIconsTwitch = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsTwitch");
-        const showIconsX = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsX");
-        const showIconsBsky = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsBsky");
-        const showIconsRentry = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsRentry");
-        const showIconsCatbox = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsCatbox");
-        const showIconsPastebin = enableShowIcons && await getSetting("enhanceLinks_showIcons_showIconsPastebin");
-        
-        const showThumbnailsYoutube = enableShowThumbnails && await getSetting("enhanceLinks_showThumbnails_showThumbnailsYoutube");
-        const showThumbnailsTwitch = enableShowThumbnails && await getSetting("enhanceLinks_showThumbnails_showThumbnailsTwitch");
-        
-        const enableEmbedsX = enableEmbeds && await getSetting("enhanceLinks_enableEmbeds_enableEmbedsX");
-        const enableEmbedsBsky = enableEmbeds && await getSetting("enhanceLinks_enableEmbeds_enableEmbedsBsky");
-        const enableEmbedsRentry = enableEmbeds && await getSetting("enhanceLinks_enableEmbeds_enableEmbedsRentry");
-        const enableEmbedsPastebin = enableEmbeds && await getSetting("enhanceLinks_enableEmbeds_enableEmbedsPastebin");
+        // Check if features are enabled
+        const showIconsYoutube = enableShowIcons && showIconsYoutubeRaw;
+        const showIconsTwitch = enableShowIcons && showIconsTwitchRaw;
+        const showIconsX = enableShowIcons && showIconsXRaw;
+        const showIconsBsky = enableShowIcons && showIconsBskyRaw;
+        const showIconsRentry = enableShowIcons && showIconsRentryRaw;
+        const showIconsCatbox = enableShowIcons && showIconsCatboxRaw;
+        const showIconsPastebin = enableShowIcons && showIconsPastebinRaw;
+        const showThumbnailsYoutube = enableShowThumbnails && showThumbnailsYoutubeRaw;
+        const showThumbnailsTwitch = enableShowThumbnails && showThumbnailsTwitchRaw;
+        const enableEmbedsX = enableEmbeds && enableEmbedsXRaw;
+        const enableEmbedsBsky = enableEmbeds && enableEmbedsBskyRaw;
+        const enableEmbedsRentry = enableEmbeds && enableEmbedsRentryRaw;
+        const enableEmbedsPastebin = enableEmbeds && enableEmbedsPastebinRaw;
 
         // If no features are enabled, return early
-        if (!showIconsYoutube && !showIconsTwitch && !showIconsX && !showIconsBsky && !showIconsRentry && !showIconsCatbox && !showIconsPastebin &&
+        if (!showIconsYoutube && !showIconsTwitch && !showIconsX && !showIconsBsky && 
+            !showIconsRentry && !showIconsCatbox && !showIconsPastebin &&
             !showThumbnailsYoutube && !showThumbnailsTwitch &&
             !enableEmbedsX && !enableEmbedsBsky && !enableEmbedsRentry && !enableEmbedsPastebin) {
             return;
@@ -3603,47 +3623,7 @@ onReady(async function () {
             return div;
         }
 
-        function createEmbedCard(oembedData, viewLinkText, originalUrl) {
-            const card = document.createElement('div');
-            card.style.display = 'flex';
-            card.style.flexDirection = 'column';
-            card.style.gap = '10px';
-            
-            const authorDiv = createAuthorDiv(oembedData.author_name, oembedData.author_url);
-            if (authorDiv) card.appendChild(authorDiv);
-            
-            if (oembedData.html) {
-                const contentDiv = document.createElement('div');
-                contentDiv.innerHTML = oembedData.html;
-                contentDiv.style.color = 'var(--text-color, #fff)';
-                contentDiv.querySelectorAll('script').forEach(script => script.remove());
-                card.appendChild(contentDiv);
-            }
-            
-            if (oembedData.thumbnail_url) {
-                const img = document.createElement('img');
-                img.src = oembedData.thumbnail_url;
-                img.style.maxWidth = '100%';
-                img.style.height = 'auto';
-                img.style.borderRadius = '4px';
-                img.style.cursor = 'pointer';
-                img.onclick = () => window.open(originalUrl, '_blank');
-                card.appendChild(img);
-            }
-            
-            const linkDiv = document.createElement('div');
-            const link = document.createElement('a');
-            link.href = originalUrl;
-            link.textContent = viewLinkText;
-            link.target = '_blank';
-            link.style.color = 'var(--link-color, #00E)';
-            linkDiv.appendChild(link);
-            card.appendChild(linkDiv);
-            
-            return card;
-        }
-
-        function createFxEmbedCard(fxData, viewLinkText, originalUrl) {
+        function createFxEmbedCard(fxData, originalUrl) {
             const card = document.createElement('div');
             card.style.display = 'flex';
             card.style.flexDirection = 'column';
@@ -3829,7 +3809,7 @@ onReady(async function () {
                         ontimeout: () => reject(new Error('Timeout'))
                     });
                 });
-                embedContainer.appendChild(createFxEmbedCard(response, 'View on X.com', url));
+                embedContainer.appendChild(createFxEmbedCard(response, url));
             } catch (e) {
                 embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
             }
