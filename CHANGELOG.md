@@ -1,3 +1,9 @@
+### v1.59.3
+*2026-01-27*
+
+- Add support for Nitter proxies
+- Small code cleanup
+
 ### v1.59.2
 *2026-01-22*
 
