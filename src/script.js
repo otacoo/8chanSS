@@ -3568,7 +3568,15 @@ onReady(async function () {
         function isXLink(url) {
             try {
                 const u = new URL(url);
-                return u.hostname.includes('x.com') || u.hostname.includes('twitter.com');
+                // Check for official X/Twitter domains
+                if (u.hostname.includes('x.com') || u.hostname.includes('twitter.com')) {
+                    return true;
+                }
+                // Check for Nitter proxy instances
+                const nitterDomains = ['nitter.net', 'nitter.poast.org', 'xcancel.com', 'nitter.space'];
+                if (nitterDomains.some(domain => u.hostname === domain || u.hostname.endsWith('.' + domain))) {
+                    return true;
+                }
             } catch (e) { }
             return false;
         }
@@ -3787,7 +3795,7 @@ onReady(async function () {
             try {
                 const postInfo = getXPostInfo(url);
                 if (!postInfo) {
-                    throw new Error('Invalid X.com URL');
+                    throw new Error('Invalid X/Twitter URL');
                 }
                 
                 const response = await new Promise((resolve, reject) => {
@@ -4258,7 +4266,7 @@ onReady(async function () {
                 root.querySelectorAll('a[href*="pastebin.com"]').forEach(processPastebinLink);
             }
             if (showIconsX || enableEmbedsX) {
-                root.querySelectorAll('a[href*="x.com"], a[href*="twitter.com"]').forEach(processXLink);
+                root.querySelectorAll('a[href*="x.com"], a[href*="twitter.com"], a[href*="nitter.net"], a[href*="nitter.poast.org"], a[href*="xcancel.com"], a[href*="nitter.space"]').forEach(processXLink);
             }
             if (showIconsBsky || enableEmbedsBsky) {
                 root.querySelectorAll('a[href*="bsky.app"]').forEach(processBskyLink);
