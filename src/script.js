@@ -97,10 +97,6 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    // Storage keys
-    const HIDDEN_POSTS_KEY = '8chanSS_hiddenPosts';
-    const FILTERED_NAMES_KEY = '8chanSS_filteredNames';
-    const FILTERED_IDS_KEY = '8chanSS_filteredIDs';
     // Version
     const VERSION = "<%= version %>";
 
@@ -876,7 +872,7 @@ onReady(async function () {
             toast.style.padding = "4px 12px";
             toast.style.borderRadius = "4px";
             toast.style.fontSize = "13px";
-            toast.style.zIndex = 99999;
+            toast.style.zIndex = "99999";
             toast.style.opacity = "1";
             toast.style.transition = "opacity 0.3s";
             toast.style.pointerEvents = "auto";
@@ -3236,7 +3232,7 @@ onReady(async function () {
                 if (!thumbDiv) {
                     thumbDiv = document.createElement('div');
                     thumbDiv.style.position = 'fixed';
-                    thumbDiv.style.zIndex = 9999;
+                    thumbDiv.style.zIndex = '9999';
                     thumbDiv.style.pointerEvents = 'none';
                     thumbDiv.style.background = '#222';
                     thumbDiv.style.border = '1px solid #444';
