@@ -3446,7 +3446,6 @@ onReady(async function () {
             link.dataset.enhanced = "1";
 
             if (showIconsTwitch) {
-                const originalText = link.textContent.trim();
                 let displayText = twitchInfo.type === 'channel' ? twitchInfo.id : 
                                  twitchInfo.type === 'clip' ? twitchInfo.username : 
                                  `Video ${twitchInfo.id}`;
