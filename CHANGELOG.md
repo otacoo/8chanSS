@@ -1,3 +1,9 @@
+### v1.59.4
+*2026-01-28*
+
+- Add support for more Youtube URL formats, e.g. /watch/VIDEOID or youtube-nocookie.com
+- Prevent macOS Command key chords being taken by the script when using shortcuts
+
 ### v1.59.3
 *2026-01-27*
 
