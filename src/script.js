@@ -3051,17 +3051,28 @@ onReady(async function () {
                 const u = new URL(url);
                 // youtu.be short links
                 if (u.hostname === 'youtu.be') {
-                    const id = u.pathname.slice(1);
-                    return { type: 'video', id: id };
+                    const id = (u.pathname.slice(1).split('/')[0] || '').split('?')[0];
+                    if (id) return { type: 'video', id: id };
+                    return null;
                 }
-                // Standard YouTube links
-                if (u.hostname.endsWith('youtube.com')) {
-                    // Standard watch links
+                // YouTube domains: youtube.com, m.youtube.com, youtube-nocookie.com
+                const isYoutube = u.hostname.endsWith('youtube.com') || u.hostname.endsWith('youtube-nocookie.com');
+                if (isYoutube) {
+                    // Standard watch links: /watch?v=ID or /watch/ID
                     if (u.pathname === '/watch') {
                         const videoId = u.searchParams.get('v');
                         if (videoId) {
                             return { type: 'video', id: videoId };
                         }
+                    }
+                    const watchPathMatch = u.pathname.match(/^\/watch\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+                    if (watchPathMatch) {
+                        return { type: 'video', id: watchPathMatch[1] };
+                    }
+                    // /v/VIDEOID
+                    const vPathMatch = u.pathname.match(/^\/v\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+                    if (vPathMatch) {
+                        return { type: 'video', id: vPathMatch[1] };
                     }
                     // /live/VIDEOID or /embed/VIDEOID or /shorts/VIDEOID
                     const liveMatch = u.pathname.match(/^\/(live|embed|shorts)\/([a-zA-Z0-9_-]{11})/);
@@ -6880,7 +6891,7 @@ onReady(async function () {
         }
 
         // Open 8chanSS menu (CTRL + F1)
-        if (event.ctrlKey && event.key === "F1") {
+        if (event.ctrlKey && !event.metaKey && event.key === "F1") {
             event.preventDefault();
             let menu = document.getElementById("8chanSS-menu") || (await createSettingsMenu());
             menu.style.display = menu.style.display === "none" || menu.style.display === "" ? "block" : "none";
@@ -6888,7 +6899,7 @@ onReady(async function () {
         }
 
         // QR (CTRL + Q)
-        if (event.ctrlKey && (event.key === "q" || event.key === "Q")) {
+        if (event.ctrlKey && !event.metaKey && (event.key === "q" || event.key === "Q")) {
             event.preventDefault();
             const hiddenDiv = document.getElementById("quick-reply");
             if (!hiddenDiv) return;
@@ -6936,7 +6947,7 @@ onReady(async function () {
         }
 
         // (R key): refresh thread page with 5 sec cooldown
-        if (event.key === "r" || event.key === "R") {
+        if (!event.ctrlKey && !event.metaKey && (event.key === "r" || event.key === "R")) {
             const isThread = window.pageType?.isThread;
             const isCatalog = window.pageType?.isCatalog;
             const threadRefreshBtn = document.getElementById("refreshButton");
@@ -6963,7 +6974,7 @@ onReady(async function () {
         }
 
         // --- Shift+T to toggle quote threading ---
-        if (event.shiftKey && !event.ctrlKey && !event.altKey && (event.key === "t" || event.key === "T")) {
+        if (event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey && (event.key === "t" || event.key === "T")) {
             event.preventDefault();
 
             const current = await getSetting("quoteThreading");
@@ -6982,7 +6993,7 @@ onReady(async function () {
         }
 
         // (ESC) Clear textarea and hide all dialogs
-        if (event.key === "Escape") {
+        if (!event.ctrlKey && !event.metaKey && event.key === "Escape") {
             // Clear the textarea
             const textarea = document.getElementById("qrbody");
             if (textarea) textarea.value = "";
@@ -6997,7 +7008,7 @@ onReady(async function () {
         }
 
         // Scroll between posts with CTRL+Arrow keys
-        if (event.ctrlKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        if (event.ctrlKey && !event.metaKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             event.preventDefault();
             const isOwnReply = !event.shiftKey;
             const isNext = event.key === 'ArrowDown';
@@ -7007,7 +7018,7 @@ onReady(async function () {
 
         // Watch Thread on ALT+W Keyboard Shortcut
         if (
-            event.altKey &&
+            event.altKey && !event.metaKey &&
             (event.key === "w" || event.key === "W")
         ) {
             event.preventDefault();
@@ -7030,7 +7041,7 @@ onReady(async function () {
         return;
     } else bbTextareas.forEach((textarea) => {
         textarea.addEventListener("keydown", async function (event) {
-            if (event.ctrlKey && event.key === "Enter") {
+            if (event.ctrlKey && !event.metaKey && event.key === "Enter") {
                 event.preventDefault();
                 const submitButton = document.getElementById("qrbutton");
                 if (submitButton) {
@@ -7053,14 +7064,14 @@ onReady(async function () {
             const key = event.key.toLowerCase();
 
             // Special case: alt+c for [code] tag
-            if (key === "c" && event.altKey && !event.ctrlKey && bbCodeCombinations.has(key)) {
+            if (key === "c" && event.altKey && !event.ctrlKey && !event.metaKey && bbCodeCombinations.has(key)) {
                 event.preventDefault();
                 applyBBCode(event.target, key);
                 return;
             }
 
             // All other tags: ctrl+key
-            if (event.ctrlKey && !event.altKey && bbCodeCombinations.has(key) && key !== "c") {
+            if (event.ctrlKey && !event.altKey && !event.metaKey && bbCodeCombinations.has(key) && key !== "c") {
                 event.preventDefault();
                 applyBBCode(event.target, key);
                 return;
