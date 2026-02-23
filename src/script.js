@@ -1342,6 +1342,7 @@ onReady(async function () {
                 "audio/ogg": ".ogg",
                 "audio/mpeg": ".mp3",
                 "audio/flac": ".flac",
+                "audio/opus": ".opus",
                 "audio/x-m4a": ".m4a",
                 "audio/x-wav": ".wav",
             };
