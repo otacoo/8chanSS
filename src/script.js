@@ -1341,6 +1341,7 @@ onReady(async function () {
                 "video/x-m4v": ".m4v",
                 "audio/ogg": ".ogg",
                 "audio/mpeg": ".mp3",
+                "audio/flac": ".flac",
                 "audio/x-m4a": ".m4a",
                 "audio/x-wav": ".wav",
             };
