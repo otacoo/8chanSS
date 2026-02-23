@@ -1526,7 +1526,7 @@ onReady(async function () {
             // 5. If "t_" thumbnail, transform to full image
             if (isTThumb(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
-                base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|mp3|m4a|wav)$/i, "");
+                base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|flac|opus|mp3|m4a|wav)$/i, "");
 
                 // Special cases: APNG and m4v - do not append extension
                 if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
@@ -1600,6 +1600,8 @@ onReady(async function () {
                         webm: "video/webm",
                         m4v: "video/x-m4v",
                         ogg: "audio/ogg",
+                        flac: "audio/flac",
+                        opus: "audio/opus",
                         mp3: "audio/mpeg",
                         m4a: "audio/x-m4a",
                         wav: "audio/wav",
