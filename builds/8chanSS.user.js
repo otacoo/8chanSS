@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.59.4
+// @version      1.59.5
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -123,7 +123,7 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.59.4";
+    const VERSION = "1.59.5";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -1203,6 +1203,8 @@ onReady(async function () {
                 "video/x-m4v": ".m4v",
                 "audio/ogg": ".ogg",
                 "audio/mpeg": ".mp3",
+                "audio/flac": ".flac",
+                "audio/opus": ".opus",
                 "audio/x-m4a": ".m4a",
                 "audio/x-wav": ".wav",
             };
@@ -1347,7 +1349,7 @@ onReady(async function () {
             }
             if (isTThumb(thumbnailSrc)) {
                 let base = thumbnailSrc.replace(/\/t_/, "/");
-                base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|mp3|m4a|wav)$/i, "");
+                base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|flac|opus|mp3|m4a|wav)$/i, "");
                 if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
                     return base;
                 }
@@ -1409,6 +1411,8 @@ onReady(async function () {
                         webm: "video/webm",
                         m4v: "video/x-m4v",
                         ogg: "audio/ogg",
+                        flac: "audio/flac",
+                        opus: "audio/opus",
                         mp3: "audio/mpeg",
                         m4a: "audio/x-m4a",
                         wav: "audio/wav",
