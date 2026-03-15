@@ -1,3 +1,8 @@
+### v1.59.6
+*2026-03-15*
+
+- Add `i.ytimg.com` to connects so the script can fetch Youtube thumbnails
+
 ### v1.59.5
 *2026-02-23*
 

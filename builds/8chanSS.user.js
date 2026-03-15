@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.59.5
+// @version      1.59.6
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -19,6 +19,7 @@
 // @grant        GM.listValues
 // @grant        GM.xmlHttpRequest
 // @connect      youtube.com
+// @connect      i.ytimg.com
 // @connect      twitch.tv
 // @connect      static-cdn.jtvnw.net
 // @connect      clips-media-assets2.twitch.tv
@@ -123,7 +124,7 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.59.5";
+    const VERSION = "1.59.6";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
