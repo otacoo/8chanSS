@@ -1367,6 +1367,8 @@ onReady(async function () {
         let cleanupFns = [];
         let currentAudioIndicator = null;
         let lastMouseEvent = null; // Store last mouse event for initial placement
+        // Track playback times for hover previews during this tab session. Cleared when tab closes.
+        const hoverPlaybackTimes = new Map();
 
         // --- Utility: Clamp value between min and max ---
         function clamp(val, min, max) {
@@ -1419,11 +1421,19 @@ onReady(async function () {
             if (floatingMedia) {
                 if (["VIDEO", "AUDIO"].includes(floatingMedia.tagName)) {
                     try {
-                        floatingMedia.pause();
-                        floatingMedia.srcObject = null;
-                        URL.revokeObjectURL(floatingMedia.src);
-                        floatingMedia.removeAttribute("src");
-                        floatingMedia.load();
+                        try {
+                            const key = floatingMedia.dataset && floatingMedia.dataset.previewSrc ? floatingMedia.dataset.previewSrc : (floatingMedia.src || "");
+                            if (key) {
+                                const t = Number(floatingMedia.currentTime);
+                                if (!isNaN(t) && isFinite(t) && t > 0) {
+                                    hoverPlaybackTimes.set(key, t);
+                                }
+                            }
+                        } catch (e) { }
+
+                        // We pause and detach, but do not remove or revoke the src
+                        try { floatingMedia.pause(); } catch (e) { }
+                        try { floatingMedia.srcObject = null; } catch (e) { }
                     } catch { }
                 }
                 floatingMedia.remove();
@@ -1646,18 +1656,50 @@ onReady(async function () {
                     /audioGenericThumb\.png$/.test(thumb.getAttribute("src") || "") &&
                     container.getAttribute("href")
                 ) {
-                    audioSrc = container.getAttribute("href");
+                    audioSrc = sanitizeUrl(container.getAttribute("href")) || audioSrc;
                 }
                 if (container && !container.style.position) {
                     container.style.position = "relative";
                 }
                 floatingMedia = document.createElement("audio");
+                // keep a reference to the original preview src
+                floatingMedia.dataset.previewSrc = audioSrc;
                 floatingMedia.src = audioSrc;
                 floatingMedia.controls = false;
                 floatingMedia.style.display = "none";
                 floatingMedia.volume = volume;
                 document.body.appendChild(floatingMedia);
-                floatingMedia.play().catch(() => { });
+                // Restore saved time (if any) once metadata is available, then play
+                try {
+                    const saved = hoverPlaybackTimes.get(audioSrc);
+                    if (typeof saved === 'number' && !isNaN(saved) && isFinite(saved) && saved > 0) {
+                        // Wait for seeked before playing to avoid starting at 0 then jumping
+                        const onLoadedMeta = function () {
+                            const onSeeked = function () {
+                                try { floatingMedia.play().catch(() => { }); } finally { floatingMedia.removeEventListener('seeked', onSeeked); }
+                            };
+                            floatingMedia.addEventListener('seeked', onSeeked);
+                            try {
+                                const dur = floatingMedia.duration;
+                                if (!isNaN(dur) && isFinite(dur) && dur > 0) {
+                                    floatingMedia.currentTime = Math.min(saved, Math.max(0, dur - 0.05));
+                                } else {
+                                    floatingMedia.currentTime = saved;
+                                }
+                            } catch (e) {
+                                floatingMedia.removeEventListener('seeked', onSeeked);
+                                floatingMedia.play().catch(() => { });
+                            }
+                        };
+                        floatingMedia.addEventListener('loadedmetadata', onLoadedMeta, { once: true });
+                    } else {
+                        // No saved time, play when possible
+                        floatingMedia.addEventListener('canplay', function () { floatingMedia.play().catch(() => { }); }, { once: true });
+                    }
+                } catch (e) {
+                    // Fallback: attempt to play immediately
+                    floatingMedia.play().catch(() => { });
+                }
 
                 // Show indicator
                 const indicator = document.createElement("div");
@@ -1693,12 +1735,15 @@ onReady(async function () {
                 }
             }
             floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
+            // Remember the original sanitized preview source for time tracking
+            floatingMedia.dataset.previewSrc = isVideo ? videoSrc : fullSrc;
             floatingMedia.src = isVideo ? videoSrc : fullSrc;
             floatingMedia.id = "hover-preview-media";
             floatingMedia.style.position = "fixed";
             floatingMedia.style.zIndex = "9999";
             floatingMedia.style.pointerEvents = "none";
             floatingMedia.style.opacity = MEDIA_OPACITY_LOADING;
+            floatingMedia.style.visibility = isVideo ? "hidden" : "visible";
             floatingMedia.style.left = "-9999px";
             floatingMedia.style.top = "-9999px";
             floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
@@ -1706,7 +1751,7 @@ onReady(async function () {
             const availableHeight = window.innerHeight * (1 - MEDIA_BOTTOM_MARGIN / 100);
             floatingMedia.style.maxHeight = `${availableHeight}px`;
             if (isVideo) {
-                floatingMedia.autoplay = true;
+                floatingMedia.autoplay = false;
                 floatingMedia.loop = true;
                 floatingMedia.muted = false;
                 floatingMedia.playsInline = true;
@@ -1727,10 +1772,47 @@ onReady(async function () {
 
             // When loaded, fade in and reposition with real size
             if (isVideo) {
+                floatingMedia.preload = 'auto';
                 floatingMedia.onloadeddata = function () {
-                    if (floatingMedia) {
-                        floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
-                        if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                    try {
+                        const key = floatingMedia.dataset && floatingMedia.dataset.previewSrc ? floatingMedia.dataset.previewSrc : (floatingMedia.src || "");
+                        const saved = key ? hoverPlaybackTimes.get(key) : null;
+
+                        // Helper to reveal and start playback once seek (if any) completes
+                        function revealAndPlay() {
+                            if (!floatingMedia) return;
+                            floatingMedia.style.visibility = "visible";
+                            floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+                            if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+                            try { floatingMedia.play().catch(() => { }); } catch (e) { }
+                        }
+
+                        if (typeof saved === 'number' && !isNaN(saved) && isFinite(saved) && saved > 0) {
+                            // Wait for seek to complete before revealing to avoid showing initial frames
+                            const onSeeked = function () {
+                                try { revealAndPlay(); } finally { floatingMedia.removeEventListener('seeked', onSeeked); }
+                            };
+                            floatingMedia.addEventListener('seeked', onSeeked);
+                            try {
+                                const dur = floatingMedia.duration;
+                                if (!isNaN(dur) && isFinite(dur) && dur > 0) {
+                                    floatingMedia.currentTime = Math.min(saved, Math.max(0, dur - 0.05));
+                                } else {
+                                    floatingMedia.currentTime = saved;
+                                }
+                            } catch (e) {
+                                // If setting currentTime fails, just reveal and attempt to play
+                                floatingMedia.removeEventListener('seeked', onSeeked);
+                                revealAndPlay();
+                            }
+                        } else {
+                            // Reveal/play when ready
+                            const onCanPlay = function () { try { revealAndPlay(); } finally { floatingMedia.removeEventListener('canplay', onCanPlay); } };
+                            floatingMedia.addEventListener('canplay', onCanPlay);
+                        }
+                    } catch (e) { 
+                        // IF any error, reveal so user sees the video
+                        try { floatingMedia.style.visibility = "visible"; floatingMedia.style.opacity = MEDIA_OPACITY_LOADED; } catch (e) { }
                     }
                 };
             } else {
