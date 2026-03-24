@@ -4579,7 +4579,7 @@ onReady(async function () {
         localStorage.setItem("mediaViewer", "true");
 
         async function updateMediaViewerClass() {
-            const mediaViewer = document.getElementById('mediaViewer-0');
+            const mediaViewer = document.querySelector('.mediaViewer');
             if (!mediaViewer) return;
 
             const isEnabled = await getSetting("enableMediaViewer");
@@ -4604,21 +4604,21 @@ onReady(async function () {
         // Initial setup if media viewer already exists
         updateMediaViewerClass();
 
-        // Use the observer registry for #media-viewer
-        const mediaViewerObs = observeSelector('#mediaViewer-0', { childList: false, subtree: false });
+        // Use the observer registry for existing .mediaViewer elements
+        const mediaViewerObs = observeSelector('.mediaViewer', { childList: false, subtree: false });
         if (mediaViewerObs) {
             mediaViewerObs.addHandler(function mediaViewerPositioningHandler() {
                 updateMediaViewerClass();
             });
         }
 
-        // If #media-viewer is not present, observe the body for its addition
+        // If .mediaViewer is not present, observe the body for its addition
         const bodyObs = observeSelector('body', { childList: true, subtree: false });
         if (bodyObs) {
             bodyObs.addHandler(function bodyMediaViewerHandler(mutations) {
                 for (const mutation of mutations) {
                     for (const node of mutation.addedNodes) {
-                        if (node.nodeType === 1 && node.id === 'mediaViewer-0') {
+                        if (node.nodeType === 1 && node.classList && node.classList.contains('mediaViewer')) {
                             updateMediaViewerClass();
                         }
                     }

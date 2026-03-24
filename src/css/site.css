@@ -109,8 +109,8 @@ nav.navHeader {
 }
 
 /* Inline Expanded, not Hover */
-:root.fit-images :not(#mediaViewer-0)>.imgExpanded,
-:root.fit-images :not(#mediaViewer-0)>video {
+:root.fit-images :not(.mediaViewer)>.imgExpanded,
+:root.fit-images :not(.mediaViewer)>video {
     max-height: 90vh !important;
     object-fit: contain;
     width: auto !important;
@@ -142,7 +142,7 @@ nav.navHeader {
 #watchedMenu,
 #settingsMenu,
 #multiboardMenu,
-#mediaViewer-0 {
+.mediaViewer {
     font-size: smaller;
     padding: 5px !important;
     box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
@@ -222,7 +222,7 @@ nav.navHeader {
 }
 
 /* Media Viewer */
-#mediaViewer-0.topright {
+.mediaViewer.topright {
     top: 26px !important;
     right: 0 !important;
     left: auto !important;
@@ -230,7 +230,7 @@ nav.navHeader {
     max-width: max-content !important;
 }
 
-#mediaViewer-0.topleft {
+.mediaViewer.topleft {
     top: 26px !important;
     left: 0 !important;
     right: auto !important;
@@ -238,11 +238,11 @@ nav.navHeader {
     max-width: max-content !important;
 }
 
-#mediaViewer-0.topright::after {
+.mediaViewer.topright::after {
     pointer-events: none;
 }
 
-#mediaViewer-0.topleft::after {
+.mediaViewer.topleft::after {
     pointer-events: none;
 }
 
