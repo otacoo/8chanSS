@@ -109,8 +109,8 @@ nav.navHeader {
 }
 
 /* Inline Expanded, not Hover */
-:root.fit-images :not(#media-viewer)>.imgExpanded,
-:root.fit-images :not(#media-viewer)>video {
+:root.fit-images :not(#mediaViewer-0)>.imgExpanded,
+:root.fit-images :not(#mediaViewer-0)>video {
     max-height: 90vh !important;
     object-fit: contain;
     width: auto !important;
@@ -142,7 +142,7 @@ nav.navHeader {
 #watchedMenu,
 #settingsMenu,
 #multiboardMenu,
-#media-viewer {
+#mediaViewer-0 {
     font-size: smaller;
     padding: 5px !important;
     box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
@@ -222,11 +222,7 @@ nav.navHeader {
 }
 
 /* Media Viewer */
-#media-viewer {
-    padding: 20px 0 0 !important;
-}
-
-#media-viewer.topright {
+#mediaViewer-0.topright {
     top: 26px !important;
     right: 0 !important;
     left: auto !important;
@@ -234,7 +230,7 @@ nav.navHeader {
     max-width: max-content !important;
 }
 
-#media-viewer.topleft {
+#mediaViewer-0.topleft {
     top: 26px !important;
     left: 0 !important;
     right: auto !important;
@@ -242,11 +238,11 @@ nav.navHeader {
     max-width: max-content !important;
 }
 
-#media-viewer.topright::after {
+#mediaViewer-0.topright::after {
     pointer-events: none;
 }
 
-#media-viewer.topleft::after {
+#mediaViewer-0.topleft::after {
     pointer-events: none;
 }
 
