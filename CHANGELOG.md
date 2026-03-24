@@ -1,3 +1,9 @@
+### v1.59.7
+*2026-03-24*
+
+- **New feature:** Hovered media will now track and restore playback time
+- Update to support the new Advanced Media Viewer
+
 ### v1.59.6
 *2026-03-15*
 
