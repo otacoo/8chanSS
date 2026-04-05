@@ -365,3 +365,8 @@ a.originalNameLink:hover .audio-preview-indicator {
     border-left: 1px solid #ececec;
     margin-left: 0.4em;
 }
+
+/* Space after time */
+a.linkSelf {
+    margin-left: 0.25em;
+}
