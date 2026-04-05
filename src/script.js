@@ -565,26 +565,6 @@ onReady(async function () {
         }
     })();
 
-    // Sidebar Right/Left
-    (async function featureSidebar() {
-        const enableSidebar = await getSetting("enableSidebar");
-        const enableSidebar_leftSidebar = await getSetting("enableSidebar_leftSidebar");
-
-        const mainPanel = document.getElementById("mainPanel");
-        if (!mainPanel) return;
-
-        if (enableSidebar && enableSidebar_leftSidebar) {
-            mainPanel.style.marginLeft = "19rem";
-            mainPanel.style.marginRight = "0";
-        } else if (enableSidebar) {
-            mainPanel.style.marginRight = "19rem";
-            mainPanel.style.marginLeft = "0";
-        } else {
-            mainPanel.style.marginRight = "0";
-            mainPanel.style.marginLeft = "0";
-        }
-    })();
-
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Custom CSS injection
@@ -1900,14 +1880,9 @@ onReady(async function () {
         // Helper to apply blur or remove spoilers styles
         function applyBlurOrRemoveSpoilers(img, removeSpoilers) {
             if (removeSpoilers) {
-                img.style.filter = "";
-                img.style.transition = "";
-                img.style.border = "1px dotted var(--border-color)";
-                img.onmouseover = null;
-                img.onmouseout = null;
+                img.classList.add('ss-spoiler-border');
             } else {
-                img.style.filter = "blur(5px)";
-                img.style.transition = "filter 0.3s ease";
+                img.classList.add('ss-spoiler-blurred');
             }
         }
 
@@ -2071,18 +2046,6 @@ onReady(async function () {
                 }
             });
         }
-
-        // Use event delegation for blur toggling
-        document.body.addEventListener("mouseover", function (e) {
-            if (e.target.matches("a.imgLink img[style*='blur(5px)']")) {
-                e.target.style.filter = "none";
-            }
-        });
-        document.body.addEventListener("mouseout", function (e) {
-            if (e.target.matches("a.imgLink img[style*='transition']")) {
-                e.target.style.filter = "blur(5px)";
-            }
-        });
     }
 
     // --- Feature: Stop small APNG images from playing ---
@@ -2418,6 +2381,7 @@ onReady(async function () {
 
     // Initial highlight on page load
     highlightMentions();
+    highlightActiveWatchedThread();
 
     // --- Highlight active watched thread in thread watcher ---
     function highlightActiveWatchedThread() {

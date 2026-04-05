@@ -107,6 +107,18 @@ nav.navHeader {
     filter: blur(5px) !important;
     transition: filter 0.3s ease;
 }
+/* Blur spoilers: blurred image */
+a.imgLink img.ss-spoiler-blurred {
+    filter: blur(5px);
+    transition: filter 0.3s ease;
+}
+a.imgLink img.ss-spoiler-blurred:hover {
+    filter: none;
+}
+/* Blur spoilers: border-only (removeSpoilers sub-option) */
+a.imgLink img.ss-spoiler-border {
+    border: 1px dotted var(--border-color);
+}
 
 /* Inline Expanded, not Hover */
 :root.fit-images :not(.mediaViewer)>.imgExpanded,
@@ -192,6 +204,16 @@ nav.navHeader {
 
 :root:not(.is-index, .is-catalog).ss-sidebar .scroll-arrow-btn {
     right: 330px !important;
+}
+
+/* Sidebar */
+:root.ss-sidebar #mainPanel {
+    margin-right: 19rem;
+    margin-left: 0;
+}
+:root.ss-leftsidebar #mainPanel {
+    margin-left: 19rem;
+    margin-right: 0;
 }
 
 .scroll-arrow-btn:hover {
