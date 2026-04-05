@@ -1,3 +1,10 @@
+### v1.59.8
+*2026-04-05*
+
+- Fix an issue where the current thread wasn't being highlighted in the Thread Watcher
+- Add a small margin after post time to separate it from the post number
+- Move CSS for sidebar and spoilers from inline to native CSS
+
 ### v1.59.7
 *2026-03-24*
 
