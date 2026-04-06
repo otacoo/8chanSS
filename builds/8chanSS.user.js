@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.59.8
+// @version      1.59.9
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -124,7 +124,7 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.59.8";
+    const VERSION = "1.59.9";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -2045,7 +2045,9 @@ onReady(async function () {
         const currentPath = window.pageType?.path;
         if (!currentPath) return;
         document.querySelectorAll('.watchedCellAnchor').forEach(link => {
-            const watchedPath = link.getAttribute('href').replace(/#.*$/, '');
+            const href = link.getAttribute('href');
+            if (!href) return;
+            const watchedPath = href.replace(/#.*$/, '');
             const cell = link.closest('.watchedCell');
             const repliesSpan = cell?.querySelector('.watchedNotificationReplies');
             const yousSpan = cell?.querySelector('.watchedNotificationYous');

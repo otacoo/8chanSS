@@ -1,3 +1,8 @@
+### v1.59.9
+*2026-04-06*
+
+- Fix a bug where the script failed to load when the Thread Watcher wasn't pinned
+
 ### v1.59.8
 *2026-04-05*
 
