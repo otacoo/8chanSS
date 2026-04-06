@@ -2389,7 +2389,9 @@ onReady(async function () {
         if (!currentPath) return;
         document.querySelectorAll('.watchedCellAnchor').forEach(link => {
             // Strip anchors to compare
-            const watchedPath = link.getAttribute('href').replace(/#.*$/, '');
+            const href = link.getAttribute('href');
+            if (!href) return;
+            const watchedPath = href.replace(/#.*$/, '');
             const cell = link.closest('.watchedCell');
             const repliesSpan = cell?.querySelector('.watchedNotificationReplies');
             const yousSpan = cell?.querySelector('.watchedNotificationYous');
