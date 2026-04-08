@@ -1,3 +1,9 @@
+## v1.60.0
+*2026-04-08*
+
+- Update *Fit expanded images and videos* to not apply to Ruffle player
+- Fix an issue where loading a thread with new replies already at the bottom didn't correctly reset the unread count to 0 and required scrolling up and down again to reset
+
 ### v1.59.9
 *2026-04-06*
 
