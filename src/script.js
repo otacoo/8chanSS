@@ -985,6 +985,17 @@ onReady(async function () {
             const currentCount = getCurrentPostCount();
             lastSeenPostCount = (saved && typeof saved.lastSeenPostCount === "number") ? saved.lastSeenPostCount : 0;
             unseenCount = Math.max(0, currentCount - lastSeenPostCount);
+
+            // If the page is scrolled to the bottom on load treat all posts as seen immediately
+            if (unseenCount > 0 && (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 50)) {
+                lastSeenPostCount = currentCount;
+                unseenCount = 0;
+                if (!allData[key]) allData[key] = {};
+                allData[key].lastSeenPostCount = lastSeenPostCount;
+                allData[key].timestamp = Date.now();
+                await setAllSavedScrollData(allData);
+            }
+
             updateTabTitle();
         }
 
