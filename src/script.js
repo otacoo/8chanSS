@@ -2061,15 +2061,14 @@ onReady(async function () {
 
     // --- Feature: Stop small APNG images from playing ---
     function featureAPNGStop() {
-        if (window.pageType?.isCatalog) return;
 
         // Helper: create a canvas snapshot of the first frame
         function createCanvasSnapshot(img) {
             const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
+            canvas.width = img.width;
+            canvas.height = img.height;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, img.width, img.height);
             return canvas;
         }
 
@@ -2104,8 +2103,8 @@ onReady(async function () {
 
             if (!isAPNG(mime, href)) return;
 
-            const width = parseInt(link.getAttribute('data-filewidth'), 10);
-            const height = parseInt(link.getAttribute('data-fileheight'), 10);
+            const width = parseInt(link.getAttribute('data-filewidth'), 10) || img.width || 0;
+            const height = parseInt(link.getAttribute('data-fileheight'), 10) || img.height || 0;
             if (width > 220 || height > 220) return;
 
             img.style.visibility = 'hidden';
@@ -2122,14 +2121,14 @@ onReady(async function () {
 
             const overlay = createOverlay(canvas.width, canvas.height);
 
+            const isCatalog = !!link.closest('.catalogCell');
             const wrapper = document.createElement('div');
             Object.assign(wrapper.style, {
                 position: 'relative',
                 display: 'inline-block',
                 width: canvas.width + 'px',
                 height: canvas.height + 'px',
-                marginRight: '1em',
-                marginBottom: '0.7em'
+                ...(isCatalog ? {} : { marginRight: '1em', marginBottom: '0.7em' })
             });
 
             img.parentNode.insertBefore(wrapper, img);
