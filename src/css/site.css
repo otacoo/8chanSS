@@ -322,11 +322,15 @@ a.originalNameLink:hover .audio-preview-indicator {
 .apng-canvas-snapshot {
     display: block;
     position: absolute;
+    top: 0;
+    left: 0;
     z-index: 1;
 }
 
 .apng-overlay {
     position: absolute;
+    top: 0;
+    left: 0;
     z-index: 2;
     cursor: pointer;
     user-select: none;
