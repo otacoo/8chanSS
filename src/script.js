@@ -162,7 +162,7 @@ onReady(async function () {
                     }
                 }
             },
-            enablePNGstop: { label: "Prevent animated PNG images from playing", default: false },
+            enablePNGstop: { label: "Prevent animated PNG images from playing (slow)", default: false },
             enableMediaViewer: {
                 label: "Enable Advanced Media Viewer",
                 default: false,
