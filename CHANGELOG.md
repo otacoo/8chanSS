@@ -1,3 +1,11 @@
+### v1.60.1
+*2026-04-19*
+
+**Prevent APNG images from playing** option:
+- Fix for thumbnail snapshots not being correctly positioned (issue #12)
+- Will now work in the catalog
+- Will now correctly work within quote tooltips
+
 ## v1.60.0
 *2026-04-08*
 
