@@ -2108,6 +2108,8 @@ onReady(async function () {
             const height = parseInt(link.getAttribute('data-fileheight'), 10);
             if (width > 220 || height > 220) return;
 
+            img.style.visibility = 'hidden';
+
             if (!img.complete || img.naturalWidth === 0) {
                 img.addEventListener('load', () => processThumb(img), { once: true });
                 return;
@@ -2117,8 +2119,6 @@ onReady(async function () {
 
             const canvas = createCanvasSnapshot(img);
             canvas.className = 'apng-canvas-snapshot';
-
-            img.style.visibility = 'hidden';
 
             const overlay = createOverlay(canvas.width, canvas.height);
 
@@ -2158,7 +2158,7 @@ onReady(async function () {
         document.querySelectorAll(SEL).forEach(processThumb);
 
         // Observe dynamically added thumbs using helper
-        const obs = observeSelector('#divThreads', { childList: true, subtree: true });
+        const obs = observeSelector('body', { childList: true, subtree: true });
         if (obs) {
             obs.addHandler(function apngStopHandler(mutations) {
                 for (const m of mutations) {
