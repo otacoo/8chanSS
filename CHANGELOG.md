@@ -1,3 +1,8 @@
+### v1.60.3
+*2026-04-26*
+
+- Fix for *Toggle ID as Yours* not targeting the correct CSS class (2x)
+
 ### v1.60.2
 *2026-04-26*
 
