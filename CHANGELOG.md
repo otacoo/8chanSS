@@ -1,3 +1,9 @@
+### v1.60.2
+*2026-04-26*
+
+- Fix for *Toggle ID as Yours* not targeting the correct CSS class
+- Add an option to toggle hover media playback tracking & restoring
+
 ### v1.60.1
 *2026-04-19*
 

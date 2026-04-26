@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.60.1
+// @version      1.60.2
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -124,7 +124,7 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.60.1";
+    const VERSION = "1.60.2";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -203,6 +203,7 @@ onReady(async function () {
                     }
                 }
             },
+            trackMediaPlayback: { label: "Track and Restore Hover Media Playback Time", default: true },
             hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
@@ -1217,6 +1218,8 @@ onReady(async function () {
         let currentAudioIndicator = null;
         let lastMouseEvent = null; 
         const hoverPlaybackTimes = new Map();
+        let trackMediaPlaybackEnabled = true;
+        getSetting("trackMediaPlayback").then(val => trackMediaPlaybackEnabled = val);
         function clamp(val, min, max) {
             return Math.max(min, Math.min(max, val));
         }
@@ -1259,7 +1262,7 @@ onReady(async function () {
                     try {
                         try {
                             const key = floatingMedia.dataset && floatingMedia.dataset.previewSrc ? floatingMedia.dataset.previewSrc : (floatingMedia.src || "");
-                            if (key) {
+                            if (key && trackMediaPlaybackEnabled) {
                                 const t = Number(floatingMedia.currentTime);
                                 if (!isNaN(t) && isFinite(t) && t > 0) {
                                     hoverPlaybackTimes.set(key, t);
@@ -1460,7 +1463,7 @@ onReady(async function () {
                 floatingMedia.volume = volume;
                 document.body.appendChild(floatingMedia);
                 try {
-                    const saved = hoverPlaybackTimes.get(audioSrc);
+                    const saved = trackMediaPlaybackEnabled ? hoverPlaybackTimes.get(audioSrc) : null;
                     if (typeof saved === 'number' && !isNaN(saved) && isFinite(saved) && saved > 0) {
                         const onLoadedMeta = function () {
                             const onSeeked = function () {
@@ -1546,7 +1549,7 @@ onReady(async function () {
                 floatingMedia.onloadeddata = function () {
                     try {
                         const key = floatingMedia.dataset && floatingMedia.dataset.previewSrc ? floatingMedia.dataset.previewSrc : (floatingMedia.src || "");
-                        const saved = key ? hoverPlaybackTimes.get(key) : null;
+                        const saved = (trackMediaPlaybackEnabled && key) ? hoverPlaybackTimes.get(key) : null;
                         function revealAndPlay() {
                             if (!floatingMedia) return;
                             floatingMedia.style.visibility = "visible";
@@ -4362,7 +4365,7 @@ onReady(async function () {
         }
         function getAllPostNumbersForId(labelId) {
             const postNumbers = [];
-            document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
+            document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
                 const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
