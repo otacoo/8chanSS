@@ -5080,7 +5080,7 @@ onReady(async function () {
         // Get all post numbers for a given ID
         function getAllPostNumbersForId(labelId) {
             const postNumbers = [];
-            document.querySelectorAll('.divPosts .postCell').forEach(postCell => {
+            document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
                 const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
