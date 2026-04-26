@@ -5072,7 +5072,7 @@ onReady(async function () {
                 const labelIdSpan = postCell.querySelector('.labelId');
                 const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
-                    const nameLink = postCell.querySelector(".linkName.noEmailName");
+                    const nameLink = postCell.querySelector(".linkName");
                     if (nameLink) {
                         nameLink.classList.toggle("youName", add);
                     }
@@ -5170,7 +5170,7 @@ onReady(async function () {
             if (event.key === T_YOUS_KEY) {
                 const yourPostNumbers = getYourPostNumbers();
                 document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-                    const nameLink = postCell.querySelector(".linkName.noEmailName");
+                    const nameLink = postCell.querySelector(".linkName");
                     if (nameLink) {
                         const postNum = Number(postCell.id);
                         nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
@@ -5222,7 +5222,7 @@ onReady(async function () {
         // Initial marking on page load for all marked post numbers
         const yourPostNumbers = getYourPostNumbers();
         document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
-            const nameLink = postCell.querySelector(".linkName.noEmailName");
+            const nameLink = postCell.querySelector(".linkName");
             if (nameLink) {
                 const postNum = Number(postCell.id);
                 nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
