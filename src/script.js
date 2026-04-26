@@ -179,6 +179,7 @@ onReady(async function () {
                     }
                 }
             },
+            trackMediaPlayback: { label: "Track and Restore Hover Media Playback Time", default: true },
             hoverVideoVolume: { label: "Hover Media Volume (0-100%)", default: 50, type: "number", min: 0, max: 100 }
         },
         threads: {
@@ -1360,6 +1361,8 @@ onReady(async function () {
         let lastMouseEvent = null; // Store last mouse event for initial placement
         // Track playback times for hover previews during this tab session. Cleared when tab closes.
         const hoverPlaybackTimes = new Map();
+        let trackMediaPlaybackEnabled = true;
+        getSetting("trackMediaPlayback").then(val => trackMediaPlaybackEnabled = val);
 
         // --- Utility: Clamp value between min and max ---
         function clamp(val, min, max) {
@@ -1414,7 +1417,7 @@ onReady(async function () {
                     try {
                         try {
                             const key = floatingMedia.dataset && floatingMedia.dataset.previewSrc ? floatingMedia.dataset.previewSrc : (floatingMedia.src || "");
-                            if (key) {
+                            if (key && trackMediaPlaybackEnabled) {
                                 const t = Number(floatingMedia.currentTime);
                                 if (!isNaN(t) && isFinite(t) && t > 0) {
                                     hoverPlaybackTimes.set(key, t);
@@ -1662,7 +1665,7 @@ onReady(async function () {
                 document.body.appendChild(floatingMedia);
                 // Restore saved time (if any) once metadata is available, then play
                 try {
-                    const saved = hoverPlaybackTimes.get(audioSrc);
+                    const saved = trackMediaPlaybackEnabled ? hoverPlaybackTimes.get(audioSrc) : null;
                     if (typeof saved === 'number' && !isNaN(saved) && isFinite(saved) && saved > 0) {
                         // Wait for seeked before playing to avoid starting at 0 then jumping
                         const onLoadedMeta = function () {
@@ -1767,7 +1770,7 @@ onReady(async function () {
                 floatingMedia.onloadeddata = function () {
                     try {
                         const key = floatingMedia.dataset && floatingMedia.dataset.previewSrc ? floatingMedia.dataset.previewSrc : (floatingMedia.src || "");
-                        const saved = key ? hoverPlaybackTimes.get(key) : null;
+                        const saved = (trackMediaPlaybackEnabled && key) ? hoverPlaybackTimes.get(key) : null;
 
                         // Helper to reveal and start playback once seek (if any) completes
                         function revealAndPlay() {
