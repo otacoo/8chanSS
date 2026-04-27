@@ -5085,14 +5085,19 @@ onReady(async function () {
         }
 
         // Get all post numbers for a given ID
+        function getPostNum(cell) {
+            const m = String(cell.id).match(/\d+/);
+            return m ? m[0] : null;
+        }
+
         function getAllPostNumbersForId(labelId) {
             const postNumbers = [];
             document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
                 const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
-                    const num = Number(postCell.id);
-                    if (!isNaN(num)) postNumbers.push(String(num));
+                    const num = getPostNum(postCell);
+                    if (num) postNumbers.push(num);
                 }
             });
             return postNumbers;
@@ -5174,7 +5179,8 @@ onReady(async function () {
             if (event.key === T_YOUS_KEY) {
                 const yourPostNumbers = getYourPostNumbers();
                 document.querySelectorAll(window.pageType?.isThread ? '.postCell, .opCell' : '.postCell').forEach(postCell => {
-                    const postNum = String(postCell.id);
+                    const postNum = getPostNum(postCell);
+                    if (!postNum) return;
                     const isYours = yourPostNumbers.includes(postNum);
                     
                     const nameLink = postCell.querySelector(".linkName");
@@ -5232,7 +5238,8 @@ onReady(async function () {
         // Initial marking on page load for all marked post numbers
         const yourPostNumbers = getYourPostNumbers();
         document.querySelectorAll(window.pageType?.isThread ? '.postCell, .opCell' : '.postCell').forEach(postCell => {
-            const postNum = String(postCell.id);
+            const postNum = getPostNum(postCell);
+            if (!postNum) return;
             const isYours = yourPostNumbers.includes(postNum);
             
             const nameLink = postCell.querySelector(".linkName");
