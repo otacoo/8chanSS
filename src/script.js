@@ -5625,11 +5625,13 @@ onReady(async function () {
             let left = rect.left + window.scrollX;
             let top = rect.bottom + window.scrollY + 4;
             // Clamp left to viewport
-            if (left + floatWidth > window.innerWidth) left = Math.max(0, window.innerWidth - floatWidth - 10);
+            if (rect.left + floatWidth > window.innerWidth) {
+                left = Math.max(window.scrollX, window.scrollX + window.innerWidth - floatWidth - 10);
+            }
             // If not enough space below, show above the label
-            if (top + floatHeight > window.scrollY + window.innerHeight) {
+            if (rect.bottom + floatHeight > window.innerHeight) {
                 top = rect.top + window.scrollY - floatHeight - 4;
-                if (top < 0) top = 10; // Clamp to top
+                if (top < window.scrollY) top = window.scrollY + 10; // Clamp to top
             }
             floatingDiv.style.top = `${top}px`;
             floatingDiv.style.left = `${left}px`;
