@@ -1,3 +1,12 @@
+### v1.60.4
+*2026-04-27*
+
+- Fix an issue with the Vertical ID list scrolling with the page
+- Better fix for *Toggle ID as Yours*
+- Adjust 8chanSS menu position
+- Make tabs, and storage & sync buttons, stand out a bit more
+- Add error catching to 8chanSS menu button so that if it fails inserting it doesn't prevent the rest of the script from working
+
 ### v1.60.3
 *2026-04-26*
 
