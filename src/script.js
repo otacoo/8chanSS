@@ -5025,17 +5025,17 @@ onReady(async function () {
         const MENU_ENTRY_CLASS = "toggleIdAsYoursMenuEntry";
         const MENU_SELECTOR = ".floatingList.extraMenu";
 
-        // --- Storage Helpers (post numbers as numbers) ---
+        // --- Storage Helpers (post numbers as strings to match site) ---
         function getYourPostNumbers() {
             try {
                 const val = localStorage.getItem(T_YOUS_KEY);
-                return val ? JSON.parse(val).map(Number) : [];
+                return val ? JSON.parse(val).map(String) : [];
             } catch {
                 return [];
             }
         }
         function setYourPostNumbers(arr) {
-            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
+            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(String)));
         }
 
         // Menu/Post Association
@@ -5068,13 +5068,17 @@ onReady(async function () {
 
         // Toggle all posts with a given ID
         function toggleYouNameClassForId(labelId, add) {
-            document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+            document.querySelectorAll(window.pageType?.isThread ? '.postCell, .opCell' : '.postCell').forEach(postCell => {
                 const labelIdSpan = postCell.querySelector('.labelId');
                 const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
                     const nameLink = postCell.querySelector(".linkName");
                     if (nameLink) {
                         nameLink.classList.toggle("youName", add);
+                    }
+                    const innerPost = postCell.querySelector('.innerPost, .innerOP');
+                    if (innerPost) {
+                        innerPost.classList.toggle("yourPost", add);
                     }
                 }
             });
@@ -5088,7 +5092,7 @@ onReady(async function () {
                 const rawId = getRawIdFromLabelId(labelIdSpan);
                 if (rawId === labelId) {
                     const num = Number(postCell.id);
-                    if (!isNaN(num)) postNumbers.push(num);
+                    if (!isNaN(num)) postNumbers.push(String(num));
                 }
             });
             return postNumbers;
@@ -5169,11 +5173,17 @@ onReady(async function () {
         window.addEventListener("storage", function (event) {
             if (event.key === T_YOUS_KEY) {
                 const yourPostNumbers = getYourPostNumbers();
-                document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+                document.querySelectorAll(window.pageType?.isThread ? '.postCell, .opCell' : '.postCell').forEach(postCell => {
+                    const postNum = String(postCell.id);
+                    const isYours = yourPostNumbers.includes(postNum);
+                    
                     const nameLink = postCell.querySelector(".linkName");
                     if (nameLink) {
-                        const postNum = Number(postCell.id);
-                        nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
+                        nameLink.classList.toggle("youName", isYours);
+                    }
+                    const innerPost = postCell.querySelector('.innerPost, .innerOP');
+                    if (innerPost) {
+                        innerPost.classList.toggle("yourPost", isYours);
                     }
                 });
             }
@@ -5221,11 +5231,17 @@ onReady(async function () {
 
         // Initial marking on page load for all marked post numbers
         const yourPostNumbers = getYourPostNumbers();
-        document.querySelectorAll('.postCell, .opCell').forEach(postCell => {
+        document.querySelectorAll(window.pageType?.isThread ? '.postCell, .opCell' : '.postCell').forEach(postCell => {
+            const postNum = String(postCell.id);
+            const isYours = yourPostNumbers.includes(postNum);
+            
             const nameLink = postCell.querySelector(".linkName");
             if (nameLink) {
-                const postNum = Number(postCell.id);
-                nameLink.classList.toggle("youName", yourPostNumbers.includes(postNum));
+                nameLink.classList.toggle("youName", isYours);
+            }
+            const innerPost = postCell.querySelector('.innerPost, .innerOP');
+            if (innerPost) {
+                innerPost.classList.toggle("yourPost", isYours);
             }
         });
     }
