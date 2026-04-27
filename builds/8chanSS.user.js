@@ -4789,7 +4789,6 @@ onReady(async function () {
             const thread = match ? match[3] : '';
             floatingDiv = document.createElement('div');
             floatingDiv.className = 'ss-idlinks-floating';
-            floatingDiv.style.position = 'fixed';
             const title = document.createElement('div');
             if (showIdLinks === "showIdLinksOnly") {
                 title.textContent = `Posts by ID: ${idToMatch} (${matchingPosts.length})`;
@@ -4829,34 +4828,23 @@ onReady(async function () {
             });
             floatingDiv.appendChild(linkContainer);
             document.body.appendChild(floatingDiv);
-            const updatePosition = () => {
-                if (!floatingDiv || !clickedLabel || !document.body.contains(clickedLabel)) return;
-                
-                const floatWidth = floatingDiv.offsetWidth || 320;
-                const floatHeight = floatingDiv.offsetHeight || 200;
-                const rect = clickedLabel.getBoundingClientRect();
-                
-                let left = rect.left;
-                let top = rect.bottom + 4;
-                if (left + floatWidth > window.innerWidth) left = Math.max(0, window.innerWidth - floatWidth - 10);
-                if (top + floatHeight > window.innerHeight) {
-                    top = rect.top - floatHeight - 4;
-                    if (top < 0) top = 10; 
-                }
-                
-                floatingDiv.style.top = `${top}px`;
-                floatingDiv.style.left = `${left}px`;
-            };
-            setTimeout(updatePosition, 0);
-            const scrollHandler = function() {
-                updatePosition();
-            };
-            window.addEventListener('scroll', scrollHandler, true);
-
+            const rect = clickedLabel.getBoundingClientRect();
+            const floatWidth = 320;
+            const floatHeight = floatingDiv.offsetHeight || 200;
+            let left = rect.left + window.scrollX;
+            let top = rect.bottom + window.scrollY + 4;
+            if (rect.left + floatWidth > window.innerWidth) {
+                left = Math.max(window.scrollX, window.scrollX + window.innerWidth - floatWidth - 10);
+            }
+            if (rect.bottom + floatHeight > window.innerHeight) {
+                top = rect.top + window.scrollY - floatHeight - 4;
+                if (top < window.scrollY) top = window.scrollY + 10; 
+            }
+            floatingDiv.style.top = `${top}px`;
+            floatingDiv.style.left = `${left}px`;
             outsideClickHandler = function (e) {
                 if (floatingDiv && !floatingDiv.contains(e.target)) {
                     closeFloatingDiv();
-                    window.removeEventListener('scroll', scrollHandler, true);
                 }
             };
             setTimeout(() => {
