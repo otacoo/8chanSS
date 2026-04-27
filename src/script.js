@@ -5618,6 +5618,16 @@ onReady(async function () {
             });
             floatingDiv.appendChild(linkContainer);
 
+            // Prevent wheel scroll from escaping to the page.
+            floatingDiv.addEventListener('wheel', function (e) {
+                const atTop = e.deltaY < 0 && this.scrollTop === 0;
+                const atBottom = e.deltaY > 0 && this.scrollTop + this.clientHeight >= this.scrollHeight - 1;
+                if (atTop || atBottom) {
+                    e.preventDefault();
+                }
+                e.stopPropagation();
+            }, { passive: false });
+
             // Position the floating div below the clicked label
             document.body.appendChild(floatingDiv);
             const rect = clickedLabel.getBoundingClientRect();
@@ -5626,13 +5636,11 @@ onReady(async function () {
             let left = rect.left + window.scrollX;
             let top = rect.bottom + window.scrollY + 4;
             // Clamp left to viewport
-            if (rect.left + floatWidth > window.innerWidth) {
-                left = Math.max(window.scrollX, window.scrollX + window.innerWidth - floatWidth - 10);
-            }
+            if (left + floatWidth > window.innerWidth) left = Math.max(0, window.innerWidth - floatWidth - 10);
             // If not enough space below, show above the label
-            if (rect.bottom + floatHeight > window.innerHeight) {
+            if (top + floatHeight > window.scrollY + window.innerHeight) {
                 top = rect.top + window.scrollY - floatHeight - 4;
-                if (top < window.scrollY) top = window.scrollY + 10; // Clamp to top
+                if (top < 0) top = 10; // Clamp to top
             }
             floatingDiv.style.top = `${top}px`;
             floatingDiv.style.left = `${left}px`;
