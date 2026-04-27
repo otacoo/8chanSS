@@ -5725,7 +5725,7 @@ onReady(async function () {
                 menu.style.maxWidth = "90vw"; // Use more of the viewport on mobile
             } else {
                 // Desktop positioning
-                menu.style.left = "35rem";
+                menu.style.left = "23rem";
                 menu.style.transform = "none";
                 menu.style.top = "3rem";
                 menu.style.maxWidth = "470px";
