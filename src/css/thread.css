@@ -172,7 +172,6 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, .25);
     max-height: 60vh;
     overflow-y: auto;
-    overscroll-behavior: contain;
     font-size: 14px;
     max-width: 56vw;
     z-index: 990;
