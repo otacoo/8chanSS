@@ -3640,7 +3640,8 @@ onReady(async function () {
             try {
                 const u = new URL(url);
                 // Check for official X/Twitter domains
-                if (u.hostname.includes('x.com') || u.hostname.includes('twitter.com')) {
+                const xDomains = ['x.com', 'twitter.com'];
+                if (xDomains.some(domain => u.hostname === domain || u.hostname.endsWith('.' + domain))) {
                     return true;
                 }
                 // Check for Nitter proxy instances
