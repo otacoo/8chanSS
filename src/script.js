@@ -6067,13 +6067,15 @@ onReady(async function () {
                 const button = document.createElement("button");
                 button.textContent = setting.label;
                 button.style.setProperty("background", "var(--contrast-color)", "important");
-                button.style.color = "#fff";
-                button.style.border = "none";
+                button.style.color = "var(--text-color, #fff)";
+                button.style.border = "1px solid var(--border-color, #888)";
                 button.style.borderRadius = "4px";
                 button.style.padding = "8px 12px";
                 button.style.cursor = "pointer";
                 button.style.width = "100%";
                 button.style.marginBottom = "10px";
+                button.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.3)";
+                button.style.fontWeight = "bold";
 
                 if (key === "saveWatchedThreads") {
                     button.addEventListener('click', async () => {
