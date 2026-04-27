@@ -5897,32 +5897,34 @@ onReady(async function () {
             tabButton.style.background = index === 0 ? "var(--contrast-color)" : "transparent";
             tabButton.style.border = "none";
             tabButton.style.borderRight = "1px solid #444";
-            tabButton.style.setProperty("border-left-radius", "0", "important");
             tabButton.style.color = "var(--text-color)";
             tabButton.style.padding = "8px 15px";
             tabButton.style.margin = "5px 0 0 0";
-            tabButton.style.setProperty("border-top-right-radius", "0", "important");
-            tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
             tabButton.style.cursor = "pointer";
             tabButton.style.flex = "1";
             tabButton.style.fontSize = "14px";
-            tabButton.style.transition = "background 0.2s";
+            tabButton.style.transition = "background 0.2s, font-weight 0.2s, color 0.2s";
 
-            // Add rounded corners and margin to the first and last tab
+            // Add rounded corners and margin to the first and last tab, keeping bottom flat
+            tabButton.style.setProperty("border-radius", "0", "important");
+
             if (index === 0) {
                 tabButton.style.setProperty("border-top-left-radius", "8px", "important");
-                tabButton.style.setProperty("border-top-right-radius", "0", "important");
-                tabButton.style.setProperty("border-bottom-left-radius", "0", "important");
-                tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
                 tabButton.style.margin = "5px 0 0 5px";
             }
             if (index === arr.length - 1) {
                 tabButton.style.setProperty("border-top-right-radius", "8px", "important");
-                tabButton.style.setProperty("border-top-left-radius", "0", "important");
-                tabButton.style.setProperty("border-bottom-left-radius", "0", "important");
-                tabButton.style.setProperty("border-bottom-right-radius", "0", "important");
                 tabButton.style.margin = "5px 5px 0 0";
                 tabButton.style.borderRight = "none"; // Remove border on last tab
+            }
+
+            // Stand out active tab
+            if (index === 0) {
+                tabButton.style.fontWeight = "bold";
+                tabButton.style.borderBottom = "1px solid var(--link-color)";
+            } else {
+                tabButton.style.fontWeight = "normal";
+                tabButton.style.borderBottom = "1px solid transparent";
             }
 
             tabButton.addEventListener("click", () => {
@@ -5937,8 +5939,12 @@ onReady(async function () {
                 // Update active tab button
                 tabNav.querySelectorAll("button").forEach((btn) => {
                     btn.style.background = "transparent";
+                    btn.style.fontWeight = "normal";
+                    btn.style.borderBottom = "1px solid transparent";
                 });
                 tabButton.style.background = "var(--contrast-color)";
+                tabButton.style.fontWeight = "bold";
+                tabButton.style.borderBottom = "1px solid var(--link-color)";
             });
 
             tabNav.appendChild(tabButton);
