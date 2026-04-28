@@ -5026,17 +5026,17 @@ onReady(async function () {
         const MENU_ENTRY_CLASS = "toggleIdAsYoursMenuEntry";
         const MENU_SELECTOR = ".floatingList.extraMenu";
 
-        // --- Storage Helpers (post numbers as strings to match site) ---
+        // --- Storage Helpers ---
         function getYourPostNumbers() {
             try {
                 const val = localStorage.getItem(T_YOUS_KEY);
-                return val ? JSON.parse(val).map(String) : [];
+                return val ? JSON.parse(val).map(Number) : [];
             } catch {
                 return [];
             }
         }
         function setYourPostNumbers(arr) {
-            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(String)));
+            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
         }
 
         // Menu/Post Association
@@ -5088,7 +5088,7 @@ onReady(async function () {
         // Get all post numbers for a given ID
         function getPostNum(cell) {
             const m = String(cell.id).match(/\d+/);
-            return m ? m[0] : null;
+            return m ? Number(m[0]) : null;
         }
 
         function getAllPostNumbersForId(labelId) {
