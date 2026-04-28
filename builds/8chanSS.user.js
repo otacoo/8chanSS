@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.60.4
+// @version      1.60.5
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otakudude
@@ -124,7 +124,7 @@ onReady(async function () {
     const divPosts = document.querySelector('.divPosts');
     const opHeadTitle = document.querySelector('.opHead.title');
     const catalogDiv = document.querySelector('.catalogDiv');
-    const VERSION = "1.60.4";
+    const VERSION = "1.60.5";
     const scriptSettings = {
         site: {
             _siteTWTitle: { type: "title", label: ":: Thread Watcher" },
@@ -4319,13 +4319,13 @@ onReady(async function () {
         function getYourPostNumbers() {
             try {
                 const val = localStorage.getItem(T_YOUS_KEY);
-                return val ? JSON.parse(val).map(String) : [];
+                return val ? JSON.parse(val).map(Number) : [];
             } catch {
                 return [];
             }
         }
         function setYourPostNumbers(arr) {
-            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(String)));
+            localStorage.setItem(T_YOUS_KEY, JSON.stringify(arr.map(Number)));
         }
         document.body.addEventListener('click', function (e) {
             if (e.target.matches('.extraMenuButton')) {
@@ -4370,7 +4370,7 @@ onReady(async function () {
         }
         function getPostNum(cell) {
             const m = String(cell.id).match(/\d+/);
-            return m ? m[0] : null;
+            return m ? Number(m[0]) : null;
         }
 
         function getAllPostNumbersForId(labelId) {

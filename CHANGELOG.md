@@ -1,3 +1,8 @@
+### v1.60.5
+*2026-04-28*
+
+- Fix a bug that broke the (you)s localstorage key when using *Toggle ID as Yours*, please toggle it once again and it will fix itself.
+
 ### v1.60.4
 *2026-04-27*
 
