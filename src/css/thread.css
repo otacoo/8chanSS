@@ -47,10 +47,6 @@
     opacity: 1;
 }
 
-#qrFilesBody {
-    max-width: 310px;
-}
-
 #quick-reply {
     box-shadow: -3px 3px 2px 0 rgba(0, 0, 0, .19);
 }
