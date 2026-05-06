@@ -1,3 +1,8 @@
+### v1.60.6
+*2026-05-07*
+
+- Remove some superfluous CSS on the QR preventing elements within from expanding
+
 ### v1.60.5
 *2026-04-28*
 
