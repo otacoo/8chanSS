@@ -121,7 +121,7 @@ a.imgLink img.ss-spoiler-border {
 }
 
 /* Inline Expanded, not Hover */
-:root.fit-images :not(ruffle-player).imgExpanded {
+:root.fit-images :not(ruffle-player,audio).imgExpanded {
     max-height: 90vh !important;
     object-fit: contain;
     width: auto !important;
