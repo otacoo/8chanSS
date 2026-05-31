@@ -40,9 +40,12 @@
     "type": "git",
     "url": "https://github.com/otacoo/8chanSS.git"
   },
-  "author": "otakudude",
+  "author": "otacoo",
   "contributors": [
-    "bapao1"
+    "bapao1",
+    "vfyxe",
+    "impregnator",
+    "Anonymous"
   ],
   "license": "MIT",
   "readmeFilename": "README.md",
