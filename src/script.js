@@ -13,7 +13,7 @@ const debounce = (fn, delay) => {
     let timeout;
     return (...args) => {
         clearTimeout(timeout);
-        timeout = setTimeout(() => fn.apply(this, args), delay);
+        timeout = setTimeout(() => fn.apply(null, args), delay);
     };
 };
 // Observer registry helper
@@ -2449,7 +2449,9 @@ onReady(async function () {
         const submitButton = document.getElementById("qrbutton");
         if (submitButton) {
             // Remove any previous handler to avoid duplicates
-            submitButton.removeEventListener("click", submitButton._watchThreadHandler || (() => { }));
+            if (submitButton._watchThreadHandler) {
+                submitButton.removeEventListener("click", submitButton._watchThreadHandler);
+            }
             submitButton._watchThreadHandler = async function () {
                 if (await getSetting("watchThreadOnReply")) {
                     setTimeout(watchThreadIfNotWatched, 500); // Wait for post to go through
