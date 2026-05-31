@@ -1,3 +1,13 @@
+### v1.60.7
+*2026-05-31*
+
+- Fix a bug where disabling Keyboard Shortcuts would disable other features like catalog filtering or update notifications
+- Fix audio element having 0 width by @TuxedoTako in https://github.com/otacoo/8chanSS/pull/13
+- Minor code adjustments and corrections
+
+## New Contributors
+* @TuxedoTako made their first contribution in https://github.com/otacoo/8chanSS/pull/13
+
 ### v1.60.6
 *2026-05-07*
 

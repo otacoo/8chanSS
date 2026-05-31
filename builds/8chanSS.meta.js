@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.60.6
+// @version      1.60.7
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
-// @author       otakudude
+// @author       otacoo
 // @license      MIT; https://github.com/otacoo/8chanSS/blob/main/LICENSE 
 // @match        *://*.8chan.moe/*
 // @match        *://*.8chan.st/*
