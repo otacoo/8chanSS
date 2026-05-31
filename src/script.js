@@ -1306,6 +1306,31 @@ onReady(async function () {
         });
     }
 
+    // --- MIME type to extension mapping ---
+    function getExtensionForMimeType(mime) {
+        const map = {
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/jxl": ".jxl",
+            "image/png": ".png",
+            "image/apng": ".png",
+            "image/gif": ".gif",
+            "image/avif": ".avif",
+            "image/webp": ".webp",
+            "image/bmp": ".bmp",
+            "video/mp4": ".mp4",
+            "video/webm": ".webm",
+            "video/x-m4v": ".m4v",
+            "audio/ogg": ".ogg",
+            "audio/mpeg": ".mp3",
+            "audio/flac": ".flac",
+            "audio/opus": ".opus",
+            "audio/x-m4a": ".m4a",
+            "audio/x-wav": ".wav",
+        };
+        return map[mime.toLowerCase()] || "";
+    }
+
     // --- Feature: Image/Video/Audio Hover Preview ---
     function featureImageHover() {
         // --- Config ---
@@ -1315,31 +1340,6 @@ onReady(async function () {
         const MEDIA_OFFSET = 50; // Margin between cursor and image, in px
         const MEDIA_BOTTOM_MARGIN = 3; // Margin from bottom of viewport to avoid browser UI, in vh
         const AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
-
-        // --- Utility: MIME type to extension mapping ---
-        function getExtensionForMimeType(mime) {
-            const map = {
-                "image/jpeg": ".jpg",
-                "image/jpg": ".jpg",
-                "image/jxl": ".jxl",
-                "image/png": ".png",
-                "image/apng": ".png",
-                "image/gif": ".gif",
-                "image/avif": ".avif",
-                "image/webp": ".webp",
-                "image/bmp": ".bmp",
-                "video/mp4": ".mp4",
-                "video/webm": ".webm",
-                "video/x-m4v": ".m4v",
-                "audio/ogg": ".ogg",
-                "audio/mpeg": ".mp3",
-                "audio/flac": ".flac",
-                "audio/opus": ".opus",
-                "audio/x-m4a": ".m4a",
-                "audio/x-wav": ".wav",
-            };
-            return map[mime.toLowerCase()] || null;
-        }
 
         // --- Utility: Sanitize URLs before assigning to src/href ---
         function sanitizeUrl(url) {
@@ -1867,22 +1867,6 @@ onReady(async function () {
     }
 
     // --- Feature: Blur Spoilers + Remove Spoilers suboption ---
-    // Utility: MIME type to extension mapping
-    function getExtensionForMimeType(mime) {
-        const map = {
-            "image/jpeg": ".jpg",
-            "image/jpg": ".jpg",
-            "image/jxl": ".jxl",
-            "image/png": ".png",
-            "image/apng": ".png",
-            "image/gif": ".gif",
-            "image/avif": ".avif",
-            "image/webp": ".webp",
-            "image/bmp": ".bmp",
-        };
-        return map[mime.toLowerCase()] || "";
-    }
-
     async function featureBlurSpoilers() {
         // Only run on thread or index pages
         if (!(window.pageType?.isThread || window.pageType?.isIndex)) {
