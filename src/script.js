@@ -482,15 +482,11 @@ onReady(async function () {
     // --- Storage helpers ---
     async function getStoredObject(key) {
         let obj = {};
-        if (typeof GM !== 'undefined' && GM.getValue) {
-            obj = await GM.getValue(key, {});
-        }
+        obj = await GM.getValue(key, {});
         return typeof obj === 'object' && obj !== null ? obj : {};
     }
     async function setStoredObject(key, obj) {
-        if (typeof GM !== 'undefined' && GM.setValue) {
-            await GM.setValue(key, obj);
-        }
+        await GM.setValue(key, obj);
     }
 
     // --- Helper: Extract raw ID from labelId element textContent ---
@@ -892,8 +888,8 @@ onReady(async function () {
                 document.body.appendChild(toast);
             }
 
-            let timeout1 = setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
-            let timeout2 = setTimeout(() => { toast.remove(); }, duration);
+            const timeout1 = setTimeout(() => { toast.style.opacity = "0"; }, duration - 300);
+            const timeout2 = setTimeout(() => { toast.remove(); }, duration);
         }
 
         window.callPageToast = function (msg, color = 'black', duration = 1200) {
@@ -1294,6 +1290,7 @@ onReady(async function () {
         catalogDiv.querySelectorAll('.catalogCell a.linkThumb').forEach(link => {
             if (link.getAttribute('target') !== '_blank') {
                 link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
             }
         });
 
@@ -1302,6 +1299,7 @@ onReady(async function () {
             const link = e.target.closest('.catalogCell a.linkThumb');
             if (link && link.getAttribute('target') !== '_blank') {
                 link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
             }
         });
     }
@@ -6042,7 +6040,6 @@ onReady(async function () {
     function createTabContent(category, tempSettings) {
         const container = document.createElement("div");
         const categorySettings = scriptSettings[category];
-        let hiddenListContainer;
 
         Object.keys(categorySettings).forEach((key) => {
             const setting = categorySettings[key];
@@ -7383,10 +7380,10 @@ onReady(async function () {
             if (!window.pageType?.isCatalog) return;
 
             // Add the Show Hidden button
-            onReady(addShowHiddenButton);
+            addShowHiddenButton();
 
             // Apply hidden threads on load
-            onReady(applyHiddenThreads);
+            applyHiddenThreads();
 
             // Scope event listener to catalog container only
             const catalogContainer = document.querySelector(".catalogWrapper, .catalogDiv");
