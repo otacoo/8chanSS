@@ -7129,11 +7129,9 @@ onReady(async function () {
     // (CTRL + Enter) and BBCodes - Only for QR textarea
     const bbTextareas = document.querySelectorAll("#qrbody, #fieldMessage");
 
-    // Check if global toggle is enabled first
-    if (!(await shortcutsGloballyEnabled())) {
-        return;
-    } else bbTextareas.forEach((textarea) => {
-        textarea.addEventListener("keydown", async function (event) {
+    if (await shortcutsGloballyEnabled()) {
+        bbTextareas.forEach((textarea) => {
+            textarea.addEventListener("keydown", async function (event) {
             if (event.ctrlKey && !event.metaKey && event.key === "Enter") {
                 event.preventDefault();
                 const submitButton = document.getElementById("qrbutton");
@@ -7171,6 +7169,7 @@ onReady(async function () {
             }
         });
     });
+    }
 
     // --- Feature: Hide catalog threads with SHIFT+click, per-board storage ---
     function featureCatalogHiding() {
