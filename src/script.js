@@ -2625,7 +2625,7 @@ onReady(async function () {
             const closeBtn = e.target.closest('#watchedMenu .close-btn');
             if (closeBtn) {
                 const watchedMenu = document.getElementById("watchedMenu");
-                if (watchedMenu) watchedMenu.style.display = "none";
+                if (watchedMenu) watchedMenu.style.removeProperty('display');
                 return;
             }
             // Mark all as read button delegation
@@ -7095,10 +7095,10 @@ onReady(async function () {
 
             // Hide QR
             const quickReply = document.getElementById("quick-reply");
-            if (quickReply) quickReply.style.display = "none";
+            if (quickReply) quickReply.style.removeProperty('display');
             // Hide TW            
             const threadWatcher = document.getElementById("watchedMenu");
-            if (threadWatcher) threadWatcher.style.display = "none";
+            if (threadWatcher) threadWatcher.style.removeProperty('display');
             return;
         }
 
