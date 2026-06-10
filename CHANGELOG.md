@@ -1,3 +1,9 @@
+### v1.60.8
+*2026-06-10*
+
+- Up the z-index of the gallery so it shows above everything else
+- Fix an issue where using `Esc` to close the dialogs prevented them from being re-opened
+
 ### v1.60.7
 *2026-05-31*
 
