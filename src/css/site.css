@@ -395,3 +395,8 @@ a.originalNameLink:hover .audio-preview-indicator {
 a.linkSelf {
     margin-left: 0.25em;
 }
+
+/* Gallery */
+div.modalPanel {
+    z-index: 306;
+}
