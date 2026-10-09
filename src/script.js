@@ -56,6 +56,7 @@
     trackHoverPlayback: "trackMediaPlayback",
     noPinInCatalog: "alwaysShowTW_noPinInCatalog",
     expandTW: "autoExpandTW",
+    customTrunc: "truncFilenames_customTrunc",
     catalogImageHover: "enableCatalogImageHover",
     threadImageHover: "enableThreadImageHover",
     threadHiding: "enableThreadHiding",
@@ -90,6 +91,7 @@
     hideNoCookieLink: false,
     hideJannyTools: false,
     hlCurrentBoard: true,
+    showReplyHeader: false,
     roundedCorners: false,
     enableSidebar: false,
     leftSidebar: false,
@@ -116,6 +118,9 @@
     lastFifty: false,
     catalogLinksNewTab: false,
     catalogFilters: {},
+    switchTimeFormat: false,
+    truncFilenames: false,
+    customTrunc: 15,
     enableShortcuts: false,
     updateNotif: true,
     ssVersion: ""
@@ -193,6 +198,7 @@
         { key: "hideNoCookieLink", label: "Hide No Cookie? Link" },
         { key: "hideJannyTools", label: "Hide Janitor Forms" },
         { key: "hlCurrentBoard", label: "Highlight Current Board" },
+        { key: "showReplyHeader", label: "Show Reply Header" },
         {
           key: "customFavicon", label: "Custom Favicon", title: "Replace the site favicon with an 8chanSS style", sub: [
             {
@@ -224,8 +230,16 @@
     },
     {
       page: "ss-misc", title: "Misc", options: [
+        { head: "Site" },
+        { key: "switchTimeFormat", label: "Enable 12-hour Clock (AM/PM)" },
+        {
+          key: "truncFilenames", label: "Truncate filenames", sub: [
+            { key: "customTrunc", label: "Max filename length (5-50)", type: "number", min: 5, max: 50 }
+          ]
+        },
         { head: "Keyboard Shortcuts" },
         { key: "enableShortcuts", label: "Enable Keyboard Shortcuts" },
+        { head: "Notifications" },
         { key: "updateNotif", label: "8chanSS update notifications" }
       ]
     },
@@ -429,15 +443,28 @@
     removeSpoilers: "blurSpoilers",
     viewerStyle: "enableMediaPlayer",
     catalogFiltering: "threadHiding",
-    catalogLinksNewTab: "catalogLinks"
+    catalogLinksNewTab: "catalogLinks",
+    customTrunc: "truncFilenames"
   };
 
   function rootToggle(cls, on) {
     document.documentElement.classList.toggle(cls, !!on);
   }
 
+  function pageWindow() {
+    try {
+      if (typeof unsafeWindow !== "undefined") {
+        return unsafeWindow.wrappedJSObject || unsafeWindow;
+      }
+    } catch (e) { }
+    return window;
+  }
+
   function openQuickReply() {
-    var qr = window.qr;
+    var qr;
+    try {
+      qr = pageWindow().qr;
+    } catch (e) { }
     if (!qr || typeof qr.showQr !== "function") return false;
     try {
       qr.showQr();
@@ -1277,6 +1304,97 @@
     }
   }
 
+  var timeFormatObserver = null;
+  var truncObserver = null;
+  var truncWired = false;
+  var truncContainer = null;
+  var debouncedTruncApply = null;
+
+  function convertTimeSpan(span) {
+    if (span.dataset.ssTimeConverted === "1") return;
+    var datetimeAttr = span.getAttribute("datetime");
+    if (!datetimeAttr) return;
+    var date = new Date(datetimeAttr);
+    if (isNaN(date.getTime())) return;
+    var hour = date.getHours();
+    var min = String(date.getMinutes()).padStart(2, "0");
+    var sec = String(date.getSeconds()).padStart(2, "0");
+    var ampm = hour >= 12 ? "PM" : "AM";
+    var hour12 = hour % 12 || 12;
+    var originalText = span.textContent.trim();
+    var datePartMatch = originalText.match(/^(.+?)\s+\d{1,2}:\d{2}:\d{2}/);
+    var datePart = datePartMatch ? datePartMatch[1].trim() : "";
+    span.dataset.ssOrigTime = originalText;
+    span.textContent = (datePart ? datePart + " " : "") + hour12 + ":" + min + ":" + sec + " " + ampm;
+    span.dataset.ssTimeConverted = "1";
+  }
+
+  function convertAllTimeSpans(root) {
+    var spans = (root || document).querySelectorAll("time.labelCreated");
+    for (var i = 0; i < spans.length; i++) convertTimeSpan(spans[i]);
+  }
+
+  function restoreTimeSpans() {
+    var spans = document.querySelectorAll('time.labelCreated[data-ss-time-converted="1"]');
+    for (var i = 0; i < spans.length; i++) {
+      var span = spans[i];
+      if (span.dataset.ssOrigTime) span.textContent = span.dataset.ssOrigTime;
+      delete span.dataset.ssOrigTime;
+      delete span.dataset.ssTimeConverted;
+    }
+  }
+
+  function truncateLink(link, max) {
+    var full = link.getAttribute("download");
+    if (!full) return;
+    var lastDot = full.lastIndexOf(".");
+    if (lastDot === -1) return;
+    var name = full.slice(0, lastDot);
+    var ext = full.slice(lastDot);
+    var truncated = name.length > max ? name.slice(0, max) + "(...)" + ext : full;
+    link.textContent = truncated;
+    link.dataset.ssTruncated = "1";
+    link.dataset.ssMax = String(max);
+    link.dataset.ssFullFilename = full;
+    link.dataset.ssTruncatedFilename = truncated;
+    link.title = full;
+  }
+
+  function applyTruncFilenames() {
+    if (pageType.isCatalog) return;
+    var max = parseInt(ssSettings.customTrunc, 10);
+    if (isNaN(max)) max = SS_DEFAULTS.customTrunc;
+    var links = document.querySelectorAll("a.originalNameLink");
+    for (var i = 0; i < links.length; i++) {
+      var link = links[i];
+      if (link.dataset.ssTruncated === "1" && link.dataset.ssMax === String(max)) continue;
+      truncateLink(link, max);
+    }
+  }
+
+  function onTruncOver(e) {
+    var link = e.target.closest("a.originalNameLink");
+    if (link && link.dataset.ssFullFilename) link.textContent = link.dataset.ssFullFilename;
+  }
+
+  function onTruncOut(e) {
+    var link = e.target.closest("a.originalNameLink");
+    if (link && link.dataset.ssTruncatedFilename) link.textContent = link.dataset.ssTruncatedFilename;
+  }
+
+  function restoreTruncFilenames() {
+    var links = document.querySelectorAll('a.originalNameLink[data-ss-truncated="1"]');
+    for (var i = 0; i < links.length; i++) {
+      var link = links[i];
+      if (link.dataset.ssFullFilename) link.textContent = link.dataset.ssFullFilename;
+      delete link.dataset.ssTruncated;
+      delete link.dataset.ssMax;
+      delete link.dataset.ssFullFilename;
+      delete link.dataset.ssTruncatedFilename;
+      link.removeAttribute("title");
+    }
+  }
+
   var Features = {
     // Feature: Catalog Links
     catalogLinks: function (on) {
@@ -1375,9 +1493,13 @@
     // Feature: Sticky Quick Reply
     enableStickyQR: function (on) {
       rootToggle("sticky-qr", on);
-      if (on && !openQuickReply()) {
-        setTimeout(openQuickReply, 800);
-      }
+      if (!on) return;
+      var tries = 0;
+      (function attempt() {
+        if (!ssSettings.enableStickyQR) return;
+        if (openQuickReply()) return;
+        if (++tries < 5) setTimeout(attempt, 500);
+      })();
     },
     // Feature: Blur Spoilers
     blurSpoilers: function (on) {
@@ -1565,6 +1687,61 @@
         for (var i = 0; i < btns.length; i++) btns[i].remove();
       }
     },
+    // Feature: 12-hour Clock
+    switchTimeFormat: function (on) {
+      if (!on) {
+        if (timeFormatObserver) { timeFormatObserver.disconnect(); timeFormatObserver = null; }
+        restoreTimeSpans();
+        return;
+      }
+      if (pageType.isCatalog) return;
+      convertAllTimeSpans(document);
+      if (!timeFormatObserver) {
+        timeFormatObserver = new MutationObserver(function (mutations) {
+          for (var i = 0; i < mutations.length; i++) {
+            var nodes = mutations[i].addedNodes;
+            for (var j = 0; j < nodes.length; j++) {
+              if (nodes[j].nodeType !== 1) continue;
+              if (nodes[j].matches && nodes[j].matches("time.labelCreated")) {
+                convertTimeSpan(nodes[j]);
+              } else if (nodes[j].querySelectorAll) {
+                convertAllTimeSpans(nodes[j]);
+              }
+            }
+          }
+        });
+        var threads = document.getElementById("divThreads") || document.body;
+        timeFormatObserver.observe(threads, { childList: true, subtree: true });
+      }
+    },
+    // Feature: Truncate Filenames
+    truncFilenames: function (on) {
+      if (pageType.isCatalog) return;
+      if (on) {
+        applyTruncFilenames();
+        var container = document.getElementById("divThreads");
+        if (container && !truncWired) {
+          truncWired = true;
+          truncContainer = container;
+          container.addEventListener("mouseover", onTruncOver);
+          container.addEventListener("mouseout", onTruncOut);
+        }
+        if (!truncObserver) {
+          debouncedTruncApply = debounce(applyTruncFilenames, 100);
+          truncObserver = new MutationObserver(function () { debouncedTruncApply(); });
+          truncObserver.observe(container || document.body, { childList: true, subtree: true });
+        }
+      } else {
+        if (truncObserver) { truncObserver.disconnect(); truncObserver = null; }
+        if (truncContainer) {
+          truncContainer.removeEventListener("mouseover", onTruncOver);
+          truncContainer.removeEventListener("mouseout", onTruncOut);
+          truncContainer = null;
+          truncWired = false;
+        }
+        restoreTruncFilenames();
+      }
+    },
     // Feature: Scroll Arrows
     scrollArrows: function (on) {
       var el = document.getElementById("ssScrollArrows");
@@ -1609,6 +1786,7 @@
     hideNoCookieLink: "hide-nocookie",
     hideJannyTools: "hide-jannytools",
     hlCurrentBoard: "hl-currentBoard",
+    showReplyHeader: "ss-replyhead",
     hideFooter: "ss-hide-footer",
     roundedCorners: "ss-rounded",
     enableFitReplies: "fit-replies",
@@ -1631,6 +1809,8 @@
     if (mediaViewerObserver) { mediaViewerObserver.disconnect(); mediaViewerObserver = null; }
     if (catalogHidingObserver) { catalogHidingObserver.disconnect(); catalogHidingObserver = null; }
     if (lastFiftyObserver) { lastFiftyObserver.disconnect(); lastFiftyObserver = null; }
+    if (timeFormatObserver) { timeFormatObserver.disconnect(); timeFormatObserver = null; }
+    if (truncObserver) { truncObserver.disconnect(); truncObserver = null; }
     if (hoverObserver) { hoverObserver.disconnect(); hoverObserver = null; }
   }
 
