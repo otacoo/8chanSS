@@ -241,6 +241,18 @@
   margin-left: 1.2em;
 }
 
+#settingsMenu .ss-sub label {
+  display: flex;
+  align-items: flex-end;
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
+  line-height: 1;
+}
+
+#settingsMenu .ss-sub label.settingsRow--allowWrap {
+  flex-wrap: wrap;
+}
+
 .ss-sub[hidden] {
   display: none;
 }
@@ -380,6 +392,33 @@
   opacity: 0.7;
   color: var(--link-hover-color);
   line-height: 0.9;
+}
+
+/* --- Highlight new IDs --- */
+.id-glow {
+  box-shadow: 0 0 12px var(--subject-color);
+}
+
+.id-dotted {
+  border: 2px dotted white;
+}
+
+/* --- Stop animated PNGs --- */
+.apng-canvas-snapshot {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.apng-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  cursor: pointer;
+  user-select: none;
 }
 
 /* --- Fit replies --- */

@@ -11,6 +11,7 @@
     return {
       isCatalog: /\/catalog\.html$/i.test(path),
       isThread: /\/(res|last)\/[^/]+\.html$/i.test(path),
+      isLast: /\/last\/[^/]+\.html$/i.test(path),
       isIndex: /\/[^/]+\/$/i.test(path),
       path: path
     };
@@ -59,7 +60,28 @@
     noPinInCatalog: "alwaysShowTW_noPinInCatalog",
     expandTW: "autoExpandTW",
     customTrunc: "truncFilenames_customTrunc",
+    idHlStyle: "highlightNewIds_idHlStyle",
     showUnreadLine: "enableScrollSave_showUnreadLine",
+    showLinkIcons: "enhanceLinks_showIcons",
+    iconYoutube: "enhanceLinks_showIcons_showIconsYoutube",
+    iconTwitch: "enhanceLinks_showIcons_showIconsTwitch",
+    iconX: "enhanceLinks_showIcons_showIconsX",
+    iconBsky: "enhanceLinks_showIcons_showIconsBsky",
+    iconRentry: "enhanceLinks_showIcons_showIconsRentry",
+    iconCatbox: "enhanceLinks_showIcons_showIconsCatbox",
+    iconPastebin: "enhanceLinks_showIcons_showIconsPastebin",
+    linkThumbnails: "enhanceLinks_showThumbnails",
+    thumbYoutube: "enhanceLinks_showThumbnails_showThumbnailsYoutube",
+    thumbTwitch: "enhanceLinks_showThumbnails_showThumbnailsTwitch",
+    linkEmbeds: "enhanceLinks_enableEmbeds",
+    embedX: "enhanceLinks_enableEmbeds_enableEmbedsX",
+    embedBsky: "enhanceLinks_enableEmbeds_enableEmbedsBsky",
+    embedRentry: "enhanceLinks_enableEmbeds_enableEmbedsRentry",
+    embedPastebin: "enhanceLinks_enableEmbeds_enableEmbedsPastebin",
+    sauceLinks: "enableTheSauce",
+    sauceIqdb: "enableTheSauce_iqdb",
+    sauceSaucenao: "enableTheSauce_saucenao",
+    saucePixiv: "enableTheSauce_pixiv",
     catalogImageHover: "enableCatalogImageHover",
     threadImageHover: "enableThreadImageHover",
     threadHiding: "enableThreadHiding",
@@ -109,6 +131,7 @@
     threadHideCloseBtn: false,
     blurSpoilers: false,
     removeSpoilers: false,
+    enablePNGstop: false,
     enableMediaPlayer: false,
     viewerStyle: "native",
     trackHoverPlayback: false,
@@ -127,6 +150,28 @@
     customTrunc: 15,
     enableScrollSave: true,
     showUnreadLine: true,
+    highlightNewIds: false,
+    idHlStyle: "moetext",
+    showLinkIcons: true,
+    iconYoutube: true,
+    iconTwitch: true,
+    iconX: true,
+    iconBsky: true,
+    iconRentry: true,
+    iconCatbox: true,
+    iconPastebin: true,
+    linkThumbnails: true,
+    thumbYoutube: true,
+    thumbTwitch: true,
+    linkEmbeds: false,
+    embedX: true,
+    embedBsky: true,
+    embedRentry: true,
+    embedPastebin: true,
+    sauceLinks: false,
+    sauceIqdb: false,
+    sauceSaucenao: false,
+    saucePixiv: false,
     enableShortcuts: false,
     updateNotif: true,
     ssVersion: ""
@@ -167,6 +212,7 @@
           ]
         },
         { key: "trackHoverPlayback", label: "Track and Restore Hover Media Playback", title: "Remembers hover video/audio position" },
+        { key: "enablePNGstop", label: "Prevent animated PNG images from playing (slow)" },
         { head: "Thread" },
         {
           key: "enableScrollSave", label: "Save Scroll Position", sub: [
@@ -244,14 +290,60 @@
     },
     {
       page: "ss-misc", title: "Misc", options: [
+        { head: "Notifications" },
+        { key: "updateNotif", label: "8chanSS update notifications" },
+        { head: "IDs" },
+        {
+          key: "highlightNewIds", label: "Highlight New IDs", sub: [
+            {
+              key: "idHlStyle", label: "Highlight Style", type: "select", options: [
+                { value: "moetext", label: "Moe" },
+                { value: "glow", label: "Glow" },
+                { value: "dotted", label: "Border" }
+              ]
+            }
+          ]
+        },
         { head: "Site" },
         {
           key: "truncFilenames", label: "Truncate filenames", sub: [
             { key: "customTrunc", label: "Max filename length (5-50)", type: "number", min: 5, max: 50 }
           ]
         },
-        { head: "Notifications" },
-        { key: "updateNotif", label: "8chanSS update notifications" }
+        { head: "Linkification" },
+        {
+          key: "showLinkIcons", label: "Show Icons and Titles", sub: [
+            { key: "iconYoutube", label: "Youtube" },
+            { key: "iconTwitch", label: "Twitch" },
+            { key: "iconX", label: "X.com" },
+            { key: "iconBsky", label: "Bluesky" },
+            { key: "iconRentry", label: "Rentry" },
+            { key: "iconCatbox", label: "Catbox" },
+            { key: "iconPastebin", label: "Pastebin" }
+          ]
+        },
+        {
+          key: "linkThumbnails", label: "Show Thumbnails on Hover", sub: [
+            { key: "thumbYoutube", label: "Youtube" },
+            { key: "thumbTwitch", label: "Twitch" }
+          ]
+        },
+        {
+          key: "linkEmbeds", label: "Enable Embedding", sub: [
+            { key: "embedX", label: "X.com" },
+            { key: "embedBsky", label: "Bluesky" },
+            { key: "embedRentry", label: "Rentry" },
+            { key: "embedPastebin", label: "Pastebin" }
+          ]
+        },
+        { head: "Sauce Links" },
+        {
+          key: "sauceLinks", label: "Sauce Links", sub: [
+            { key: "sauceIqdb", label: "IQDB" },
+            { key: "sauceSaucenao", label: "Saucenao" },
+            { key: "saucePixiv", label: "Pixiv (only added if filename matches Pixiv ID)" }
+          ]
+        }
       ]
     },
     { page: "ss-shortcuts", title: "Shortcuts", options: [
@@ -458,7 +550,24 @@
     catalogFiltering: "threadHiding",
     catalogLinksNewTab: "catalogLinks",
     customTrunc: "truncFilenames",
-    showUnreadLine: "enableScrollSave"
+    showUnreadLine: "enableScrollSave",
+    idHlStyle: "highlightNewIds",
+    iconYoutube: "showLinkIcons",
+    iconTwitch: "showLinkIcons",
+    iconX: "showLinkIcons",
+    iconBsky: "showLinkIcons",
+    iconRentry: "showLinkIcons",
+    iconCatbox: "showLinkIcons",
+    iconPastebin: "showLinkIcons",
+    thumbYoutube: "linkThumbnails",
+    thumbTwitch: "linkThumbnails",
+    embedX: "linkEmbeds",
+    embedBsky: "linkEmbeds",
+    embedRentry: "linkEmbeds",
+    embedPastebin: "linkEmbeds",
+    sauceIqdb: "sauceLinks",
+    sauceSaucenao: "sauceLinks",
+    saucePixiv: "sauceLinks"
   };
 
   function rootToggle(cls, on) {
@@ -1524,6 +1633,1636 @@
     saveScrollPositionNow();
   }
 
+  var apngObserver = null;
+
+  function isAPNGFile(mime, src) {
+    if (mime) {
+      var lower = mime.toLowerCase();
+      if (lower === "image/apng" || lower === "image/png") return true;
+    }
+    return !!(src && /\.(a?png)(\?.*)?$/i.test(src));
+  }
+
+  function processAPNGThumb(img) {
+    if (img.dataset.ssApngProcessed === "1") return;
+    var link = img.closest("a.linkThumb, a.imgLink");
+    if (!link) return;
+    var mime = (link.getAttribute("data-filemime") || "").toLowerCase();
+    var href = link.getAttribute("href") || "";
+    if (!isAPNGFile(mime, href)) return;
+    var width = parseInt(link.getAttribute("data-filewidth"), 10) || img.width || 0;
+    var height = parseInt(link.getAttribute("data-fileheight"), 10) || img.height || 0;
+    if (width > 220 || height > 220) return;
+    img.style.visibility = "hidden";
+    if (!img.complete || img.naturalWidth === 0) {
+      img.addEventListener("load", function () { processAPNGThumb(img); }, { once: true });
+      return;
+    }
+    img.dataset.ssApngProcessed = "1";
+    var canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext("2d").drawImage(img, 0, 0, img.width, img.height);
+    canvas.className = "apng-canvas-snapshot";
+    var overlay = document.createElement("div");
+    overlay.className = "apng-overlay";
+    overlay.style.width = canvas.width + "px";
+    overlay.style.height = canvas.height + "px";
+    var isCatalog = !!link.closest(".catalogCell");
+    var wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    wrapper.style.display = "inline-block";
+    wrapper.style.width = canvas.width + "px";
+    wrapper.style.height = canvas.height + "px";
+    if (!isCatalog) {
+      wrapper.style.marginRight = "1em";
+      wrapper.style.marginBottom = "0.7em";
+    }
+    img.parentNode.insertBefore(wrapper, img);
+    wrapper.appendChild(img);
+    wrapper.appendChild(canvas);
+    wrapper.appendChild(overlay);
+    overlay.addEventListener("click", function () {
+      overlay.remove();
+      canvas.remove();
+      img.style.visibility = "";
+    });
+    ["mouseenter", "mouseleave"].forEach(function (type) {
+      overlay.addEventListener(type, function (e) {
+        img.dispatchEvent(new MouseEvent(type, {
+          bubbles: false,
+          cancelable: true,
+          clientX: e.clientX,
+          clientY: e.clientY
+        }));
+      });
+    });
+  }
+
+  function processAllAPNGThumbs(root) {
+    var thumbs = (root || document).querySelectorAll("a.linkThumb img, a.imgLink img");
+    for (var i = 0; i < thumbs.length; i++) processAPNGThumb(thumbs[i]);
+  }
+
+  function restoreAPNGThumbs() {
+    var overlays = document.querySelectorAll(".apng-overlay");
+    for (var i = 0; i < overlays.length; i++) {
+      var overlay = overlays[i];
+      var wrapper = overlay.parentNode;
+      if (!wrapper) continue;
+      var img = wrapper.querySelector("img");
+      var canvas = wrapper.querySelector("canvas.apng-canvas-snapshot");
+      if (canvas) canvas.remove();
+      overlay.remove();
+      if (img) {
+        img.style.visibility = "";
+        delete img.dataset.ssApngProcessed;
+        if (wrapper.parentNode) wrapper.parentNode.insertBefore(img, wrapper);
+      }
+      if (wrapper.parentNode && !wrapper.children.length) wrapper.remove();
+    }
+  }
+
+  var highlightIdsObserver = null;
+  var debouncedHighlightIds = null;
+
+  function rawIdFromLabelId(span) {
+    return span ? span.textContent.split(/[|\(]/)[0].trim() : null;
+  }
+
+  function applyHighlightNewIds() {
+    var posts = document.querySelector(".divPosts");
+    if (!posts) return;
+    var styleClassMap = { moetext: "moeText", glow: "id-glow", dotted: "id-dotted" };
+    var styleClass = styleClassMap[ssSettings.idHlStyle] || "moeText";
+    var labelSpans = posts.querySelectorAll(".labelId");
+    var idFrequency = {};
+    var i;
+    for (i = 0; i < labelSpans.length; i++) {
+      var id = rawIdFromLabelId(labelSpans[i]);
+      idFrequency[id] = (idFrequency[id] || 0) + 1;
+    }
+    var seen = {};
+    for (i = 0; i < labelSpans.length; i++) {
+      var span = labelSpans[i];
+      var spanId = rawIdFromLabelId(span);
+      span.classList.remove("moeText", "id-glow", "id-dotted");
+      if (!seen[spanId]) {
+        seen[spanId] = true;
+        span.classList.add(styleClass);
+        span.title = idFrequency[spanId] === 1
+          ? "This ID appears only once."
+          : "This was the first occurrence of this ID.";
+      } else {
+        span.title = "";
+      }
+    }
+  }
+
+  function clearHighlightNewIds() {
+    var spans = document.querySelectorAll(".labelId.moeText, .labelId.id-glow, .labelId.id-dotted");
+    for (var i = 0; i < spans.length; i++) {
+      spans[i].classList.remove("moeText", "id-glow", "id-dotted");
+      spans[i].removeAttribute("title");
+    }
+  }
+
+  var enhancedLinksWired = false;
+
+  function initEnhancedLinks() {
+    if (enhancedLinksWired) return;
+    var showIcons = !!ssSettings.showLinkIcons;
+    var showThumbnails = !!ssSettings.linkThumbnails;
+    var enableEmbeds = !!ssSettings.linkEmbeds;
+    var showIconsYoutube = showIcons && !!ssSettings.iconYoutube;
+    var showIconsTwitch = showIcons && !!ssSettings.iconTwitch;
+    var showIconsX = showIcons && !!ssSettings.iconX;
+    var showIconsBsky = showIcons && !!ssSettings.iconBsky;
+    var showIconsRentry = showIcons && !!ssSettings.iconRentry;
+    var showIconsCatbox = showIcons && !!ssSettings.iconCatbox;
+    var showIconsPastebin = showIcons && !!ssSettings.iconPastebin;
+    var showThumbnailsYoutube = showThumbnails && !!ssSettings.thumbYoutube;
+    var showThumbnailsTwitch = showThumbnails && !!ssSettings.thumbTwitch;
+    var enableEmbedsX = enableEmbeds && !!ssSettings.embedX;
+    var enableEmbedsBsky = enableEmbeds && !!ssSettings.embedBsky;
+    var enableEmbedsRentry = enableEmbeds && !!ssSettings.embedRentry;
+    var enableEmbedsPastebin = enableEmbeds && !!ssSettings.embedPastebin;
+    if (!showIconsYoutube && !showIconsTwitch && !showIconsX && !showIconsBsky &&
+      !showIconsRentry && !showIconsCatbox && !showIconsPastebin &&
+      !showThumbnailsYoutube && !showThumbnailsTwitch &&
+      !enableEmbedsX && !enableEmbedsBsky && !enableEmbedsRentry && !enableEmbedsPastebin) {
+      return;
+    }
+    enhancedLinksWired = true;
+
+    const MAX_CACHE_SIZE = 350;
+    const ORDER_KEY = "_order";
+    const TRACKING_PARAMS = [
+      "si", "feature", "ref", "fsi", "source",
+      "utm_source", "utm_medium", "utm_campaign", "gclid", "gclsrc", "fbclid"
+    ];
+
+    const YT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#FF0000" d="M549.7 124.1c-6.3-23.7-24.9-42.4-48.6-48.6C456.5 64 288 64 288 64s-168.5 0-213.1 11.5c-23.7 6.3-42.4 24.9-48.6 48.6C16 168.5 16 256 16 256s0 87.5 10.3 131.9c6.3 23.7 24.9 42.4 48.6 48.6C119.5 448 288 448 288 448s168.5 0 213.1-11.5c23.7-6.3 42.4-24.9 48.6-48.6 10.3-44.4 10.3-131.9 10.3-131.9s0-87.5-10.3-131.9zM232 334.1V177.9L361 256 232 334.1z"/></svg>`;
+    const TWITCH_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#9146FF" d="M391.17,103.47H352.54v109.7h38.63ZM285,103H246.37V212.75H285ZM120.83,0,24.31,91.42V420.58H140.14V512l96.53-91.42h77.25L487.69,256V0ZM449.07,237.75l-77.22,73.12H294.61l-67.6,64v-64H140.14V36.58H449.07Z"/></svg>`;
+    const RENTRY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="16" style="vertical-align:middle;margin-right:2px;" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>`;
+    const PASTEBIN_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="16" style="vertical-align:middle;margin-right:2px;" fill="currentColor"><path d="M19.385 2.5H4.615A2.115 2.115 0 0 0 2.5 4.615v14.77a2.115 2.115 0 0 0 2.115 2.115h14.77a2.115 2.115 0 0 0 2.115-2.115V4.615A2.115 2.115 0 0 0 19.385 2.5M8.423 18.308v-7.423H6.154V6.5h5.888v1.154H8.423v3.462h3.462v1.154H8.423v5.039H6.154m8.654 0v-7.423h-2.269V6.5h5.888v1.154h-3.619v3.462h3.462v1.154h-3.462v5.039H15.077Z"/></svg>`;
+    const CATBOX_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="16" style="vertical-align:middle;margin-right:2px;" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>`;
+    const X_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="16" style="vertical-align:middle;margin-right:2px;" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.48 11.25H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+    const BSKY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 57" width="18" height="16" style="vertical-align:middle;margin-right:2px;"><path fill="#0085FF" d="M13.873 3.805C21.21 9.332 29.103 20.537 32 26.55v15.882c0-.338-.13.044-.41.867-1.512 4.456-7.418 21.847-20.923 7.944-7.111-7.32-3.819-14.64 9.125-16.85-7.405 1.264-15.73-.825-18.014-9.015C1.12 23.022 0 8.51 0 6.55 0-3.268 8.579-.182 13.873 3.805ZM50.127 3.805C42.79 9.332 34.897 20.537 32 26.55v15.882c0-.338.130.044.410.867 1.512 4.456 7.418 21.847 20.923 7.944 7.111-7.32 3.819-14.64-9.125-16.85 7.405 1.264 15.73-.825 18.014-9.015C62.88 23.022 64 8.51 64 6.55c0-9.818-8.578-6.732-13.873-2.745Z"/></svg>`;
+
+    function loadCache(cacheKey) {
+      try {
+        const data = localStorage.getItem(cacheKey);
+        if (data) {
+          const parsed = JSON.parse(data);
+          if (!Array.isArray(parsed[ORDER_KEY])) {
+            parsed[ORDER_KEY] = [];
+          }
+          return parsed;
+        }
+      } catch (e) { }
+      return { [ORDER_KEY]: [] };
+    }
+    function saveCache(cacheKey, cache) {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(cache));
+      } catch (e) { }
+    }
+
+    const ytTitleCache = loadCache('ytTitleCache');
+
+    function getYouTubeInfo(url) {
+      try {
+        const u = new URL(url);
+        if (u.hostname === 'youtu.be') {
+          const id = (u.pathname.slice(1).split('/')[0] || '').split('?')[0];
+          if (id) return { type: 'video', id: id };
+          return null;
+        }
+        const isYoutube = u.hostname.endsWith('youtube.com') || u.hostname.endsWith('youtube-nocookie.com');
+        if (isYoutube) {
+          if (u.pathname === '/watch') {
+            const videoId = u.searchParams.get('v');
+            if (videoId) {
+              return { type: 'video', id: videoId };
+            }
+          }
+          const watchPathMatch = u.pathname.match(/^\/watch\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+          if (watchPathMatch) {
+            return { type: 'video', id: watchPathMatch[1] };
+          }
+          const vPathMatch = u.pathname.match(/^\/v\/([a-zA-Z0-9_-]{11})(?:\/|$)/);
+          if (vPathMatch) {
+            return { type: 'video', id: vPathMatch[1] };
+          }
+          const liveMatch = u.pathname.match(/^\/(live|embed|shorts)\/([a-zA-Z0-9_-]{11})/);
+          if (liveMatch) {
+            return { type: 'video', id: liveMatch[2] };
+          }
+          const postMatch = u.pathname.match(/^(?:\/@([a-zA-Z0-9_.-]+))?\/post\/([a-zA-Z0-9_-]+)/);
+          if (postMatch) {
+            return {
+              type: 'post',
+              id: postMatch[2],
+              channel: postMatch[1] || null
+            };
+          }
+          const channelMatch = u.pathname.match(/^\/(?:@([a-zA-Z0-9_.-]+)|c\/([a-zA-Z0-9_.-]+)|channel\/([a-zA-Z0-9_-]+)|user\/([a-zA-Z0-9_-]+)|([a-zA-Z0-9_.-]+))(?:\/|$)/);
+          if (channelMatch) {
+            const channelId = channelMatch[1] || channelMatch[2] || channelMatch[3] || channelMatch[4] || channelMatch[5];
+            if (channelId) {
+              return { type: 'channel', id: channelId };
+            }
+          }
+        }
+      } catch (e) { }
+      return null;
+    }
+
+    function sanitizeYouTubeId(videoId) {
+      if (!videoId) return null;
+      const match = videoId.match(/([a-zA-Z0-9_-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    function stripTrackingParams(url) {
+      try {
+        const u = new URL(url);
+        let changed = false;
+        const KEEP_PARAMS = new Set(['t', 'start']);
+        TRACKING_PARAMS.forEach(param => {
+          if (u.searchParams.has(param) && !KEEP_PARAMS.has(param)) {
+            u.searchParams.delete(param);
+            changed = true;
+          }
+        });
+        if (u.hash && u.hash.includes('?')) {
+          const [hashPath, hashQuery] = u.hash.split('?');
+          const hashParams = new URLSearchParams(hashQuery);
+          let hashChanged = false;
+          TRACKING_PARAMS.forEach(param => {
+            if (hashParams.has(param) && !KEEP_PARAMS.has(param)) {
+              hashParams.delete(param);
+              hashChanged = true;
+            }
+          });
+          if (hashChanged) {
+            u.hash = hashParams.toString()
+              ? `${hashPath}?${hashParams.toString()}`
+              : hashPath;
+            changed = true;
+          }
+        }
+        return changed ? u.toString() : url;
+      } catch (e) {
+        return url;
+      }
+    }
+
+    async function fetchYouTubeTitle(videoId) {
+      const cleanId = sanitizeYouTubeId(videoId);
+      if (!cleanId) return null;
+      if (ytTitleCache.hasOwnProperty(cleanId)) {
+        const idx = ytTitleCache[ORDER_KEY].indexOf(cleanId);
+        if (idx !== -1) {
+          ytTitleCache[ORDER_KEY].splice(idx, 1);
+        }
+        ytTitleCache[ORDER_KEY].push(cleanId);
+        saveCache('ytTitleCache', ytTitleCache);
+        return ytTitleCache[cleanId];
+      }
+      try {
+        const data = await new Promise((resolve, reject) => {
+          GM.xmlHttpRequest({
+            method: "GET",
+            url: `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`,
+            timeout: 8000,
+            onload: (response) => {
+              if (response.status === 200) {
+                try {
+                  resolve(JSON.parse(response.responseText));
+                } catch (e) {
+                  reject(e);
+                }
+              } else {
+                reject(new Error(`HTTP ${response.status}`));
+              }
+            },
+            onerror: () => reject(new Error('Network error')),
+            ontimeout: () => reject(new Error('Timeout'))
+          });
+        });
+        const title = data ? data.title : null;
+        if (title) {
+          ytTitleCache[cleanId] = title;
+          ytTitleCache[ORDER_KEY].push(cleanId);
+          while (ytTitleCache[ORDER_KEY].length > MAX_CACHE_SIZE) {
+            const oldest = ytTitleCache[ORDER_KEY].shift();
+            delete ytTitleCache[oldest];
+          }
+          saveCache('ytTitleCache', ytTitleCache);
+        }
+        return title;
+      } catch {
+        return null;
+      }
+    }
+
+    function getYouTubeThumbnailUrl(videoId) {
+      return `https://i.ytimg.com/vi_webp/${videoId}/hqdefault.webp`;
+    }
+
+    async function fetchAsDataURL(url) {
+      return new Promise((resolve) => {
+        try {
+          GM.xmlHttpRequest({
+            method: "GET",
+            url: url,
+            responseType: "blob",
+            timeout: 10000,
+            onload: (response) => {
+              if (response.status === 200 && response.response) {
+                try {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.onerror = () => resolve(null);
+                  reader.readAsDataURL(response.response);
+                } catch (e) {
+                  resolve(null);
+                }
+              } else {
+                resolve(null);
+              }
+            },
+            onerror: () => resolve(null),
+            ontimeout: () => resolve(null)
+          });
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+
+    function addThumbnailHover(link, thumbnailUrl, altText = "Thumbnail") {
+      if (link.dataset.thumbHover) return;
+      link.dataset.thumbHover = "1";
+      let thumbDiv = null;
+      let lastImg = null;
+      let lastHoverToken = 0;
+
+      function showThumb(e) {
+        if (!thumbDiv) {
+          thumbDiv = document.createElement('div');
+          thumbDiv.style.position = 'fixed';
+          thumbDiv.style.zIndex = '9999';
+          thumbDiv.style.pointerEvents = 'none';
+          thumbDiv.style.background = '#222';
+          thumbDiv.style.border = '1px solid #444';
+          thumbDiv.style.padding = '2px';
+          thumbDiv.style.borderRadius = '4px';
+          thumbDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+          thumbDiv.style.transition = 'opacity 0.1s';
+          thumbDiv.style.opacity = '0';
+          thumbDiv.style.maxWidth = '280px';
+          thumbDiv.style.maxHeight = '200px';
+          thumbDiv.style.color = '#fff';
+
+          const img = document.createElement('img');
+          img.style.display = 'block';
+          img.style.maxWidth = '280px';
+          img.style.maxHeight = '200px';
+          img.style.borderRadius = '3px';
+          img.alt = altText;
+          img.src = "data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQv///wAAACH5BAEAAAMALAAAAAAQABAAAAIgjI+py+0Po5yUFQA7";
+
+          lastImg = img;
+          const hoverToken = ++lastHoverToken;
+
+          fetchAsDataURL(thumbnailUrl).then(dataUrl => {
+            if (lastImg === img && hoverToken === lastHoverToken) {
+              if (dataUrl) {
+                img.src = dataUrl;
+              } else {
+                img.alt = "Failed to load thumbnail";
+              }
+            }
+          });
+
+          thumbDiv.appendChild(img);
+          document.body.appendChild(thumbDiv);
+
+          setTimeout(() => {
+            if (thumbDiv) thumbDiv.style.opacity = '1';
+          }, 10);
+        }
+        const top = Math.min(window.innerHeight - 130, e.clientY + 12);
+        const left = Math.min(window.innerWidth - 290, e.clientX + 12);
+        thumbDiv.style.top = `${top}px`;
+        thumbDiv.style.left = `${left}px`;
+      }
+
+      function moveThumb(e) {
+        if (thumbDiv) {
+          const top = Math.min(window.innerHeight - 130, e.clientY + 12);
+          const left = Math.min(window.innerWidth - 290, e.clientX + 12);
+          thumbDiv.style.top = `${top}px`;
+          thumbDiv.style.left = `${left}px`;
+        }
+      }
+
+      function hideThumb() {
+        lastHoverToken++;
+        if (thumbDiv && thumbDiv.parentNode) {
+          thumbDiv.parentNode.removeChild(thumbDiv);
+          thumbDiv = null;
+        }
+        lastImg = null;
+      }
+
+      link.addEventListener('mouseenter', showThumb);
+      link.addEventListener('mousemove', moveThumb);
+      link.addEventListener('mouseleave', hideThumb);
+    }
+
+    function isInsideCodeblock(link) {
+      return link.closest('.inlineCode, .aa, .katex, .katex-html, .hljs-built_in, .hljs-string, .embedContainer, .embed-wrapper, [data-embed], .embed') !== null;
+    }
+
+    function processYouTubeLink(link) {
+      if (link.dataset.enhanced) return;
+      if (isInsideCodeblock(link)) return;
+      const ytInfo = getYouTubeInfo(link.href);
+      if (!ytInfo) return;
+      link.dataset.enhanced = "1";
+
+      const cleanUrl = stripTrackingParams(link.href);
+      if (cleanUrl !== link.href) {
+        link.href = cleanUrl;
+      }
+
+      if (showIconsYoutube) {
+        if (ytInfo.type === 'video') {
+          const cleanId = sanitizeYouTubeId(ytInfo.id);
+          if (cleanId) {
+            fetchYouTubeTitle(cleanId).then(title => {
+              if (title) link.innerHTML = `${YT_ICON} ${title}`;
+            });
+          }
+        } else if (ytInfo.type === 'post') {
+          link.innerHTML = `${YT_ICON} ${link.textContent.trim()}`;
+        } else if (ytInfo.type === 'channel') {
+          const channelName = ytInfo.id.startsWith('@') ? ytInfo.id : `@${ytInfo.id}`;
+          link.innerHTML = `${YT_ICON} ${channelName}`;
+        }
+      }
+
+      if (showThumbnailsYoutube && ytInfo.type === 'video') {
+        const cleanId = sanitizeYouTubeId(ytInfo.id);
+        if (cleanId) {
+          const thumbUrl = getYouTubeThumbnailUrl(cleanId);
+          addThumbnailHover(link, thumbUrl, "YouTube thumbnail");
+        }
+      }
+    }
+
+    function extractTitleAndThumbnail(html) {
+      const result = { title: null, thumbnail: null };
+      const jsonLdMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+      if (jsonLdMatch) {
+        try {
+          const jsonLd = JSON.parse(jsonLdMatch[1]);
+          if (jsonLd.name) result.title = jsonLd.name.trim();
+        } catch (e) { }
+      }
+      if (!result.title) {
+        const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+        if (ogTitleMatch && ogTitleMatch[1]) {
+          const title = ogTitleMatch[1].trim();
+          if (title !== 'Twitch') result.title = title;
+        }
+      }
+      if (!result.title) {
+        const twitterTitleMatch = html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i);
+        if (twitterTitleMatch && twitterTitleMatch[1]) {
+          const title = twitterTitleMatch[1].trim();
+          if (title !== 'Twitch') result.title = title;
+        }
+      }
+      const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+      if (ogImageMatch && ogImageMatch[1]) result.thumbnail = ogImageMatch[1].trim();
+      if (!result.thumbnail) {
+        const twitterImageMatch = html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i);
+        if (twitterImageMatch && twitterImageMatch[1]) result.thumbnail = twitterImageMatch[1].trim();
+      }
+      return result;
+    }
+
+    function getTwitchInfo(url) {
+      try {
+        const u = new URL(url);
+        if (u.hostname.includes('twitch.tv')) {
+          const videoMatch = u.pathname.match(/^\/videos?\/(\d+)/);
+          if (videoMatch) {
+            return { type: 'video', id: videoMatch[1] };
+          }
+          const clipMatch = u.pathname.match(/^\/([a-zA-Z0-9_]+)\/clip\/([a-zA-Z0-9_-]+)/);
+          if (clipMatch) {
+            return { type: 'clip', id: clipMatch[2], username: clipMatch[1] };
+          }
+          const channelMatch = u.pathname.match(/^\/([a-zA-Z0-9_]+)\/?$/);
+          if (channelMatch) {
+            return { type: 'channel', id: channelMatch[1] };
+          }
+        }
+      } catch (e) { }
+      return null;
+    }
+
+    function getTwitchThumbnailUrl(twitchInfo) {
+      if (!twitchInfo) return null;
+      if (twitchInfo.type === 'clip') {
+        const clipParts = twitchInfo.id.split('-');
+        const slug = clipParts.length > 1 ? clipParts.slice(0, -1).join('-') : twitchInfo.id;
+        return `https://clips-media-assets2.twitch.tv/${slug}-preview-480x272.jpg`;
+      } else if (twitchInfo.type === 'channel') {
+        return `https://static-cdn.jtvnw.net/previews-ttv/live_user_${twitchInfo.id}-320x180.jpg`;
+      }
+      return null;
+    }
+
+    async function fetchTwitchPageInfo(url) {
+      try {
+        const response = await new Promise((resolve, reject) => {
+          GM.xmlHttpRequest({
+            method: 'GET',
+            url: url,
+            onload: (r) => r.status === 200 ? resolve(r.responseText) : reject(new Error(`HTTP ${r.status}`)),
+            onerror: reject
+          });
+        });
+        return extractTitleAndThumbnail(response);
+      } catch (e) {
+        return { title: null, thumbnail: null };
+      }
+    }
+
+    function processTwitchLink(link) {
+      if (link.dataset.enhanced) return;
+      if (isInsideCodeblock(link)) return;
+      const twitchInfo = getTwitchInfo(link.href);
+      if (!twitchInfo) return;
+
+      if (link.closest('.embedContainer, .embed-wrapper, [data-embed], .embed') ||
+        link.hasAttribute('data-embed') ||
+        link.classList.contains('embed-link')) {
+        return;
+      }
+
+      link.dataset.enhanced = "1";
+
+      if (showIconsTwitch) {
+        let displayText = twitchInfo.type === 'channel' ? twitchInfo.id :
+          twitchInfo.type === 'clip' ? twitchInfo.username :
+            `Video ${twitchInfo.id}`;
+        link.innerHTML = `${TWITCH_ICON} ${displayText}`;
+
+        if (twitchInfo.type === 'clip') {
+          const pageUrl = `https://www.twitch.tv/${twitchInfo.username}/clip/${twitchInfo.id}`;
+          fetchTwitchPageInfo(pageUrl).then(info => {
+            if (info.title) link.innerHTML = `${TWITCH_ICON} ${info.title}`;
+            if (showThumbnailsTwitch) {
+              const thumbUrl = info.thumbnail || getTwitchThumbnailUrl(twitchInfo);
+              if (thumbUrl) addThumbnailHover(link, thumbUrl, "Twitch thumbnail");
+            }
+          });
+        } else if (twitchInfo.type === 'video') {
+          const pageUrl = `https://www.twitch.tv/videos/${twitchInfo.id}`;
+          fetchTwitchPageInfo(pageUrl).then(info => {
+            if (info.title) link.innerHTML = `${TWITCH_ICON} ${info.title}`;
+          });
+        }
+      }
+
+      if (showThumbnailsTwitch && twitchInfo.type === 'channel') {
+        const thumbUrl = getTwitchThumbnailUrl(twitchInfo);
+        if (thumbUrl) addThumbnailHover(link, thumbUrl, "Twitch thumbnail");
+      }
+    }
+
+    function isRentryLink(url) {
+      try {
+        const u = new URL(url);
+        return u.hostname === 'rentry.co' || u.hostname === 'rentry.org';
+      } catch (e) { }
+      return false;
+    }
+
+    function getRentryKey(url) {
+      try {
+        const u = new URL(url);
+        const match = u.pathname.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
+        return match ? match[1] : null;
+      } catch (e) { }
+      return null;
+    }
+
+    function processRentryLink(link) {
+      if (link.dataset.enhanced) return;
+      if (isInsideCodeblock(link)) return;
+      if (!isRentryLink(link.href)) return;
+      link.dataset.enhanced = "1";
+
+      if (showIconsRentry) {
+        const originalText = link.textContent.trim();
+        link.innerHTML = `${RENTRY_ICON} ${originalText}`;
+      }
+
+      if (enableEmbedsRentry && getRentryKey(link.href)) {
+        addEmbedButton(link, createRentryEmbed);
+      }
+    }
+
+    function isPastebinLink(url) {
+      try {
+        const u = new URL(url);
+        return u.hostname === 'pastebin.com' || u.hostname === 'www.pastebin.com';
+      } catch (e) { }
+      return false;
+    }
+
+    function getPastebinKey(url) {
+      try {
+        const u = new URL(url);
+        const match = u.pathname.match(/^\/(?:raw\/)?([a-zA-Z0-9]+)$/);
+        return match ? match[1] : null;
+      } catch (e) { }
+      return null;
+    }
+
+    function processPastebinLink(link) {
+      if (link.dataset.enhanced) return;
+      if (isInsideCodeblock(link)) return;
+      if (!isPastebinLink(link.href)) return;
+      link.dataset.enhanced = "1";
+
+      if (showIconsPastebin) {
+        const originalText = link.textContent.trim();
+        link.innerHTML = `${PASTEBIN_ICON} ${originalText}`;
+      }
+
+      if (enableEmbedsPastebin && getPastebinKey(link.href)) {
+        addEmbedButton(link, createPastebinEmbed);
+      }
+    }
+
+    function isCatboxLink(url) {
+      try {
+        const u = new URL(url);
+        return u.hostname === 'catbox.moe' || u.hostname.endsWith('.catbox.moe');
+      } catch (e) { }
+      return false;
+    }
+
+    function processCatboxLink(link) {
+      if (link.dataset.enhanced) return;
+      if (isInsideCodeblock(link)) return;
+      if (!isCatboxLink(link.href)) return;
+      link.dataset.enhanced = "1";
+
+      if (showIconsCatbox) {
+        const originalText = link.textContent.trim();
+        link.innerHTML = `${CATBOX_ICON} ${originalText}`;
+      }
+    }
+
+    function isXLink(url) {
+      try {
+        const u = new URL(url);
+        const xDomains = ['x.com', 'twitter.com'];
+        if (xDomains.some(domain => u.hostname === domain || u.hostname.endsWith('.' + domain))) {
+          return true;
+        }
+        const nitterDomains = ['nitter.net', 'nitter.poast.org', 'xcancel.com', 'nitter.space'];
+        if (nitterDomains.some(domain => u.hostname === domain || u.hostname.endsWith('.' + domain))) {
+          return true;
+        }
+      } catch (e) { }
+      return false;
+    }
+
+    function getXPostId(url) {
+      try {
+        const u = new URL(url);
+        const match = u.pathname.match(/\/status\/(\d+)/);
+        return match ? match[1] : null;
+      } catch (e) { }
+      return null;
+    }
+
+    function getXPostInfo(url) {
+      try {
+        const u = new URL(url);
+        const match = u.pathname.match(/\/([^\/]+)\/status\/(\d+)/);
+        if (match) {
+          return { username: match[1], statusId: match[2] };
+        }
+      } catch (e) { }
+      return null;
+    }
+
+    function applyEmbedStyles(container) {
+      container.style.marginTop = '10px';
+      container.style.border = '1px solid #444';
+      container.style.padding = '15px';
+      container.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+    }
+
+    function createAuthorDiv(authorName, authorUrl, handlePrefix = '@') {
+      if (!authorName && !authorUrl) return null;
+      const div = document.createElement('div');
+      div.style.display = 'flex';
+      div.style.alignItems = 'center';
+      div.style.gap = '8px';
+      if (authorName) {
+        const name = document.createElement('strong');
+        name.textContent = authorName;
+        name.style.color = 'var(--text-color, #fff)';
+        div.appendChild(name);
+      }
+      if (authorUrl) {
+        const link = document.createElement('a');
+        link.href = authorUrl;
+        link.textContent = `${handlePrefix}${authorUrl.split('/').pop()}`;
+        link.target = '_blank';
+        link.style.color = 'var(--link-color, #00E)';
+        div.appendChild(link);
+      }
+      return div;
+    }
+
+    function createFxEmbedCard(fxData, originalUrl) {
+      const card = document.createElement('div');
+      card.style.display = 'flex';
+      card.style.flexDirection = 'column';
+      card.style.gap = '10px';
+
+      if (fxData.code !== 200) {
+        card.innerHTML = `<a href="${originalUrl}" target="_blank">${originalUrl}</a>`;
+        return card;
+      }
+
+      const post = fxData.tweet || fxData.post || fxData;
+
+      if (post.author) {
+        const authorUrl = post.author.url ||
+          (post.author.screen_name ? `https://x.com/${post.author.screen_name}` : null) ||
+          (post.author.handle ? `https://bsky.app/profile/${post.author.handle}` : null);
+        const authorDiv = createAuthorDiv(post.author.name, authorUrl);
+        if (authorDiv) card.appendChild(authorDiv);
+      }
+
+      const text = post.text || post.content || '';
+      if (text) {
+        const textDiv = document.createElement('div');
+        textDiv.style.color = 'var(--text-color, #fff)';
+        textDiv.style.whiteSpace = 'pre-wrap';
+        textDiv.style.wordWrap = 'break-word';
+        textDiv.textContent = text;
+        card.appendChild(textDiv);
+      }
+
+      if (post.media) {
+        const photos = post.media.photos || post.media.images || [];
+        if (photos.length > 0) {
+          const mediaContainer = document.createElement('div');
+          mediaContainer.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
+          photos.forEach(photo => {
+            mediaContainer.appendChild(createMediaImage(photo.url || photo));
+          });
+          card.appendChild(mediaContainer);
+        }
+
+        const videos = post.media.videos || [];
+        if (videos.length > 0) {
+          const video = videos[0];
+          const videoContainer = document.createElement('div');
+          videoContainer.style.cssText = 'margin-top:8px;position:relative';
+
+          if (video.url) {
+            const videoEl = document.createElement('video');
+            videoEl.controls = true;
+            videoEl.style.cssText = 'max-width:100%;height:auto;border-radius:4px;display:block';
+            fetchMediaAsBlob(video.url).then(blobUrl => {
+              videoEl.src = blobUrl;
+            }).catch(() => {
+              videoEl.style.display = 'none';
+              if (video.thumbnail_url) {
+                videoContainer.appendChild(createVideoThumbnail(video.thumbnail_url, originalUrl));
+              }
+            });
+            videoEl.onerror = () => {
+              videoEl.style.display = 'none';
+              if (video.thumbnail_url) {
+                videoContainer.appendChild(createVideoThumbnail(video.thumbnail_url, originalUrl));
+              }
+            };
+            videoContainer.appendChild(videoEl);
+          } else if (video.thumbnail_url) {
+            videoContainer.appendChild(createVideoThumbnail(video.thumbnail_url, originalUrl));
+          }
+          card.appendChild(videoContainer);
+        }
+      }
+
+      return card;
+    }
+
+    function getContentTypeFromUrl(url) {
+      const match = url.match(/\.(jpg|jpeg|png|gif|webp|mp4|webm)$/i);
+      if (!match) return 'application/octet-stream';
+      const ext = match[1].toLowerCase();
+      const types = {
+        jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+        gif: 'image/gif', webp: 'image/webp',
+        mp4: 'video/mp4', webm: 'video/webm'
+      };
+      return types[ext] || 'application/octet-stream';
+    }
+
+    async function fetchMediaAsBlob(url) {
+      return new Promise((resolve, reject) => {
+        GM.xmlHttpRequest({
+          method: 'GET',
+          url: url,
+          responseType: 'arraybuffer',
+          onload: (r) => {
+            if (r.status === 200) {
+              try {
+                let contentType = 'application/octet-stream';
+                if (typeof r.getResponseHeader === 'function') {
+                  contentType = r.getResponseHeader('Content-Type') || getContentTypeFromUrl(url);
+                } else if (r.responseHeaders) {
+                  const match = r.responseHeaders.match(/content-type:\s*([^\r\n]+)/i);
+                  contentType = match ? match[1].trim() : getContentTypeFromUrl(url);
+                } else {
+                  contentType = getContentTypeFromUrl(url);
+                }
+                const blob = new Blob([r.response], { type: contentType });
+                resolve(URL.createObjectURL(blob));
+              } catch (e) {
+                reject(e);
+              }
+            } else {
+              reject(new Error(`HTTP ${r.status}`));
+            }
+          },
+          onerror: reject,
+          ontimeout: () => reject(new Error('Timeout'))
+        });
+      });
+    }
+
+    function createMediaImage(url, onClick) {
+      const img = document.createElement('img');
+      img.style.cssText = 'max-width:100%;max-height:400px;height:auto;border-radius:4px;cursor:pointer';
+      img.onclick = onClick || (() => window.open(url, '_blank'));
+      img.onerror = () => { img.style.display = 'none'; };
+      fetchMediaAsBlob(url).then(blobUrl => {
+        img.src = blobUrl;
+      }).catch(() => {
+        img.style.display = 'none';
+      });
+      return img;
+    }
+
+    function createVideoThumbnail(thumbnailUrl, originalUrl) {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:relative;cursor:pointer';
+      wrapper.onclick = () => window.open(originalUrl, '_blank');
+
+      const img = createMediaImage(thumbnailUrl);
+      wrapper.appendChild(img);
+
+      const playBtn = document.createElement('div');
+      playBtn.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff';
+      playBtn.innerHTML = '▶';
+      wrapper.appendChild(playBtn);
+
+      return wrapper;
+    }
+
+    async function createXEmbed(url) {
+      const embedContainer = document.createElement('div');
+      embedContainer.className = 'embedContainer';
+      applyEmbedStyles(embedContainer);
+
+      try {
+        const postInfo = getXPostInfo(url);
+        if (!postInfo) {
+          throw new Error('Invalid X/Twitter URL');
+        }
+
+        const response = await new Promise((resolve, reject) => {
+          GM.xmlHttpRequest({
+            method: 'GET',
+            url: `https://api.fxtwitter.com/${encodeURIComponent(postInfo.username)}/status/${postInfo.statusId}`,
+            onload: (r) => {
+              if (r.status === 200) {
+                try {
+                  resolve(JSON.parse(r.responseText));
+                } catch (e) {
+                  reject(e);
+                }
+              } else {
+                reject(new Error(`HTTP ${r.status}`));
+              }
+            },
+            onerror: reject,
+            ontimeout: () => reject(new Error('Timeout'))
+          });
+        });
+        embedContainer.appendChild(createFxEmbedCard(response, url));
+      } catch (e) {
+        embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+      }
+      return embedContainer;
+    }
+
+    function addEmbedButton(link, createEmbedFn) {
+      if (link.nextSibling?.classList?.contains('embedButton') ||
+        link.closest('.embedContainer, .embed-wrapper, [data-embed], .embed')) {
+        return;
+      }
+
+      const embedButton = document.createElement('span');
+      embedButton.className = 'embedButton glowOnHover';
+      embedButton.textContent = '[Embed]';
+
+      embedButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const embedContainer = embedButton.nextElementSibling;
+        if (embedContainer?.classList.contains('embedContainer')) {
+          embedContainer.remove();
+          embedButton.textContent = '[Embed]';
+        } else {
+          embedButton.textContent = '[Loading...]';
+          embedButton.style.pointerEvents = 'none';
+          try {
+            const newContainer = await createEmbedFn(link.href);
+            embedButton.parentNode.insertBefore(newContainer, embedButton.nextSibling);
+            embedButton.textContent = '[Remove]';
+          } catch (error) {
+            embedButton.textContent = '[Embed]';
+            console.error('Failed to create embed:', error);
+          } finally {
+            embedButton.style.pointerEvents = 'auto';
+          }
+        }
+      });
+
+      link.nextSibling
+        ? link.parentNode.insertBefore(embedButton, link.nextSibling)
+        : link.parentNode.appendChild(embedButton);
+    }
+
+    function processXLink(link) {
+      if (link.dataset.enhanced) return;
+      if (isInsideCodeblock(link)) return;
+      if (!isXLink(link.href)) return;
+      link.dataset.enhanced = "1";
+
+      if (showIconsX) {
+        link.innerHTML = `${X_ICON} ${link.textContent.trim()}`;
+      }
+
+      if (enableEmbedsX && getXPostId(link.href)) {
+        addEmbedButton(link, createXEmbed);
+      }
+    }
+
+    function isBskyLink(url) {
+      try {
+        const u = new URL(url);
+        return u.hostname.includes('bsky.app');
+      } catch (e) { }
+      return false;
+    }
+
+    function getBskyPostId(url) {
+      try {
+        const u = new URL(url);
+        const match = u.pathname.match(/\/profile\/[^\/]+\/post\/([a-zA-Z0-9_-]+)/);
+        return match ? match[1] : null;
+      } catch (e) { }
+      return null;
+    }
+
+    function extractBskyMedia(html) {
+      const result = { images: [], videos: [], title: null, author: null };
+
+      const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+      if (ogTitleMatch && ogTitleMatch[1]) {
+        result.title = ogTitleMatch[1].trim();
+      }
+      if (!result.title) {
+        const twitterTitleMatch = html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i);
+        if (twitterTitleMatch && twitterTitleMatch[1]) {
+          result.title = twitterTitleMatch[1].trim();
+        }
+      }
+
+      const ogSiteNameMatch = html.match(/<meta\s+property=["']og:site_name["']\s+content=["']([^"']+)["']/i);
+      if (ogSiteNameMatch && ogSiteNameMatch[1]) {
+        result.author = ogSiteNameMatch[1].trim();
+      }
+
+      const ogImageMatches = html.matchAll(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/gi);
+      for (const match of ogImageMatches) {
+        if (match[1] && !match[1].includes('embed.bsky.app')) {
+          result.images.push(match[1].trim());
+        }
+      }
+
+      if (result.images.length === 0) {
+        const twitterImageMatch = html.match(/<meta\s+name=["']twitter:image["']\s+content=["']([^"']+)["']/i);
+        if (twitterImageMatch && twitterImageMatch[1] && !twitterImageMatch[1].includes('embed.bsky.app')) {
+          result.images.push(twitterImageMatch[1].trim());
+        }
+      }
+
+      const ogVideoMatch = html.match(/<meta\s+property=["']og:video["']\s+content=["']([^"']+)["']/i);
+      if (ogVideoMatch && ogVideoMatch[1]) {
+        result.videos.push(ogVideoMatch[1].trim());
+      }
+
+      const ogVideoImageMatch = html.match(/<meta\s+property=["']og:video:image["']\s+content=["']([^"']+)["']/i);
+      if (ogVideoImageMatch && ogVideoImageMatch[1] && result.videos.length > 0) {
+        result.videos[0] = { url: result.videos[0], thumbnail: ogVideoImageMatch[1].trim() };
+      }
+
+      const jsonLdMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+      if (jsonLdMatch) {
+        try {
+          const jsonLd = JSON.parse(jsonLdMatch[1]);
+          if (jsonLd.image && !result.images.length) {
+            if (Array.isArray(jsonLd.image)) {
+              result.images = jsonLd.image.map(img => typeof img === 'string' ? img : img.url || img.contentUrl).filter(Boolean);
+            } else if (typeof jsonLd.image === 'string') {
+              result.images.push(jsonLd.image);
+            } else if (jsonLd.image.url || jsonLd.image.contentUrl) {
+              result.images.push(jsonLd.image.url || jsonLd.image.contentUrl);
+            }
+          }
+        } catch (e) { }
+      }
+
+      return result;
+    }
+
+    async function createBskyEmbed(url) {
+      const embedContainer = document.createElement('div');
+      embedContainer.className = 'embedContainer';
+      applyEmbedStyles(embedContainer);
+
+      try {
+        const [oembedResponse, pageHtml] = await Promise.all([
+          new Promise((resolve) => {
+            GM.xmlHttpRequest({
+              method: 'GET',
+              url: `https://embed.bsky.app/oembed?url=${encodeURIComponent(url)}&maxwidth=600`,
+              onload: (r) => {
+                if (r.status === 200) {
+                  try {
+                    resolve(JSON.parse(r.responseText));
+                  } catch (e) {
+                    resolve(null);
+                  }
+                } else {
+                  resolve(null);
+                }
+              },
+              onerror: () => resolve(null),
+              ontimeout: () => resolve(null)
+            });
+          }),
+          new Promise((resolve) => {
+            GM.xmlHttpRequest({
+              method: 'GET',
+              url: url,
+              onload: (r) => {
+                if (r.status === 200) {
+                  resolve(r.responseText);
+                } else {
+                  resolve(null);
+                }
+              },
+              onerror: () => resolve(null),
+              ontimeout: () => resolve(null)
+            });
+          })
+        ]);
+
+        const card = document.createElement('div');
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '10px';
+
+        let mediaData = { images: [], videos: [], title: null, author: null };
+        if (pageHtml) {
+          mediaData = extractBskyMedia(pageHtml);
+        }
+
+        const authorName = oembedResponse?.author_name || mediaData.author || 'Bluesky';
+        const authorUrl = oembedResponse?.author_url || url;
+        const authorDiv = createAuthorDiv(authorName, authorUrl);
+        if (authorDiv) card.appendChild(authorDiv);
+
+        if (oembedResponse?.html) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = oembedResponse.html;
+          const blockquote = tempDiv.querySelector('blockquote');
+          if (blockquote) {
+            const textDiv = document.createElement('div');
+            textDiv.style.color = 'var(--text-color, #fff)';
+            textDiv.style.whiteSpace = 'pre-wrap';
+            textDiv.style.wordWrap = 'break-word';
+            const textContent = blockquote.cloneNode(true);
+            textContent.querySelectorAll('script').forEach(s => s.remove());
+            textDiv.textContent = textContent.textContent || blockquote.textContent;
+            card.appendChild(textDiv);
+          }
+        }
+
+        if (mediaData.images.length > 0) {
+          const mediaContainer = document.createElement('div');
+          mediaContainer.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
+          mediaData.images.forEach(imageUrl => {
+            mediaContainer.appendChild(createMediaImage(imageUrl));
+          });
+          card.appendChild(mediaContainer);
+        }
+
+        if (mediaData.videos.length > 0) {
+          mediaData.videos.forEach(video => {
+            const videoContainer = document.createElement('div');
+            videoContainer.style.marginTop = '8px';
+
+            if (typeof video === 'object' && video.thumbnail) {
+              videoContainer.appendChild(createVideoThumbnail(video.thumbnail, url));
+            } else if (typeof video === 'string') {
+              const videoEl = document.createElement('video');
+              videoEl.controls = true;
+              videoEl.style.cssText = 'max-width:100%;height:auto;border-radius:4px;display:block';
+              fetchMediaAsBlob(video).then(blobUrl => {
+                videoEl.src = blobUrl;
+              }).catch(() => {
+                videoEl.style.display = 'none';
+              });
+              videoEl.onerror = () => { videoEl.style.display = 'none'; };
+              videoContainer.appendChild(videoEl);
+            }
+            card.appendChild(videoContainer);
+          });
+        }
+
+        if (oembedResponse?.thumbnail_url && mediaData.images.length === 0 && mediaData.videos.length === 0) {
+          card.appendChild(createMediaImage(oembedResponse.thumbnail_url, () => window.open(url, '_blank')));
+        }
+
+        embedContainer.appendChild(card);
+      } catch (e) {
+        console.error('Bluesky embed error:', e);
+        embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+      }
+      return embedContainer;
+    }
+
+    async function createRentryEmbed(url) {
+      const embedContainer = document.createElement('div');
+      embedContainer.className = 'embedContainer';
+      applyEmbedStyles(embedContainer);
+
+      try {
+        const rentryKey = getRentryKey(url);
+        if (!rentryKey) {
+          throw new Error('Invalid Rentry URL');
+        }
+
+        const baseUrl = url.includes('rentry.org') ? 'https://rentry.org' : 'https://rentry.co';
+        const pageUrl = `${baseUrl}/${rentryKey}`;
+
+        const html = await new Promise((resolve, reject) => {
+          GM.xmlHttpRequest({
+            method: 'GET',
+            url: pageUrl,
+            onload: (r) => {
+              if (r.status === 200) {
+                resolve(r.responseText);
+              } else {
+                reject(new Error(`HTTP ${r.status}`));
+              }
+            },
+            onerror: reject,
+            ontimeout: () => reject(new Error('Timeout'))
+          });
+        });
+
+        let title = null;
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch) {
+          title = titleMatch[1].replace(/\s*-\s*rentry\.(co|org)/i, '').trim();
+        }
+
+        let content = null;
+        const contentMatch = html.match(/<div[^>]*class="[^"]*markdown[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+          html.match(/<div[^>]*id=["']content["'][^>]*>([\s\S]*?)<\/div>/i) ||
+          html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+
+        if (contentMatch && contentMatch[1]) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = contentMatch[1];
+          tempDiv.querySelectorAll('script, iframe, object, embed').forEach(el => el.remove());
+          content = tempDiv.innerHTML;
+        }
+
+        if (!content) {
+          const textareaMatch = html.match(/<textarea[^>]*id=["']text["'][^>]*>([\s\S]*?)<\/textarea>/i);
+          if (textareaMatch && textareaMatch[1]) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = textareaMatch[1].replace(/&amp;/g, '&');
+            content = tempDiv.textContent || tempDiv.innerText || textareaMatch[1];
+          }
+        }
+
+        if (!content) {
+          throw new Error('Could not extract content from Rentry page');
+        }
+
+        const card = document.createElement('div');
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '10px';
+
+        const titleDiv = document.createElement('div');
+        titleDiv.style.cssText = 'font-weight:bold;color:var(--text-color,#fff)';
+        titleDiv.textContent = title ? `Rentry: ${title}` : `Rentry: ${rentryKey}`;
+        card.appendChild(titleDiv);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.style.cssText = 'padding:12px;border-radius:4px;overflow-x:auto;max-height:600px;overflow-y:auto;color:var(--text-color,#fff);word-wrap:break-word';
+
+        if (content.includes('<')) {
+          contentDiv.innerHTML = content;
+          contentDiv.querySelectorAll('script').forEach(script => script.remove());
+          contentDiv.querySelectorAll('a').forEach(link => {
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+          });
+        } else {
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'white-space:pre-wrap;word-wrap:break-word;font-family:monospace;font-size:12px;margin:0';
+          pre.textContent = content;
+          contentDiv.appendChild(pre);
+        }
+
+        card.appendChild(contentDiv);
+        embedContainer.appendChild(card);
+      } catch (e) {
+        console.error('Rentry embed error:', e);
+        embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+      }
+      return embedContainer;
+    }
+
+    async function createPastebinEmbed(url) {
+      const embedContainer = document.createElement('div');
+      embedContainer.className = 'embedContainer';
+      applyEmbedStyles(embedContainer);
+
+      try {
+        const pasteKey = getPastebinKey(url);
+        if (!pasteKey) {
+          throw new Error('Invalid Pastebin URL');
+        }
+
+        const rawUrl = `https://pastebin.com/raw/${pasteKey}`;
+        const content = await new Promise((resolve, reject) => {
+          GM.xmlHttpRequest({
+            method: 'GET',
+            url: rawUrl,
+            onload: (r) => {
+              if (r.status === 200) {
+                resolve(r.responseText);
+              } else {
+                reject(new Error(`HTTP ${r.status}`));
+              }
+            },
+            onerror: reject,
+            ontimeout: () => reject(new Error('Timeout'))
+          });
+        });
+
+        const card = document.createElement('div');
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '10px';
+
+        const titleDiv = document.createElement('div');
+        titleDiv.style.cssText = 'font-weight:bold;color:var(--text-color,#fff)';
+        titleDiv.textContent = `Pastebin: ${pasteKey}`;
+        card.appendChild(titleDiv);
+
+        const contentDiv = document.createElement('pre');
+        contentDiv.style.cssText = 'padding:12px;border-radius:4px;overflow-x:auto;max-height:400px;overflow-y:auto;color:var(--text-color,#fff);white-space:pre-wrap;word-wrap:break-word;font-family:monospace;font-size:12px;margin:0';
+        contentDiv.textContent = content;
+        card.appendChild(contentDiv);
+
+        embedContainer.appendChild(card);
+      } catch (e) {
+        console.error('Pastebin embed error:', e);
+        embedContainer.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+      }
+      return embedContainer;
+    }
+
+    function processBskyLink(link) {
+      if (link.dataset.enhanced) return;
+      if (isInsideCodeblock(link)) return;
+      if (!isBskyLink(link.href)) return;
+      link.dataset.enhanced = "1";
+
+      if (showIconsBsky) {
+        link.innerHTML = `${BSKY_ICON} ${link.textContent.trim()}`;
+      }
+
+      if (enableEmbedsBsky && getBskyPostId(link.href)) {
+        addEmbedButton(link, createBskyEmbed);
+      }
+    }
+
+    function processLinks(root = document) {
+      if (showIconsYoutube || showThumbnailsYoutube) {
+        root.querySelectorAll('a[href*="youtu"]').forEach(processYouTubeLink);
+      }
+      if (showIconsTwitch || showThumbnailsTwitch) {
+        root.querySelectorAll('a[href*="twitch"]').forEach(processTwitchLink);
+      }
+      if (showIconsRentry || enableEmbedsRentry) {
+        root.querySelectorAll('a[href*="rentry.co"], a[href*="rentry.org"]').forEach(processRentryLink);
+      }
+      if (showIconsCatbox) {
+        root.querySelectorAll('a[href*="catbox.moe"]').forEach(processCatboxLink);
+      }
+      if (showIconsPastebin || enableEmbedsPastebin) {
+        root.querySelectorAll('a[href*="pastebin.com"]').forEach(processPastebinLink);
+      }
+      if (showIconsX || enableEmbedsX) {
+        root.querySelectorAll('a[href*="x.com"], a[href*="twitter.com"], a[href*="nitter.net"], a[href*="nitter.poast.org"], a[href*="xcancel.com"], a[href*="nitter.space"]').forEach(processXLink);
+      }
+      if (showIconsBsky || enableEmbedsBsky) {
+        root.querySelectorAll('a[href*="bsky.app"]').forEach(processBskyLink);
+      }
+    }
+
+    processLinks(document);
+
+    var enhanceLinksObserver = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var added = mutations[i].addedNodes;
+        for (var j = 0; j < added.length; j++) {
+          if (added[j].nodeType === 1) processLinks(added[j]);
+        }
+      }
+    });
+    enhanceLinksObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  var sauceLinksWired = false;
+
+  function initSauceLinks() {
+    if (sauceLinksWired) return;
+    if (!ssSettings.sauceLinks) return;
+    const iqdbEnabled = !!ssSettings.sauceIqdb;
+    const saucenaoEnabled = !!ssSettings.sauceSaucenao;
+    const pixivEnabled = !!ssSettings.saucePixiv;
+    if (!iqdbEnabled && !saucenaoEnabled && !pixivEnabled) return;
+    sauceLinksWired = true;
+
+    const services = [
+      {
+        key: "iqdb",
+        label: "iqdb",
+        enabled: iqdbEnabled,
+        method: "post",
+        url: "https://iqdb.org/",
+        fileField: "file",
+      },
+      {
+        key: "saucenao",
+        label: "sauce",
+        enabled: saucenaoEnabled,
+        method: "post",
+        url: "https://saucenao.com/search.php",
+        fileField: "file",
+      },
+      {
+        key: "pixiv",
+        label: "pixiv",
+        enabled: pixivEnabled,
+        method: "pixiv",
+      },
+    ];
+
+    function getImageUrl(detailDiv) {
+      let imgSrc = null;
+      const imageContainer = detailDiv.closest('.uploadCell, .postCell, .opCell');
+
+      if (imageContainer) {
+        const thumbImg = imageContainer.querySelector('.imgLink > img');
+        const thumbSrc = thumbImg?.getAttribute("src");
+        if (thumbImg && thumbSrc?.startsWith('/.media/t_')) {
+          imgSrc = thumbSrc;
+        }
+
+        if (!imgSrc) {
+          const imgLink = imageContainer.querySelector('.imgLink');
+          if (imgLink) {
+            imgSrc = imgLink.getAttribute('href');
+          }
+        }
+      }
+
+      if (!imgSrc) {
+        return null;
+      }
+
+      let origin = window.location.origin;
+
+      if (imgSrc.startsWith("//")) {
+        return window.location.protocol + imgSrc;
+      } else if (imgSrc.startsWith("/")) {
+        return origin + imgSrc;
+      } else if (/^https?:\/\//.test(imgSrc)) {
+        return imgSrc;
+      } else {
+        return origin + "/" + imgSrc;
+      }
+    }
+
+    async function fetchImageBlob(url) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch image");
+      return await response.blob();
+    }
+
+    function getPixivId(detailDiv) {
+      const origNameLink = detailDiv.querySelector('.originalNameLink');
+      if (!origNameLink) return null;
+      const filename = origNameLink.getAttribute('download') || origNameLink.textContent;
+      const match = filename && filename.match(/^(\d+)_p\d+\./);
+      return match ? match[1] : null;
+    }
+
+    function submitImageToService({ url, fileField, file }) {
+      const form = document.createElement("form");
+      form.action = url;
+      form.method = "POST";
+      form.enctype = "multipart/form-data";
+      form.target = "_blank";
+      form.style.display = "none";
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.name = fileField;
+      form.appendChild(input);
+
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+
+      document.body.appendChild(form);
+      form.submit();
+      setTimeout(() => form.remove(), 10000);
+    }
+
+    function addSauceLinksToElement(detailDiv) {
+      if (detailDiv.classList.contains('sauceLinksProcessed')) {
+        return;
+      }
+
+      detailDiv.querySelectorAll('.sauceLinksContainer').forEach(el => el.remove());
+
+      const imgUrl = getImageUrl(detailDiv);
+      if (!imgUrl) {
+        return;
+      }
+
+      const container = document.createElement('div');
+      container.className = 'sauceLinksContainer';
+      container.style.marginBottom = '3px';
+      container.style.display = 'inline-flex';
+      container.style.flexWrap = 'wrap';
+      container.style.gap = '6px';
+
+      let anyLink = false;
+
+      services.forEach(service => {
+        if (!service.enabled) {
+          return;
+        }
+
+        const a = document.createElement('a');
+        a.className = 'sauceLink';
+        a.target = '_blank';
+        a.style.fontSize = '90%';
+        a.textContent = service.label;
+
+        if (service.method === "post") {
+          a.href = "#";
+          a.title = `Upload thumbnail to ${service.label}`;
+          a.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+              const blob = await fetchImageBlob(imgUrl);
+              const file = new File([blob], "image.png", { type: blob.type || "image/png" });
+              submitImageToService({ url: service.url, fileField: service.fileField, file });
+            } catch (err) {
+              showToast("Failed to upload thumbnail.", "red", 2500);
+            }
+          });
+        } else if (service.method === "pixiv") {
+          const pixivId = getPixivId(detailDiv);
+          if (pixivId) {
+            a.href = `https://www.pixiv.net/artworks/${pixivId}`;
+            a.title = "Open Pixiv artwork";
+          } else {
+            return;
+          }
+        }
+
+        container.appendChild(a);
+        anyLink = true;
+      });
+
+      if (anyLink) {
+        detailDiv.classList.add('sauceLinksProcessed');
+        detailDiv.after(container);
+      }
+    }
+
+    function observeAllUploadDetails(container = document) {
+      const details = container.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)');
+      details.forEach(detailDiv => addSauceLinksToElement(detailDiv));
+    }
+    observeAllUploadDetails();
+
+    const pendingUploadDetails = new Set();
+    const debouncedProcessUploadDetails = debounce(() => {
+      pendingUploadDetails.forEach(detailDiv => addSauceLinksToElement(detailDiv));
+      pendingUploadDetails.clear();
+    }, 50);
+
+    function collectUploadDetails(node) {
+      if (node.nodeType !== 1) return;
+      if (node.classList && node.classList.contains('uploadDetails')) {
+        pendingUploadDetails.add(node);
+      } else if (node.querySelectorAll) {
+        node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(n => pendingUploadDetails.add(n));
+      }
+    }
+
+    const divPosts = document.querySelector('.divPosts');
+    if (divPosts) {
+      const saucePostsObserver = new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          var nodes = mutations[i].addedNodes;
+          for (var j = 0; j < nodes.length; j++) collectUploadDetails(nodes[j]);
+        }
+        debouncedProcessUploadDetails();
+      });
+      saucePostsObserver.observe(divPosts, { childList: true, subtree: true });
+    }
+
+    const sauceBodyObserver = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var nodes = mutations[i].addedNodes;
+        for (var j = 0; j < nodes.length; j++) {
+          var node = nodes[j];
+          if (node.nodeType !== 1) continue;
+          if (node.classList && (node.classList.contains('quoteTooltip') || node.classList.contains('innerPost'))) {
+            node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+          } else if (node.querySelectorAll) {
+            node.querySelectorAll('.quoteTooltip .uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+            node.querySelectorAll('.innerPost .uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+          }
+        }
+      }
+    });
+    sauceBodyObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   var Features = {
     // Feature: Catalog Links
     catalogLinks: function (on) {
@@ -1919,7 +3658,67 @@
           autoHideHeaderEl = null;
         }
       }
-    }
+    },
+    // Feature: Stop animated PNGs
+    enablePNGstop: function (on) {
+      if (on) {
+        processAllAPNGThumbs(document);
+        if (!apngObserver) {
+          apngObserver = new MutationObserver(function (mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+              var nodes = mutations[i].addedNodes;
+              for (var j = 0; j < nodes.length; j++) {
+                if (nodes[j].nodeType === 1) processAllAPNGThumbs(nodes[j]);
+              }
+            }
+          });
+          apngObserver.observe(document.body, { childList: true, subtree: true });
+        }
+      } else {
+        if (apngObserver) { apngObserver.disconnect(); apngObserver = null; }
+        restoreAPNGThumbs();
+      }
+    },
+    // Feature: Highlight New IDs
+    highlightNewIds: function (on) {
+      if (pageType.isCatalog || pageType.isLast) return;
+      if (!on) {
+        if (highlightIdsObserver) { highlightIdsObserver.disconnect(); highlightIdsObserver = null; }
+        clearHighlightNewIds();
+        return;
+      }
+      if (!document.querySelector(".spanId")) return;
+      applyHighlightNewIds();
+      if (!highlightIdsObserver) {
+        debouncedHighlightIds = debounce(applyHighlightNewIds, 50);
+        var posts = document.querySelector(".divPosts");
+        if (posts) {
+          highlightIdsObserver = new MutationObserver(function (mutations) {
+            var needsUpdate = false;
+            for (var i = 0; i < mutations.length && !needsUpdate; i++) {
+              var nodes = mutations[i].addedNodes;
+              for (var j = 0; j < nodes.length; j++) {
+                var node = nodes[j];
+                if (node.nodeType !== 1) continue;
+                if ((node.matches && node.matches(".labelId")) ||
+                  (node.querySelector && node.querySelector(".labelId"))) {
+                  needsUpdate = true;
+                  break;
+                }
+              }
+            }
+            if (needsUpdate) debouncedHighlightIds();
+          });
+          highlightIdsObserver.observe(posts, { childList: true, subtree: true });
+        }
+      }
+    },
+    // Feature: Enhanced Links
+    showLinkIcons: function () { initEnhancedLinks(); },
+    linkThumbnails: function () { initEnhancedLinks(); },
+    linkEmbeds: function () { initEnhancedLinks(); },
+    // Feature: Sauce Links
+    sauceLinks: function () { initSauceLinks(); }
   };
 
   function applyAll() {
@@ -1963,6 +3762,8 @@
     if (lastFiftyObserver) { lastFiftyObserver.disconnect(); lastFiftyObserver = null; }
     if (truncObserver) { truncObserver.disconnect(); truncObserver = null; }
     if (hoverObserver) { hoverObserver.disconnect(); hoverObserver = null; }
+    if (apngObserver) { apngObserver.disconnect(); apngObserver = null; }
+    if (highlightIdsObserver) { highlightIdsObserver.disconnect(); highlightIdsObserver = null; }
   }
 
   // Feature: Toasts
