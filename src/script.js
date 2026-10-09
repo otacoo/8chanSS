@@ -3891,7 +3891,7 @@
   }
 
   function scrollToReply(isOwnReply, getNext) {
-    var anchors = document.querySelectorAll(isOwnReply ? "a.youName" : "a.quoteLink.you");
+    var anchors = document.querySelectorAll(isOwnReply ? "a.youName" : "a.quoteLink.postLink--you");
     var cells = [];
     for (var i = 0; i < anchors.length; i++) {
       var cell = anchors[i].closest(".postCell, .opCell");
@@ -3944,6 +3944,24 @@
       var t = e.target;
       var inQR = t && (t.id === "qrbody" || t.id === "fieldMessage");
 
+      if (e.key === "Tab" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        var qrbody = document.getElementById("qrbody");
+        var captcha = document.getElementById("QRfieldCaptcha");
+        if (qrbody) {
+          if (document.activeElement === qrbody && captcha) {
+            e.preventDefault();
+            captcha.focus();
+          } else if (document.activeElement === captcha) {
+            e.preventDefault();
+            qrbody.focus();
+          } else if (document.activeElement !== qrbody) {
+            e.preventDefault();
+            qrbody.focus();
+          }
+        }
+        return;
+      }
+
       if (inQR) {
         if (e.ctrlKey && e.key === "Enter") {
           e.preventDefault();
@@ -3966,25 +3984,7 @@
       }
 
       var tag = t && t.tagName;
-      if (t && e.key !== "Tab" && (tag === "INPUT" || tag === "TEXTAREA" || t.isContentEditable)) return;
-
-      if (e.key === "Tab") {
-        var qrbody = document.getElementById("qrbody");
-        var captcha = document.getElementById("QRfieldCaptcha");
-        if (qrbody) {
-          if (document.activeElement === qrbody && captcha) {
-            e.preventDefault();
-            captcha.focus();
-          } else if (document.activeElement === captcha) {
-            e.preventDefault();
-            qrbody.focus();
-          } else if (document.activeElement !== qrbody) {
-            e.preventDefault();
-            qrbody.focus();
-          }
-        }
-        return;
-      }
+      if (t && (tag === "INPUT" || tag === "TEXTAREA" || t.isContentEditable)) return;
 
       if (e.ctrlKey && (e.key === "q" || e.key === "Q")) {
         e.preventDefault();
@@ -4018,7 +4018,13 @@
         var area = document.getElementById("qrbody");
         if (area) area.value = "";
         var quickReply = document.getElementById("quick-reply");
-        if (quickReply) quickReply.style.removeProperty("display");
+        if (quickReply) {
+          quickReply.style.removeProperty("display");
+          if (!quickReply.classList.contains("hidden")) {
+            var closeBtn = quickReply.querySelector(".close-btn");
+            if (closeBtn) closeBtn.click();
+          }
+        }
         var watcher = document.getElementById("watchedMenu");
         if (watcher) watcher.style.removeProperty("display");
         return;

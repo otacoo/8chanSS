@@ -9,7 +9,7 @@
   min-width: 300px;
 }
 
-:root.sticky-qr #quick-reply.floatingMenu {
+:root.sticky-qr #quick-reply.floatingMenu:not(.hidden) {
   display: block;
   top: auto !important;
   bottom: 0;
