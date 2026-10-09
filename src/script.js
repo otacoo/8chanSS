@@ -44,6 +44,7 @@
     catalogLinksNewTab: "enableHeaderCatalogLinks_openInNewTab",
     scrollArrows: "enableScrollArrows",
     bottomHeader: "enableBottomHeader",
+    autoHideHeaderScroll: "enableAutoHideHeaderScroll",
     faviconStyle: "customFavicon_faviconStyle",
     mascotOpacity: "enableMascots_mascotOpacity",
     mascotUrls: "enableMascots_mascotUrls",
@@ -54,6 +55,7 @@
     enableMediaPlayer: "enableMediaViewer",
     viewerStyle: "enableMediaViewer_viewerStyle",
     trackHoverPlayback: "trackMediaPlayback",
+    backlinkIcons: "enableBacklinkIcons",
     noPinInCatalog: "alwaysShowTW_noPinInCatalog",
     expandTW: "autoExpandTW",
     customTrunc: "truncFilenames_customTrunc",
@@ -76,6 +78,7 @@
     scrollArrows: false,
     arrowPageScroll: true,
     bottomHeader: false,
+    autoHideHeaderScroll: false,
     customFavicon: false,
     faviconStyle: "default",
     enableMascots: false,
@@ -98,6 +101,7 @@
     enableFitReplies: false,
     highlightOnYou: true,
     opBackground: false,
+    backlinkIcons: false,
     applyFixes: true,
     enableStickyQR: false,
     fadeQuickReply: false,
@@ -118,7 +122,6 @@
     lastFifty: false,
     catalogLinksNewTab: false,
     catalogFilters: {},
-    switchTimeFormat: false,
     truncFilenames: false,
     customTrunc: 15,
     enableShortcuts: false,
@@ -131,6 +134,7 @@
       page: "ss-general", title: "General", options: [
         { head: "Site" },
         { key: "bottomHeader", label: "Bottom Header", title: "Move nav header to bottom of viewport" },
+        { key: "autoHideHeaderScroll", label: "Auto-hide Header on Scroll" },
         {
           key: "catalogLinks", label: "Catalog Links", title: "Turn all board links in the header into /catalog.html links", sub: [
             { key: "catalogLinksNewTab", label: "Always open in new tab" }
@@ -142,6 +146,7 @@
           ]
         },
         { head: "Media" },
+        { key: "threadImageHover", label: "Image Hover" },
         {
           key: "blurSpoilers", label: "Blur Spoilers", sub: [
             { key: "removeSpoilers", label: "Remove Spoilers" }
@@ -159,7 +164,6 @@
           ]
         },
         { key: "trackHoverPlayback", label: "Track and Restore Hover Media Playback", title: "Remembers hover video/audio position" },
-        { key: "threadImageHover", label: "Thread Image Hover" },
         { head: "Thread Watcher" },
         { key: "noPinInCatalog", label: "Don't pin in Catalog" },
         { key: "smallFont", label: "Smaller font" },
@@ -224,6 +228,7 @@
         { key: "enableStickyQR", label: "Sticky Quick Reply" },
         { key: "fadeQuickReply", label: "Fade Quick Reply" },
         { key: "threadHideCloseBtn", label: "Hide Inline Close Button" },
+        { key: "backlinkIcons", label: "Backlink Icons" },
         { head: "Misc" },
         { key: "applyFixes", label: "Apply 8chanSS fixes", title: "Applies small fixes that must run before the page renders" }
       ]
@@ -231,7 +236,6 @@
     {
       page: "ss-misc", title: "Misc", options: [
         { head: "Site" },
-        { key: "switchTimeFormat", label: "Enable 12-hour Clock (AM/PM)" },
         {
           key: "truncFilenames", label: "Truncate filenames", sub: [
             { key: "customTrunc", label: "Max filename length (5-50)", type: "number", min: 5, max: 50 }
@@ -1304,45 +1308,10 @@
     }
   }
 
-  var timeFormatObserver = null;
   var truncObserver = null;
   var truncWired = false;
   var truncContainer = null;
   var debouncedTruncApply = null;
-
-  function convertTimeSpan(span) {
-    if (span.dataset.ssTimeConverted === "1") return;
-    var datetimeAttr = span.getAttribute("datetime");
-    if (!datetimeAttr) return;
-    var date = new Date(datetimeAttr);
-    if (isNaN(date.getTime())) return;
-    var hour = date.getHours();
-    var min = String(date.getMinutes()).padStart(2, "0");
-    var sec = String(date.getSeconds()).padStart(2, "0");
-    var ampm = hour >= 12 ? "PM" : "AM";
-    var hour12 = hour % 12 || 12;
-    var originalText = span.textContent.trim();
-    var datePartMatch = originalText.match(/^(.+?)\s+\d{1,2}:\d{2}:\d{2}/);
-    var datePart = datePartMatch ? datePartMatch[1].trim() : "";
-    span.dataset.ssOrigTime = originalText;
-    span.textContent = (datePart ? datePart + " " : "") + hour12 + ":" + min + ":" + sec + " " + ampm;
-    span.dataset.ssTimeConverted = "1";
-  }
-
-  function convertAllTimeSpans(root) {
-    var spans = (root || document).querySelectorAll("time.labelCreated");
-    for (var i = 0; i < spans.length; i++) convertTimeSpan(spans[i]);
-  }
-
-  function restoreTimeSpans() {
-    var spans = document.querySelectorAll('time.labelCreated[data-ss-time-converted="1"]');
-    for (var i = 0; i < spans.length; i++) {
-      var span = spans[i];
-      if (span.dataset.ssOrigTime) span.textContent = span.dataset.ssOrigTime;
-      delete span.dataset.ssOrigTime;
-      delete span.dataset.ssTimeConverted;
-    }
-  }
 
   function truncateLink(link, max) {
     var full = link.getAttribute("download");
@@ -1392,6 +1361,31 @@
       delete link.dataset.ssFullFilename;
       delete link.dataset.ssTruncatedFilename;
       link.removeAttribute("title");
+    }
+  }
+
+  var autoHideHeaderWired = false;
+  var autoHideHeaderEl = null;
+  var autoHideLastScrollY = 0;
+  var autoHideTicking = false;
+
+  function updateAutoHideHeader() {
+    autoHideTicking = false;
+    if (!autoHideHeaderEl) return;
+    var currentY = window.scrollY;
+    var direction = currentY > autoHideLastScrollY ? "down" : "up";
+    autoHideLastScrollY = currentY;
+    if (direction === "up" || currentY < 100) {
+      autoHideHeaderEl.classList.remove("nav-hidden");
+    } else if (currentY > 50) {
+      autoHideHeaderEl.classList.add("nav-hidden");
+    }
+  }
+
+  function onAutoHideScroll() {
+    if (!autoHideTicking) {
+      requestAnimationFrame(updateAutoHideHeader);
+      autoHideTicking = true;
     }
   }
 
@@ -1687,33 +1681,6 @@
         for (var i = 0; i < btns.length; i++) btns[i].remove();
       }
     },
-    // Feature: 12-hour Clock
-    switchTimeFormat: function (on) {
-      if (!on) {
-        if (timeFormatObserver) { timeFormatObserver.disconnect(); timeFormatObserver = null; }
-        restoreTimeSpans();
-        return;
-      }
-      if (pageType.isCatalog) return;
-      convertAllTimeSpans(document);
-      if (!timeFormatObserver) {
-        timeFormatObserver = new MutationObserver(function (mutations) {
-          for (var i = 0; i < mutations.length; i++) {
-            var nodes = mutations[i].addedNodes;
-            for (var j = 0; j < nodes.length; j++) {
-              if (nodes[j].nodeType !== 1) continue;
-              if (nodes[j].matches && nodes[j].matches("time.labelCreated")) {
-                convertTimeSpan(nodes[j]);
-              } else if (nodes[j].querySelectorAll) {
-                convertAllTimeSpans(nodes[j]);
-              }
-            }
-          }
-        });
-        var threads = document.getElementById("divThreads") || document.body;
-        timeFormatObserver.observe(threads, { childList: true, subtree: true });
-      }
-    },
     // Feature: Truncate Filenames
     truncFilenames: function (on) {
       if (pageType.isCatalog) return;
@@ -1768,6 +1735,31 @@
       } else if (!on && el) {
         el.remove();
       }
+    },
+    // Feature: Auto-hide Header on Scroll
+    autoHideHeaderScroll: function (on) {
+      if (on) {
+        var header = document.getElementById("dynamicHeaderThread");
+        if (!header) return;
+        rootToggle("ss-autohide-header", true);
+        autoHideHeaderEl = header;
+        autoHideLastScrollY = window.scrollY;
+        if (!autoHideHeaderWired) {
+          autoHideHeaderWired = true;
+          window.addEventListener("scroll", onAutoHideScroll, { passive: true });
+        }
+        updateAutoHideHeader();
+      } else {
+        rootToggle("ss-autohide-header", false);
+        if (autoHideHeaderWired) {
+          window.removeEventListener("scroll", onAutoHideScroll);
+          autoHideHeaderWired = false;
+        }
+        if (autoHideHeaderEl) {
+          autoHideHeaderEl.classList.remove("nav-hidden");
+          autoHideHeaderEl = null;
+        }
+      }
     }
   };
 
@@ -1794,6 +1786,7 @@
     opBackground: "op-background",
     fadeQuickReply: "fade-qr",
     threadHideCloseBtn: "hide-close-btn",
+    backlinkIcons: "backlink-icon",
     noPinInCatalog: "ss-nopin-catalog",
     smallFont: "ss-small-font",
     expandTW: "auto-expand-tw"
@@ -1809,7 +1802,6 @@
     if (mediaViewerObserver) { mediaViewerObserver.disconnect(); mediaViewerObserver = null; }
     if (catalogHidingObserver) { catalogHidingObserver.disconnect(); catalogHidingObserver = null; }
     if (lastFiftyObserver) { lastFiftyObserver.disconnect(); lastFiftyObserver = null; }
-    if (timeFormatObserver) { timeFormatObserver.disconnect(); timeFormatObserver = null; }
     if (truncObserver) { truncObserver.disconnect(); truncObserver = null; }
     if (hoverObserver) { hoverObserver.disconnect(); hoverObserver = null; }
   }
@@ -1824,8 +1816,9 @@
   };
 
   function sanitizeToastHTML(html) {
-    html = String(html).replace(/<(\/?)(?!a\b|b\b|i\b|u\b|strong\b|em\b)[^>]*>/gi, "");
-    html = html.replace(/<(b|i|u|strong|em)[^>]*>/gi, "<$1>");
+    html = String(html).replace(/<(?!\/?(?:a|b|i|u|strong|em|br)\b)[^>]*>/gi, "");
+    html = html.replace(/<(b|i|u|strong|em|br)\b[^>]*>/gi, "<$1>");
+    html = html.replace(/<\/(b|i|u|strong|em|br)\b[^>]*>/gi, "</$1>");
     html = html.replace(/<a\s+([^>]+)>/gi, function (match, attrs) {
       var allowed = "";
       attrs.replace(/(\w+)\s*=\s*(['"])(.*?)\2/gi, function (_, name, q, value) {
@@ -1873,7 +1866,7 @@
     saveSetting("ssVersion");
     if (!firstInstall) {
       showToast(
-        "8chanSS has updated to v" + VERSION + '. Check out the <b><a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">changelog</a></b>.',
+        "8chanSS has updated to v" + VERSION + '.<br>Check out the <b><a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">changelog</a></b>.',
         "blue",
         15000
       );
