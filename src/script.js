@@ -172,6 +172,7 @@
     sauceIqdb: false,
     sauceSaucenao: false,
     saucePixiv: false,
+    autoSaveDaily: false,
     enableShortcuts: false,
     updateNotif: true,
     ssVersion: ""
@@ -257,7 +258,7 @@
         { key: "hideNoCookieLink", label: "Hide No Cookie? Link" },
         { key: "hideJannyTools", label: "Hide Janitor Forms" },
         { key: "hlCurrentBoard", label: "Highlight Current Board" },
-        { key: "showReplyHeader", label: "Show Reply Header" },
+        { key: "showReplyHeader", label: "Reply Header" },
         {
           key: "customFavicon", label: "Custom Favicon", title: "Replace the site favicon with an 8chanSS style", sub: [
             {
@@ -344,6 +345,17 @@
             { key: "saucePixiv", label: "Pixiv (only added if filename matches Pixiv ID)" }
           ]
         }
+      ]
+    },
+    {
+      page: "ss-storage", title: "Storage", options: [
+        { key: "autoSaveDaily", label: "Save every day", title: "Saves your posts, watched threads and favorite boards once every 24 hours" },
+        { key: "saveMyPosts", label: "Save my posts", type: "button" },
+        { key: "saveWatchedThreads", label: "Save Current Watched Threads", type: "button" },
+        { key: "saveFavoriteBoards", label: "Save Current Favorite Boards", type: "button" },
+        { key: "restoreMyPosts", label: "Restore my posts", type: "button" },
+        { key: "restoreWatchedThreads", label: "Restore Watched Threads", type: "button" },
+        { key: "restoreFavoriteBoards", label: "Restore Favorite Boards", type: "button" }
       ]
     },
     { page: "ss-shortcuts", title: "Shortcuts", options: [
@@ -3718,7 +3730,17 @@
     linkThumbnails: function () { initEnhancedLinks(); },
     linkEmbeds: function () { initEnhancedLinks(); },
     // Feature: Sauce Links
-    sauceLinks: function () { initSauceLinks(); }
+    sauceLinks: function () { initSauceLinks(); },
+    // Feature: Daily auto-save
+    autoSaveDaily: function (on) {
+      if (autoSaveTimer) {
+        clearInterval(autoSaveTimer);
+        autoSaveTimer = null;
+      }
+      if (!on) return;
+      runAutoSave();
+      autoSaveTimer = setInterval(runAutoSave, 60 * 60 * 1000);
+    }
   };
 
   function applyAll() {
@@ -3764,6 +3786,7 @@
     if (hoverObserver) { hoverObserver.disconnect(); hoverObserver = null; }
     if (apngObserver) { apngObserver.disconnect(); apngObserver = null; }
     if (highlightIdsObserver) { highlightIdsObserver.disconnect(); highlightIdsObserver = null; }
+    if (autoSaveTimer) { clearInterval(autoSaveTimer); autoSaveTimer = null; }
   }
 
   // Feature: Toasts
@@ -4108,6 +4131,169 @@
     return box;
   }
 
+  var AUTO_SAVE_KEY = "8chanSS_lastAutoSave";
+  var AUTO_SAVE_INTERVAL = 24 * 60 * 60 * 1000;
+  var autoSaveTimer = null;
+
+  function collectYousData() {
+    var data = {};
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.slice(-5) === "-yous") data[key] = localStorage.getItem(key);
+      }
+    } catch (e) { }
+    return data;
+  }
+
+  function saveYousData() {
+    var data = collectYousData();
+    if (!Object.keys(data).length) return Promise.resolve(false);
+    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve(false);
+    return GM.setValue("8chanSS_savedMyPosts", JSON.stringify(data)).then(function () {
+      return true;
+    }).catch(function () {
+      return false;
+    });
+  }
+
+  function saveWatchedData() {
+    var watchedData;
+    try { watchedData = localStorage.getItem("watchedData"); } catch (e) { }
+    if (!watchedData) return Promise.resolve(false);
+    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve(false);
+    return GM.setValue("8chanSS_watchedData", watchedData).then(function () {
+      return true;
+    }).catch(function () {
+      return false;
+    });
+  }
+
+  function saveFavoriteBoardsData() {
+    var favoriteBoardsData;
+    try { favoriteBoardsData = localStorage.getItem("navBoardData"); } catch (e) { }
+    if (!favoriteBoardsData) return Promise.resolve(false);
+    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve(false);
+    return GM.setValue("8chanSS_savedFavoriteBoards", favoriteBoardsData).then(function () {
+      return true;
+    }).catch(function () {
+      return false;
+    });
+  }
+
+  function runAutoSave() {
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(AUTO_SAVE_KEY), 10) || 0; } catch (e) { }
+    if (Date.now() - last < AUTO_SAVE_INTERVAL) return;
+    try { localStorage.setItem(AUTO_SAVE_KEY, String(Date.now())); } catch (e) { }
+    saveYousData();
+    saveWatchedData();
+    saveFavoriteBoardsData();
+  }
+
+  var SS_BUTTONS = {
+    saveMyPosts: function () {
+      var data = collectYousData();
+      var count = Object.keys(data).length;
+      if (!count) {
+        showToast("No posts found in localStorage.", "orange", 2500);
+        return;
+      }
+      if (typeof GM === "undefined" || !GM.setValue) return;
+      GM.setValue("8chanSS_savedMyPosts", JSON.stringify(data)).then(function () {
+        showToast("My posts saved (" + count + " boards)!", "green", 2000);
+      }).catch(function () {
+        showToast("Failed to save my posts.", "red", 2500);
+      });
+    },
+    restoreMyPosts: function () {
+      if (typeof GM === "undefined" || !GM.getValue) return;
+      GM.getValue("8chanSS_savedMyPosts", null).then(function (raw) {
+        var data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch (e) { }
+        if (!data || typeof data !== "object") {
+          showToast("No saved posts found.", "orange", 2500);
+          return;
+        }
+        var count = 0;
+        Object.keys(data).forEach(function (k) {
+          try { localStorage.setItem(k, data[k]); count++; } catch (e) { }
+        });
+        showToast("My posts restored (" + count + " boards). Please reload the page.", "blue", 3000);
+      }).catch(function () {
+        showToast("Failed to restore my posts.", "red", 2500);
+      });
+    },
+    saveWatchedThreads: function () {
+      var watchedData;
+      try { watchedData = localStorage.getItem("watchedData"); } catch (e) { }
+      if (!watchedData) {
+        showToast("No watched threads found in localStorage.", "orange", 2500);
+        return;
+      }
+      if (typeof GM === "undefined" || !GM.setValue) return;
+      GM.setValue("8chanSS_watchedData", watchedData).then(function () {
+        showToast("Watched threads saved!", "green", 2000);
+      }).catch(function () {
+        showToast("Failed to save watched threads.", "red", 2500);
+      });
+    },
+    restoreWatchedThreads: function () {
+      if (typeof GM === "undefined" || !GM.getValue) return;
+      GM.getValue("8chanSS_watchedData", null).then(function (savedData) {
+        if (!savedData) {
+          showToast("No saved watched threads found.", "orange", 2500);
+          return;
+        }
+        try { localStorage.setItem("watchedData", savedData); } catch (e) { }
+        showToast("Watched threads restored. Please reload the page.", "blue", 3000);
+      }).catch(function () {
+        showToast("Failed to restore watched threads.", "red", 2500);
+      });
+    },
+    saveFavoriteBoards: function () {
+      var favoriteBoardsData;
+      try { favoriteBoardsData = localStorage.getItem("navBoardData"); } catch (e) { }
+      if (!favoriteBoardsData) {
+        showToast("No favorite boards found in localStorage.", "orange", 2500);
+        return;
+      }
+      if (typeof GM === "undefined" || !GM.setValue) return;
+      GM.setValue("8chanSS_savedFavoriteBoards", favoriteBoardsData).then(function () {
+        showToast("Favorite boards saved!", "green", 2000);
+      }).catch(function () {
+        showToast("Failed to save favorite boards.", "red", 2500);
+      });
+    },
+    restoreFavoriteBoards: function () {
+      if (typeof GM === "undefined" || !GM.getValue) return;
+      GM.getValue("8chanSS_savedFavoriteBoards", null).then(function (savedData) {
+        if (!savedData) {
+          showToast("No saved favorite boards found.", "orange", 2500);
+          return;
+        }
+        try { localStorage.setItem("navBoardData", savedData); } catch (e) { }
+        showToast("Favorite boards restored. Please reload the page.", "blue", 3000);
+      }).catch(function () {
+        showToast("Failed to restore favorite boards.", "red", 2500);
+      });
+    }
+  };
+
+  function makeButton(opt) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "ss-storage-btn";
+    button.textContent = opt.label;
+    button.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      var handler = SS_BUTTONS[opt.key];
+      if (handler) handler();
+    });
+    return button;
+  }
+
   function makeOptionLabel(opt) {
     var label = document.createElement("label");
     if (opt.title) label.title = opt.title;
@@ -4231,14 +4417,26 @@
     var panel = document.createElement("div");
     panel.className = "panelContents settingsPanel";
     panel.dataset.tabTitle = def.page;
+    var buttonGrid = null;
     def.options.forEach(function (opt) {
       if (opt.head) {
+        buttonGrid = null;
         var h = document.createElement("h3");
         h.className = "ss-subhead";
         h.textContent = opt.head;
         panel.appendChild(h);
         return;
       }
+      if (opt.type === "button") {
+        if (!buttonGrid) {
+          buttonGrid = document.createElement("div");
+          buttonGrid.className = "ss-button-grid";
+          panel.appendChild(buttonGrid);
+        }
+        buttonGrid.appendChild(makeButton(opt));
+        return;
+      }
+      buttonGrid = null;
       if (opt.sub && opt.sub.length) {
         var wrap = document.createElement("div");
         wrap.appendChild(makeOptionLabel(opt));

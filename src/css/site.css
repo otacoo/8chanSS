@@ -253,6 +253,34 @@
   flex-wrap: wrap;
 }
 
+/* --- Storage page buttons --- */
+.ss-button-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  gap: 8px;
+  margin: 0.5em 0;
+}
+
+.ss-button-grid::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--border-color, #888);
+  opacity: 0.6;
+}
+
+.ss-button-grid button {
+  width: 100%;
+  margin: 0;
+  padding: 2px;
+}
+
 .ss-sub[hidden] {
   display: none;
 }
