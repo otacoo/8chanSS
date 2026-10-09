@@ -515,14 +515,18 @@
   content: "\e065";
 }
 
-/* --- Gallery above menus --- */
+/* --- Z-indexes --- */
 div.modalPanel {
-  z-index: 306;
+  z-index: 500;
 }
 
-/* --- Side catalog backdrop (used by Sidebar) --- */
-#sideCatalogDiv {
-  z-index: 200;
+#dynamicHeaderThread {
+  z-index: 400;
+}
+
+#sideCatalog {
+  z-index: 300;
+  position: absolute;
   background: var(--background-gradient);
 }
 
@@ -568,7 +572,7 @@ a.originalNameLink[href$=".wav"] {
   padding: 5px;
   font-size: 12px;
   border-radius: 3px;
-  z-index: 1000;
+  z-index: 300;
   left: 0;
   top: 0;
   white-space: nowrap;
