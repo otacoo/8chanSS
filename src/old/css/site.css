@@ -1,0 +1,402 @@
+/* Unhide on DOM loaded */
+#dynamicAnnouncement,
+#panelMessage,
+#postingForm {
+    visibility: visible;
+}
+
+/* Cleanup */
+:root.hide-posting-form #postingForm,
+:root.hide-announcement #dynamicAnnouncement,
+:root.hide-panelmessage #panelMessage,
+:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:nth-child(1),
+:root.disable-banner #bannerImage,
+:root.hide-checkboxes .deletionCheckBox,
+:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:nth-child(1)>tr:nth-child(2),
+:root.hide-jannytools #boardContentLinks,
+:root.hide-jannytools #actionsForm,
+.watchedNotification::before,
+#navFadeEnd,
+#navFadeMid {
+    display: none;
+}
+
+/* Side Catalog */
+#sideCatalogDiv {
+    z-index: 200;
+    background: var(--background-gradient);
+}
+
+:root.is-catalog.show-catalog-form #postingForm {
+    display: block !important;
+}
+
+:root.is-thread footer {
+    visibility: hidden;
+    height: 0;
+}
+
+/* OP */
+:root.op-background .opCell>.innerOP {
+    padding-top: 0.25em;
+    width: 100%;
+    background: var(--contrast-color);
+    border: 1px solid var(--horizon-sep-color);
+    border-top-width: 0;
+    border-left-width: 0;
+}
+
+/* Header */
+nav.navHeader {
+    z-index: 300;
+}
+
+:not(:root.bottom-header) .navHeader {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+:root.bottom-header nav.navHeader {
+    top: auto !important;
+    bottom: 0 !important;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
+}
+
+:root.hl-currentBoard .navBoardsLink--current {
+    font-weight: 800;
+    color: var(--link-color) !important;
+    text-transform: uppercase;
+}
+
+:root.hl-currentBoard .navBoardsLink--current:hover {
+    color: var(--link-color-hover) !important;
+}
+
+/* (You) Replies */
+:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),
+:root.highlight-yous .innerOP:has(> .opHead.title > .youName),
+:root.highlight-yous .yourPost {
+    border-left: dashed #68b723 2px !important;
+}
+
+:root.highlight-yous .innerPost:has(>.divMessage>.you),
+:root.highlight-yous .innerPost:has(>.divMessage>*:not(div)>.you),
+:root.highlight-yous .innerPost:has(>.divMessage>*:not(div)>*:not(div)>.you),
+:root.highlight-yous .quotesYou {
+    border-left: solid var(--subject-color) 2px !important;
+}
+
+/* Fit Replies */
+:root.fit-replies :not(.hidden).innerPost {
+    margin-left: 10px;
+    display: flow-root;
+}
+
+:root.fit-replies :not(.hidden, .inlineQuote).innerPost {
+    margin-left: 0;
+}
+
+/* Filename & Thumbs */
+.multipleUploads .uploadCell:not(.expandedCell) {
+    max-width: 215px;
+}
+
+/* Blur Spoilers Option, for quoteTooltip only */
+:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],
+:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"],
+:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"] {
+    filter: blur(5px) !important;
+    transition: filter 0.3s ease;
+}
+/* Blur spoilers: blurred image */
+a.imgLink img.ss-spoiler-blurred {
+    filter: blur(5px);
+    transition: filter 0.3s ease;
+}
+a.imgLink img.ss-spoiler-blurred:hover {
+    filter: none;
+}
+/* Blur spoilers: border-only (removeSpoilers sub-option) */
+a.imgLink img.ss-spoiler-border {
+    border: 1px dotted var(--border-color);
+}
+
+/* Inline Expanded, not Hover */
+:root.fit-images :not(ruffle-player,audio).imgExpanded {
+    max-height: 90vh !important;
+    object-fit: contain;
+    width: auto !important;
+}
+
+/* Thread Watcher */
+:not(:root.auto-expand-tw) #watchedMenu .floatingContainer {
+    overflow-x: hidden;
+    overflow-wrap: break-word;
+}
+
+:root.auto-expand-tw #watchedMenu .floatingContainer {
+    height: fit-content !important;
+    padding-bottom: 10px;
+    resize: horizontal;
+}
+
+.watchedCellLabel a::before {
+    content: attr(data-board);
+    color: #aaa;
+    margin-right: 4px;
+    font-weight: bold;
+}
+
+.watchButton.watched-active::before {
+    color: #dd003e !important;
+}
+
+#watchedMenu,
+#settingsMenu,
+#multiboardMenu,
+.mediaViewer {
+    font-size: smaller;
+    padding: 5px !important;
+    box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
+}
+
+#watchedMenu,
+#watchedMenu .floatingContainer {
+    max-width: 100vw;
+}
+
+.watchedNotification::before {
+    padding-right: 2px;
+}
+
+#watchedMenu .floatingContainer {
+    scrollbar-width: thin;
+    scrollbar-color: var(--link-color) var(--contrast-color);
+}
+
+.ss-active {
+    font-weight: bold;
+}
+
+.markAllRead::before {
+    content: \"\\e065\";
+}
+/* Up/Down Arrows */
+.scroll-arrow-btn {
+    position: fixed;
+    right: 50px;
+    width: 36px;
+    height: 35px;
+    background: #222;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    font-size: 22px;
+    cursor: pointer;
+    opacity: 0.7;
+    z-index: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+:root:not(.is-index, .is-catalog).ss-sidebar .scroll-arrow-btn {
+    right: 330px !important;
+}
+
+/* Sidebar */
+:root.ss-sidebar #mainPanel {
+    margin-right: 19rem;
+    margin-left: 0;
+}
+:root.ss-leftsidebar #mainPanel {
+    margin-left: 19rem;
+    margin-right: 0;
+}
+
+.scroll-arrow-btn:hover {
+    opacity: 1;
+    background: #444;
+}
+
+#scroll-arrow-up {
+    bottom: 80px;
+}
+
+#scroll-arrow-down {
+    bottom: 32px;
+}
+
+/* Smol padding fix for the anchor */
+.bumpLockIndicator::after {
+    padding-right: 3px;
+}
+
+/* Native Settings */
+.floatingMenu.focused {
+    z-index: 305 !important;
+}
+
+#quick-reply {
+    padding: 0;
+}
+
+/* Media Viewer */
+.mediaViewer.topright {
+    top: 26px !important;
+    right: 0 !important;
+    left: auto !important;
+    max-height: 97% !important;
+    max-width: max-content !important;
+}
+
+.mediaViewer.topleft {
+    top: 26px !important;
+    left: 0 !important;
+    right: auto !important;
+    max-height: 97% !important;
+    max-width: max-content !important;
+}
+
+.mediaViewer.topright::after {
+    pointer-events: none;
+}
+
+.mediaViewer.topleft::after {
+    pointer-events: none;
+}
+
+/* 8chanSS settings custom class */
+.ss-chevron {
+    transition: transform 0.2s;
+    margin-left: 6px;
+    font-size: 12px;
+    display: inline-block;
+}
+
+a.imgLink[data-filemime^='audio/'],
+a.originalNameLink[href$='.mp3'],
+a.originalNameLink[href$='.ogg'],
+a.originalNameLink[href$='.m4a'],
+a.originalNameLink[href$='.wav'] {
+    position: relative;
+}
+
+.audio-preview-indicator {
+    display: none;
+    position: absolute;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 5px;
+    font-size: 12px;
+    border-radius: 3px;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+a[data-filemime^='audio/']:hover .audio-preview-indicator,
+a.originalNameLink:hover .audio-preview-indicator {
+    display: block;
+}
+
+.yt-icon {
+    width: 16px;
+    height: 13px;
+    vertical-align: middle;
+    margin-right: 2px;
+}
+
+.id-glow {
+    box-shadow: 0 0 12px var(--subject-color);
+}
+
+.id-dotted {
+    border: 2px dotted white;
+}
+
+/* APNG */
+.apng-canvas-snapshot {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.apng-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Mascots */
+.chSS-mascot {
+    position: fixed;
+    height: auto;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: -1;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* Mascot settings textarea */
+#setting_enableMascots_mascotUrls {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Backlink icons */
+:root.backlink-icon .panelBacklinks > a {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin: 0 2px;
+    text-decoration: none;
+    font-size: 0;
+    vertical-align: middle;
+    color: var(--link-color);
+}
+
+:root.backlink-icon .panelBacklinks > a::before {
+    content: '▶';
+    font-size: 12px;
+    display: inline-block;
+    line-height: 0.6;
+    color: var(--link-color);
+    transform: rotate(0deg);
+    transition: transform 0.1s ease-in-out, opacity 0.1s ease-in-out;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Symbol', Roboto, Ubuntu, Cantarell, sans-serif;
+}
+
+:root.backlink-icon .panelBacklinks > a.inlined::before {
+    transform: rotate(90deg);
+    opacity: 0.7;
+    color: var(--link-hover-color);
+    line-height: 0.9;
+}
+
+/* ID Post Count */
+:root.show-ID-count .labelId::after {
+    content: attr(data-posts-by-this-id);
+    padding: 2px 0px 2px 4px;
+    border-left: 1px solid #ececec;
+    margin-left: 0.4em;
+}
+
+/* Space after time */
+a.linkSelf {
+    margin-left: 0.25em;
+}
+
+/* Gallery */
+div.modalPanel {
+    z-index: 306;
+}

@@ -1,0 +1,191 @@
+/* Quick Reply */
+:root.sticky-qr #quick-reply {
+    display: block;
+    top: auto !important;
+    bottom: 0;
+}
+
+:root.sticky-qr.ss-sidebar #quick-reply {
+    left: auto !important;
+    right: 0 !important;
+}
+
+:root.sticky-qr.ss-leftsidebar #quick-reply {
+    left: 0 !important;
+    right: auto !important;
+}
+
+:root.sticky-qr #qrbody {
+    resize: vertical;
+    max-height: 50vh;
+    height: 130px;
+}
+
+:root.sticky-qr #selectedDiv,
+#selectedDivQr {
+    display: inline-flex;
+    overflow: scroll hidden;
+    max-width: 300px;
+}
+
+#qrbody {
+    min-width: 300px;
+}
+
+:root.bottom-header #quick-reply {
+    bottom: 28px !important;
+}
+
+:root.fade-qr #quick-reply {
+    padding: 0;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+:root.fade-qr #quick-reply:hover,
+:root.fade-qr #quick-reply:focus-within {
+    opacity: 1;
+}
+
+#quick-reply {
+    box-shadow: -3px 3px 2px 0 rgba(0, 0, 0, .19);
+}
+
+/* Unread Line */
+#unread-line {
+    height: 2px;
+    border: none !important;
+    pointer-events: none !important;
+    background-image: linear-gradient(to left, rgba(185, 185, 185, 0.2), var(--text-color), rgba(185, 185, 185, 0.2));
+    margin: -3px auto -3px auto;
+    width: 60%;
+}
+
+/* Banner Right Sidebar */
+:root.ss-sidebar #bannerImage {
+    width: 19rem;
+    right: 0;
+    position: fixed;
+    top: 26px;
+}
+
+:root.ss-sidebar.bottom-header #bannerImage {
+    top: 0 !important;
+}
+
+/* Banner Left Sidebar */
+:root.ss-leftsidebar #bannerImage {
+    width: 19rem;
+    left: 0;
+    position: fixed;
+    top: 26px;
+}
+
+:root.ss-leftsidebar.bottom-header #bannerImage {
+    top: 0 !important;
+}
+
+/* Posts */
+.quoteTooltip {
+    z-index: 999;
+}
+
+.nestedQuoteLink {
+    text-decoration: underline dashed !important;
+}
+
+:root.hide-stub .unhideButton {
+    display: none;
+}
+
+.quoteTooltip .innerPost {
+    overflow: hidden;
+}
+
+.inlineQuote .innerPost,
+.quoteTooltip .innerPost {
+    box-shadow: -1px 1px 2px 0px rgba(0, 0, 0, 0.19);
+}
+
+.inlineQuote {
+    margin-top: 4px;
+}
+
+.postInfo.title>.inlineQuote {
+    margin-left: 15px;
+}
+
+.postCell.is-hidden-by-filter {
+    display: none;
+}
+
+/* Custom class added through the userscript for backlinks */
+.reply-inlined {
+    opacity: 0.5;
+    text-decoration: underline dashed !important;
+    text-underline-offset: 2px;
+}
+
+.quote-inlined {
+    opacity: 0.5;
+    text-decoration: underline dashed !important;
+    text-underline-offset: 2px;
+}
+
+.target-highlight {
+    background: var(--marked-color);
+    border-color: var(--marked-border-color);
+    color: var(--marked-text-color);
+}
+
+.statLabel {
+    color: var(--link-color);
+}
+
+.statNumb {
+    color: var(--text-color);
+}
+
+/* Not sure what this is about, guess we'll find out */
+.postCell::before {
+    display: inline !important;
+    height: auto !important;
+}
+
+/* Quote Thread */
+.threadedReplies {
+    border-left: 1px solid #ccc;
+    padding-left: 15px;
+}
+
+/* Floating ID Links List */
+.ss-idlinks-floating {
+    position: absolute;
+    background: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--navbar-text-color);
+    padding: 8px 15px 10px 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .25);
+    max-height: 60vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    font-size: 14px;
+    max-width: 56vw;
+    z-index: 990;
+    scrollbar-width: thin;
+}
+
+.ss-idlinks-floating .innerPost,
+.ss-vertical-id-list .innerPost {
+    background: none;
+    display: block !important;
+    border: none;
+    box-shadow: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ss-idlinks-floating .innerPost {
+    padding: 0 1px 2px 0 !important;
+}

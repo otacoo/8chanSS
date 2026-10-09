@@ -1,0 +1,22 @@
+/* Hide on page load */
+#dynamicAnnouncement,
+#panelMessage,
+#postingForm {
+    visibility: hidden;
+}
+
+/* Margins */
+:not(.is-catalog) body {
+    margin: 0;
+}
+
+/* Links at top of page */
+.innerUtility.top {
+    margin-top: 2em;
+    background: none !important;
+    color: var(--link-color) !important;
+}
+
+.innerUtility.top a {
+    color: var(--link-color) !important;
+}
