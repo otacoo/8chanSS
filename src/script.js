@@ -35,7 +35,40 @@
 
   /* ================= SECTION: Settings store ================= */
 
-  var SS_STORE_KEY = "8chanSS_settings_v2";
+  /* Per-option GM storage: old 8chanSS_* keys are reused 1:1 so existing
+     settings carry over; options new to 8chanSS use their own key. */
+  var SS_STORE_PREFIX = "8chanSS_";
+
+  var SS_STORAGE_KEYS = {
+    catalogLinks: "enableHeaderCatalogLinks",
+    catalogLinksNewTab: "enableHeaderCatalogLinks_openInNewTab",
+    scrollArrows: "enableScrollArrows",
+    bottomHeader: "enableBottomHeader",
+    faviconStyle: "customFavicon_faviconStyle",
+    mascotOpacity: "enableMascots_mascotOpacity",
+    mascotUrls: "enableMascots_mascotUrls",
+    announceHash: "announcementContent",
+    showCatalogForm: "hidePostingForm_showCatalogForm",
+    leftSidebar: "enableSidebar_leftSidebar",
+    removeSpoilers: "blurSpoilers_removeSpoilers",
+    enableMediaPlayer: "enableMediaViewer",
+    viewerStyle: "enableMediaViewer_viewerStyle",
+    trackHoverPlayback: "trackMediaPlayback",
+    noPinInCatalog: "alwaysShowTW_noPinInCatalog",
+    expandTW: "autoExpandTW",
+    catalogImageHover: "enableCatalogImageHover",
+    threadImageHover: "enableThreadImageHover",
+    threadHiding: "enableThreadHiding",
+    catalogFiltering: "enableThreadHiding_enableCatalogFiltering",
+    catalogNewTab: "openCatalogThreadNewTab",
+    lastFifty: "enableLastFifty",
+    updateNotif: "enableUpdateNotif",
+    ssVersion: "version"
+  };
+
+  function storageKeyFor(key) {
+    return SS_STORAGE_KEYS[key] || key;
+  }
 
   var SS_DEFAULTS = {
     catalogLinks: true,
@@ -76,7 +109,8 @@
     smallFont: false,
     expandTW: false,
     catalogImageHover: false,
-    threadImageHover: true, threadHiding: false,
+    threadImageHover: true,
+    threadHiding: false,
     catalogFiltering: false,
     catalogNewTab: false,
     lastFifty: false,
@@ -199,145 +233,63 @@
   ];
 
   var ssSettings = Object.assign({}, SS_DEFAULTS);
-  var ssFresh = true;
 
-  function loadSettings() {
-    if (typeof GM === "undefined" || !GM.getValue) return Promise.resolve();
-    return GM.getValue(SS_STORE_KEY, null).then(function (stored) {
-      ssFresh = (stored === null);
-      if (stored && typeof stored === "object") {
-        for (var k in SS_DEFAULTS) {
-          if (typeof stored[k] === typeof SS_DEFAULTS[k]) ssSettings[k] = stored[k];
-        }
-      }
-    }).catch(function (err) {
-      console.error("[8chanSS] loadSettings failed:", err);
-    });
-  }
+  /* Hidden catalog threads state (shared with the old script's key) */
+  var HIDDEN_THREADS_KEY = "8chanSS_hiddenCatalogThreads";
+  var hiddenThreadsCache = null;
+  var hiddenThreadsPromise = null;
 
-  function saveSettings() {
-    try { localStorage.setItem("8chanSS_fixes", ssSettings.applyFixes ? "1" : "0"); } catch (e) { }
-    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve();
-    return GM.setValue(SS_STORE_KEY, ssSettings).catch(function (err) {
-      console.error("[8chanSS] saveSettings failed:", err);
-    });
-  }
-
-  var LEGACY_MAP = {
-    enableHeaderCatalogLinks: "catalogLinks",
-    enableHeaderCatalogLinks_openInNewTab: "catalogLinksNewTab",
-    enableScrollArrows: "scrollArrows",
-    enableBottomHeader: "bottomHeader",
-    customFavicon: "customFavicon",
-    customFavicon_faviconStyle: "faviconStyle",
-    enableMascots: "enableMascots",
-    enableMascots_mascotOpacity: "mascotOpacity",
-    enableMascots_mascotUrls: "mascotUrls",
-    hideAnnouncement: "hideAnnouncement",
-    announcementContent: "announceHash",
-    hidePanelMessage: "hidePanelMessage",
-    hidePostingForm: "hidePostingForm",
-    hidePostingForm_showCatalogForm: "showCatalogForm",
-    hideBanner: "hideBanner",
-    hideNoCookieLink: "hideNoCookieLink",
-    hideJannyTools: "hideJannyTools",
-    hlCurrentBoard: "hlCurrentBoard",
-    enableSidebar: "enableSidebar",
-    enableSidebar_leftSidebar: "leftSidebar",
-    enableFitReplies: "enableFitReplies",
-    highlightOnYou: "highlightOnYou",
-    opBackground: "opBackground",
-    enableStickyQR: "enableStickyQR",
-    fadeQuickReply: "fadeQuickReply",
-    threadHideCloseBtn: "threadHideCloseBtn",
-    blurSpoilers: "blurSpoilers",
-    blurSpoilers_removeSpoilers: "removeSpoilers",
-    enableMediaViewer: "enableMediaPlayer",
-    enableMediaViewer_viewerStyle: "viewerStyle",
-    trackMediaPlayback: "trackHoverPlayback",
-    autoExpandTW: "expandTW",
-    enableCatalogImageHover: "catalogImageHover",
-    enableThreadImageHover: "threadImageHover",
-    enableThreadHiding: "threadHiding",
-    enableThreadHiding_enableCatalogFiltering: "catalogFiltering",
-    openCatalogThreadNewTab: "catalogNewTab",
-    enableLastFifty: "lastFifty",
-    enableShortcuts: "enableShortcuts",
-    enableUpdateNotif: "updateNotif",
-    version: "ssVersion",
-    catalogFilters: "catalogFilters"
-  };
-
-  var LEGACY_KEEP = [
-    "8chanSS_watchedData",
-    "8chanSS_savedFavoriteBoards",
-    "8chanSS_saveFavoriteBoards",
-    "8chanSS_saveWatchedThreads",
-    "8chanSS_saveQRCheckboxes",
-    "8chanSS_scrollPositions"
-  ];
-
-  function legacyKept(full) {
-    if (LEGACY_KEEP.indexOf(full) !== -1) return true;
-    return full.indexOf("8chanSS_scrollPosition_") === 0;
-  }
-
-  function convertLegacyValue(newKey, raw) {
-    var def = SS_DEFAULTS[newKey];
+  function convertStoredValue(key, raw) {
+    var def = SS_DEFAULTS[key];
     if (typeof def === "boolean") return raw === true || raw === "true";
     if (typeof def === "number") {
       var n = parseInt(raw, 10);
       return isNaN(n) ? def : n;
     }
-    if (typeof def === "string") return raw === null || raw === undefined ? def : String(raw);
-    if (def && typeof def === "object") return (raw && typeof raw === "object") ? raw : def;
+    if (typeof def === "string") return String(raw);
+    if (def && typeof def === "object") {
+      if (raw && typeof raw === "object") return raw;
+      try {
+        var obj = JSON.parse(raw);
+        if (obj && typeof obj === "object") return obj;
+      } catch (e) { }
+    }
     return def;
   }
 
-  function migrateLegacy() {
-    if (typeof GM === "undefined" || !GM.listValues || !GM.getValue || !GM.deleteValue) return Promise.resolve();
-    return GM.listValues().then(function (keys) {
+  function loadSettings() {
+    if (typeof GM === "undefined" || !GM.getValue || !GM.listValues) return Promise.resolve();
+    return GM.listValues().then(function (names) {
+      var present = {};
+      (names || []).forEach(function (name) { present[name] = true; });
       var pending = [];
-      var touched = false;
-      (keys || []).forEach(function (full) {
-        if (full === SS_STORE_KEY || full === HIDDEN_THREADS_KEY || legacyKept(full)) return;
-        if (full.indexOf("8chanSS_") !== 0) return;
-        var short = full.slice("8chanSS_".length);
-        if (short === "hiddenCatalogThreads") {
-          pending.push(GM.getValue(HIDDEN_THREADS_KEY, null).then(function (existing) {
-            if (existing) return;
-            return GM.getValue(full, "{}").then(function (raw) {
-              try {
-                var obj = JSON.parse(raw);
-                if (obj && typeof obj === "object") {
-                  hiddenThreadsCache = obj;
-                  return saveHiddenThreads();
-                }
-              } catch (e) { }
-            });
-          }).then(function () {
-            return GM.deleteValue(full).catch(function () { });
-          }).catch(function () { }));
-          return;
-        }
-        var target = LEGACY_MAP[short];
-        if (target && ssFresh) {
-          pending.push(GM.getValue(full, null).then(function (raw) {
-            if (raw !== null && raw !== undefined) {
-              ssSettings[target] = convertLegacyValue(target, raw);
-              touched = true;
-            }
-            return GM.deleteValue(full).catch(function () { });
-          }).catch(function () { }));
-        } else {
-          pending.push(GM.deleteValue(full).catch(function () { }));
-        }
+      Object.keys(SS_DEFAULTS).forEach(function (key) {
+        var full = SS_STORE_PREFIX + storageKeyFor(key);
+        if (!present[full]) return;
+        pending.push(GM.getValue(full, null).then(function (raw) {
+          if (raw !== null && raw !== undefined) ssSettings[key] = convertStoredValue(key, raw);
+        }).catch(function () { }));
       });
-      return Promise.all(pending).then(function () {
-        if (touched) return saveSettings();
-      });
+      return Promise.all(pending);
     }).catch(function (err) {
-      console.error("[8chanSS] legacy migration failed:", err);
+      console.error("[8chanSS] loadSettings failed:", err);
+    });
+  }
+
+  function saveSetting(key) {
+    try { localStorage.setItem("8chanSS_fixes", ssSettings.applyFixes ? "1" : "0"); } catch (e) { }
+    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve();
+    var full = SS_STORE_PREFIX + storageKeyFor(key);
+    var value = ssSettings[key];
+    return GM.setValue(full, (value && typeof value === "object") ? value : String(value)).catch(function (err) {
+      console.error("[8chanSS] saveSetting failed:", key, err);
+    });
+  }
+
+  function deleteSetting(key) {
+    if (typeof GM === "undefined" || !GM.deleteValue) return Promise.resolve();
+    return GM.deleteValue(SS_STORE_PREFIX + storageKeyFor(key)).catch(function (err) {
+      console.error("[8chanSS] deleteSetting failed:", key, err);
     });
   }
 
@@ -426,22 +378,19 @@
   }
 
   var FAVICON_STYLES = ["default", "eight", "eight_dark", "pixel", "pixel_alt"];
-  var FAVICON_STATES = ["base", "unread", "notif"];
   var FAVICON_DATA = {
-    default: { base: __SS_FAV_DEFAULT_BASE__, unread: __SS_FAV_DEFAULT_UNREAD__, notif: __SS_FAV_DEFAULT_NOTIF__ },
-    eight: { base: __SS_FAV_EIGHT_BASE__, unread: __SS_FAV_EIGHT_UNREAD__, notif: __SS_FAV_EIGHT_NOTIF__ },
-    eight_dark: { base: __SS_FAV_EIGHT_DARK_BASE__, unread: __SS_FAV_EIGHT_DARK_UNREAD__, notif: __SS_FAV_EIGHT_DARK_NOTIF__ },
-    pixel: { base: __SS_FAV_PIXEL_BASE__, unread: __SS_FAV_PIXEL_UNREAD__, notif: __SS_FAV_PIXEL_NOTIF__ },
-    pixel_alt: { base: __SS_FAV_PIXEL_ALT_BASE__, unread: __SS_FAV_PIXEL_ALT_UNREAD__, notif: __SS_FAV_PIXEL_ALT_NOTIF__ }
+    default: __SS_FAV_DEFAULT_BASE__,
+    eight: __SS_FAV_EIGHT_BASE__,
+    eight_dark: __SS_FAV_EIGHT_DARK_BASE__,
+    pixel: __SS_FAV_PIXEL_BASE__,
+    pixel_alt: __SS_FAV_PIXEL_ALT_BASE__
   };
   var faviconApplied = null;
   var faviconOriginalHref = null;
 
-  function setFavicon(style, state) {
+  function setFavicon(style) {
     if (FAVICON_STYLES.indexOf(style) === -1) style = "default";
-    if (FAVICON_STATES.indexOf(state) === -1) state = "base";
-    var id = style + ":" + state;
-    if (faviconApplied === id) return;
+    if (faviconApplied === style) return;
     if (faviconOriginalHref === null) {
       var cur = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]');
       faviconOriginalHref = (cur && cur.getAttribute("href")) || "";
@@ -452,9 +401,9 @@
     link.id = "ssFavicon";
     link.rel = "icon";
     link.type = "image/png";
-    link.href = "data:image/png;base64," + FAVICON_DATA[style][state];
+    link.href = "data:image/png;base64," + FAVICON_DATA[style];
     document.head.appendChild(link);
-    faviconApplied = id;
+    faviconApplied = style;
   }
 
   function resetFavicon() {
@@ -505,8 +454,8 @@
 
   var spoilerThreadsObserver = null;
   var spoilerTooltipObserver = null;
-  var debouncedSpoilerApply = null;
   var mediaViewerObserver = null;
+  var mediaPlayerApplied = false;
   var hoverPlaybackTimes = {};
 
   function applyBlurOrRemoveSpoilers(img) {
@@ -574,6 +523,7 @@
               var parsedWidth = parseInt(dimensions[0].trim(), 10);
               var parsedHeight = parseInt(dimensions[1].trim(), 10);
               if (parsedWidth <= 220 || parsedHeight <= 220) {
+                if (!img.dataset.ssOrigSrc) img.dataset.ssOrigSrc = img.getAttribute("src") || "";
                 img.src = href + "#spoiler";
                 link.dataset.blurSpoilerProcessed = "1";
                 applyBlurOrRemoveSpoilers(img);
@@ -583,15 +533,17 @@
           }
         }
       }
+      if (!img.dataset.ssOrigSrc) img.dataset.ssOrigSrc = img.getAttribute("src") || "";
       var initialWidth = img.offsetWidth;
       var initialHeight = img.offsetHeight;
       img.style.width = initialWidth + "px";
       img.style.height = initialHeight + "px";
       img.src = transformedSrc + "#spoiler";
       img.addEventListener("load", function () {
+        if (!img.dataset.ssOrigSrc) return;
         img.style.width = img.naturalWidth + "px";
         img.style.height = img.naturalHeight + "px";
-      });
+      }, { once: true });
       applyBlurOrRemoveSpoilers(img);
       link.dataset.blurSpoilerProcessed = "1";
       return;
@@ -609,7 +561,14 @@
     for (var i = 0; i < links.length; i++) {
       delete links[i].dataset.blurSpoilerProcessed;
       var img = links[i].querySelector("img");
-      if (img) img.classList.remove("ss-spoiler-blurred", "ss-spoiler-border");
+      if (!img) continue;
+      if (img.dataset.ssOrigSrc) {
+        img.src = img.dataset.ssOrigSrc;
+        delete img.dataset.ssOrigSrc;
+      }
+      img.style.removeProperty("width");
+      img.style.removeProperty("height");
+      img.classList.remove("ss-spoiler-blurred", "ss-spoiler-border");
     }
   }
 
@@ -661,15 +620,33 @@
     "audio/flac": ".flac",
     "audio/opus": ".opus",
     "audio/x-m4a": ".m4a",
-    "audio/x-wav": ".wav"
+    "audio/x-wav": ".wav",
+    "audio/wav": ".wav"
   };
 
-  function mimeExt(mime) {
-    return MIME_TO_EXT[String(mime).toLowerCase()] || "";
-  }
+  var EXT_TO_MIME = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    jxl: "image/jxl",
+    png: "image/png",
+    apng: "image/apng",
+    gif: "image/gif",
+    avif: "image/avif",
+    webp: "image/webp",
+    bmp: "image/bmp",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    m4v: "video/x-m4v",
+    ogg: "audio/ogg",
+    flac: "audio/flac",
+    opus: "audio/opus",
+    mp3: "audio/mpeg",
+    m4a: "audio/x-m4a",
+    wav: "audio/x-wav"
+  };
 
   function getExtensionForMimeType(mime) {
-    return mimeExt(mime);
+    return MIME_TO_EXT[String(mime).toLowerCase()] || "";
   }
 
   var hoverMimeCache = {};
@@ -706,6 +683,24 @@
     return "";
   }
 
+  function hasExtension(str) {
+    return /\.[a-z0-9]+$/i.test(str);
+  }
+
+  function isTThumb(str) {
+    return /\/t_/.test(str);
+  }
+
+  function isDirectHash(str) {
+    return /^\/\.media\/[a-f0-9]{40,}$/i.test(str) && !hasExtension(str);
+  }
+
+  function isGenericThumbSrc(src) {
+    return /\/spoiler\.png$/i.test(src) ||
+      /\/custom\.spoiler$/i.test(src) ||
+      /\/audioGenericThumb\.png$/i.test(src);
+  }
+
   function getFullMediaSrc(thumbNode, filemime) {
     var thumbnailSrc = thumbNode.getAttribute("src");
     if (thumbnailSrc) {
@@ -719,84 +714,47 @@
       fileWidth = thumbNode.naturalWidth;
       fileHeight = thumbNode.naturalHeight;
     }
-    function hasExtension(str) {
-      return /\.[a-z0-9]+$/i.test(str);
-    }
-    function isTThumb(str) {
-      return /\/t_/.test(str);
-    }
-    function isDirectHash(str) {
-      return /^\/\.media\/[a-f0-9]{40,}$/i.test(str) && !hasExtension(str);
-    }
-    function isSmallImage() {
-      return (fileWidth && fileWidth <= 220) || (fileHeight && fileHeight <= 220);
-    }
-    function isBarePngNoThumb() {
-      return (
-        filemime &&
-        filemime.toLowerCase() === "image/png" &&
-        parentA &&
-        !isTThumb(href) &&
-        !hasExtension(href)
-      );
-    }
-    function isSmallBarePngSrc() {
-      return (
-        isSmallImage() &&
-        filemime &&
-        filemime.toLowerCase() === "image/png" &&
-        !isTThumb(thumbnailSrc) &&
-        !hasExtension(thumbnailSrc)
-      );
-    }
-    function isGenericThumb() {
-      return (
-        /\/spoiler\.png$/i.test(thumbnailSrc) ||
-        /\/custom\.spoiler$/i.test(thumbnailSrc) ||
-        /\/audioGenericThumb\.png$/i.test(thumbnailSrc)
-      );
-    }
+    var mime = String(filemime || "").toLowerCase();
+    var smallImage = (fileWidth && fileWidth <= 220) || (fileHeight && fileHeight <= 220);
     if (!filemime) {
       if (
         thumbNode.closest(".catalogCell") ||
-        /^\/\.media\/t?_[a-f0-9]{40,}$/i.test(thumbnailSrc.replace(/\\/g, ""))
+        /^\/\.media\/t?_[a-f0-9]{40,}$/i.test(String(thumbnailSrc || "").replace(/\\/g, ""))
       ) {
         return thumbnailSrc;
       }
       return null;
     }
-    if (isBarePngNoThumb()) {
+    if (
+      mime === "image/png" &&
+      ((parentA && !isTThumb(href) && !hasExtension(href)) ||
+        (smallImage && !isTThumb(thumbnailSrc) && !hasExtension(thumbnailSrc)))
+    ) {
       return thumbnailSrc;
     }
-    if (isSmallBarePngSrc()) {
-      return thumbnailSrc;
-    }
-    if (isSmallImage() && hasExtension(thumbnailSrc)) {
+    if (smallImage && hasExtension(thumbnailSrc)) {
       return thumbnailSrc;
     }
     if (isTThumb(thumbnailSrc)) {
       var base = thumbnailSrc.replace(/\/t_/, "/");
       base = base.replace(/\.(jpe?g|jxl|png|apng|gif|avif|webp|webm|mp4|m4v|ogg|flac|opus|mp3|m4a|wav)$/i, "");
-      if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
+      if (mime === "image/apng" || mime === "video/x-m4v") {
         return base;
       }
-      var ext = filemime ? getExtensionForMimeType(filemime) : null;
+      var ext = getExtensionForMimeType(filemime);
       if (!ext) return null;
       return base + ext;
     }
     if (isDirectHash(thumbnailSrc)) {
-      if (filemime && (filemime.toLowerCase() === "image/apng" || filemime.toLowerCase() === "video/x-m4v")) {
+      if (mime === "image/apng" || mime === "video/x-m4v") {
         return thumbnailSrc;
       }
-      var ext2 = filemime ? getExtensionForMimeType(filemime) : null;
-      if (!ext2) {
-        return thumbnailSrc;
-      }
-      return thumbnailSrc + ext2;
+      var ext2 = getExtensionForMimeType(filemime);
+      return ext2 ? thumbnailSrc + ext2 : thumbnailSrc;
     }
-    if (isGenericThumb()) {
-      if (parentA && parentA.getAttribute("href")) {
-        return sanitizeMediaUrl(parentA.getAttribute("href"));
+    if (isGenericThumbSrc(thumbnailSrc)) {
+      if (href) {
+        return sanitizeMediaUrl(href);
       }
       return null;
     }
@@ -862,10 +820,6 @@
     }
   }
 
-  function leaveHandler() {
-    cleanupFloatingMedia();
-  }
-
   function mouseMoveHandler(ev) {
     lastMouseEvent = ev;
     positionFloatingMedia(ev);
@@ -888,26 +842,7 @@
       var href = parentA.getAttribute("href");
       if (!href) return;
       var ext = href.split(".").pop().toLowerCase();
-      filemime = parentA.getAttribute("data-filemime") || {
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        jxl: "image/jxl",
-        png: "image/png",
-        apng: "image/apng",
-        gif: "image/gif",
-        avif: "image/avif",
-        webp: "image/webp",
-        bmp: "image/bmp",
-        mp4: "video/mp4",
-        webm: "video/webm",
-        m4v: "video/x-m4v",
-        ogg: "audio/ogg",
-        flac: "audio/flac",
-        opus: "audio/opus",
-        mp3: "audio/mpeg",
-        m4a: "audio/x-m4a",
-        wav: "audio/wav"
-      }[ext];
+      filemime = parentA.getAttribute("data-filemime") || EXT_TO_MIME[ext];
       if (!filemime) {
         cacheThumbMime();
         filemime = hoverMimeCache[thumbHash(thumb.getAttribute("src")) || ""] || null;
@@ -980,12 +915,12 @@
         container.appendChild(indicator);
       }
       currentAudioIndicator = indicator;
-      thumb.addEventListener("mouseleave", leaveHandler, { once: true });
-      if (container) container.addEventListener("click", leaveHandler, { once: true });
-      window.addEventListener("scroll", leaveHandler, { passive: true, once: true });
-      cleanupFns.push(function () { thumb.removeEventListener("mouseleave", leaveHandler); });
-      if (container) cleanupFns.push(function () { container.removeEventListener("click", leaveHandler); });
-      cleanupFns.push(function () { window.removeEventListener("scroll", leaveHandler); });
+      thumb.addEventListener("mouseleave", cleanupFloatingMedia, { once: true });
+      if (container) container.addEventListener("click", cleanupFloatingMedia, { once: true });
+      window.addEventListener("scroll", cleanupFloatingMedia, { passive: true, once: true });
+      cleanupFns.push(function () { thumb.removeEventListener("mouseleave", cleanupFloatingMedia); });
+      if (container) cleanupFns.push(function () { container.removeEventListener("click", cleanupFloatingMedia); });
+      cleanupFns.push(function () { window.removeEventListener("scroll", cleanupFloatingMedia); });
       return;
     }
     var videoSrc = fullSrc;
@@ -1023,7 +958,7 @@
     }
     document.body.appendChild(floatingMedia);
     document.addEventListener("mousemove", mouseMoveHandler, { passive: true });
-    thumb.addEventListener("mouseleave", leaveHandler, { passive: true, once: true });
+    thumb.addEventListener("mouseleave", cleanupFloatingMedia, { passive: true, once: true });
     cleanupFns.push(function () { document.removeEventListener("mousemove", mouseMoveHandler); });
     if (lastMouseEvent) {
       positionFloatingMedia(lastMouseEvent);
@@ -1097,10 +1032,10 @@
       });
     }
     floatingMedia.onerror = mediaBlobFallback;
-    thumb.addEventListener("mouseleave", leaveHandler, { once: true });
-    window.addEventListener("scroll", leaveHandler, { passive: true, once: true });
-    cleanupFns.push(function () { thumb.removeEventListener("mouseleave", leaveHandler); });
-    cleanupFns.push(function () { window.removeEventListener("scroll", leaveHandler); });
+    thumb.addEventListener("mouseleave", cleanupFloatingMedia, { once: true });
+    window.addEventListener("scroll", cleanupFloatingMedia, { passive: true, once: true });
+    cleanupFns.push(function () { thumb.removeEventListener("mouseleave", cleanupFloatingMedia); });
+    cleanupFns.push(function () { window.removeEventListener("scroll", cleanupFloatingMedia); });
   }
 
   function attachThumbListeners(root) {
@@ -1135,12 +1070,7 @@
         for (var i = 0; i < mutations.length; i++) {
           var nodes = mutations[i].addedNodes;
           for (var j = 0; j < nodes.length; j++) {
-            if (nodes[j].nodeType !== 1) continue;
-            if (nodes[j].matches && nodes[j].matches("a.linkThumb img, a.imgLink img")) {
-              attachThumbListeners(nodes[j]);
-            } else if (nodes[j].querySelectorAll) {
-              attachThumbListeners(nodes[j]);
-            }
+            if (nodes[j].nodeType === 1) attachThumbListeners(nodes[j]);
           }
         }
       });
@@ -1148,18 +1078,20 @@
     }
   }
 
-  var HIDDEN_THREADS_KEY = "8chanSS_hiddenThreads";
-  var hiddenThreadsCache = null;
   var catalogHiddenMode = false;
   var catalogHidingObserver = null;
   var debouncedCatalogHiddenApply = null;
   var catalogHidingWired = false;
+  var catalogHidingContainer = null;
 
   function loadHiddenThreads() {
-    if (hiddenThreadsCache) return Promise.resolve(hiddenThreadsCache);
+    if (hiddenThreadsPromise) return hiddenThreadsPromise;
     hiddenThreadsCache = {};
-    if (typeof GM === "undefined" || !GM.getValue) return Promise.resolve(hiddenThreadsCache);
-    return GM.getValue(HIDDEN_THREADS_KEY, "{}").then(function (raw) {
+    if (typeof GM === "undefined" || !GM.getValue) {
+      hiddenThreadsPromise = Promise.resolve(hiddenThreadsCache);
+      return hiddenThreadsPromise;
+    }
+    hiddenThreadsPromise = GM.getValue(HIDDEN_THREADS_KEY, "{}").then(function (raw) {
       try {
         var obj = JSON.parse(raw);
         if (obj && typeof obj === "object") hiddenThreadsCache = obj;
@@ -1168,6 +1100,7 @@
     }).catch(function () {
       return hiddenThreadsCache;
     });
+    return hiddenThreadsPromise;
   }
 
   function saveHiddenThreads() {
@@ -1199,7 +1132,20 @@
   function applyHiddenThreads() {
     if (!pageType.isCatalog) return Promise.resolve();
     return loadHiddenThreads().then(function (obj) {
-      var filters = ssSettings.catalogFiltering ? Object.values(ssSettings.catalogFilters || {}) : [];
+      var filters = [];
+      if (ssSettings.catalogFiltering) {
+        var saved = ssSettings.catalogFilters || {};
+        Object.keys(saved).forEach(function (k) {
+          var f = saved[k];
+          if (!f || !f.word) return;
+          filters.push({
+            word: f.word,
+            boards: String(f.boards || "").toLowerCase().split(",").map(function (b) {
+              return b.trim();
+            }).filter(function (b) { return !!b; })
+          });
+        });
+      }
       var cells = document.querySelectorAll(".catalogCell");
       for (var i = 0; i < cells.length; i++) {
         var cell = cells[i];
@@ -1211,11 +1157,8 @@
             ((cell.querySelector(".divMessage") || {}).textContent || "");
           text = text.toLowerCase();
           for (var f = 0; f < filters.length; f++) {
-            if (filters[f] && filterMatches(filters[f].word, text)) {
-              var boards = String(filters[f].boards || "").toLowerCase().split(",").map(function (b) {
-                return b.trim();
-              }).filter(function (b) { return !!b; });
-              if (!boards.length || boards.indexOf(info.board) !== -1) {
+            if (filterMatches(filters[f].word, text)) {
+              if (!filters[f].boards.length || filters[f].boards.indexOf(info.board) !== -1) {
                 hidden = true;
                 break;
               }
@@ -1295,6 +1238,7 @@
   }
 
   var catalogNewTabWired = false;
+  var catalogNewTabDiv = null;
 
   function onCatalogThumbClick(e) {
     var link = e.target.closest(".catalogCell a.linkThumb");
@@ -1315,7 +1259,21 @@
     }
     if (!catalogNewTabWired) {
       catalogNewTabWired = true;
+      catalogNewTabDiv = catalogDiv;
       catalogDiv.addEventListener("click", onCatalogThumbClick);
+    }
+  }
+
+  function removeCatalogNewTab() {
+    if (catalogNewTabDiv) {
+      catalogNewTabDiv.removeEventListener("click", onCatalogThumbClick);
+      catalogNewTabDiv = null;
+      catalogNewTabWired = false;
+    }
+    var links = document.querySelectorAll(".catalogCell a.linkThumb[target='_blank']");
+    for (var i = 0; i < links.length; i++) {
+      links[i].removeAttribute("target");
+      links[i].removeAttribute("rel");
     }
   }
 
@@ -1341,7 +1299,7 @@
     // Feature: Custom Favicon
     customFavicon: function (on) {
       if (on) {
-        setFavicon(ssSettings.faviconStyle, "base");
+        setFavicon(ssSettings.faviconStyle);
       } else {
         resetFavicon();
       }
@@ -1379,15 +1337,19 @@
       var root = document.documentElement;
       if (!on) {
         root.classList.remove("hide-announcement");
-        if (ssSettings.announceHash) { ssSettings.announceHash = ""; saveSettings(); }
+        if (ssSettings.announceHash) {
+          ssSettings.announceHash = "";
+          deleteSetting("announceHash");
+        }
         return;
       }
       var el = document.getElementById("dynamicAnnouncement");
-      var content = el ? (el.textContent || "").replace(/\s+/g, " ").trim() : "";
+      var content = el ? (el.textContent || "").replace(/[^\w\s.,!?-]/g, "") : "";
       if (ssSettings.announceHash && content && ssSettings.announceHash !== content) {
         ssSettings.hideAnnouncement = false;
         ssSettings.announceHash = "";
-        saveSettings();
+        saveSetting("hideAnnouncement");
+        deleteSetting("announceHash");
         var box = document.querySelector('input[data-ss-setting="hideAnnouncement"]');
         if (box) box.checked = false;
         root.classList.remove("hide-announcement");
@@ -1396,7 +1358,7 @@
       root.classList.add("hide-announcement");
       if (content && ssSettings.announceHash !== content) {
         ssSettings.announceHash = content;
-        saveSettings();
+        saveSetting("announceHash");
       }
     },
     // Feature: Hide Posting Form
@@ -1478,6 +1440,7 @@
     enableMediaPlayer: function (on) {
       if (on) {
         try { localStorage.setItem("mediaViewer", "true"); } catch (e) { }
+        mediaPlayerApplied = true;
         positionMediaViewer();
         if (!mediaViewerObserver) {
           mediaViewerObserver = new MutationObserver(function (mutations) {
@@ -1498,12 +1461,14 @@
           mediaViewerObserver.disconnect();
           mediaViewerObserver = null;
         }
+        if (mediaPlayerApplied) {
+          try { localStorage.setItem("mediaViewer", "false"); } catch (e) { }
+          mediaPlayerApplied = false;
+        }
         var viewer = document.querySelector(".mediaViewer");
         if (viewer) viewer.classList.remove("topright", "topleft");
       }
     },
-    // Feature: Track Hover Playback
-    trackHoverPlayback: function () { },
     // Feature: Thread Hiding
     threadHiding: function (on) {
       if (!pageType.isCatalog) return;
@@ -1512,6 +1477,7 @@
         var container = document.querySelector(".catalogWrapper, .catalogDiv");
         if (container && !catalogHidingWired) {
           catalogHidingWired = true;
+          catalogHidingContainer = container;
           container.addEventListener("click", onCatalogCellClick, true);
         }
         if (!catalogHidingObserver) {
@@ -1538,6 +1504,11 @@
         }
       } else {
         if (catalogHidingObserver) { catalogHidingObserver.disconnect(); catalogHidingObserver = null; }
+        if (catalogHidingContainer) {
+          catalogHidingContainer.removeEventListener("click", onCatalogCellClick, true);
+          catalogHidingContainer = null;
+          catalogHidingWired = false;
+        }
         catalogHiddenMode = false;
         var showBtn = document.getElementById("ss-show-hidden-btn");
         if (showBtn) showBtn.remove();
@@ -1550,7 +1521,12 @@
     },
     // Feature: Catalog New Tab
     catalogNewTab: function (on) {
-      if (on && pageType.isCatalog) applyCatalogNewTab();
+      if (!pageType.isCatalog) return;
+      if (on) {
+        applyCatalogNewTab();
+      } else {
+        removeCatalogNewTab();
+      }
     },
     // Feature: Catalog Image Hover
     catalogImageHover: function (on) {
@@ -1591,7 +1567,6 @@
     },
     // Feature: Scroll Arrows
     scrollArrows: function (on) {
-      document.documentElement.classList.toggle("ss-scroll-arrows", !!on);
       var el = document.getElementById("ssScrollArrows");
       if (on && !el) {
         el = document.createElement("div");
@@ -1642,7 +1617,6 @@
     fadeQuickReply: "fade-qr",
     threadHideCloseBtn: "hide-close-btn",
     noPinInCatalog: "ss-nopin-catalog",
-    smallFont: "ss-small-font",
     smallFont: "ss-small-font",
     expandTW: "auto-expand-tw"
   };
@@ -1716,7 +1690,7 @@
     if (!ssSettings.updateNotif || ssSettings.ssVersion === VERSION) return;
     var firstInstall = !ssSettings.ssVersion;
     ssSettings.ssVersion = VERSION;
-    saveSettings();
+    saveSetting("ssVersion");
     if (!firstInstall) {
       showToast(
         "8chanSS has updated to v" + VERSION + '. Check out the <b><a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">changelog</a></b>.',
@@ -1761,9 +1735,12 @@
   }
 
   function scrollToReply(isOwnReply, getNext) {
-    var cells = Array.from(document.querySelectorAll(isOwnReply
-      ? ".postCell:has(a.youName), .opCell:has(a.youName)"
-      : ".postCell:has(a.quoteLink.you), .opCell:has(a.quoteLink.you)"));
+    var anchors = document.querySelectorAll(isOwnReply ? "a.youName" : "a.quoteLink.you");
+    var cells = [];
+    for (var i = 0; i < anchors.length; i++) {
+      var cell = anchors[i].closest(".postCell, .opCell");
+      if (cell && cells.indexOf(cell) === -1) cells.push(cell);
+    }
     if (!cells.length) return;
     var want = isOwnReply ? "own" : "reply";
     var current = -1;
@@ -1960,7 +1937,7 @@
       obj[key] = { word: word, boards: rows[i].querySelector(".ss-filterboards").value.trim(), key: key };
     }
     ssSettings.catalogFilters = obj;
-    saveSettings();
+    saveSetting("catalogFilters");
     if (ssSettings.threadHiding) applyHiddenThreads();
   }
 
@@ -2254,7 +2231,7 @@
       } else {
         ssSettings[key] = !!field.checked;
       }
-      saveSettings();
+      saveSetting(key);
       if (field.type === "checkbox") {
         var sub = menu.querySelector('[data-ss-subof="' + key + '"]');
         if (sub) sub.hidden = !field.checked;
@@ -2293,8 +2270,6 @@
       rootEl.classList.toggle("is-thread", pageType.isThread);
       rootEl.classList.toggle("is-index", pageType.isIndex);
       loadSettings().then(function () {
-        return migrateLegacy();
-      }).then(function () {
         applyAll();
         checkUpdateNotif();
         initShortcuts();

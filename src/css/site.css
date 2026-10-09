@@ -398,10 +398,6 @@
   content: "\e065";
 }
 
-.ss-active {
-  font-weight: bold;
-}
-
 /* --- Gallery above menus --- */
 div.modalPanel {
   z-index: 306;
