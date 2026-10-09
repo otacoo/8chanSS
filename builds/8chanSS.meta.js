@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      1.60.8
+// @version      2.0.0
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otacoo
@@ -17,6 +17,7 @@
 // @grant        GM.setValue
 // @grant        GM.deleteValue
 // @grant        GM.listValues
+// @grant        unsafeWindow
 // @grant        GM.xmlHttpRequest
 // @connect      youtube.com
 // @connect      i.ytimg.com

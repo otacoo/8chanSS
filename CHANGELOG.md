@@ -1,3 +1,28 @@
+# v2.0.0
+*2026-10-09*
+
+8chanSS has been rewritten for the updated site. Options are stored under the same keys as before, so your existing settings carry over.
+
+**New Options:**
+- Reply Header (Styling > Site Styling)
+- Rounded Corners (Styling > Site Styling)
+- Hide Footer (Styling > Site Styling), the footer was previously always hidden on threads
+- Smaller font (General > Thread Watcher), the Thread Watcher previously always used a smaller font
+- Apply 8chanSS fixes (Styling > Misc), controls the CSS fixes that must run before the page renders
+- Scroll by page (General > Show Up/Down Arrows), when off the arrows jump to the very top/bottom
+- Save localStorage keys every day (Storage), save/restore your (You)s, watched threads and favorite boards
+
+**Modifications:**
+- The 8chanSS settings now live inside the site's native Settings menu (gear icon), replacing the old floating 8chanSS menu
+- Options are split into General, Styling, Misc and Shortcuts pages
+- Options now apply immediately upon toggling
+- Added a Shortcuts page with the full keyboard shortcut reference
+- Added a filter manager under the catalog filtering sub-options
+- Update the look of the toast notifications
+
+**Fixes**
+- Fix for Sticky Quick Reply
+
 ### v1.60.8
 *2026-06-10*
 
