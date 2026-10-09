@@ -3,8 +3,25 @@
       var concatOptions, pkg, shellOptions;
       pkg = grunt.file.readJSON('package.json');
       concatOptions = {
-        process: {
-          data: pkg
+        process: function(src, filepath) {
+          if (/metadata\.js$/.test(filepath)) {
+            return grunt.template.process(src, { data: pkg });
+          }
+          var css = function(file) {
+            return function() { return JSON.stringify(grunt.file.read(file)); };
+          };
+          var favStyles = ["default", "eight", "eight_dark", "pixel", "pixel_alt"];
+          favStyles.forEach(function(style) {
+            var key = "__SS_FAV_" + style.toUpperCase() + "_BASE__";
+            var b64 = grunt.file.read("src/img/fav/" + style + "_base.png", { encoding: "base64" });
+            src = src.split(key).join(JSON.stringify(b64));
+          });
+          return src
+            .replace(/__SS_VERSION__/g, function() { return pkg.version; })
+            .replace(/__SS_SHIM_CSS__/g, css('tmp/shim.min.css'))
+            .replace(/__SS_SITE_CSS__/g, css('tmp/site.min.css'))
+            .replace(/__SS_THREAD_CSS__/g, css('tmp/thread.min.css'))
+            .replace(/__SS_CATALOG_CSS__/g, css('tmp/catalog.min.css'));
         }
       };
       shellOptions = {
