@@ -1,22 +1,27 @@
-/* Hide on page load */
+/* 8chanSS shim: injected at document-start, before DOM is ready.
+   Keep this minimal and static only. Dynamic :root toggles live in site.css.
+   This file must stay tiny to avoid blocking first paint. */
+
+/* Pre-hide hider targets so enabling those options doesn't flash on load
+   (site.css unhides them again on DOM ready). */
 #dynamicAnnouncement,
 #panelMessage,
 #postingForm {
-    visibility: hidden;
+   visibility: hidden;
 }
 
 /* Margins */
 :not(.is-catalog) body {
-    margin: 0;
+   margin: 0;
 }
 
 /* Links at top of page */
 .innerUtility.top {
-    margin-top: 2em;
-    background: none !important;
-    color: var(--link-color) !important;
+   margin-top: 2em;
+   background: none !important;
+   color: var(--link-color) !important;
 }
 
 .innerUtility.top a {
-    color: var(--link-color) !important;
+   color: var(--link-color) !important;
 }

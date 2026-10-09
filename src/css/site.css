@@ -1,402 +1,470 @@
-/* Unhide on DOM loaded */
+/* 8chanSS site CSS: global rules, applied on all pages. */
+
+/* Unhide on DOM loaded (pairs with shim pre-hiding) */
 #dynamicAnnouncement,
 #panelMessage,
 #postingForm {
-    visibility: visible;
+  visibility: visible;
 }
 
-/* Cleanup */
+/* --- Cleanup --- */
 :root.hide-posting-form #postingForm,
 :root.hide-announcement #dynamicAnnouncement,
 :root.hide-panelmessage #panelMessage,
-:root.hide-close-btn .inlineQuote>.innerPost>.postInfo.title>a:nth-child(1),
+:root.hide-close-btn .inlineQuote > .innerPost > .postInfo.title > a:nth-child(1),
 :root.disable-banner #bannerImage,
-:root.hide-checkboxes .deletionCheckBox,
-:root.hide-nocookie #captchaBody>table:nth-child(2)>tbody:nth-child(1)>tr:nth-child(2),
+:root.hide-nocookie #captchaBody > table:nth-child(2) > tbody:nth-child(1) > tr:nth-child(2),
 :root.hide-jannytools #boardContentLinks,
-:root.hide-jannytools #actionsForm,
-.watchedNotification::before,
-#navFadeEnd,
-#navFadeMid {
-    display: none;
+:root.hide-jannytools #actionsForm {
+  display: none;
 }
 
-/* Side Catalog */
-#sideCatalogDiv {
-    z-index: 200;
-    background: var(--background-gradient);
+:root.ss-hide-footer #dynamicFooterAlt {
+  display: none;
+}
+
+/* --- Feature: Bottom Header --- */
+:root.ss-bottom-header nav.navHeader {
+  top: auto !important;
+  bottom: 0 !important;
+  box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Misc shortcut reference table --- */
+.ss-note {
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.7;
+  margin: 0 0 0.5em;
+}
+
+.ss-keys {
+  width: 100%;
+  margin-top: 0.5em;
+  border: 1px solid var(--border-color, #888);
+  border-radius: 4px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.ss-keys td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-color, #888);
+}
+
+.ss-keys tr:last-child td {
+  border-bottom: none;
+}
+
+.ss-keys td:first-child {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.ss-keys tr:hover td {
+  background: var(--contrast-color, transparent);
+}
+
+.ss-keys kbd {
+  background: #f7f7f7;
+  color: #000;
+  border: 1px solid #555;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 12px;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+/* --- Toast notifications --- */
+#ss-toasts {
+  position: fixed;
+  top: 40px;
+  right: 12px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(360px, 90vw);
+}
+
+.ss-toast {
+  color: var(--text-color);
+  background: var(--menu-color);
+  border: 1px solid var(--border-color);
+  border-left-width: 5px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  opacity: 1;
+  transition: opacity 0.3s;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.ss-toast-hide {
+  opacity: 0;
+}
+
+:root.ss-rounded .ss-toast {
+  border-radius: 5px;
+}
+
+.ss-toast-black { border-left-color: #222; }
+.ss-toast-orange { border-left-color: #cc7a00; }
+.ss-toast-green { border-left-color: #339933; }
+.ss-toast-blue { border-left-color: #1976d2; }
+.ss-toast-red { border-left-color: #c62828; }
+
+.ss-toast a {
+  text-decoration: underline;
+}
+/* --- 8chanSS native-menu footer (small print) --- */
+.ss-foot {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-top: 1em;
+  position: absolute;
+  bottom: 5px;
+  padding-left: 5px;
+}
+
+/* --- Feature: Scroll Arrows --- */
+#ssScrollArrows {
+  position: fixed;
+  right: 3em;
+  bottom: 8em;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+:root.ss-bottom-header #ssScrollArrows {
+  bottom: 40px;
+}
+
+:root.ss-sidebar #ssScrollArrows {
+  right: calc(19rem + 40px);
+}
+
+#ssScrollArrows button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.8;
+  background: var(--contrast-color, #222);
+  color: var(--text-color, #fff);
+  border: 1px solid var(--border-color, #888);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+#ssScrollArrows button:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+#ssScrollArrows button:active {
+  transform: translateY(0);
+}
+
+/* --- Rounded corners --- */
+:root.ss-rounded .innerPost,
+:root.ss-rounded .floatingMenu,
+:root.ss-rounded .ss-keys,
+:root.ss-rounded #ssScrollArrows button {
+  border-radius: 5px;
+}
+
+/* --- 8chanSS page sub-heads + sub-options --- */
+#settingsMenu .settingsSectionTitle {
+  font-size: 130% !important;
+}
+
+.ss-subhead {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  margin: 1.2em 0 0.5em;
+  white-space: nowrap;
+}
+
+.ss-subhead::before,
+.ss-subhead::after {
+  content: "";
+  height: 1px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.ss-subhead::before {
+  flex: 0 0 1.2em;
+}
+
+.ss-subhead::after {
+  flex: 1;
+}
+
+.panelContents > .ss-subhead:first-of-type {
+  margin-top: 0.2em;
+}
+
+.ss-sub {
+  margin-left: 1.2em;
+}
+
+.ss-sub[hidden] {
+  display: none;
+}
+
+/* --- Catalog filter manager --- */
+.ss-filterbox {
+  margin: 8px 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.ss-filterbox[hidden] {
+  display: none;
+}
+
+.ss-filterhelp {
+  font-size: 10px;
+  margin-bottom: 5px;
+  opacity: 0.8;
+}
+
+.ss-filterrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.ss-filterrow input[type="text"] {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+  background: var(--background-color, transparent);
+  color: var(--text-color, inherit);
+  min-width: 0;
+}
+
+.ss-filterword {
+  flex: 1;
+}
+
+.ss-filterboards {
+  flex: 2;
+}
+
+.ss-filterrm {
+  background: none;
+  border: none;
+  color: #c00;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+}
+
+.ss-filteradd {
+  width: 100%;
+  margin-top: 4px;
+  cursor: pointer;
 }
 
 :root.is-catalog.show-catalog-form #postingForm {
-    display: block !important;
+  display: block !important;
 }
 
-:root.is-thread footer {
-    visibility: hidden;
-    height: 0;
+/* --- OP background --- */
+:root.op-background .opCell > .innerOP {
+  padding-top: 0.25em;
+  width: 100%;
+  background: var(--contrast-color);
+  border: 1px solid var(--horizon-sep-color);
+  border-top-width: 0;
+  border-left-width: 0;
 }
 
-/* OP */
-:root.op-background .opCell>.innerOP {
-    padding-top: 0.25em;
-    width: 100%;
-    background: var(--contrast-color);
-    border: 1px solid var(--horizon-sep-color);
-    border-top-width: 0;
-    border-left-width: 0;
-}
-
-/* Header */
-nav.navHeader {
-    z-index: 300;
-}
-
-:not(:root.bottom-header) .navHeader {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-
-:root.bottom-header nav.navHeader {
-    top: auto !important;
-    bottom: 0 !important;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
-}
-
+/* --- Highlight current board --- */
 :root.hl-currentBoard .navBoardsLink--current {
-    font-weight: 800;
-    color: var(--link-color) !important;
-    text-transform: uppercase;
+  font-weight: 800;
+  color: var(--link-color) !important;
+  text-transform: uppercase;
 }
 
 :root.hl-currentBoard .navBoardsLink--current:hover {
-    color: var(--link-color-hover) !important;
+  color: var(--link-color-hover) !important;
 }
 
-/* (You) Replies */
+/* --- Style (You) posts --- */
 :root.highlight-yous .innerPost:has(> .postInfo.title > .youName),
 :root.highlight-yous .innerOP:has(> .opHead.title > .youName),
 :root.highlight-yous .yourPost {
-    border-left: dashed #68b723 2px !important;
+  border-left: dashed #68b723 2px !important;
 }
 
-:root.highlight-yous .innerPost:has(>.divMessage>.you),
-:root.highlight-yous .innerPost:has(>.divMessage>*:not(div)>.you),
-:root.highlight-yous .innerPost:has(>.divMessage>*:not(div)>*:not(div)>.you),
+:root.highlight-yous .innerPost:has(> .divMessage > .you),
+:root.highlight-yous .innerPost:has(> .divMessage > *:not(div) > .you),
+:root.highlight-yous .innerPost:has(> .divMessage > *:not(div) > *:not(div) > .you),
 :root.highlight-yous .quotesYou {
-    border-left: solid var(--subject-color) 2px !important;
+  border-left: solid var(--subject-color) 2px !important;
 }
 
-/* Fit Replies */
+/* --- Fit replies --- */
 :root.fit-replies :not(.hidden).innerPost {
-    margin-left: 10px;
-    display: flow-root;
+  margin-left: 10px;
+  display: flow-root;
 }
 
 :root.fit-replies :not(.hidden, .inlineQuote).innerPost {
-    margin-left: 0;
+  margin-left: 0;
 }
 
-/* Filename & Thumbs */
-.multipleUploads .uploadCell:not(.expandedCell) {
-    max-width: 215px;
+/* --- Sidebar --- */
+:root.ss-sidebar #mainPanel {
+  margin-right: 19rem;
+  margin-left: 0;
 }
 
-/* Blur Spoilers Option, for quoteTooltip only */
-:root.ss-blur-spoilers .quoteTooltip img[src*=\"custom\.spoiler\"],
-:root.ss-blur-spoilers .quoteTooltip img[src*=\"spoiler\.png\"],
-:root.ss-blur-spoilers .quoteTooltip img[src*=\"audioGenericThumb\.png\"] {
-    filter: blur(5px) !important;
-    transition: filter 0.3s ease;
-}
-/* Blur spoilers: blurred image */
-a.imgLink img.ss-spoiler-blurred {
-    filter: blur(5px);
-    transition: filter 0.3s ease;
-}
-a.imgLink img.ss-spoiler-blurred:hover {
-    filter: none;
-}
-/* Blur spoilers: border-only (removeSpoilers sub-option) */
-a.imgLink img.ss-spoiler-border {
-    border: 1px dotted var(--border-color);
+:root.ss-leftsidebar #mainPanel {
+  margin-left: 19rem;
+  margin-right: 0;
 }
 
-/* Inline Expanded, not Hover */
-:root.fit-images :not(ruffle-player,audio).imgExpanded {
-    max-height: 90vh !important;
-    object-fit: contain;
-    width: auto !important;
+/* --- Thread Watcher menu --- */
+#watchedMenu {
+  padding: 5px !important;
+  box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
 }
 
-/* Thread Watcher */
-:not(:root.auto-expand-tw) #watchedMenu .floatingContainer {
-    overflow-x: hidden;
-    overflow-wrap: break-word;
+:root.ss-small-font #watchedMenu {
+  font-size: smaller;
+}
+
+#watchedMenu,
+#watchedMenu .floatingContainer {
+  max-width: 100vw;
+}
+
+#watchedMenu .floatingContainer {
+  scrollbar-width: thin;
+  scrollbar-color: var(--link-color) var(--contrast-color);
 }
 
 :root.auto-expand-tw #watchedMenu .floatingContainer {
-    height: fit-content !important;
-    padding-bottom: 10px;
-    resize: horizontal;
+  height: fit-content !important;
+  padding-bottom: 10px;
+  resize: horizontal;
+}
+
+:root.ss-nopin-catalog.is-catalog #watchedMenu {
+  display: none !important;
 }
 
 .watchedCellLabel a::before {
-    content: attr(data-board);
-    color: #aaa;
-    margin-right: 4px;
-    font-weight: bold;
+  content: attr(data-board);
+  color: #aaa;
+  margin-right: 4px;
+  font-weight: bold;
 }
 
 .watchButton.watched-active::before {
-    color: #dd003e !important;
-}
-
-#watchedMenu,
-#settingsMenu,
-#multiboardMenu,
-.mediaViewer {
-    font-size: smaller;
-    padding: 5px !important;
-    box-shadow: -3px 3px 2px 0px rgba(0, 0, 0, 0.19);
-}
-
-#watchedMenu,
-#watchedMenu .floatingContainer {
-    max-width: 100vw;
-}
-
-.watchedNotification::before {
-    padding-right: 2px;
-}
-
-#watchedMenu .floatingContainer {
-    scrollbar-width: thin;
-    scrollbar-color: var(--link-color) var(--contrast-color);
-}
-
-.ss-active {
-    font-weight: bold;
+  color: #dd003e !important;
 }
 
 .markAllRead::before {
-    content: \"\\e065\";
-}
-/* Up/Down Arrows */
-.scroll-arrow-btn {
-    position: fixed;
-    right: 50px;
-    width: 36px;
-    height: 35px;
-    background: #222;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-    font-size: 22px;
-    cursor: pointer;
-    opacity: 0.7;
-    z-index: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.2s, background 0.2s;
+  content: "\e065";
 }
 
-:root:not(.is-index, .is-catalog).ss-sidebar .scroll-arrow-btn {
-    right: 330px !important;
+.ss-active {
+  font-weight: bold;
 }
 
-/* Sidebar */
-:root.ss-sidebar #mainPanel {
-    margin-right: 19rem;
-    margin-left: 0;
-}
-:root.ss-leftsidebar #mainPanel {
-    margin-left: 19rem;
-    margin-right: 0;
+/* --- Gallery above menus --- */
+div.modalPanel {
+  z-index: 306;
 }
 
-.scroll-arrow-btn:hover {
-    opacity: 1;
-    background: #444;
+/* --- Side catalog backdrop (used by Sidebar) --- */
+#sideCatalogDiv {
+  z-index: 200;
+  background: var(--background-gradient);
 }
 
-#scroll-arrow-up {
-    bottom: 80px;
-}
-
-#scroll-arrow-down {
-    bottom: 32px;
-}
-
-/* Smol padding fix for the anchor */
-.bumpLockIndicator::after {
-    padding-right: 3px;
-}
-
-/* Native Settings */
-.floatingMenu.focused {
-    z-index: 305 !important;
-}
-
-#quick-reply {
-    padding: 0;
-}
-
-/* Media Viewer */
+/* --- Advanced Media Player positioning --- */
 .mediaViewer.topright {
-    top: 26px !important;
-    right: 0 !important;
-    left: auto !important;
-    max-height: 97% !important;
-    max-width: max-content !important;
+  top: 26px !important;
+  right: 0 !important;
+  left: auto !important;
+  max-height: 97% !important;
+  max-width: max-content !important;
 }
 
 .mediaViewer.topleft {
-    top: 26px !important;
-    left: 0 !important;
-    right: auto !important;
-    max-height: 97% !important;
-    max-width: max-content !important;
+  top: 26px !important;
+  left: 0 !important;
+  right: auto !important;
+  max-height: 97% !important;
+  max-width: max-content !important;
 }
 
 .mediaViewer.topright::after {
-    pointer-events: none;
+  pointer-events: none;
 }
 
 .mediaViewer.topleft::after {
-    pointer-events: none;
+  pointer-events: none;
 }
 
-/* 8chanSS settings custom class */
-.ss-chevron {
-    transition: transform 0.2s;
-    margin-left: 6px;
-    font-size: 12px;
-    display: inline-block;
+/* --- Blur spoilers --- */
+:root.ss-blur-spoilers .quoteTooltip img[src*="custom.spoiler"],
+:root.ss-blur-spoilers .quoteTooltip img[src*="spoiler.png"],
+:root.ss-blur-spoilers .quoteTooltip img[src*="audioGenericThumb.png"] {
+  filter: blur(5px) !important;
+  transition: filter 0.3s ease;
 }
 
-a.imgLink[data-filemime^='audio/'],
-a.originalNameLink[href$='.mp3'],
-a.originalNameLink[href$='.ogg'],
-a.originalNameLink[href$='.m4a'],
-a.originalNameLink[href$='.wav'] {
-    position: relative;
+a.imgLink img.ss-spoiler-blurred {
+  filter: blur(5px);
+  transition: filter 0.3s ease;
 }
 
-.audio-preview-indicator {
-    display: none;
-    position: absolute;
-    background: rgba(0, 0, 0, 0.7);
-    color: #fff;
-    padding: 5px;
-    font-size: 12px;
-    border-radius: 3px;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    white-space: nowrap;
-    pointer-events: none;
+a.imgLink img.ss-spoiler-blurred:hover {
+  filter: none;
 }
 
-a[data-filemime^='audio/']:hover .audio-preview-indicator,
-a.originalNameLink:hover .audio-preview-indicator {
-    display: block;
+a.imgLink img.ss-spoiler-border {
+  border: 1px dotted var(--border-color);
 }
-
-.yt-icon {
-    width: 16px;
-    height: 13px;
-    vertical-align: middle;
-    margin-right: 2px;
-}
-
-.id-glow {
-    box-shadow: 0 0 12px var(--subject-color);
-}
-
-.id-dotted {
-    border: 2px dotted white;
-}
-
-/* APNG */
-.apng-canvas-snapshot {
-    display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-}
-
-.apng-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 2;
-    cursor: pointer;
-    user-select: none;
-}
-
-/* Mascots */
+/* --- Mascot --- */
 .chSS-mascot {
-    position: fixed;
-    height: auto;
-    object-fit: contain;
-    pointer-events: none;
-    z-index: -1;
-    user-select: none;
-    -webkit-user-drag: none;
-}
-
-/* Mascot settings textarea */
-#setting_enableMascots_mascotUrls {
-    resize: vertical;
-    min-height: 80px;
-}
-
-/* Backlink icons */
-:root.backlink-icon .panelBacklinks > a {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    margin: 0 2px;
-    text-decoration: none;
-    font-size: 0;
-    vertical-align: middle;
-    color: var(--link-color);
-}
-
-:root.backlink-icon .panelBacklinks > a::before {
-    content: '▶';
-    font-size: 12px;
-    display: inline-block;
-    line-height: 0.6;
-    color: var(--link-color);
-    transform: rotate(0deg);
-    transition: transform 0.1s ease-in-out, opacity 0.1s ease-in-out;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Symbol', Roboto, Ubuntu, Cantarell, sans-serif;
-}
-
-:root.backlink-icon .panelBacklinks > a.inlined::before {
-    transform: rotate(90deg);
-    opacity: 0.7;
-    color: var(--link-hover-color);
-    line-height: 0.9;
-}
-
-/* ID Post Count */
-:root.show-ID-count .labelId::after {
-    content: attr(data-posts-by-this-id);
-    padding: 2px 0px 2px 4px;
-    border-left: 1px solid #ececec;
-    margin-left: 0.4em;
-}
-
-/* Space after time */
-a.linkSelf {
-    margin-left: 0.25em;
-}
-
-/* Gallery */
-div.modalPanel {
-    z-index: 306;
+  position: fixed;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: -1;
+  user-select: none;
+  -webkit-user-drag: none;
 }
