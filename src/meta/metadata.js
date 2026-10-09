@@ -29,6 +29,7 @@
 // @grant        GM.setValue
 // @grant        GM.deleteValue
 // @grant        GM.listValues
+// @grant        unsafeWindow
 // @grant        GM.xmlHttpRequest
 // @connect      youtube.com
 // @connect      i.ytimg.com
