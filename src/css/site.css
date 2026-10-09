@@ -438,6 +438,35 @@ div.modalPanel {
   pointer-events: none;
 }
 
+/* --- Audio hover indicator --- */
+a[data-filemime^="audio/"],
+a.originalNameLink[href$=".mp3"],
+a.originalNameLink[href$=".ogg"],
+a.originalNameLink[href$=".m4a"],
+a.originalNameLink[href$=".wav"] {
+  position: relative;
+}
+
+.audio-preview-indicator {
+  display: none;
+  position: absolute;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 5px;
+  font-size: 12px;
+  border-radius: 3px;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+a[data-filemime^="audio/"]:hover .audio-preview-indicator,
+a.originalNameLink:hover .audio-preview-indicator {
+  display: block;
+}
+
 /* --- Blur spoilers --- */
 :root.ss-blur-spoilers .quoteTooltip img[src*="custom.spoiler"],
 :root.ss-blur-spoilers .quoteTooltip img[src*="spoiler.png"],
