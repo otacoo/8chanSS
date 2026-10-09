@@ -59,6 +59,7 @@
     noPinInCatalog: "alwaysShowTW_noPinInCatalog",
     expandTW: "autoExpandTW",
     customTrunc: "truncFilenames_customTrunc",
+    showUnreadLine: "enableScrollSave_showUnreadLine",
     catalogImageHover: "enableCatalogImageHover",
     threadImageHover: "enableThreadImageHover",
     threadHiding: "enableThreadHiding",
@@ -124,6 +125,8 @@
     catalogFilters: {},
     truncFilenames: false,
     customTrunc: 15,
+    enableScrollSave: true,
+    showUnreadLine: true,
     enableShortcuts: false,
     updateNotif: true,
     ssVersion: ""
@@ -164,6 +167,12 @@
           ]
         },
         { key: "trackHoverPlayback", label: "Track and Restore Hover Media Playback", title: "Remembers hover video/audio position" },
+        { head: "Thread" },
+        {
+          key: "enableScrollSave", label: "Save Scroll Position", sub: [
+            { key: "showUnreadLine", label: "Show Unread Line" }
+          ]
+        },
         { head: "Thread Watcher" },
         { key: "noPinInCatalog", label: "Don't pin in Catalog" },
         { key: "smallFont", label: "Smaller font" },
@@ -241,13 +250,13 @@
             { key: "customTrunc", label: "Max filename length (5-50)", type: "number", min: 5, max: 50 }
           ]
         },
-        { head: "Keyboard Shortcuts" },
-        { key: "enableShortcuts", label: "Enable Keyboard Shortcuts" },
         { head: "Notifications" },
         { key: "updateNotif", label: "8chanSS update notifications" }
       ]
     },
-    { page: "ss-shortcuts", title: "Shortcuts", options: [] }
+    { page: "ss-shortcuts", title: "Shortcuts", options: [
+      { key: "enableShortcuts", label: "Enable Keyboard Shortcuts" }
+    ] }
   ];
 
   var ssSettings = Object.assign({}, SS_DEFAULTS);
@@ -448,7 +457,8 @@
     viewerStyle: "enableMediaPlayer",
     catalogFiltering: "threadHiding",
     catalogLinksNewTab: "catalogLinks",
-    customTrunc: "truncFilenames"
+    customTrunc: "truncFilenames",
+    showUnreadLine: "enableScrollSave"
   };
 
   function rootToggle(cls, on) {
@@ -1389,6 +1399,131 @@
     }
   }
 
+  var SCROLL_POSITIONS_KEY = "8chanSS_scrollPositions";
+  var UNREAD_LINE_ID = "unread-line";
+  var SCROLL_MAX_THREADS = 200;
+  var scrollSaveWired = false;
+  var scrollSaveThrottle = null;
+  var scrollSaveLastY = 0;
+  var scrollSaveData = null;
+  var scrollSaveLoaded = false;
+
+  function scrollThreadKey() {
+    if (!pageType.isThread) return null;
+    var match = location.pathname.match(/^\/([^/]+)\/res\/([^/.]+)\.html$/i);
+    return match ? match[1] + "/" + match[2] : null;
+  }
+
+  function loadScrollPositions() {
+    if (scrollSaveLoaded) return Promise.resolve(scrollSaveData);
+    scrollSaveLoaded = true;
+    scrollSaveData = {};
+    if (typeof GM === "undefined" || !GM.getValue) return Promise.resolve(scrollSaveData);
+    return GM.getValue(SCROLL_POSITIONS_KEY, null).then(function (raw) {
+      if (!raw) return scrollSaveData;
+      try {
+        var obj = JSON.parse(raw);
+        if (obj && typeof obj === "object") scrollSaveData = obj;
+      } catch (e) { }
+      return scrollSaveData;
+    }).catch(function () {
+      return scrollSaveData;
+    });
+  }
+
+  function saveScrollPositions() {
+    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve();
+    return GM.setValue(SCROLL_POSITIONS_KEY, JSON.stringify(scrollSaveData || {})).catch(function () { });
+  }
+
+  function removeUnreadLine() {
+    var marker = document.getElementById(UNREAD_LINE_ID);
+    if (marker && marker.parentNode) marker.parentNode.removeChild(marker);
+  }
+
+  function addUnreadLine(position) {
+    if (!ssSettings.showUnreadLine) return;
+    var posts = document.querySelectorAll(".divPosts > .postCell[id]");
+    if (!posts.length) return;
+    if ((position + window.innerHeight) >= (document.body.offsetHeight - 5)) return;
+    var target = null;
+    for (var i = 0; i < posts.length; i++) {
+      if (posts[i].offsetTop > position) break;
+      target = posts[i];
+    }
+    if (!target) return;
+    removeUnreadLine();
+    var marker = document.createElement("hr");
+    marker.id = UNREAD_LINE_ID;
+    if (target.nextSibling) target.parentNode.insertBefore(marker, target.nextSibling);
+    else target.parentNode.appendChild(marker);
+  }
+
+  function removeUnreadLineIfAtBottom() {
+    if (!ssSettings.showUnreadLine) return;
+    if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 5)) removeUnreadLine();
+  }
+
+  function saveScrollPositionNow() {
+    var key = scrollThreadKey();
+    if (!key) return Promise.resolve();
+    return loadScrollPositions().then(function (data) {
+      var position = window.scrollY;
+      var keys = Object.keys(data);
+      if (keys.length >= SCROLL_MAX_THREADS && !data[key]) {
+        keys.sort(function (a, b) { return (data[a].timestamp || 0) - (data[b].timestamp || 0); });
+        for (var i = 0; i < keys.length - SCROLL_MAX_THREADS + 1; i++) delete data[keys[i]];
+      }
+      if (!data[key]) data[key] = {};
+      if (typeof data[key].position !== "number" || position > data[key].position) {
+        data[key].position = position;
+        data[key].timestamp = Date.now();
+        return saveScrollPositions();
+      }
+    });
+  }
+
+  function restoreScrollPosition() {
+    var key = scrollThreadKey();
+    if (!key) return Promise.resolve();
+    return loadScrollPositions().then(function (data) {
+      var saved = data[key];
+      if (!saved || typeof saved.position !== "number") return;
+      var anchor = location.hash ? location.hash.slice(1) : "";
+      if (anchor && /^[a-zA-Z0-9_-]+$/.test(anchor)) {
+        setTimeout(function () {
+          var post = document.getElementById(anchor);
+          if (post && post.classList.contains("postCell")) {
+            var rect = post.getBoundingClientRect();
+            window.scrollTo({
+              top: rect.top + window.pageYOffset - window.innerHeight / 2 + rect.height / 2,
+              behavior: "auto"
+            });
+          }
+          addUnreadLine(saved.position);
+        }, 25);
+        return;
+      }
+      window.scrollTo({ top: saved.position, behavior: "auto" });
+      setTimeout(function () { addUnreadLine(saved.position); }, 80);
+    });
+  }
+
+  function onScrollSave() {
+    if (scrollSaveThrottle) return;
+    scrollSaveThrottle = setTimeout(function () {
+      scrollSaveThrottle = null;
+      var y = window.scrollY;
+      if (y > scrollSaveLastY) saveScrollPositionNow();
+      scrollSaveLastY = y;
+      removeUnreadLineIfAtBottom();
+    }, 100);
+  }
+
+  function onBeforeUnloadSave() {
+    saveScrollPositionNow();
+  }
+
   var Features = {
     // Feature: Catalog Links
     catalogLinks: function (on) {
@@ -1708,6 +1843,30 @@
         }
         restoreTruncFilenames();
       }
+    },
+    // Feature: Save Scroll Position
+    enableScrollSave: function (on) {
+      if (!pageType.isThread) return;
+      if (!on) {
+        if (scrollSaveWired) {
+          window.removeEventListener("scroll", onScrollSave);
+          window.removeEventListener("beforeunload", onBeforeUnloadSave);
+          scrollSaveWired = false;
+        }
+        removeUnreadLine();
+        return;
+      }
+      if (!ssSettings.showUnreadLine) removeUnreadLine();
+      if (!scrollSaveWired) {
+        scrollSaveWired = true;
+        scrollSaveLastY = window.scrollY;
+        window.addEventListener("scroll", onScrollSave, { passive: true });
+        window.addEventListener("beforeunload", onBeforeUnloadSave);
+        if (document.readyState !== "complete") {
+          window.addEventListener("load", function () { restoreScrollPosition(); }, { once: true });
+        }
+      }
+      restoreScrollPosition();
     },
     // Feature: Scroll Arrows
     scrollArrows: function (on) {

@@ -82,3 +82,13 @@
   border-color: var(--marked-border-color);
   color: var(--marked-text-color);
 }
+
+/* --- Unread line (Save Scroll Position) --- */
+#unread-line {
+  height: 2px;
+  border: none !important;
+  pointer-events: none !important;
+  background-image: linear-gradient(to left, rgba(185, 185, 185, 0.2), var(--text-color), rgba(185, 185, 185, 0.2));
+  margin: -3px auto -3px auto;
+  width: 60%;
+}
