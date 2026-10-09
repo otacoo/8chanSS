@@ -16,34 +16,7 @@ Then press the big install button to install the script.
 
 
 ### Configure
-- Check in the 8chan header for the 8chanSS menu button
-- Alternatively, press `CTRL` + `F1` to open the menu
-
-
-### What it does:
-- Catalog links for the header
-- Image hover for catalog and thread images, videos and audio (new)
-- Image Hover for spoilers
-- Autoscroll page to last read post + unread line
-- Sidebar
-- Quick Reply to sidebar
-- Blur or remove spoilers
-- Beep on getting a (You)
-- Custom text for (You) notification in the tab
-- Improved styling of the site
-- Adds a checkbox to the Quick Reply to save (or not save) the name field on refresh
-- Hide Posting Form and Announcements
-- Show full filename of media posts
-- Style (You) posts (green for your posts & red for replies to you)
-- Image Hover that follows the cursor
-- Bottom Header
-- Up/Down Arrows
-- Pin Thread Watcher
-- Hide/unhide threads in the catalog
-- Mark/unmark posts as yours
-- Show all posts by ID
-
-More incoming...
+- Click the gear icon in the header and search for 8chanSS
 
 ### Keyboard Shortcuts:
 
@@ -96,13 +69,6 @@ Add this to uBlock's *My Filters* page and press Save Changes, then restart your
 ! Block Custom Theme CSS on https://8chan.moe|se
 ||8chan.*/*/custom.css$css
 ```
-
-### ~~Notification API~~ (currently removed due to site CSP)
-<blockquote><i>
-8chanSS makes available a small API to call toast notifications on the page.
-
-The API allows any script to call a notification, set a color (black, green, orange, red, blue) and duration in ms (default 1200 ms).
-</i></blockquote>
 
 ## Contributing
 Read [Contributing](https://github.com/otacoo/8chanSS/blob/main/CONTRIBUTING.md#development--contribution) first to set up, fork the repo, then do a pull request to here.
