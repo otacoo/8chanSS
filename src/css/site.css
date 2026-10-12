@@ -547,6 +547,10 @@ div.modalPanel {
   z-index: 400;
 }
 
+.floatingMenu {
+  z-index: 401 !important;
+}
+
 #sideCatalog {
   z-index: 300;
   position: absolute;
