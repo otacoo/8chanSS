@@ -20,8 +20,6 @@ Then press the big install button to install the script.
 
 ### Keyboard Shortcuts:
 
-<kbd>CTRL</kbd> + <kbd>F1</kbd> : Open 8chanSS settings menu
-
 <kbd>CTRL</kbd> + <kbd>Enter</kbd> : Submit post
 
 <kbd>Tab</kbd> : Target Quick Reply text area
