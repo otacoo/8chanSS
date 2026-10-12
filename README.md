@@ -28,6 +28,8 @@ Then press the big install button to install the script.
 
 <kbd>R</kbd> : Refresh Thread (5 sec. cooldown)
 
+<kbd>G</kbd> : Open Gallery
+
 <kbd>Esc</kbd> : Clear and close the Quick Reply
 
 <kbd>CTRL</kbd> + <kbd>Q</kbd> : Toggle Quick Reply on/off
