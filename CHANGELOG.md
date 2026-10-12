@@ -1,3 +1,8 @@
+### v2.1.1
+*2026-10-12*
+
+- Up the z-index for the Quick Reply
+
 ### v2.1.0
 *2026-10-12*
 

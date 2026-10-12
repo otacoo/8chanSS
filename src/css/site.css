@@ -552,6 +552,10 @@ div.modalPanel {
   z-index: 401 !important;
 }
 
+#quick-reply {
+  z-index: 402 !important;
+}
+
 #sideCatalog {
   z-index: 300;
   position: absolute;
