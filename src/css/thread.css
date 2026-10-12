@@ -44,7 +44,7 @@
 
 :root.fade-qr #quick-reply {
   padding: 0;
-  opacity: 0.6;
+  opacity: 0.5;
   transition: opacity 0.3s ease;
 }
 
