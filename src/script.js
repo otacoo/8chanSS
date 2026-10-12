@@ -2661,7 +2661,7 @@
 
       const embedButton = document.createElement('span');
       embedButton.className = 'embedButton glowOnHover';
-      embedButton.textContent = '[Embed]';
+      embedButton.textContent = 'Embed';
 
       embedButton.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -2670,16 +2670,16 @@
         const embedContainer = embedButton.nextElementSibling;
         if (embedContainer?.classList.contains('embedContainer')) {
           embedContainer.remove();
-          embedButton.textContent = '[Embed]';
+          embedButton.textContent = 'Embed';
         } else {
-          embedButton.textContent = '[Loading...]';
+          embedButton.textContent = 'Loading...';
           embedButton.style.pointerEvents = 'none';
           try {
             const newContainer = await createEmbedFn(link.href);
             embedButton.parentNode.insertBefore(newContainer, embedButton.nextSibling);
-            embedButton.textContent = '[Remove]';
+            embedButton.textContent = 'Remove';
           } catch (error) {
-            embedButton.textContent = '[Embed]';
+            embedButton.textContent = 'Embed';
             console.error('Failed to create embed:', error);
           } finally {
             embedButton.style.pointerEvents = 'auto';
@@ -3341,7 +3341,7 @@
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      setTimeout(function () { osc.stop(); }, 100);
+      setTimeout(function () { osc.stop(); }, 60);
     } catch (e) { }
   }
 
