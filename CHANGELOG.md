@@ -1,3 +1,16 @@
+### v2.1.3
+*2026-10-12*
+
+- **Changed:** Pinned Advanced Media Player windows can now be dragged (issue #14 by @rockmanzx-del)
+
+**Fixes & others:**
+- Fix *Hide Footer* preventing tab (N)/(You) counters from being cleared
+- Fix Beep duration, and being triggered by every post instead of only (You)s
+- Fix embed button double brackets
+- Performance: hover media previews now only reposition once per animation frame
+- Performance: Enhanced Links do fewer DOM queries on page updates
+- Code cleanup: media player, Storage page, observers
+
 ### v2.1.2
 *2026-10-12*
 
