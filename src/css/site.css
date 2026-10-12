@@ -560,16 +560,17 @@ div.modalPanel {
   z-index: 400;
 }
 
-.floatingMenu,
+#quick-reply,
+#watchedMenu,
 .floatingList {
   z-index: 401 !important;
 }
 
-#quick-reply {
+.mediaViewer {
   z-index: 402 !important;
 }
 
-.mediaViewer {
+#settingsMenu.floatingMenu {
   z-index: 403 !important;
 }
 
