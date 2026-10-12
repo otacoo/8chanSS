@@ -195,8 +195,13 @@
 :root.ss-rounded .innerPost,
 :root.ss-rounded .floatingMenu,
 :root.ss-rounded .ss-keys,
-:root.ss-rounded #ssScrollArrows button {
+:root.ss-rounded #ssScrollArrows button,
+:root.ss-rounded .ss-storage-btn {
   border-radius: 5px;
+}
+
+:root.ss-rounded.ss-replyhead .postInfo.title {
+  border-radius: 5px 5px 0 0;
 }
 
 /* --- 8chanSS page sub-heads + sub-options --- */
