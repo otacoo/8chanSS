@@ -4741,6 +4741,7 @@
       return label;
     }
     if (opt.type === "textarea") {
+      label.className = "ss-textarea-row";
       label.appendChild(document.createTextNode(opt.label));
       var ta = document.createElement("textarea");
       ta.rows = opt.rows || 4;

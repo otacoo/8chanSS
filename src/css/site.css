@@ -269,6 +269,18 @@
   flex-wrap: wrap;
 }
 
+/* Textarea rows stack the label above the field */
+#settingsMenu label.ss-textarea-row {
+  display: block;
+}
+
+#settingsMenu label.ss-textarea-row textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
 /* --- Storage page buttons --- */
 .ss-button-grid {
   position: relative;
