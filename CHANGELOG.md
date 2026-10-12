@@ -1,3 +1,24 @@
+### v2.1.0
+*2026-10-12*
+
+- **New Option:** Better Gallery (General > Media) 
+  - Replaces the site's gallery with a grid of all media, with a viewer, a button to jump to the post and a close button
+  - New shortcut: `G` opens the Gallery
+- **New Option:** Beep on (You) (Misc > Notifications)
+- **New Option:** Style scrollbars + Thin scrollbars (Styling > Site Styling)
+- **New Option:** Always show ID post count (Misc > IDs)
+- **New Option:** Move file uploads below OP title (Styling > Misc)
+- Formatting shortcuts: `CTRL + D` is now Doom, `CTRL + SHIFT + B` Srz Bizniz, `ALT + E` Echoes
+
+**Fixes:**
+- `Tab` in the Quick Reply now cycles between the text area and the captcha
+- `Esc` now correctly closes the Quick Reply when Sticky Quick Reply is enabled
+- Fix for `CTRL + SHIFT + UP/DOWN` not scrolling between replies to your posts
+- Fix for Advanced Media Player pinning not applying to all media viewers
+- Rounded Corners now also rounds thumbnails, storage buttons and reply headers
+- Floating menus can no longer be hidden behind the header
+- Stronger shadow and bold version number for toast notifications
+
 # v2.0.0
 *2026-10-09*
 
