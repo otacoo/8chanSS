@@ -633,6 +633,7 @@
   var spoilerTooltipObserver = null;
   var mediaViewerObserver = null;
   var mediaPlayerApplied = false;
+  var mediaViewerDragging = false;
   var hoverPlaybackTimes = {};
 
   function applyBlurOrRemoveSpoilers(img) {
@@ -756,6 +757,36 @@
       var style = ssSettings.viewerStyle;
       if (style === "topright" || style === "topleft") viewers[i].classList.add(style);
     }
+  }
+
+  function pinMediaViewer(viewer) {
+    var style = ssSettings.viewerStyle;
+    if (style !== "topright" && style !== "topleft") return;
+    if (viewer.classList.contains(style)) return;
+    viewer.classList.remove("topright", "topleft");
+    viewer.classList.add(style);
+  }
+
+  function onMediaViewerMouseDown(e) {
+    if (e.button !== 0) return;
+    var target = e.target;
+    if (!target || !target.closest) return;
+    if (target.onclick !== null) return;
+    var handle = target.closest(".mediaViewer > .handle");
+    if (!handle) return;
+    var viewer = handle.parentElement;
+    if (!viewer) return;
+    if (!viewer.classList.contains("topright") && !viewer.classList.contains("topleft")) return;
+    mediaViewerDragging = true;
+    var rect = viewer.getBoundingClientRect();
+    viewer.classList.remove("topright", "topleft");
+    viewer.style.left = rect.left + "px";
+    viewer.style.top = rect.top + "px";
+    viewer.style.right = "auto";
+  }
+
+  function onMediaViewerMouseUp() {
+    mediaViewerDragging = false;
   }
 
   function saveHoverPlaybackTime(key, t) {
@@ -3818,11 +3849,24 @@
       if (on) {
         try { localStorage.setItem("mediaViewer", "true"); } catch (e) { }
         mediaPlayerApplied = true;
+        document.addEventListener("mousedown", onMediaViewerMouseDown, true);
+        window.addEventListener("mouseup", onMediaViewerMouseUp);
+        window.addEventListener("blur", onMediaViewerMouseUp);
         positionMediaViewer();
         if (!mediaViewerObserver) {
           mediaViewerObserver = new MutationObserver(function (mutations) {
             for (var i = 0; i < mutations.length; i++) {
-              var nodes = mutations[i].addedNodes;
+              var m = mutations[i];
+              if (m.type === "attributes") {
+                if (mediaViewerDragging) continue;
+                var el = m.target;
+                if (el.classList && el.classList.contains("mediaViewer") &&
+                  (el.classList.contains("focused") || !el.classList.contains("hidden"))) {
+                  pinMediaViewer(el);
+                }
+                continue;
+              }
+              var nodes = m.addedNodes;
               for (var j = 0; j < nodes.length; j++) {
                 var node = nodes[j];
                 if (node.nodeType !== 1) continue;
@@ -3835,13 +3879,22 @@
             }
           });
           var menus = document.getElementById("floatingMenus") || document.body;
-          mediaViewerObserver.observe(menus, { childList: true, subtree: true });
+          mediaViewerObserver.observe(menus, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["class"]
+          });
         }
       } else {
         if (mediaViewerObserver) {
           mediaViewerObserver.disconnect();
           mediaViewerObserver = null;
         }
+        document.removeEventListener("mousedown", onMediaViewerMouseDown, true);
+        window.removeEventListener("mouseup", onMediaViewerMouseUp);
+        window.removeEventListener("blur", onMediaViewerMouseUp);
+        mediaViewerDragging = false;
         if (mediaPlayerApplied) {
           try { localStorage.setItem("mediaViewer", "false"); } catch (e) { }
           mediaPlayerApplied = false;
