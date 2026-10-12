@@ -746,11 +746,12 @@
   }
 
   function positionMediaViewer() {
-    var viewer = document.querySelector(".mediaViewer");
-    if (!viewer) return;
-    viewer.classList.remove("topright", "topleft");
-    var style = ssSettings.viewerStyle;
-    if (style === "topright" || style === "topleft") viewer.classList.add(style);
+    var viewers = document.querySelectorAll(".mediaViewer");
+    for (var i = 0; i < viewers.length; i++) {
+      viewers[i].classList.remove("topright", "topleft");
+      var style = ssSettings.viewerStyle;
+      if (style === "topright" || style === "topleft") viewers[i].classList.add(style);
+    }
   }
 
   function saveHoverPlaybackTime(key, t) {
@@ -3534,7 +3535,8 @@
               }
             }
           });
-          mediaViewerObserver.observe(document.body, { childList: true });
+          var menus = document.getElementById("floatingMenus") || document.body;
+          mediaViewerObserver.observe(menus, { childList: true, subtree: true });
         }
       } else {
         if (mediaViewerObserver) {
@@ -3545,8 +3547,10 @@
           try { localStorage.setItem("mediaViewer", "false"); } catch (e) { }
           mediaPlayerApplied = false;
         }
-        var viewer = document.querySelector(".mediaViewer");
-        if (viewer) viewer.classList.remove("topright", "topleft");
+        var viewers = document.querySelectorAll(".mediaViewer");
+        for (var v = 0; v < viewers.length; v++) {
+          viewers[v].classList.remove("topright", "topleft");
+        }
       }
     },
     // Feature: Thread Hiding
