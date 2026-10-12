@@ -548,7 +548,8 @@ div.modalPanel {
   z-index: 400;
 }
 
-.floatingMenu {
+.floatingMenu,
+.floatingList {
   z-index: 401 !important;
 }
 
