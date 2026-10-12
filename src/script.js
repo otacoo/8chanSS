@@ -1,4 +1,4 @@
-/* 8chanSS — native-menu pages after Data. See SS_PAGES to add options. */
+/* 8chanSS — See SS_PAGES to add options. */
 (function () {
   "use strict";
 
@@ -36,8 +36,7 @@
 
   /* ================= SECTION: Settings store ================= */
 
-  /* Per-option GM storage: old 8chanSS_* keys are reused 1:1 so existing
-     settings carry over; options new to 8chanSS use their own key. */
+  /* Per-option GM storage */
   var SS_STORE_PREFIX = "8chanSS_";
 
   var SS_STORAGE_KEYS = {
@@ -119,6 +118,8 @@
     hlCurrentBoard: true,
     showReplyHeader: false,
     roundedCorners: false,
+    styleScrollbars: false,
+    thinScrollbars: false,
     enableSidebar: false,
     leftSidebar: false,
     enableFitReplies: false,
@@ -247,6 +248,11 @@
         },
         { head: "Site Styling" },
         { key: "roundedCorners", label: "Rounded Corners" },
+        {
+          key: "styleScrollbars", label: "Style scrollbars", sub: [
+            { key: "thinScrollbars", label: "Thin scrollbars" }
+          ]
+        },
         { key: "hideAnnouncement", label: "Hide Announcement (unhides if changed)" },
         { key: "hidePanelMessage", label: "Hide Panel Message" },
         { key: "hideFooter", label: "Hide Footer" },
@@ -293,7 +299,7 @@
     {
       page: "ss-misc", title: "Misc", options: [
         { head: "Notifications" },
-        { key: "updateNotif", label: "8chanSS update notifications" },
+        { key: "updateNotif", label: "Enable toast notifications" },
         { key: "beepOnYou", label: "Beep on (You)" },
         { head: "IDs" },
         {
@@ -367,7 +373,7 @@
 
   var ssSettings = Object.assign({}, SS_DEFAULTS);
 
-  /* Hidden catalog threads state (shared with the old script's key) */
+  /* Hidden catalog threads state */
   var HIDDEN_THREADS_KEY = "8chanSS_hiddenCatalogThreads";
   var hiddenThreadsCache = null;
   var hiddenThreadsPromise = null;
@@ -565,6 +571,7 @@
     catalogLinksNewTab: "catalogLinks",
     customTrunc: "truncFilenames",
     showUnreadLine: "enableScrollSave",
+    thinScrollbars: "styleScrollbars",
     idHlStyle: "highlightNewIds",
     iconYoutube: "showLinkIcons",
     iconTwitch: "showLinkIcons",
