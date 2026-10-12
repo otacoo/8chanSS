@@ -556,6 +556,10 @@ div.modalPanel {
   z-index: 402 !important;
 }
 
+.mediaViewer {
+  z-index: 403 !important;
+}
+
 #sideCatalog {
   z-index: 300;
   position: absolute;
