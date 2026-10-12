@@ -3968,7 +3968,7 @@
     saveSetting("ssVersion");
     if (!firstInstall) {
       showToast(
-        "8chanSS has updated to v" + VERSION + '.<br>Check out the <b><a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">changelog</a></b>.',
+        "8chanSS has updated to <b>v" + VERSION + '</b>. Check out the <b><a href="https://github.com/otacoo/8chanSS/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">changelog</a></b>.',
         "blue",
         15000
       );
