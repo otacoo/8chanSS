@@ -633,7 +633,6 @@
   var spoilerTooltipObserver = null;
   var mediaViewerObserver = null;
   var mediaPlayerApplied = false;
-  var mediaViewerDragging = false;
   var hoverPlaybackTimes = {};
 
   function applyBlurOrRemoveSpoilers(img) {
@@ -750,43 +749,27 @@
     }
   }
 
-  function positionMediaViewer() {
-    var viewers = document.querySelectorAll(".mediaViewer");
+  function positionMediaViewer(viewer) {
+    var style = ssSettings.viewerStyle;
+    var viewers = viewer ? [viewer] : document.querySelectorAll(".mediaViewer");
     for (var i = 0; i < viewers.length; i++) {
+      viewers[i].dataset.ssHidden = viewers[i].classList.contains("hidden") ? "1" : "0";
       viewers[i].classList.remove("topright", "topleft");
-      var style = ssSettings.viewerStyle;
       if (style === "topright" || style === "topleft") viewers[i].classList.add(style);
     }
   }
 
-  function pinMediaViewer(viewer) {
-    var style = ssSettings.viewerStyle;
-    if (style !== "topright" && style !== "topleft") return;
-    if (viewer.classList.contains(style)) return;
-    viewer.classList.remove("topright", "topleft");
-    viewer.classList.add(style);
-  }
-
   function onMediaViewerMouseDown(e) {
-    if (e.button !== 0) return;
-    var target = e.target;
-    if (!target || !target.closest) return;
-    if (target.onclick !== null) return;
-    var handle = target.closest(".mediaViewer > .handle");
-    if (!handle) return;
+    if (e.button !== 0 || e.target.onclick !== null) return;
+    var handle = e.target.closest(".mediaViewer > .handle");
+    if (!handle || !handle.parentElement) return;
     var viewer = handle.parentElement;
-    if (!viewer) return;
     if (!viewer.classList.contains("topright") && !viewer.classList.contains("topleft")) return;
-    mediaViewerDragging = true;
     var rect = viewer.getBoundingClientRect();
     viewer.classList.remove("topright", "topleft");
     viewer.style.left = rect.left + "px";
     viewer.style.top = rect.top + "px";
     viewer.style.right = "auto";
-  }
-
-  function onMediaViewerMouseUp() {
-    mediaViewerDragging = false;
   }
 
   function saveHoverPlaybackTime(key, t) {
@@ -1029,9 +1012,16 @@
     }
   }
 
+  var hoverMoveQueued = false;
+
   function mouseMoveHandler(ev) {
     lastMouseEvent = ev;
-    positionFloatingMedia(ev);
+    if (hoverMoveQueued) return;
+    hoverMoveQueued = true;
+    requestAnimationFrame(function () {
+      hoverMoveQueued = false;
+      positionFloatingMedia(lastMouseEvent);
+    });
   }
 
   function onThumbEnter(e) {
@@ -3107,7 +3097,9 @@
       for (var i = 0; i < mutations.length; i++) {
         var added = mutations[i].addedNodes;
         for (var j = 0; j < added.length; j++) {
-          if (added[j].nodeType === 1) processLinks(added[j]);
+          var node = added[j];
+          if (node.nodeType !== 1 || !node.querySelector || !node.querySelector("a[href]")) continue;
+          processLinks(node);
         }
       }
     });
@@ -3329,8 +3321,7 @@
           if (node.classList && (node.classList.contains('quoteTooltip') || node.classList.contains('innerPost'))) {
             node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
           } else if (node.querySelectorAll) {
-            node.querySelectorAll('.quoteTooltip .uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
-            node.querySelectorAll('.innerPost .uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
+            node.querySelectorAll('.quoteTooltip .uploadDetails:not(.sauceLinksProcessed), .innerPost .uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
           }
         }
       }
@@ -3340,53 +3331,30 @@
 
   var beepOnYouObserver = null;
   var beepAudioContext = null;
-  var beepAudioReady = false;
-  var beepAudioPromise = null;
 
-  function ensureBeepAudioReady() {
-    if (beepAudioReady) return Promise.resolve();
-    if (beepAudioPromise) return beepAudioPromise;
-    beepAudioPromise = new Promise(function (resolve) {
-      function resumeAudioContext() {
-        if (!beepAudioContext) {
-          beepAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (beepAudioContext.state === "suspended") {
-          beepAudioContext.resume().then(function () {
-            beepAudioReady = true;
-            window.removeEventListener("click", resumeAudioContext);
-            window.removeEventListener("keydown", resumeAudioContext);
-            resolve();
-          });
-        } else {
-          beepAudioReady = true;
-          window.removeEventListener("click", resumeAudioContext);
-          window.removeEventListener("keydown", resumeAudioContext);
-          resolve();
-        }
-      }
-      window.addEventListener("click", resumeAudioContext);
-      window.addEventListener("keydown", resumeAudioContext);
-    });
-    return beepAudioPromise;
+  function beepNow(ctx) {
+    try {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.frequency.value = 550;
+      gain.gain.value = 0.1;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      setTimeout(function () { osc.stop(); }, 100);
+    } catch (e) { }
   }
 
   function playBeep() {
-    ensureBeepAudioReady().then(function () {
-      try {
-        var oscillator = beepAudioContext.createOscillator();
-        var gainNode = beepAudioContext.createGain();
-        oscillator.type = "sine";
-        oscillator.frequency.value = 550;
-        gainNode.gain.value = 0.1;
-        oscillator.connect(gainNode);
-        gainNode.connect(beepAudioContext.destination);
-        oscillator.start();
-        setTimeout(function () { oscillator.stop(); }, 100);
-      } catch (e) {
-        console.warn("Beep failed:", e);
-      }
-    });
+    var Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return;
+    if (!beepAudioContext) beepAudioContext = new Ctor();
+    var ctx = beepAudioContext;
+    if (ctx.state === "suspended") {
+      ctx.resume().then(function () { beepNow(ctx); });
+      return;
+    }
+    beepNow(ctx);
   }
 
   var galleryWired = false;
@@ -3425,9 +3393,7 @@
   }
 
   function onGalleryButtonClick(e) {
-    var target = e.target;
-    if (!target || !target.closest) return;
-    if (!target.closest("#galleryLink")) return;
+    if (!e.target.closest("#galleryLink")) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     openGallery();
@@ -3618,12 +3584,8 @@
       grid.appendChild(tile);
     });
 
-    updateGalleryTitle();
-    document.addEventListener("keydown", onGalleryKey, true);
-  }
-
-  function updateGalleryTitle() {
     galleryEls.title.textContent = "Gallery (" + galleryItems.length + ")";
+    document.addEventListener("keydown", onGalleryKey, true);
   }
 
   function showGalleryItem(index) {
@@ -3850,41 +3812,20 @@
         try { localStorage.setItem("mediaViewer", "true"); } catch (e) { }
         mediaPlayerApplied = true;
         document.addEventListener("mousedown", onMediaViewerMouseDown, true);
-        window.addEventListener("mouseup", onMediaViewerMouseUp);
-        window.addEventListener("blur", onMediaViewerMouseUp);
         positionMediaViewer();
         if (!mediaViewerObserver) {
           mediaViewerObserver = new MutationObserver(function (mutations) {
             for (var i = 0; i < mutations.length; i++) {
-              var m = mutations[i];
-              if (m.type === "attributes") {
-                if (mediaViewerDragging) continue;
-                var el = m.target;
-                if (el.classList && el.classList.contains("mediaViewer") &&
-                  (el.classList.contains("focused") || !el.classList.contains("hidden"))) {
-                  pinMediaViewer(el);
-                }
-                continue;
-              }
-              var nodes = m.addedNodes;
-              for (var j = 0; j < nodes.length; j++) {
-                var node = nodes[j];
-                if (node.nodeType !== 1) continue;
-                if ((node.classList && node.classList.contains("mediaViewer")) ||
-                  (node.querySelector && node.querySelector(".mediaViewer"))) {
-                  positionMediaViewer();
-                  return;
-                }
-              }
+              var el = mutations[i].target;
+              if (!el.classList || !el.classList.contains("mediaViewer")) continue;
+              var isHidden = el.classList.contains("hidden");
+              var wasHidden = el.dataset.ssHidden;
+              el.dataset.ssHidden = isHidden ? "1" : "0";
+              if (wasHidden === undefined || (wasHidden === "1" && !isHidden)) positionMediaViewer(el);
             }
           });
           var menus = document.getElementById("floatingMenus") || document.body;
-          mediaViewerObserver.observe(menus, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ["class"]
-          });
+          mediaViewerObserver.observe(menus, { subtree: true, attributes: true, attributeFilter: ["class"] });
         }
       } else {
         if (mediaViewerObserver) {
@@ -3892,9 +3833,6 @@
           mediaViewerObserver = null;
         }
         document.removeEventListener("mousedown", onMediaViewerMouseDown, true);
-        window.removeEventListener("mouseup", onMediaViewerMouseUp);
-        window.removeEventListener("blur", onMediaViewerMouseUp);
-        mediaViewerDragging = false;
         if (mediaPlayerApplied) {
           try { localStorage.setItem("mediaViewer", "false"); } catch (e) { }
           mediaPlayerApplied = false;
@@ -4184,7 +4122,6 @@
       if (beepOnYouObserver) return;
       var posts = document.querySelector(".divPosts");
       if (!posts) return;
-      ensureBeepAudioReady();
       beepOnYouObserver = new MutationObserver(function (mutations) {
         for (var i = 0; i < mutations.length; i++) {
           var nodes = mutations[i].addedNodes;
@@ -4279,21 +4216,6 @@
   Object.keys(CLASS_TOGGLES).forEach(function (key) {
     Features[key] = function (on) { rootToggle(CLASS_TOGGLES[key], on); };
   });
-
-  function disconnectAll() {
-    if (catalogObserver) { catalogObserver.disconnect(); catalogObserver = null; }
-    if (spoilerThreadsObserver) { spoilerThreadsObserver.disconnect(); spoilerThreadsObserver = null; }
-    if (spoilerTooltipObserver) { spoilerTooltipObserver.disconnect(); spoilerTooltipObserver = null; }
-    if (mediaViewerObserver) { mediaViewerObserver.disconnect(); mediaViewerObserver = null; }
-    if (catalogHidingObserver) { catalogHidingObserver.disconnect(); catalogHidingObserver = null; }
-    if (lastFiftyObserver) { lastFiftyObserver.disconnect(); lastFiftyObserver = null; }
-    if (truncObserver) { truncObserver.disconnect(); truncObserver = null; }
-    if (hoverObserver) { hoverObserver.disconnect(); hoverObserver = null; }
-    if (apngObserver) { apngObserver.disconnect(); apngObserver = null; }
-    if (highlightIdsObserver) { highlightIdsObserver.disconnect(); highlightIdsObserver = null; }
-    if (beepOnYouObserver) { beepOnYouObserver.disconnect(); beepOnYouObserver = null; }
-    if (autoSaveTimer) { clearInterval(autoSaveTimer); autoSaveTimer = null; }
-  }
 
   // Feature: Toasts
   var TOAST_COLORS = {
@@ -4658,6 +4580,24 @@
   var AUTO_SAVE_INTERVAL = 24 * 60 * 60 * 1000;
   var autoSaveTimer = null;
 
+  function readLocal(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+
+  function writeLocal(key, value) {
+    try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+  }
+
+  function gmBackup(gmKey, value) {
+    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve(false);
+    return GM.setValue(gmKey, value).then(function () { return true; }).catch(function () { return false; });
+  }
+
+  function gmFetch(gmKey) {
+    if (typeof GM === "undefined" || !GM.getValue) return Promise.resolve(null);
+    return GM.getValue(gmKey, null).catch(function () { return null; });
+  }
+
   function collectYousData() {
     var data = {};
     try {
@@ -4672,66 +4612,58 @@
   function saveYousData() {
     var data = collectYousData();
     if (!Object.keys(data).length) return Promise.resolve(false);
-    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve(false);
-    return GM.setValue("8chanSS_savedMyPosts", JSON.stringify(data)).then(function () {
-      return true;
-    }).catch(function () {
-      return false;
+    return gmBackup("8chanSS_savedMyPosts", JSON.stringify(data));
+  }
+
+  var SS_BACKUPS = {
+    watchedData: { gmKey: "8chanSS_watchedData", title: "Watched threads", name: "watched threads" },
+    navBoardData: { gmKey: "8chanSS_savedFavoriteBoards", title: "Favorite boards", name: "favorite boards" }
+  };
+
+  function saveBackup(localKey, silent) {
+    var info = SS_BACKUPS[localKey];
+    var raw = readLocal(localKey);
+    if (!raw) {
+      if (!silent) showToast("No " + info.name + " found in localStorage.", "orange", 2500);
+      return Promise.resolve(false);
+    }
+    return gmBackup(info.gmKey, raw).then(function (ok) {
+      if (!silent) showToast(ok ? info.title + " saved!" : "Failed to save " + info.name + ".", ok ? "green" : "red", ok ? 2000 : 2500);
+      return ok;
     });
   }
 
-  function saveWatchedData() {
-    var watchedData;
-    try { watchedData = localStorage.getItem("watchedData"); } catch (e) { }
-    if (!watchedData) return Promise.resolve(false);
-    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve(false);
-    return GM.setValue("8chanSS_watchedData", watchedData).then(function () {
-      return true;
-    }).catch(function () {
-      return false;
-    });
-  }
-
-  function saveFavoriteBoardsData() {
-    var favoriteBoardsData;
-    try { favoriteBoardsData = localStorage.getItem("navBoardData"); } catch (e) { }
-    if (!favoriteBoardsData) return Promise.resolve(false);
-    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve(false);
-    return GM.setValue("8chanSS_savedFavoriteBoards", favoriteBoardsData).then(function () {
-      return true;
-    }).catch(function () {
-      return false;
+  function restoreBackup(localKey) {
+    var info = SS_BACKUPS[localKey];
+    return gmFetch(info.gmKey).then(function (saved) {
+      if (!saved) { showToast("No saved " + info.name + " found.", "orange", 2500); return; }
+      if (!writeLocal(localKey, saved)) { showToast("Failed to restore " + info.name + ".", "red", 2500); return; }
+      showToast(info.title + " restored. Please reload the page.", "blue", 3000);
     });
   }
 
   function runAutoSave() {
-    var last = 0;
-    try { last = parseInt(localStorage.getItem(AUTO_SAVE_KEY), 10) || 0; } catch (e) { }
+    var last = parseInt(readLocal(AUTO_SAVE_KEY), 10) || 0;
     if (Date.now() - last < AUTO_SAVE_INTERVAL) return;
-    try { localStorage.setItem(AUTO_SAVE_KEY, String(Date.now())); } catch (e) { }
+    writeLocal(AUTO_SAVE_KEY, String(Date.now()));
     saveYousData();
-    saveWatchedData();
-    saveFavoriteBoardsData();
+    saveBackup("watchedData", true);
+    saveBackup("navBoardData", true);
   }
 
   var SS_BUTTONS = {
     saveMyPosts: function () {
-      var data = collectYousData();
-      var count = Object.keys(data).length;
+      var count = Object.keys(collectYousData()).length;
       if (!count) {
         showToast("No posts found in localStorage.", "orange", 2500);
         return;
       }
-      if (typeof GM === "undefined" || !GM.setValue) return;
-      GM.setValue("8chanSS_savedMyPosts", JSON.stringify(data)).then(function () {
-        showToast("My posts saved (" + count + " boards)!", "green", 2000);
-      }).catch(function () {
-        showToast("Failed to save my posts.", "red", 2500);
+      saveYousData().then(function (ok) {
+        showToast(ok ? "My posts saved (" + count + " boards)!" : "Failed to save my posts.", ok ? "green" : "red", ok ? 2000 : 2500);
       });
     },
     restoreMyPosts: function () {
-      if (typeof GM === "undefined" || !GM.getValue) return;
-      GM.getValue("8chanSS_savedMyPosts", null).then(function (raw) {
+      gmFetch("8chanSS_savedMyPosts").then(function (raw) {
         var data = null;
         try { data = raw ? JSON.parse(raw) : null; } catch (e) { }
         if (!data || typeof data !== "object") {
@@ -4739,68 +4671,14 @@
           return;
         }
         var count = 0;
-        Object.keys(data).forEach(function (k) {
-          try { localStorage.setItem(k, data[k]); count++; } catch (e) { }
-        });
+        Object.keys(data).forEach(function (k) { if (writeLocal(k, data[k])) count++; });
         showToast("My posts restored (" + count + " boards). Please reload the page.", "blue", 3000);
-      }).catch(function () {
-        showToast("Failed to restore my posts.", "red", 2500);
       });
     },
-    saveWatchedThreads: function () {
-      var watchedData;
-      try { watchedData = localStorage.getItem("watchedData"); } catch (e) { }
-      if (!watchedData) {
-        showToast("No watched threads found in localStorage.", "orange", 2500);
-        return;
-      }
-      if (typeof GM === "undefined" || !GM.setValue) return;
-      GM.setValue("8chanSS_watchedData", watchedData).then(function () {
-        showToast("Watched threads saved!", "green", 2000);
-      }).catch(function () {
-        showToast("Failed to save watched threads.", "red", 2500);
-      });
-    },
-    restoreWatchedThreads: function () {
-      if (typeof GM === "undefined" || !GM.getValue) return;
-      GM.getValue("8chanSS_watchedData", null).then(function (savedData) {
-        if (!savedData) {
-          showToast("No saved watched threads found.", "orange", 2500);
-          return;
-        }
-        try { localStorage.setItem("watchedData", savedData); } catch (e) { }
-        showToast("Watched threads restored. Please reload the page.", "blue", 3000);
-      }).catch(function () {
-        showToast("Failed to restore watched threads.", "red", 2500);
-      });
-    },
-    saveFavoriteBoards: function () {
-      var favoriteBoardsData;
-      try { favoriteBoardsData = localStorage.getItem("navBoardData"); } catch (e) { }
-      if (!favoriteBoardsData) {
-        showToast("No favorite boards found in localStorage.", "orange", 2500);
-        return;
-      }
-      if (typeof GM === "undefined" || !GM.setValue) return;
-      GM.setValue("8chanSS_savedFavoriteBoards", favoriteBoardsData).then(function () {
-        showToast("Favorite boards saved!", "green", 2000);
-      }).catch(function () {
-        showToast("Failed to save favorite boards.", "red", 2500);
-      });
-    },
-    restoreFavoriteBoards: function () {
-      if (typeof GM === "undefined" || !GM.getValue) return;
-      GM.getValue("8chanSS_savedFavoriteBoards", null).then(function (savedData) {
-        if (!savedData) {
-          showToast("No saved favorite boards found.", "orange", 2500);
-          return;
-        }
-        try { localStorage.setItem("navBoardData", savedData); } catch (e) { }
-        showToast("Favorite boards restored. Please reload the page.", "blue", 3000);
-      }).catch(function () {
-        showToast("Failed to restore favorite boards.", "red", 2500);
-      });
-    }
+    saveWatchedThreads: function () { saveBackup("watchedData"); },
+    saveFavoriteBoards: function () { saveBackup("navBoardData"); },
+    restoreWatchedThreads: function () { restoreBackup("watchedData"); },
+    restoreFavoriteBoards: function () { restoreBackup("navBoardData"); }
   };
 
   function makeButton(opt) {
@@ -5111,10 +4989,6 @@
       if (tryInjectMenu()) observer.disconnect();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
-    window.addEventListener("beforeunload", function () {
-      observer.disconnect();
-      disconnectAll();
-    }, { once: true });
   }
 
   /* ================= SECTION: Boot ================= */
