@@ -204,6 +204,16 @@
   border-radius: 5px 5px 0 0;
 }
 
+/* --- Style scrollbars --- */
+:root.ss-scrollbars {
+  scrollbar-color: var(--link-color) var(--contrast-color);
+}
+
+:root.ss-thin-scrollbars,
+:root.ss-thin-scrollbars * {
+  scrollbar-width: thin;
+}
+
 /* --- 8chanSS page sub-heads + sub-options --- */
 #settingsMenu .settingsSectionTitle {
   font-size: 130% !important;

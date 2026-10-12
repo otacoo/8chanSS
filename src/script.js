@@ -3824,6 +3824,11 @@
         }
       });
       beepOnYouObserver.observe(posts, { childList: true, subtree: false });
+    },
+    // Feature: Style scrollbars
+    styleScrollbars: function (on) {
+      rootToggle("ss-scrollbars", on);
+      rootToggle("ss-thin-scrollbars", !!on && !!ssSettings.thinScrollbars);
     }
   };
 
