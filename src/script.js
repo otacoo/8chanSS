@@ -3336,12 +3336,15 @@
     try {
       var osc = ctx.createOscillator();
       var gain = ctx.createGain();
+      var t = ctx.currentTime;
       osc.frequency.value = 550;
-      gain.gain.value = 0.1;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.1, t + 0.008);
+      gain.gain.linearRampToValueAtTime(0, t + 0.03);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start();
-      setTimeout(function () { osc.stop(); }, 60);
+      osc.start(t);
+      osc.stop(t + 0.032);
     } catch (e) { }
   }
 
