@@ -1,3 +1,8 @@
+### v2.1.2
+*2026-10-12*
+
+- Up the z-index for the Media Viewer
+
 ### v2.1.1
 *2026-10-12*
 
