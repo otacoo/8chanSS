@@ -1,3 +1,14 @@
+### v2.1.4
+*2026-10-12*
+
+- Adjust z-indexes: 
+  - Settings will show above everything else
+  - Thread Watcher menu will be visible again
+  - Media viewer shows above QR and TW (same as native)
+  - Side catalog shows behind QR and TW (same as native)
+- Reduced faded QR opacity to 50%
+- Fix Mascots text area in the Settings menu
+
 ### v2.1.3
 *2026-10-12*
 
