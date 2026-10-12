@@ -173,6 +173,7 @@
     sauceSaucenao: false,
     saucePixiv: false,
     autoSaveDaily: false,
+    beepOnYou: false,
     enableShortcuts: false,
     updateNotif: true,
     ssVersion: ""
@@ -293,6 +294,7 @@
       page: "ss-misc", title: "Misc", options: [
         { head: "Notifications" },
         { key: "updateNotif", label: "8chanSS update notifications" },
+        { key: "beepOnYou", label: "Beep on (You)" },
         { head: "IDs" },
         {
           key: "highlightNewIds", label: "Highlight New IDs", sub: [
@@ -3275,6 +3277,57 @@
     sauceBodyObserver.observe(document.body, { childList: true, subtree: true });
   }
 
+  var beepOnYouObserver = null;
+  var beepAudioContext = null;
+  var beepAudioReady = false;
+  var beepAudioPromise = null;
+
+  function ensureBeepAudioReady() {
+    if (beepAudioReady) return Promise.resolve();
+    if (beepAudioPromise) return beepAudioPromise;
+    beepAudioPromise = new Promise(function (resolve) {
+      function resumeAudioContext() {
+        if (!beepAudioContext) {
+          beepAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (beepAudioContext.state === "suspended") {
+          beepAudioContext.resume().then(function () {
+            beepAudioReady = true;
+            window.removeEventListener("click", resumeAudioContext);
+            window.removeEventListener("keydown", resumeAudioContext);
+            resolve();
+          });
+        } else {
+          beepAudioReady = true;
+          window.removeEventListener("click", resumeAudioContext);
+          window.removeEventListener("keydown", resumeAudioContext);
+          resolve();
+        }
+      }
+      window.addEventListener("click", resumeAudioContext);
+      window.addEventListener("keydown", resumeAudioContext);
+    });
+    return beepAudioPromise;
+  }
+
+  function playBeep() {
+    ensureBeepAudioReady().then(function () {
+      try {
+        var oscillator = beepAudioContext.createOscillator();
+        var gainNode = beepAudioContext.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.value = 550;
+        gainNode.gain.value = 0.1;
+        oscillator.connect(gainNode);
+        gainNode.connect(beepAudioContext.destination);
+        oscillator.start();
+        setTimeout(function () { oscillator.stop(); }, 100);
+      } catch (e) {
+        console.warn("Beep failed:", e);
+      }
+    });
+  }
+
   var Features = {
     // Feature: Catalog Links
     catalogLinks: function (on) {
@@ -3740,6 +3793,30 @@
       if (!on) return;
       runAutoSave();
       autoSaveTimer = setInterval(runAutoSave, 60 * 60 * 1000);
+    },
+    // Feature: Beep on (You)
+    beepOnYou: function (on) {
+      if (!on) {
+        if (beepOnYouObserver) { beepOnYouObserver.disconnect(); beepOnYouObserver = null; }
+        return;
+      }
+      if (beepOnYouObserver) return;
+      var posts = document.querySelector(".divPosts");
+      if (!posts) return;
+      ensureBeepAudioReady();
+      beepOnYouObserver = new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          var nodes = mutations[i].addedNodes;
+          for (var j = 0; j < nodes.length; j++) {
+            var node = nodes[j];
+            if (node.nodeType !== 1) continue;
+            if (!node.matches || !node.matches(".postCell, .opCell")) continue;
+            if (!node.querySelector("a.quoteLink.postLink--you")) continue;
+            playBeep();
+          }
+        }
+      });
+      beepOnYouObserver.observe(posts, { childList: true, subtree: false });
     }
   };
 
@@ -3786,6 +3863,7 @@
     if (hoverObserver) { hoverObserver.disconnect(); hoverObserver = null; }
     if (apngObserver) { apngObserver.disconnect(); apngObserver = null; }
     if (highlightIdsObserver) { highlightIdsObserver.disconnect(); highlightIdsObserver = null; }
+    if (beepOnYouObserver) { beepOnYouObserver.disconnect(); beepOnYouObserver = null; }
     if (autoSaveTimer) { clearInterval(autoSaveTimer); autoSaveTimer = null; }
   }
 
