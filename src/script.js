@@ -4122,15 +4122,27 @@
       if (beepOnYouObserver) return;
       var posts = document.querySelector(".divPosts");
       if (!posts) return;
+      var lastPostId = 0;
+      var existing = posts.querySelectorAll(".postCell[id], .opCell[id]");
+      for (var i = 0; i < existing.length; i++) {
+        var existingId = parseInt(existing[i].id, 10);
+        if (existingId > lastPostId) lastPostId = existingId;
+      }
       beepOnYouObserver = new MutationObserver(function (mutations) {
+        var beeped = false;
         for (var i = 0; i < mutations.length; i++) {
           var nodes = mutations[i].addedNodes;
           for (var j = 0; j < nodes.length; j++) {
             var node = nodes[j];
-            if (node.nodeType !== 1) continue;
-            if (!node.matches || !node.matches(".postCell, .opCell")) continue;
-            if (!node.querySelector("a.quoteLink.postLink--you")) continue;
-            playBeep();
+            if (node.nodeType !== 1 || !node.matches || !node.matches(".postCell, .opCell")) continue;
+            var postId = parseInt(node.id, 10);
+            if (!postId || postId <= lastPostId) continue;
+            lastPostId = postId;
+            if (beeped || node.querySelector(".yourPost")) continue;
+            if (node.querySelector("a.quoteLink.postLink--you")) {
+              beeped = true;
+              playBeep();
+            }
           }
         }
       });
