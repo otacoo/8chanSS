@@ -19,8 +19,8 @@
   display: none;
 }
 
-:root.ss-hide-footer #dynamicFooterAlt {
-  display: none;
+:root.ss-hide-footer #footer {
+  visibility: hidden;
 }
 
 /* --- Feature: Bottom Header --- */
