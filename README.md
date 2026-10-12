@@ -50,9 +50,13 @@ Then press the big install button to install the script.
 
 <kbd>CTRL</kbd> + <kbd>I</kbd> : Add *italics* tags
 
-<kbd>CTRL</kbd> + <kbd>D</kbd> : Add Srz Bizniz tags
+<kbd>CTRL</kbd> + <kbd>D</kbd> : Add doom tags
+
+<kbd>CTRL</kbd> + <kbd>SHIFT</kbd> + <kbd>B</kbd> : Add Srz Bizniz tags
 
 <kbd>CTRL</kbd> + <kbd>M</kbd> : Add moe tags
+
+<kbd>ALT</kbd> + <kbd>E</kbd> : Add echo tags
 
 ### How to add boards to your header:
 

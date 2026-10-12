@@ -3981,9 +3981,11 @@
     b: ["'''", "'''"],
     u: ["__", "__"],
     i: ["''", "''"],
-    d: ["==", "=="],
+    d: ["[doom]", "[/doom]"],
     m: ["[moe]", "[/moe]"],
-    c: ["[code]", "[/code]"]
+    c: ["[code]", "[/code]"],
+    e: ["(((", ")))"],
+    "shift+b": ["==", "=="]
   };
   var lastHighlightedPost = null;
   var lastScrollType = null;
@@ -4089,14 +4091,15 @@
           return;
         }
         var bbKey = e.key.toLowerCase();
-        if (bbKey === "c" && e.altKey && !e.ctrlKey && BBCODE_TAGS[bbKey]) {
+        var bbCombo = (e.shiftKey ? "shift+" : "") + bbKey;
+        if (e.altKey && !e.ctrlKey && (bbKey === "c" || bbKey === "e")) {
           e.preventDefault();
           applyBBCode(t, bbKey);
           return;
         }
-        if (e.ctrlKey && !e.altKey && bbKey !== "c" && BBCODE_TAGS[bbKey]) {
+        if (e.ctrlKey && !e.altKey && bbKey !== "c" && BBCODE_TAGS[bbCombo]) {
           e.preventDefault();
-          applyBBCode(t, bbKey);
+          applyBBCode(t, bbCombo);
           return;
         }
         return;
@@ -4504,9 +4507,11 @@
       [["Ctrl", "I"], "Italic text"],
       [["Ctrl", "U"], "Underline text"],
       [["Ctrl", "S"], "Spoiler text"],
-      [["Ctrl", "D"], "Srz Bizniz text"],
+      [["Ctrl", "D"], "Doom text"],
+      [["Ctrl", "Shift", "B"], "Srz Bizniz text"],
       [["Ctrl", "M"], "Moe text"],
-      [["Alt", "C"], "Code block"]
+      [["Alt", "C"], "Code block"],
+      [["Alt", "E"], "Echo text"]
     ];
     var table = document.createElement("table");
     table.className = "ss-keys";
