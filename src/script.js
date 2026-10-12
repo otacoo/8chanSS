@@ -127,6 +127,7 @@
     opBackground: false,
     backlinkIcons: false,
     applyFixes: true,
+    moveUploads: true,
     enableStickyQR: false,
     fadeQuickReply: false,
     threadHideCloseBtn: false,
@@ -296,7 +297,8 @@
         { key: "threadHideCloseBtn", label: "Hide Inline Close Button" },
         { key: "backlinkIcons", label: "Backlink Icons" },
         { head: "Misc" },
-        { key: "applyFixes", label: "Apply 8chanSS fixes", title: "Applies small fixes that must run before the page renders" }
+        { key: "applyFixes", label: "Apply 8chanSS fixes", title: "Applies small fixes that must run before the page renders" },
+        { key: "moveUploads", label: "Move file uploads below OP title" }
       ]
     },
     {
@@ -3643,6 +3645,11 @@
     galleryEls.mediaWrap.textContent = "";
   }
 
+  function applyMiscFixes() {
+    var captchaInput = document.getElementById("QRfieldCaptcha");
+    if (captchaInput) captchaInput.autocomplete = "off";
+  }
+
   var Features = {
     // Feature: Catalog Links
     catalogLinks: function (on) {
@@ -4167,6 +4174,23 @@
           galleryWired = false;
         }
         closeGallery();
+      }
+    },
+    // Feature: Apply 8chanSS fixes
+    applyFixes: function (on) {
+      if (on) applyMiscFixes();
+    },
+    // Feature: Move file uploads below OP title
+    moveUploads: function (on) {
+      var innerOP = document.querySelector(".innerOP");
+      if (!innerOP) return;
+      var opHeadTitle = innerOP.querySelector(".opHead.title");
+      if (!opHeadTitle) return;
+      if (on) {
+        if (innerOP.firstChild !== opHeadTitle) innerOP.insertBefore(opHeadTitle, innerOP.firstChild);
+      } else {
+        var uploads = innerOP.querySelector(".panelUploads");
+        if (uploads) uploads.after(opHeadTitle);
       }
     }
   };
