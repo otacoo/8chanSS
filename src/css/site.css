@@ -196,7 +196,8 @@
 :root.ss-rounded .floatingMenu,
 :root.ss-rounded .ss-keys,
 :root.ss-rounded #ssScrollArrows button,
-:root.ss-rounded .ss-storage-btn {
+:root.ss-rounded .ss-storage-btn,
+:root.ss-rounded .imgLink img {
   border-radius: 5px;
 }
 
