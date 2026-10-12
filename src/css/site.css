@@ -446,6 +446,14 @@
   border: 2px dotted white;
 }
 
+/* --- ID post count --- */
+:root.alwaysShowIdCount .labelId::after {
+  content: var(--user-id-count);
+  padding: 2px 0 2px 4px;
+  border-left: 1px solid #ececec;
+  margin-left: 0.4em;
+}
+
 /* --- Stop animated PNGs --- */
 .apng-canvas-snapshot {
   display: block;

@@ -153,6 +153,7 @@
     showUnreadLine: true,
     highlightNewIds: false,
     idHlStyle: "moetext",
+    alwaysShowIdCount: false,
     showLinkIcons: true,
     iconYoutube: true,
     iconTwitch: true,
@@ -313,6 +314,7 @@
             }
           ]
         },
+        { key: "alwaysShowIdCount", label: "Always show ID post count" },
         { head: "Site" },
         {
           key: "truncFilenames", label: "Truncate filenames", sub: [
@@ -1746,9 +1748,25 @@
 
   var highlightIdsObserver = null;
   var debouncedHighlightIds = null;
+  var idCountApplied = false;
 
   function rawIdFromLabelId(span) {
-    return span ? span.textContent.split(/[|\(]/)[0].trim() : null;
+    if (!span) return null;
+    return span.getAttribute("data-id") || span.textContent.trim();
+  }
+
+  function setNativeIdCount(on) {
+    var value = on ? "true" : "false";
+    try {
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: "alwaysShowIdCount",
+        oldValue: localStorage.getItem("alwaysShowIdCount"),
+        newValue: value,
+        url: location.href,
+        storageArea: localStorage
+      }));
+    } catch (e) { }
+    try { localStorage.setItem("alwaysShowIdCount", value); } catch (e) { }
   }
 
   function applyHighlightNewIds() {
@@ -3829,6 +3847,17 @@
     styleScrollbars: function (on) {
       rootToggle("ss-scrollbars", on);
       rootToggle("ss-thin-scrollbars", !!on && !!ssSettings.thinScrollbars);
+    },
+    // Feature: Always show ID post count (native option)
+    alwaysShowIdCount: function (on) {
+      if (on) {
+        setNativeIdCount(true);
+        idCountApplied = true;
+        return;
+      }
+      if (!idCountApplied) return;
+      setNativeIdCount(false);
+      idCountApplied = false;
     }
   };
 
