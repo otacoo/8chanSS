@@ -2,7 +2,7 @@
 *2026-10-14*
 
 - **New Shortcut:** `ALT + T` toggles the Thread Watcher
-- **Removed:** Catalog thread hiding is now the native site's job
+- **Removed:** Catalog thread hiding with SHIFT + Click is now the native site's job; keyword filtering still available
 - Hover media previews now use the site's own video volume setting
 
 **Fixes:**
