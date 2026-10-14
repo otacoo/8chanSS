@@ -870,6 +870,15 @@
     return "";
   }
 
+  // Root-relative so the site's own image error recovery (api.restoreImage) picks it up
+  function mediaSrcAttr(url) {
+    try {
+      var parsed = new URL(url, location.href);
+      if (parsed.origin === location.origin) return parsed.pathname + parsed.search + parsed.hash;
+    } catch (e) { }
+    return url;
+  }
+
   function hasExtension(str) {
     return /\.[a-z0-9]+$/i.test(str);
   }
@@ -1070,10 +1079,11 @@
       }
       floatingMedia = document.createElement("audio");
       floatingMedia.dataset.previewSrc = audioSrc;
-      floatingMedia.src = audioSrc;
+      floatingMedia.src = mediaSrcAttr(audioSrc);
       floatingMedia.controls = false;
       floatingMedia.style.display = "none";
       floatingMedia.volume = volume;
+      floatingMedia.onerror = mediaBlobFallback;
       document.body.appendChild(floatingMedia);
       try {
         var savedAudio = getHoverPlaybackTime(audioSrc);
@@ -1131,7 +1141,7 @@
     }
     floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
     floatingMedia.dataset.previewSrc = isVideo ? videoSrc : fullSrc;
-    floatingMedia.src = isVideo ? videoSrc : fullSrc;
+    floatingMedia.src = mediaSrcAttr(isVideo ? videoSrc : fullSrc);
     floatingMedia.id = "hover-preview-media";
     floatingMedia.style.position = "fixed";
     floatingMedia.style.zIndex = "9999";
@@ -1213,8 +1223,13 @@
         cleanupFloatingMedia();
         return;
       }
-      fetch(failedSrc).then(function (res) {
-        if (!res.ok) throw new Error("fetch failed");
+      var fetcher = fetch;
+      try {
+        var w = pageWindow();
+        if (w.api && typeof w.api.fetch === "function") fetcher = function (u) { return w.api.fetch(u); };
+      } catch (e) { }
+      fetcher(failedSrc).then(function (res) {
+        if (!res || !res.ok) throw new Error("fetch failed");
         return res.blob();
       }).then(function (blob) {
         if (!floatingMedia) return;
@@ -1225,7 +1240,9 @@
         cleanupFloatingMedia();
       });
     }
-    floatingMedia.onerror = mediaBlobFallback;
+    // Images: leave error recovery to the site's global api.restoreImage handler (needs a
+    // root-relative src), it solves the PoW challenge and retries with a cache-buster.
+    if (isVideo || isAudio) floatingMedia.onerror = mediaBlobFallback;
     thumb.addEventListener("mouseleave", cleanupFloatingMedia, { once: true });
     window.addEventListener("scroll", cleanupFloatingMedia, { passive: true, once: true });
     cleanupFns.push(function () { thumb.removeEventListener("mouseleave", cleanupFloatingMedia); });

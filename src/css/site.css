@@ -608,6 +608,11 @@ a.originalNameLink[href$=".wav"] {
   position: relative;
 }
 
+/* Keep the preview invisible while the site's api.restoreImage solves the challenge and retries */
+#hover-preview-media.brokenImage {
+  opacity: 0 !important;
+}
+
 .audio-preview-indicator {
   display: none;
   position: absolute;
