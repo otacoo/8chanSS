@@ -543,10 +543,6 @@
   font-weight: bold;
 }
 
-.watchButton.watched-active::before {
-  color: #dd003e !important;
-}
-
 .markAllRead::before {
   content: "\e065";
 }

@@ -4383,6 +4383,15 @@
     lastScrollType = want;
   }
 
+  function toggleWatchThread() {
+    try {
+      var w = pageWindow();
+      if (!w.watcher || !w.posting || !w.api || !w.api.boardUri || !w.api.threadId) return;
+      var op = w.posting.get(w.posting.uri(w.api.boardUri, w.api.threadId));
+      if (op) w.watcher.watchThread(op);
+    } catch (e) { }
+  }
+
   function initShortcuts() {
     window.addEventListener("hashchange", function () {
       if (lastHighlightedPost) {
@@ -4499,11 +4508,7 @@
 
       if (e.altKey && !e.ctrlKey && (e.key === "w" || e.key === "W")) {
         e.preventDefault();
-        var watchBtn = document.querySelector(".watchButton");
-        if (watchBtn && !watchBtn.classList.contains("watched-active")) {
-          watchBtn.click();
-          setTimeout(function () { watchBtn.classList.add("watched-active"); }, 100);
-        }
+        toggleWatchThread();
         return;
       }
     });
@@ -4796,7 +4801,7 @@
       [["Ctrl", "Q"], "Toggle Quick Reply"],
       [["Ctrl", "Enter"], "Submit post"],
       [["Escape"], "Clear QR textarea and hide dialogs"],
-      [["Alt", "W"], "Watch Thread"],
+      [["Alt", "W"], "Watch/Unwatch Thread"],
       [["Shift", "Click"], "Hide Thread in Catalog"],
       [["Ctrl", "Up/Down"], "Scroll between Your Replies"],
       [["Ctrl", "Shift", "Up/Down"], "Scroll between Replies to You"],
