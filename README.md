@@ -36,6 +36,8 @@ Then press the big install button to install the script.
 
 <kbd>ALT</kbd> + <kbd>W</kbd> : Watch thread
 
+<kbd>ALT</kbd> + <kbd>T</kbd> : Toggle Thread Watcher
+
 <kbd>CTRL</kbd> + <kbd>UP/DOWN Arrow</kbd> : Scroll between Your replies
 
 <kbd>CTRL</kbd> + <kbd>SHIFT</kbd> + <kbd>UP/DOWN Arrow</kbd> : Scroll between replies to (You)
