@@ -4285,6 +4285,13 @@
     } catch (e) { }
   }
 
+  function toggleWatcherMenu() {
+    try {
+      var w = pageWindow();
+      if (w.watcher && typeof w.watcher.toggleWatcher === "function") w.watcher.toggleWatcher();
+    } catch (e) { }
+  }
+
   function initShortcuts() {
     window.addEventListener("hashchange", function () {
       if (lastHighlightedPost) {
@@ -4402,6 +4409,12 @@
       if (e.altKey && !e.ctrlKey && (e.key === "w" || e.key === "W")) {
         e.preventDefault();
         toggleWatchThread();
+        return;
+      }
+
+      if (e.altKey && !e.ctrlKey && (e.key === "t" || e.key === "T")) {
+        e.preventDefault();
+        toggleWatcherMenu();
         return;
       }
     });
@@ -4695,6 +4708,7 @@
       [["Ctrl", "Enter"], "Submit post"],
       [["Escape"], "Clear QR textarea and hide dialogs"],
       [["Alt", "W"], "Watch/Unwatch Thread"],
+      [["Alt", "T"], "Toggle Thread Watcher"],
       [["Shift", "Click"], "Hide Thread in Catalog"],
       [["Ctrl", "Up/Down"], "Scroll between Your Replies"],
       [["Ctrl", "Shift", "Up/Down"], "Scroll between Replies to You"],
