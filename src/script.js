@@ -791,8 +791,15 @@
   var MEDIA_OPACITY_LOADED = "1";
   var MEDIA_OFFSET = 50;
   var MEDIA_BOTTOM_MARGIN = 3;
-  var MEDIA_VOLUME = 0.5;
   var AUDIO_INDICATOR_TEXT = "▶ Playing audio...";
+
+  function getHoverVolume() {
+    var raw = null;
+    try { raw = localStorage.getItem("videovol"); } catch (e) { }
+    var vol = parseFloat(raw);
+    if (isNaN(vol)) vol = 0.5;
+    return Math.max(0, Math.min(1, vol));
+  }
 
   var MIME_TO_EXT = {
     "image/jpeg": ".jpg",
@@ -1058,7 +1065,7 @@
     }
     fullSrc = sanitizeMediaUrl(fullSrc);
     if (!fullSrc) return;
-    var volume = MEDIA_VOLUME;
+    var volume = getHoverVolume();
     if (isAudio) {
       var container = thumb.closest("a.linkThumb, a.imgLink");
       var audioSrc = fullSrc;
