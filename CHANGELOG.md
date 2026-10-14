@@ -1,3 +1,14 @@
+## v2.2.0
+*2026-10-14*
+
+- **New Shortcut:** `ALT + T` toggles the Thread Watcher
+- **Removed:** Catalog thread hiding is now the native site's job
+- Hover media previews now use the site's own video volume setting
+
+**Fixes:**
+- Fix for `ALT + W` (Watch Thread) not working; now can toggle watch/unwatch
+- Fix hover media previews sometimes failing with a 403 when the site's PoWBlock challenge is renewed
+
 ### v2.1.4
 *2026-10-12*
 
