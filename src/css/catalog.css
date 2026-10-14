@@ -9,3 +9,13 @@
     margin-top: 9px !important;
     margin-right: 8px;
 }
+
+/* Filtered threads reuse the native hidden-cell reveal behavior */
+.catalogDiv:not(.showHiddenCatalogCells) .catalogCell.ss-hidden-thread {
+    display: none;
+}
+
+.catalogCell.catalogCell--hiding ,
+.catalogCell.ss-hidden-thread {
+    opacity: 0.40;
+}

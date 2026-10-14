@@ -83,7 +83,6 @@
     saucePixiv: "enableTheSauce_pixiv",
     catalogImageHover: "enableCatalogImageHover",
     threadImageHover: "enableThreadImageHover",
-    threadHiding: "enableThreadHiding",
     catalogFiltering: "enableThreadHiding_enableCatalogFiltering",
     catalogNewTab: "openCatalogThreadNewTab",
     lastFifty: "enableLastFifty",
@@ -143,7 +142,6 @@
     expandTW: false,
     catalogImageHover: false,
     threadImageHover: true,
-    threadHiding: false,
     catalogFiltering: false,
     catalogNewTab: false,
     lastFifty: false,
@@ -232,13 +230,9 @@
         { key: "expandTW", label: "Auto Expand Thread Watcher" },
         { head: "Catalog" },
         { key: "catalogImageHover", label: "Catalog Image Hover" },
-        {
-          key: "threadHiding", label: "Enable Thread Hiding (Shift + Click to hide/unhide a thread)", sub: [
-            { key: "catalogFiltering", label: "Enable Catalog Thread Filtering" }
-          ]
-        },
         { key: "catalogNewTab", label: "Always Open Threads in New Tab" },
-        { key: "lastFifty", label: "Show Last 50 Posts button" }
+        { key: "lastFifty", label: "Show Last 50 Posts button" },
+        { key: "catalogFiltering", label: "Catalog Thread Hiding", title: "Hides threads matching your word/board filters" }
       ]
     },
     {
@@ -378,11 +372,6 @@
   ];
 
   var ssSettings = Object.assign({}, SS_DEFAULTS);
-
-  /* Hidden catalog threads state */
-  var HIDDEN_THREADS_KEY = "8chanSS_hiddenCatalogThreads";
-  var hiddenThreadsCache = null;
-  var hiddenThreadsPromise = null;
 
   function convertStoredValue(key, raw) {
     var def = SS_DEFAULTS[key];
@@ -573,7 +562,6 @@
     arrowPageScroll: "scrollArrows",
     removeSpoilers: "blurSpoilers",
     viewerStyle: "enableMediaPlayer",
-    catalogFiltering: "threadHiding",
     catalogLinksNewTab: "catalogLinks",
     customTrunc: "truncFilenames",
     showUnreadLine: "enableScrollSave",
@@ -1284,35 +1272,8 @@
     }
   }
 
-  var catalogHiddenMode = false;
-  var catalogHidingObserver = null;
-  var debouncedCatalogHiddenApply = null;
-  var catalogHidingWired = false;
-  var catalogHidingContainer = null;
-
-  function loadHiddenThreads() {
-    if (hiddenThreadsPromise) return hiddenThreadsPromise;
-    hiddenThreadsCache = {};
-    if (typeof GM === "undefined" || !GM.getValue) {
-      hiddenThreadsPromise = Promise.resolve(hiddenThreadsCache);
-      return hiddenThreadsPromise;
-    }
-    hiddenThreadsPromise = GM.getValue(HIDDEN_THREADS_KEY, "{}").then(function (raw) {
-      try {
-        var obj = JSON.parse(raw);
-        if (obj && typeof obj === "object") hiddenThreadsCache = obj;
-      } catch (e) { }
-      return hiddenThreadsCache;
-    }).catch(function () {
-      return hiddenThreadsCache;
-    });
-    return hiddenThreadsPromise;
-  }
-
-  function saveHiddenThreads() {
-    if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve();
-    return GM.setValue(HIDDEN_THREADS_KEY, JSON.stringify(hiddenThreadsCache)).catch(function () { });
-  }
+  var catalogFilterObserver = null;
+  var debouncedCatalogFilterApply = null;
 
   function cellBoardThread(cell) {
     var link = cell.querySelector("a.linkThumb[href*='/res/']");
@@ -1335,80 +1296,43 @@
     return text.indexOf(w) !== -1;
   }
 
-  function applyHiddenThreads() {
-    if (!pageType.isCatalog) return Promise.resolve();
-    return loadHiddenThreads().then(function (obj) {
-      var filters = [];
-      if (ssSettings.catalogFiltering) {
-        var saved = ssSettings.catalogFilters || {};
-        Object.keys(saved).forEach(function (k) {
-          var f = saved[k];
-          if (!f || !f.word) return;
-          filters.push({
-            word: f.word,
-            boards: String(f.boards || "").toLowerCase().split(",").map(function (b) {
-              return b.trim();
-            }).filter(function (b) { return !!b; })
-          });
+  function applyCatalogFilters() {
+    if (!pageType.isCatalog) return;
+    var filters = [];
+    if (ssSettings.catalogFiltering) {
+      var saved = ssSettings.catalogFilters || {};
+      Object.keys(saved).forEach(function (k) {
+        var f = saved[k];
+        if (!f || !f.word) return;
+        filters.push({
+          word: f.word,
+          boards: String(f.boards || "").toLowerCase().split(",").map(function (b) {
+            return b.trim();
+          }).filter(function (b) { return !!b; })
         });
-      }
-      var cells = document.querySelectorAll(".catalogCell");
-      for (var i = 0; i < cells.length; i++) {
-        var cell = cells[i];
+      });
+    }
+    var cells = document.querySelectorAll(".catalogCell");
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      var hidden = false;
+      if (filters.length) {
         var info = cellBoardThread(cell);
         if (!info) continue;
-        var hidden = (obj[info.board] || []).indexOf(info.threadNum) !== -1;
-        if (!hidden && filters.length) {
-          var text = ((cell.querySelector(".labelSubject") || {}).textContent || "") + " " +
-            ((cell.querySelector(".divMessage") || {}).textContent || "");
-          text = text.toLowerCase();
-          for (var f = 0; f < filters.length; f++) {
-            if (filterMatches(filters[f].word, text)) {
-              if (!filters[f].boards.length || filters[f].boards.indexOf(info.board) !== -1) {
-                hidden = true;
-                break;
-              }
+        var text = ((cell.querySelector(".labelSubject") || {}).textContent || "") + " " +
+          ((cell.querySelector(".divMessage") || {}).textContent || "");
+        text = text.toLowerCase();
+        for (var f = 0; f < filters.length; f++) {
+          if (filterMatches(filters[f].word, text)) {
+            if (!filters[f].boards.length || filters[f].boards.indexOf(info.board) !== -1) {
+              hidden = true;
+              break;
             }
           }
         }
-        if (catalogHiddenMode ? !hidden : hidden) {
-          cell.style.display = "none";
-          cell.classList.add("ss-hidden-thread");
-          cell.classList.remove("ss-unhide-thread");
-        } else {
-          cell.style.display = "";
-          cell.classList.remove("ss-hidden-thread");
-          cell.classList.toggle("ss-unhide-thread", catalogHiddenMode);
-        }
       }
-      updateShowHiddenBtn();
-    });
-  }
-
-  function onCatalogCellClick(e) {
-    if (!e.shiftKey || e.button !== 0) return;
-    var cell = e.target.closest(".catalogCell");
-    if (!cell) return;
-    var info = cellBoardThread(cell);
-    if (!info) return;
-    e.preventDefault();
-    e.stopPropagation();
-    loadHiddenThreads().then(function (obj) {
-      if (!obj[info.board]) obj[info.board] = [];
-      var list = obj[info.board];
-      var at = list.indexOf(info.threadNum);
-      if (catalogHiddenMode) {
-        if (at !== -1) list.splice(at, 1);
-      } else if (at === -1) {
-        list.push(info.threadNum);
-      }
-      saveHiddenThreads().then(applyHiddenThreads);
-    });
-  }
-
-  function updateShowHiddenBtn() {
-    var btn = document.getElementById("ss-show-hidden-btn");
-    if (btn) btn.textContent = catalogHiddenMode ? "Hide Hidden" : "Show Hidden";
+      cell.classList.toggle("ss-hidden-thread", hidden);
+    }
   }
 
   var lastFiftyObserver = null;
@@ -3853,53 +3777,22 @@
         }
       }
     },
-    // Feature: Thread Hiding
-    threadHiding: function (on) {
+    // Feature: Catalog Thread Hiding (word/board filters)
+    catalogFiltering: function (on) {
       if (!pageType.isCatalog) return;
       if (on) {
-        applyHiddenThreads();
-        var container = document.querySelector(".catalogWrapper, .catalogDiv");
-        if (container && !catalogHidingWired) {
-          catalogHidingWired = true;
-          catalogHidingContainer = container;
-          container.addEventListener("click", onCatalogCellClick, true);
-        }
-        if (!catalogHidingObserver) {
-          debouncedCatalogHiddenApply = debounce(function () { applyHiddenThreads(); }, 50);
+        applyCatalogFilters();
+        if (!catalogFilterObserver) {
+          debouncedCatalogFilterApply = debounce(applyCatalogFilters, 50);
           var catalogDiv = document.querySelector(".catalogDiv");
-          if (catalogDiv) catalogHidingObserver = new MutationObserver(function () { debouncedCatalogHiddenApply(); });
-          if (catalogHidingObserver) catalogHidingObserver.observe(catalogDiv, { childList: true, subtree: false });
-        }
-        if (!document.getElementById("ss-show-hidden-btn")) {
-          var refreshBtn = document.querySelector("#catalogRefreshButton");
-          if (refreshBtn) {
-            var btn = document.createElement("button");
-            btn.id = "ss-show-hidden-btn";
-            btn.className = "catalogLabel";
-            btn.type = "button";
-            btn.textContent = "Show Hidden";
-            btn.style.marginRight = "8px";
-            btn.addEventListener("click", function () {
-              catalogHiddenMode = !catalogHiddenMode;
-              applyHiddenThreads();
-            });
-            refreshBtn.parentNode.insertBefore(btn, refreshBtn);
-          }
+          if (catalogDiv) catalogFilterObserver = new MutationObserver(function () { debouncedCatalogFilterApply(); });
+          if (catalogFilterObserver) catalogFilterObserver.observe(catalogDiv, { childList: true, subtree: false });
         }
       } else {
-        if (catalogHidingObserver) { catalogHidingObserver.disconnect(); catalogHidingObserver = null; }
-        if (catalogHidingContainer) {
-          catalogHidingContainer.removeEventListener("click", onCatalogCellClick, true);
-          catalogHidingContainer = null;
-          catalogHidingWired = false;
-        }
-        catalogHiddenMode = false;
-        var showBtn = document.getElementById("ss-show-hidden-btn");
-        if (showBtn) showBtn.remove();
-        var cells = document.querySelectorAll(".catalogCell.ss-hidden-thread, .catalogCell.ss-unhide-thread");
+        if (catalogFilterObserver) { catalogFilterObserver.disconnect(); catalogFilterObserver = null; }
+        var cells = document.querySelectorAll(".catalogCell.ss-hidden-thread");
         for (var i = 0; i < cells.length; i++) {
-          cells[i].style.display = "";
-          cells[i].classList.remove("ss-hidden-thread", "ss-unhide-thread");
+          cells[i].classList.remove("ss-hidden-thread");
         }
       }
     },
@@ -4566,11 +4459,11 @@
     }
     ssSettings.catalogFilters = obj;
     saveSetting("catalogFilters");
-    if (ssSettings.threadHiding) applyHiddenThreads();
+    if (ssSettings.catalogFiltering) applyCatalogFilters();
   }
 
   function refreshFilterBox() {
-    if (filterBoxEl) filterBoxEl.hidden = !(ssSettings.threadHiding && ssSettings.catalogFiltering);
+    if (filterBoxEl) filterBoxEl.hidden = !ssSettings.catalogFiltering;
   }
 
   function buildFilterBox() {
@@ -4598,7 +4491,7 @@
     });
     box.appendChild(add);
     box.addEventListener("change", function () { saveFilterBox(); });
-    box.hidden = !(ssSettings.threadHiding && ssSettings.catalogFiltering);
+    box.hidden = !ssSettings.catalogFiltering;
     filterBoxEl = box;
     return box;
   }
@@ -4877,9 +4770,15 @@
         sub.setAttribute("data-ss-subof", opt.key);
         sub.hidden = !ssSettings[opt.key];
         opt.sub.forEach(function (s) { sub.appendChild(makeOptionLabel(s)); });
-        if (opt.key === "threadHiding") sub.appendChild(buildFilterBox());
         wrap.appendChild(sub);
         panel.appendChild(wrap);
+        return;
+      }
+      if (opt.key === "catalogFiltering") {
+        var filterWrap = document.createElement("div");
+        filterWrap.appendChild(makeOptionLabel(opt));
+        filterWrap.appendChild(buildFilterBox());
+        panel.appendChild(filterWrap);
         return;
       }
       panel.appendChild(makeOptionLabel(opt));
@@ -5002,7 +4901,7 @@
       try {
         var applyKey = SUB_APPLY[key] || key;
         if (Features[applyKey]) Features[applyKey](ssSettings[applyKey]);
-        if (key === "threadHiding" || key === "catalogFiltering") refreshFilterBox();
+        if (key === "catalogFiltering") refreshFilterBox();
       }
       catch (err) { console.error("[8chanSS] apply failed:", key, err); }
     });
