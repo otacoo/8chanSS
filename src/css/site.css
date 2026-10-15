@@ -570,6 +570,10 @@ div.modalPanel {
   z-index: 403 !important;
 }
 
+.quoteTooltip {
+  z-index: 404 !important;
+}
+
 #sideCatalog {
   z-index: 300;
   position: absolute;
