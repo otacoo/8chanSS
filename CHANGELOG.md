@@ -1,3 +1,10 @@
+### v2.2.1
+*2026-10-15*
+
+- **New option:** Remember Comment Draft (General > Thread) 
+  - Saves comment draft into localStorage, per thread, until sent or deleted
+- Fix quote tooltip showing below other elements (z-index)
+
 ## v2.2.0
 *2026-10-14*
 
