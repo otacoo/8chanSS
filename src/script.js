@@ -151,6 +151,7 @@
     customTrunc: 15,
     enableScrollSave: true,
     showUnreadLine: true,
+    rememberCommentDraft: false,
     highlightNewIds: false,
     idHlStyle: "moetext",
     alwaysShowIdCount: false,
@@ -224,6 +225,7 @@
             { key: "showUnreadLine", label: "Show Unread Line" }
           ]
         },
+        { key: "rememberCommentDraft", label: "Remember Comment Draft", title: "Saves unsubmitted Quick Reply text and restores it, until the post is sent (drafts expire after 24 hours)" },
         { head: "Thread Watcher" },
         { key: "noPinInCatalog", label: "Don't pin in Catalog" },
         { key: "smallFont", label: "Smaller font" },
@@ -3594,6 +3596,110 @@
     if (captchaInput) captchaInput.autocomplete = "off";
   }
 
+  var COMMENT_DRAFT_PREFIX = "8chanSS_rememberComment:";
+  var COMMENT_DRAFT_EXPIRY = 24 * 60 * 60 * 1000;
+  var COMMENT_DRAFT_MAX = 10;
+  var commentDraftBound = false;
+
+  function commentDraftKey() {
+    return COMMENT_DRAFT_PREFIX + location.pathname;
+  }
+
+  function removeCommentDraft(key) {
+    try { localStorage.removeItem(key); } catch (e) { }
+  }
+
+  function loadCommentDraft(key) {
+    var raw = null;
+    try { raw = localStorage.getItem(key); } catch (e) { return null; }
+    if (!raw) return null;
+    var entry = null;
+    try { entry = JSON.parse(raw); } catch (e) { }
+    if (!entry || typeof entry.text !== "string" || typeof entry.savedAt !== "number" ||
+      Date.now() - entry.savedAt > COMMENT_DRAFT_EXPIRY) {
+      removeCommentDraft(key);
+      return null;
+    }
+    return entry;
+  }
+
+  function saveCommentDraft(text) {
+    try {
+      localStorage.setItem(commentDraftKey(), JSON.stringify({ text: text, savedAt: Date.now() }));
+    } catch (e) { }
+    cleanupCommentDrafts();
+  }
+
+  function cleanupCommentDrafts() {
+    var keys = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf(COMMENT_DRAFT_PREFIX) === 0) keys.push(key);
+      }
+    } catch (e) { return; }
+    var kept = [];
+    for (var j = 0; j < keys.length; j++) {
+      var draft = loadCommentDraft(keys[j]);
+      if (draft) kept.push({ key: keys[j], savedAt: draft.savedAt });
+    }
+    kept.sort(function (a, b) { return b.savedAt - a.savedAt; });
+    for (var k = COMMENT_DRAFT_MAX; k < kept.length; k++) removeCommentDraft(kept[k].key);
+  }
+
+  function restoreCommentDraft(body) {
+    var draft = loadCommentDraft(commentDraftKey());
+    if (draft && !body.value) {
+      body.value = draft.text;
+      body.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
+  function bindCommentDraft(attempt) {
+    if (commentDraftBound || !ssSettings.rememberCommentDraft) return;
+    var body = document.getElementById("qrbody");
+    if (!body) {
+      if ((attempt || 0) < 20) setTimeout(function () { bindCommentDraft((attempt || 0) + 1); }, 250);
+      return;
+    }
+    commentDraftBound = true;
+
+    var form = body.closest("form");
+    var panel = document.getElementById("quick-reply") || body;
+    var saveTimer = null;
+    var pendingText = null;
+
+    restoreCommentDraft(body);
+
+    body.addEventListener("input", function () {
+      if (!ssSettings.rememberCommentDraft) return;
+      pendingText = body.value;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () {
+        if (pendingText && pendingText.trim()) saveCommentDraft(pendingText);
+        else removeCommentDraft(commentDraftKey());
+      }, 5000);
+    });
+
+    function clearSaved() {
+      clearTimeout(saveTimer);
+      pendingText = null;
+      removeCommentDraft(commentDraftKey());
+    }
+
+    if (form) form.addEventListener("submit", clearSaved, true);
+    panel.addEventListener("click", function (e) {
+      var target = e.target;
+      if (target && target.closest && target.closest("input[type=submit], button[type=submit]")) clearSaved();
+    });
+
+    // The site clears the QR on close, so restore the draft whenever it is reopened
+    new MutationObserver(function () {
+      if (!ssSettings.rememberCommentDraft) return;
+      if (!body.value) restoreCommentDraft(body);
+    }).observe(panel, { attributes: true, attributeFilter: ["class"] });
+  }
+
   var Features = {
     // Feature: Catalog Links
     catalogLinks: function (on) {
@@ -4114,6 +4220,10 @@
         var uploads = innerOP.querySelector(".panelUploads");
         if (uploads) uploads.after(opHeadTitle);
       }
+    },
+    // Feature: Remember Comment Draft
+    rememberCommentDraft: function (on) {
+      if (on) bindCommentDraft();
     }
   };
 
