@@ -418,7 +418,9 @@
   }
 
   function saveSetting(key) {
-    try { localStorage.setItem("8chanSS_fixes", ssSettings.applyFixes ? "1" : "0"); } catch (e) { }
+    if (key === "applyFixes") {
+      try { localStorage.setItem("8chanSS_fixes", ssSettings.applyFixes ? "1" : "0"); } catch (e) { }
+    }
     if (typeof GM === "undefined" || !GM.setValue) return Promise.resolve();
     var full = SS_STORE_PREFIX + storageKeyFor(key);
     var value = ssSettings[key];
@@ -1789,6 +1791,11 @@
 
   var enhancedLinksWired = false;
 
+  var CANDIDATE_LINKS = 'a[href*="youtu"], a[href*="twitch"], a[href*="rentry.co"], a[href*="rentry.org"], ' +
+    'a[href*="catbox.moe"], a[href*="pastebin.com"], a[href*="x.com"], a[href*="twitter.com"], ' +
+    'a[href*="nitter.net"], a[href*="nitter.poast.org"], a[href*="xcancel.com"], a[href*="nitter.space"], ' +
+    'a[href*="bsky.app"]';
+
   function initEnhancedLinks() {
     if (enhancedLinksWired) return;
     var showIcons = !!ssSettings.showLinkIcons;
@@ -3028,26 +3035,16 @@
     }
 
     function processLinks(root = document) {
-      if (showIconsYoutube || showThumbnailsYoutube) {
-        root.querySelectorAll('a[href*="youtu"]').forEach(processYouTubeLink);
-      }
-      if (showIconsTwitch || showThumbnailsTwitch) {
-        root.querySelectorAll('a[href*="twitch"]').forEach(processTwitchLink);
-      }
-      if (showIconsRentry || enableEmbedsRentry) {
-        root.querySelectorAll('a[href*="rentry.co"], a[href*="rentry.org"]').forEach(processRentryLink);
-      }
-      if (showIconsCatbox) {
-        root.querySelectorAll('a[href*="catbox.moe"]').forEach(processCatboxLink);
-      }
-      if (showIconsPastebin || enableEmbedsPastebin) {
-        root.querySelectorAll('a[href*="pastebin.com"]').forEach(processPastebinLink);
-      }
-      if (showIconsX || enableEmbedsX) {
-        root.querySelectorAll('a[href*="x.com"], a[href*="twitter.com"], a[href*="nitter.net"], a[href*="nitter.poast.org"], a[href*="xcancel.com"], a[href*="nitter.space"]').forEach(processXLink);
-      }
-      if (showIconsBsky || enableEmbedsBsky) {
-        root.querySelectorAll('a[href*="bsky.app"]').forEach(processBskyLink);
+      var links = root.querySelectorAll(CANDIDATE_LINKS);
+      for (var i = 0; i < links.length; i++) {
+        var link = links[i];
+        if (showIconsYoutube || showThumbnailsYoutube) processYouTubeLink(link);
+        if (showIconsTwitch || showThumbnailsTwitch) processTwitchLink(link);
+        if (showIconsRentry || enableEmbedsRentry) processRentryLink(link);
+        if (showIconsCatbox) processCatboxLink(link);
+        if (showIconsPastebin || enableEmbedsPastebin) processPastebinLink(link);
+        if (showIconsX || enableEmbedsX) processXLink(link);
+        if (showIconsBsky || enableEmbedsBsky) processBskyLink(link);
       }
     }
 
@@ -3245,40 +3242,15 @@
     }
     observeAllUploadDetails();
 
-    const pendingUploadDetails = new Set();
-    const debouncedProcessUploadDetails = debounce(() => {
-      pendingUploadDetails.forEach(detailDiv => addSauceLinksToElement(detailDiv));
-      pendingUploadDetails.clear();
-    }, 50);
-
-    function collectUploadDetails(node) {
-      if (node.nodeType !== 1) return;
-      if (node.classList && node.classList.contains('uploadDetails')) {
-        pendingUploadDetails.add(node);
-      } else if (node.querySelectorAll) {
-        node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(n => pendingUploadDetails.add(n));
-      }
-    }
-
-    const divPosts = document.querySelector('.divPosts');
-    if (divPosts) {
-      const saucePostsObserver = new MutationObserver(function (mutations) {
-        for (var i = 0; i < mutations.length; i++) {
-          var nodes = mutations[i].addedNodes;
-          for (var j = 0; j < nodes.length; j++) collectUploadDetails(nodes[j]);
-        }
-        debouncedProcessUploadDetails();
-      });
-      saucePostsObserver.observe(divPosts, { childList: true, subtree: true });
-    }
-
     const sauceBodyObserver = new MutationObserver(function (mutations) {
       for (var i = 0; i < mutations.length; i++) {
         var nodes = mutations[i].addedNodes;
         for (var j = 0; j < nodes.length; j++) {
           var node = nodes[j];
           if (node.nodeType !== 1) continue;
-          if (node.classList && (node.classList.contains('quoteTooltip') || node.classList.contains('innerPost'))) {
+          if (node.classList && node.classList.contains('uploadDetails')) {
+            if (!node.classList.contains('sauceLinksProcessed')) addSauceLinksToElement(node);
+          } else if (node.classList && (node.classList.contains('quoteTooltip') || node.classList.contains('innerPost'))) {
             node.querySelectorAll('.uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
           } else if (node.querySelectorAll) {
             node.querySelectorAll('.quoteTooltip .uploadDetails:not(.sauceLinksProcessed), .innerPost .uploadDetails:not(.sauceLinksProcessed)').forEach(addSauceLinksToElement);
@@ -4308,7 +4280,16 @@
     linkThumbnails: function () { initEnhancedLinks(); },
     linkEmbeds: function () { initEnhancedLinks(); },
     // Feature: Sauce Links
-    sauceLinks: function () { initSauceLinks(); },
+    sauceLinks: function (on) {
+      if (on) {
+        initSauceLinks();
+        return;
+      }
+      var containers = document.querySelectorAll(".sauceLinksContainer");
+      for (var i = 0; i < containers.length; i++) containers[i].remove();
+      var processed = document.querySelectorAll(".sauceLinksProcessed");
+      for (var j = 0; j < processed.length; j++) processed[j].classList.remove("sauceLinksProcessed");
+    },
     // Feature: Daily auto-save
     autoSaveDaily: function (on) {
       if (autoSaveTimer) {
@@ -5259,9 +5240,11 @@
 
   function watchNativeMenu() {
     if (tryInjectMenu()) return;
-    var observer = new MutationObserver(function () {
-      if (tryInjectMenu()) observer.disconnect();
-    });
+    var observer = null;
+    var check = debounce(function () {
+      if (tryInjectMenu() && observer) observer.disconnect();
+    }, 100);
+    observer = new MutationObserver(check);
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }
 
