@@ -84,6 +84,7 @@
     catalogImageHover: "enableCatalogImageHover",
     threadImageHover: "enableThreadImageHover",
     catalogFiltering: "enableThreadHiding_enableCatalogFiltering",
+    hashNavigation: "enableHashNav",
     catalogNewTab: "openCatalogThreadNewTab",
     lastFifty: "enableLastFifty",
     updateNotif: "enableUpdateNotif",
@@ -153,6 +154,7 @@
     showUnreadLine: true,
     rememberCommentDraft: false,
     quoteThreading: false,
+    hashNavigation: false,
     highlightNewIds: false,
     idHlStyle: "moetext",
     alwaysShowIdCount: false,
@@ -228,6 +230,7 @@
         },
         { key: "rememberCommentDraft", label: "Remember Comment Draft", title: "Saves unsubmitted Quick Reply text and restores it, until the post is sent (drafts expire after 24 hours)" },
         { key: "quoteThreading", label: "Quote Threading", title: "Nests replies under the post they quote instead of showing them in order" },
+        { key: "hashNavigation", label: "Hash Navigation", title: "Adds a # link next to quotes and backlinks to jump straight to the post" },
         { head: "Thread Watcher" },
         { key: "noPinInCatalog", label: "Don't pin in Catalog" },
         { key: "smallFont", label: "Smaller font" },
@@ -3806,6 +3809,78 @@
     quoteThreadingObserver.observe(root, { childList: true, subtree: true });
   }
 
+  var HASH_NAV_LINKS = ".divMessage a.quoteLink, .panelBackLinks a.backLink";
+  var hashNavObserver = null;
+  var hashNavWired = false;
+
+  function addHashLink(link) {
+    if (!link || link.dataset.ssHash) return;
+    var match = (link.getAttribute("href") || "").match(/#(\d+)$/);
+    if (!match) return;
+    link.dataset.ssHash = "1";
+    var hash = document.createElement("a");
+    hash.className = "ss-hash-link";
+    hash.textContent = "#";
+    hash.href = "#" + match[1];
+    hash.title = "Go to post " + match[1];
+    link.after(hash);
+  }
+
+  function addHashLinks(root) {
+    var links = root.querySelectorAll(HASH_NAV_LINKS);
+    for (var i = 0; i < links.length; i++) addHashLink(links[i]);
+  }
+
+  function removeHashLinks() {
+    var links = document.querySelectorAll(".ss-hash-link");
+    for (var i = 0; i < links.length; i++) {
+      var prev = links[i].previousElementSibling;
+      if (prev && prev.dataset) delete prev.dataset.ssHash;
+      links[i].remove();
+    }
+  }
+
+  function onHashNavClick(e) {
+    var target = e.target && e.target.closest ? e.target.closest(".ss-hash-link") : null;
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var id = (target.getAttribute("href") || "").replace("#", "");
+    if (!/^\d+$/.test(id)) return;
+    var post = document.getElementById(id);
+    if (!post) return;
+    try { history.replaceState(null, "", "#" + id); } catch (err) { }
+    if (post.classList.contains("opCell")) {
+      var rect = post.getBoundingClientRect();
+      window.scrollTo({ top: rect.top + window.pageYOffset - 25, behavior: "smooth" });
+    } else {
+      post.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
+  function wireHashNavigation() {
+    var root = document.getElementById("divThreads");
+    if (!root) return;
+    addHashLinks(root);
+    if (hashNavObserver) return;
+    hashNavObserver = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var nodes = mutations[i].addedNodes;
+        for (var j = 0; j < nodes.length; j++) {
+          var node = nodes[j];
+          if (node.nodeType !== 1) continue;
+          if (node.matches && node.matches(HASH_NAV_LINKS)) addHashLink(node);
+          else addHashLinks(node);
+        }
+      }
+    });
+    hashNavObserver.observe(root, { childList: true, subtree: true });
+    if (!hashNavWired) {
+      hashNavWired = true;
+      root.addEventListener("click", onHashNavClick, true);
+    }
+  }
+
   var Features = {
     // Feature: Catalog Links
     catalogLinks: function (on) {
@@ -4341,6 +4416,18 @@
         if (quoteThreadingObserver) {
           quoteThreadingObserver.disconnect();
           quoteThreadingObserver = null;
+        }
+      }
+    },
+    // Feature: Hash Navigation
+    hashNavigation: function (on) {
+      if (on) {
+        wireHashNavigation();
+      } else {
+        removeHashLinks();
+        if (hashNavObserver) {
+          hashNavObserver.disconnect();
+          hashNavObserver = null;
         }
       }
     }

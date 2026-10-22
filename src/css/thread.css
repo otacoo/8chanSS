@@ -98,3 +98,16 @@
   border-left: 1px solid var(--border-color, #888);
   padding-left: 15px;
 }
+
+/* --- Hash Navigation --- */
+.ss-hash-link {
+  color: var(--link-color);
+  text-decoration: none;
+  cursor: pointer;
+  margin-left: 2px;
+  opacity: 0.6;
+}
+
+.ss-hash-link:hover {
+  opacity: 1;
+}
