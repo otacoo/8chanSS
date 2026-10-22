@@ -25,3 +25,8 @@
 .innerUtility.top a {
    color: var(--link-color) !important;
 }
+
+/* Not sure what is for yet, but it breaks text selection and Quote Threading; removed */
+.postCell::before {
+  content: initial !important;
+}
