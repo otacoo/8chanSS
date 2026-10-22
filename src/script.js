@@ -3847,15 +3847,9 @@
     e.stopPropagation();
     var id = (target.getAttribute("href") || "").replace("#", "");
     if (!/^\d+$/.test(id)) return;
-    var post = document.getElementById(id);
-    if (!post) return;
-    try { history.replaceState(null, "", "#" + id); } catch (err) { }
-    if (post.classList.contains("opCell")) {
-      var rect = post.getBoundingClientRect();
-      window.scrollTo({ top: rect.top + window.pageYOffset - 25, behavior: "smooth" });
-    } else {
-      post.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    if (!document.getElementById(id)) return;
+    // Native fragment navigation: the browser scrolls to the post and :target highlights it
+    location.hash = id;
   }
 
   function wireHashNavigation() {
