@@ -152,6 +152,7 @@
     enableScrollSave: true,
     showUnreadLine: true,
     rememberCommentDraft: false,
+    quoteThreading: false,
     highlightNewIds: false,
     idHlStyle: "moetext",
     alwaysShowIdCount: false,
@@ -226,6 +227,7 @@
           ]
         },
         { key: "rememberCommentDraft", label: "Remember Comment Draft", title: "Saves unsubmitted Quick Reply text and restores it, until the post is sent (drafts expire after 24 hours)" },
+        { key: "quoteThreading", label: "Quote Threading", title: "Nests replies under the post they quote instead of showing them in order" },
         { head: "Thread Watcher" },
         { key: "noPinInCatalog", label: "Don't pin in Catalog" },
         { key: "smallFont", label: "Smaller font" },
@@ -3700,6 +3702,105 @@
     }).observe(panel, { attributes: true, attributeFilter: ["class"] });
   }
 
+  var quoteThreadingObserver = null;
+  var quoteThreadingShortcutWired = false;
+
+  function wireQuoteThreadingShortcut() {
+    if (quoteThreadingShortcutWired) return;
+    quoteThreadingShortcutWired = true;
+    document.addEventListener("keydown", function (e) {
+      if (!e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+      if (e.key !== "t" && e.key !== "T") return;
+      var t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      e.preventDefault();
+      ssSettings.quoteThreading = !ssSettings.quoteThreading;
+      saveSetting("quoteThreading");
+      Features.quoteThreading(ssSettings.quoteThreading);
+      var box = document.querySelector('input[data-ss-setting="quoteThreading"]');
+      if (box) box.checked = ssSettings.quoteThreading;
+      showToast("Quote threading " + (ssSettings.quoteThreading ? "enabled" : "disabled"), ssSettings.quoteThreading ? "blue" : "black", 1300);
+    });
+  }
+
+  function threadPostIndex() {
+    var index = {};
+    var posts = document.querySelectorAll("#divThreads .innerPost[data-uri], #divThreads .innerOP[data-uri]");
+    for (var i = 0; i < posts.length; i++) {
+      if (!posts[i].classList.contains("innerClone")) index[posts[i].getAttribute("data-uri")] = posts[i];
+    }
+    return index;
+  }
+
+  // The post a reply belongs under: the last post it quotes that is on the page
+  function quotedParent(postCell, index) {
+    var quotes = postCell.querySelectorAll("a.quoteLink[data-link-uri]");
+    for (var i = quotes.length - 1; i >= 0; i--) {
+      var uri = quotes[i].getAttribute("data-link-uri");
+      var parent = index ? index[uri] : null;
+      if (!parent && !index) {
+        parent = document.querySelector('#divThreads .innerPost[data-uri="' + uri + '"]:not(.innerClone), #divThreads .innerOP[data-uri="' + uri + '"]:not(.innerClone)');
+      }
+      if (!parent) continue;
+      var parentCell = parent.closest(".postCell, .opCell");
+      if (parentCell && parentCell !== postCell) return parentCell;
+    }
+    return null;
+  }
+
+  function nestUnder(postCell, parentCell) {
+    if (!postCell || !parentCell || postCell === parentCell) return;
+    if (parentCell.classList.contains("opCell")) return;
+    var container = parentCell.querySelector(":scope > .threadedReplies");
+    if (!container) {
+      container = document.createElement("div");
+      container.className = "threadedReplies";
+      parentCell.appendChild(container);
+    }
+    if (postCell.parentNode !== container) container.appendChild(postCell);
+  }
+
+  function unthreadPosts() {
+    var containers = document.querySelectorAll(".threadedReplies");
+    for (var i = containers.length - 1; i >= 0; i--) {
+      var container = containers[i];
+      var anchor = container.parentNode;
+      while (container.firstChild) {
+        var child = container.firstChild;
+        anchor.after(child);
+        anchor = child;
+      }
+      container.remove();
+    }
+  }
+
+  function wireQuoteThreading() {
+    var posts = document.querySelector(".divPosts");
+    if (!posts) return;
+    var index = threadPostIndex();
+    var cells = posts.querySelectorAll(".postCell");
+    for (var i = 0; i < cells.length; i++) {
+      nestUnder(cells[i], quotedParent(cells[i], index));
+    }
+    if (quoteThreadingObserver) return;
+    quoteThreadingObserver = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var nodes = mutations[i].addedNodes;
+        for (var j = 0; j < nodes.length; j++) {
+          var node = nodes[j];
+          if (node.nodeType !== 1) continue;
+          if (node.classList && node.classList.contains("postCell")) {
+            nestUnder(node, quotedParent(node, null));
+          } else if (node.querySelectorAll) {
+            var cells = node.querySelectorAll(".postCell");
+            for (var k = 0; k < cells.length; k++) nestUnder(cells[k], quotedParent(cells[k], null));
+          }
+        }
+      }
+    });
+    quoteThreadingObserver.observe(posts, { childList: true, subtree: false });
+  }
+
   var Features = {
     // Feature: Catalog Links
     catalogLinks: function (on) {
@@ -4224,6 +4325,19 @@
     // Feature: Remember Comment Draft
     rememberCommentDraft: function (on) {
       if (on) bindCommentDraft();
+    },
+    // Feature: Quote Threading
+    quoteThreading: function (on) {
+      wireQuoteThreadingShortcut();
+      if (on) {
+        wireQuoteThreading();
+      } else {
+        unthreadPosts();
+        if (quoteThreadingObserver) {
+          quoteThreadingObserver.disconnect();
+          quoteThreadingObserver = null;
+        }
+      }
     }
   };
 
@@ -4836,6 +4950,7 @@
       [["Escape"], "Clear QR textarea and hide dialogs"],
       [["Alt", "W"], "Watch/Unwatch Thread"],
       [["Alt", "T"], "Toggle Thread Watcher"],
+      [["Shift", "T"], "Toggle Quote Threading"],
       [["Shift", "Click"], "Hide Thread in Catalog"],
       [["Ctrl", "Up/Down"], "Scroll between Your Replies"],
       [["Ctrl", "Shift", "Up/Down"], "Scroll between Replies to You"],

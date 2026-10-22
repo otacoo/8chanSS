@@ -92,3 +92,9 @@
   margin: -3px auto -3px auto;
   width: 60%;
 }
+
+/* --- Quote Threading --- */
+.threadedReplies {
+  border-left: 1px solid var(--border-color, #888);
+  padding-left: 15px;
+}
