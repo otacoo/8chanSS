@@ -3705,6 +3705,31 @@
   var quoteThreadingObserver = null;
   var quoteThreadingShortcutWired = false;
 
+  function threadContext() {
+    var opCell = document.querySelector("#divThreads .opCell");
+    return {
+      board: opCell ? opCell.getAttribute("data-boarduri") : "",
+      threadId: opCell ? opCell.id : ""
+    };
+  }
+
+  // The post a reply belongs under: the last post it quotes that is on this page.
+  // The quote href is used because data-link-uri is only added by the site later,
+  // when a post gets decorated.
+  function quotedParent(postCell, ctx) {
+    var quotes = postCell.querySelectorAll("a.quoteLink[href]");
+    for (var i = quotes.length - 1; i >= 0; i--) {
+      var match = (quotes[i].getAttribute("href") || "").match(/\/([^/]+)\/res\/(\d+)\.html#(\d+)/);
+      if (!match) continue;
+      if (match[1] !== ctx.board || match[2] !== ctx.threadId) continue;
+      var parent = document.getElementById(match[3]);
+      if (!parent) continue;
+      var parentCell = parent.closest(".postCell, .opCell");
+      if (parentCell && parentCell !== postCell) return parentCell;
+    }
+    return null;
+  }
+
   function wireQuoteThreadingShortcut() {
     if (quoteThreadingShortcutWired) return;
     quoteThreadingShortcutWired = true;
@@ -3721,31 +3746,6 @@
       if (box) box.checked = ssSettings.quoteThreading;
       showToast("Quote threading " + (ssSettings.quoteThreading ? "enabled" : "disabled"), ssSettings.quoteThreading ? "blue" : "black", 1300);
     });
-  }
-
-  function threadPostIndex() {
-    var index = {};
-    var posts = document.querySelectorAll("#divThreads .innerPost[data-uri], #divThreads .innerOP[data-uri]");
-    for (var i = 0; i < posts.length; i++) {
-      if (!posts[i].classList.contains("innerClone")) index[posts[i].getAttribute("data-uri")] = posts[i];
-    }
-    return index;
-  }
-
-  // The post a reply belongs under: the last post it quotes that is on the page
-  function quotedParent(postCell, index) {
-    var quotes = postCell.querySelectorAll("a.quoteLink[data-link-uri]");
-    for (var i = quotes.length - 1; i >= 0; i--) {
-      var uri = quotes[i].getAttribute("data-link-uri");
-      var parent = index ? index[uri] : null;
-      if (!parent && !index) {
-        parent = document.querySelector('#divThreads .innerPost[data-uri="' + uri + '"]:not(.innerClone), #divThreads .innerOP[data-uri="' + uri + '"]:not(.innerClone)');
-      }
-      if (!parent) continue;
-      var parentCell = parent.closest(".postCell, .opCell");
-      if (parentCell && parentCell !== postCell) return parentCell;
-    }
-    return null;
   }
 
   function nestUnder(postCell, parentCell) {
@@ -3775,30 +3775,35 @@
   }
 
   function wireQuoteThreading() {
-    var posts = document.querySelector(".divPosts");
-    if (!posts) return;
-    var index = threadPostIndex();
-    var cells = posts.querySelectorAll(".postCell");
-    for (var i = 0; i < cells.length; i++) {
-      nestUnder(cells[i], quotedParent(cells[i], index));
+    var root = document.getElementById("divThreads");
+    if (!root) return;
+    var ctx = threadContext();
+    var posts = root.querySelector(".divPosts");
+    if (posts) {
+      var cells = posts.querySelectorAll(".postCell");
+      for (var i = 0; i < cells.length; i++) {
+        nestUnder(cells[i], quotedParent(cells[i], ctx));
+      }
     }
     if (quoteThreadingObserver) return;
     quoteThreadingObserver = new MutationObserver(function (mutations) {
+      var ctx = threadContext();
       for (var i = 0; i < mutations.length; i++) {
         var nodes = mutations[i].addedNodes;
         for (var j = 0; j < nodes.length; j++) {
           var node = nodes[j];
           if (node.nodeType !== 1) continue;
+          if (node.classList && node.classList.contains("threadedReplies")) continue;
           if (node.classList && node.classList.contains("postCell")) {
-            nestUnder(node, quotedParent(node, null));
+            nestUnder(node, quotedParent(node, ctx));
           } else if (node.querySelectorAll) {
             var cells = node.querySelectorAll(".postCell");
-            for (var k = 0; k < cells.length; k++) nestUnder(cells[k], quotedParent(cells[k], null));
+            for (var k = 0; k < cells.length; k++) nestUnder(cells[k], quotedParent(cells[k], ctx));
           }
         }
       }
     });
-    quoteThreadingObserver.observe(posts, { childList: true, subtree: false });
+    quoteThreadingObserver.observe(root, { childList: true, subtree: true });
   }
 
   var Features = {
