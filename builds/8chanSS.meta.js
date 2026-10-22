@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      2.2.1
+// @version      2.3.0
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otacoo

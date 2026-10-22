@@ -1,3 +1,22 @@
+## v2.3.0
+*2026-10-22*
+
+- **New Option:** Quote Threading (General > Thread)
+  - Replies are nested under the post they quote instead of being shown in order
+  - New shortcut: `SHIFT + T` toggles it
+- **New Option:** Hash Navigation (General > Thread)
+  - Adds a `#` link next to quotes and backlinks to jump straight to the post, highlighted by the site itself
+
+**Fixes:**
+- Fix text selection in posts being broken by the site's post decoration (Misc > Apply 8chanSS fixes)
+- Fix link thumbnail previews (YouTube/Twitch) being able to open outside of the viewport
+- Fix Sauce Links staying on the page after the option was turned off
+
+**Performance:**
+- Enhanced Links do a single DOM query per page update instead of... seven
+- Improve rendering of Sauce Links
+- Improve Settings menu injection
+
 ### v2.2.1
 *2026-10-15*
 
