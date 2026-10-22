@@ -603,6 +603,27 @@ div.modalPanel {
   pointer-events: none;
 }
 
+/* --- Link thumbnail hover (Enhanced Links) --- */
+.ss-link-thumb {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  background: #222;
+  border: 1px solid #444;
+  padding: 2px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.1s;
+  max-width: 280px;
+  max-height: 200px;
+  color: #fff;
+}
+
+.ss-link-thumb img {
+  display: block;
+  border-radius: 3px;
+}
+
 /* --- Audio hover indicator --- */
 a[data-filemime^="audio/"],
 a.originalNameLink[href$=".mp3"],

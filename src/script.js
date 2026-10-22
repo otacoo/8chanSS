@@ -2029,31 +2029,43 @@
       let thumbDiv = null;
       let lastImg = null;
       let lastHoverToken = 0;
+      let lastEvent = null;
+      let thumbWidth = 290;
+      let thumbHeight = 210;
+
+      function positionThumb(e) {
+        if (!thumbDiv || !e) return;
+        let top = e.clientY + 12;
+        let left = e.clientX + 12;
+        if (top + thumbHeight > window.innerHeight - 8) top = e.clientY - 12 - thumbHeight;
+        if (top < 8) top = 8;
+        if (left + thumbWidth > window.innerWidth - 8) left = e.clientX - 12 - thumbWidth;
+        if (left < 8) left = 8;
+        thumbDiv.style.top = `${top}px`;
+        thumbDiv.style.left = `${left}px`;
+      }
+
+      function measureThumb(e) {
+        if (!thumbDiv) return;
+        const rect = thumbDiv.getBoundingClientRect();
+        if (rect.width) thumbWidth = rect.width;
+        if (rect.height) thumbHeight = rect.height;
+        positionThumb(e);
+      }
 
       function showThumb(e) {
+        lastEvent = e;
         if (!thumbDiv) {
           thumbDiv = document.createElement('div');
-          thumbDiv.style.position = 'fixed';
-          thumbDiv.style.zIndex = '9999';
-          thumbDiv.style.pointerEvents = 'none';
-          thumbDiv.style.background = '#222';
-          thumbDiv.style.border = '1px solid #444';
-          thumbDiv.style.padding = '2px';
-          thumbDiv.style.borderRadius = '4px';
-          thumbDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
-          thumbDiv.style.transition = 'opacity 0.1s';
+          thumbDiv.className = 'ss-link-thumb';
           thumbDiv.style.opacity = '0';
-          thumbDiv.style.maxWidth = '280px';
-          thumbDiv.style.maxHeight = '200px';
-          thumbDiv.style.color = '#fff';
 
           const img = document.createElement('img');
-          img.style.display = 'block';
-          img.style.maxWidth = '280px';
-          img.style.maxHeight = '200px';
-          img.style.borderRadius = '3px';
+          img.style.maxWidth = Math.min(280, window.innerWidth - 20) + 'px';
+          img.style.maxHeight = Math.min(200, window.innerHeight - 20) + 'px';
           img.alt = altText;
           img.src = "data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQv///wAAACH5BAEAAAMALAAAAAAQABAAAAIgjI+py+0Po5yUFQA7";
+          img.addEventListener('load', () => measureThumb(lastEvent));
 
           lastImg = img;
           const hoverToken = ++lastHoverToken;
@@ -2075,19 +2087,12 @@
             if (thumbDiv) thumbDiv.style.opacity = '1';
           }, 10);
         }
-        const top = Math.min(window.innerHeight - 130, e.clientY + 12);
-        const left = Math.min(window.innerWidth - 290, e.clientX + 12);
-        thumbDiv.style.top = `${top}px`;
-        thumbDiv.style.left = `${left}px`;
+        positionThumb(e);
       }
 
       function moveThumb(e) {
-        if (thumbDiv) {
-          const top = Math.min(window.innerHeight - 130, e.clientY + 12);
-          const left = Math.min(window.innerWidth - 290, e.clientX + 12);
-          thumbDiv.style.top = `${top}px`;
-          thumbDiv.style.left = `${left}px`;
-        }
+        lastEvent = e;
+        positionThumb(e);
       }
 
       function hideThumb() {
