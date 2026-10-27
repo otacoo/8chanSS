@@ -1,3 +1,18 @@
+## v2.4.0
+*2026-10-27*
+
+**PR by @Nostramadeus in #15**:
+- **New Option:** Auto Watch Threads You Reply In (General > Thread Watcher)
+- **New Option:** Auto Watch Threads You Create (General > Thread Watcher)
+
+**Changes:**
+- Removed *Beep on (You)* option; now part of the native script
+- *Remember Comment Draft* will now also work for the Index/Catalog posting form
+
+**Fixes:**
+- Up/Down arrows will no longer have the Sidebar margins applied when in the Index or Catalog
+- Smaller TW font works again
+
 ## v2.3.0
 *2026-10-22*
 
