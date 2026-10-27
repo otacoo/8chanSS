@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      2.4.0
+// @version      2.4.1
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otacoo
@@ -41,7 +41,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.4.0";
+  var VERSION = "2.4.1";
 
   var pageType = (function () {
     var path = (location.pathname || "").toLowerCase();
@@ -4538,6 +4538,7 @@
         var opUri = opElem && opElem.getAttribute("data-uri");
         if (!opUri) return;
         op = { boardUri: boardUri, threadId: threadId, postId: threadId, uri: opUri, op: true };
+        if (typeof cloneInto === "function") { try { op = cloneInto(op, w); } catch (e) { } }
       }
       w.watcher.watchThread(op);
     } catch (e) { }
@@ -4573,7 +4574,7 @@
     var origSetYou = w.posting.setYou;
     var wrapped = function (boardUri, postId, add) {
       var isNewPost = add && !document.getElementById(String(postId));
-      var result = origSetYou.apply(w.posting, arguments);
+      var result = origSetYou.call(w.posting, boardUri, postId, add);
       if (isNewPost) {
         if (pageType.isThread) {
           if (ssSettings.watchOnPost) watchThreadIfUnwatched(boardUri, w.api.threadId);

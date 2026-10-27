@@ -1,3 +1,8 @@
+### v2.4.1
+*2026-10-27*
+
+- Fix Auto Watch options on Firefox
+
 ## v2.4.0
 *2026-10-27*
 
