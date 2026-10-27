@@ -4561,6 +4561,8 @@
         var opUri = opElem && opElem.getAttribute("data-uri");
         if (!opUri) return;
         op = { boardUri: boardUri, threadId: threadId, postId: threadId, uri: opUri, op: true };
+        // hand the page its own copy on Firefox, where sandbox objects are not readable
+        if (typeof cloneInto === "function") { try { op = cloneInto(op, w); } catch (e) { } }
       }
       w.watcher.watchThread(op);
     } catch (e) { }
@@ -4596,7 +4598,7 @@
     var origSetYou = w.posting.setYou;
     var wrapped = function (boardUri, postId, add) {
       var isNewPost = add && !document.getElementById(String(postId));
-      var result = origSetYou.apply(w.posting, arguments);
+      var result = origSetYou.call(w.posting, boardUri, postId, add);
       if (isNewPost) {
         if (pageType.isThread) {
           if (ssSettings.watchOnPost) watchThreadIfUnwatched(boardUri, w.api.threadId);
