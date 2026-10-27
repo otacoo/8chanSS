@@ -181,7 +181,6 @@
     sauceSaucenao: false,
     saucePixiv: false,
     autoSaveDaily: false,
-    beepOnYou: false,
     enableShortcuts: false,
     updateNotif: true,
     ssVersion: ""
@@ -310,7 +309,6 @@
       page: "ss-misc", title: "Misc", options: [
         { head: "Notifications" },
         { key: "updateNotif", label: "Enable toast notifications" },
-        { key: "beepOnYou", label: "Beep on (You)" },
         { head: "IDs" },
         {
           key: "highlightNewIds", label: "Highlight New IDs", sub: [
@@ -3265,37 +3263,6 @@
     sauceBodyObserver.observe(document.body, { childList: true, subtree: true });
   }
 
-  var beepOnYouObserver = null;
-  var beepAudioContext = null;
-
-  function beepNow(ctx) {
-    try {
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      var t = ctx.currentTime;
-      osc.frequency.value = 550;
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.1, t + 0.008);
-      gain.gain.linearRampToValueAtTime(0, t + 0.03);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.032);
-    } catch (e) { }
-  }
-
-  function playBeep() {
-    var Ctor = window.AudioContext || window.webkitAudioContext;
-    if (!Ctor) return;
-    if (!beepAudioContext) beepAudioContext = new Ctor();
-    var ctx = beepAudioContext;
-    if (ctx.state === "suspended") {
-      ctx.resume().then(function () { beepNow(ctx); });
-      return;
-    }
-    beepNow(ctx);
-  }
-
   var galleryWired = false;
   var galleryOverlay = null;
   var galleryEls = null;
@@ -4308,41 +4275,6 @@
       if (!on) return;
       runAutoSave();
       autoSaveTimer = setInterval(runAutoSave, 60 * 60 * 1000);
-    },
-    // Feature: Beep on (You)
-    beepOnYou: function (on) {
-      if (!on) {
-        if (beepOnYouObserver) { beepOnYouObserver.disconnect(); beepOnYouObserver = null; }
-        return;
-      }
-      if (beepOnYouObserver) return;
-      var posts = document.querySelector(".divPosts");
-      if (!posts) return;
-      var lastPostId = 0;
-      var existing = posts.querySelectorAll(".postCell[id], .opCell[id]");
-      for (var i = 0; i < existing.length; i++) {
-        var existingId = parseInt(existing[i].id, 10);
-        if (existingId > lastPostId) lastPostId = existingId;
-      }
-      beepOnYouObserver = new MutationObserver(function (mutations) {
-        var beeped = false;
-        for (var i = 0; i < mutations.length; i++) {
-          var nodes = mutations[i].addedNodes;
-          for (var j = 0; j < nodes.length; j++) {
-            var node = nodes[j];
-            if (node.nodeType !== 1 || !node.matches || !node.matches(".postCell, .opCell")) continue;
-            var postId = parseInt(node.id, 10);
-            if (!postId || postId <= lastPostId) continue;
-            lastPostId = postId;
-            if (beeped || node.querySelector(".yourPost")) continue;
-            if (node.querySelector("a.quoteLink.postLink--you")) {
-              beeped = true;
-              playBeep();
-            }
-          }
-        }
-      });
-      beepOnYouObserver.observe(posts, { childList: true, subtree: false });
     },
     // Feature: Style scrollbars
     styleScrollbars: function (on) {
