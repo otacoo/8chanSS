@@ -159,7 +159,7 @@
   bottom: 40px;
 }
 
-:root.ss-sidebar #ssScrollArrows {
+:root:not(.is-index, .is-catalog).ss-sidebar #ssScrollArrows {
   right: calc(19rem + 40px);
 }
 
