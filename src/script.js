@@ -191,6 +191,7 @@
     {
       page: "ss-general", title: "General", options: [
         { head: "Site" },
+        { key: "rememberCommentDraft", label: "Remember Comment Draft", title: "Saves unsubmitted Quick Reply or Posting Form text and restores it, until the post is sent (drafts expire after 24 hours)" },
         { key: "bottomHeader", label: "Bottom Header", title: "Move nav header to bottom of viewport" },
         { key: "autoHideHeaderScroll", label: "Auto-hide Header on Scroll" },
         {
@@ -230,7 +231,6 @@
             { key: "showUnreadLine", label: "Show Unread Line" }
           ]
         },
-        { key: "rememberCommentDraft", label: "Remember Comment Draft", title: "Saves unsubmitted Quick Reply text and restores it, until the post is sent (drafts expire after 24 hours)" },
         { key: "quoteThreading", label: "Quote Threading", title: "Nests replies under the post they quote instead of showing them in order" },
         { key: "hashNavigation", label: "Hash Navigation", title: "Adds a # link next to quotes and backlinks to jump straight to the post" },
         { head: "Thread Watcher" },
@@ -3585,10 +3585,11 @@
   var COMMENT_DRAFT_PREFIX = "8chanSS_rememberComment:";
   var COMMENT_DRAFT_EXPIRY = 24 * 60 * 60 * 1000;
   var COMMENT_DRAFT_MAX = 10;
-  var commentDraftBound = false;
 
+  // Threads keep their own draft; the catalog and index post to the whole board
   function commentDraftKey() {
-    return COMMENT_DRAFT_PREFIX + location.pathname;
+    var scope = pageType.isThread ? location.pathname : location.pathname.split("/")[1];
+    return COMMENT_DRAFT_PREFIX + scope;
   }
 
   function removeCommentDraft(key) {
@@ -3641,17 +3642,10 @@
     }
   }
 
-  function bindCommentDraft(attempt) {
-    if (commentDraftBound || !ssSettings.rememberCommentDraft) return;
-    var body = document.getElementById("qrbody");
-    if (!body) {
-      if ((attempt || 0) < 20) setTimeout(function () { bindCommentDraft((attempt || 0) + 1); }, 250);
-      return;
-    }
-    commentDraftBound = true;
-
+  function wireCommentDraft(body) {
+    body.dataset.ssDraft = "1";
     var form = body.closest("form");
-    var panel = document.getElementById("quick-reply") || body;
+    var panel = body.closest("#quick-reply, #postingForm") || body;
     var saveTimer = null;
     var pendingText = null;
 
@@ -3679,11 +3673,22 @@
       if (target && target.closest && target.closest("input[type=submit], button[type=submit]")) clearSaved();
     });
 
-    // The site clears the QR on close, so restore the draft whenever it is reopened
     new MutationObserver(function () {
       if (!ssSettings.rememberCommentDraft) return;
       if (!body.value) restoreCommentDraft(body);
     }).observe(panel, { attributes: true, attributeFilter: ["class"] });
+  }
+
+  function bindCommentDraft(attempt) {
+    if (!ssSettings.rememberCommentDraft) return;
+    var ids = pageType.isThread ? ["qrbody", "fieldMessage"] : ["fieldMessage"];
+    var missing = 0;
+    for (var i = 0; i < ids.length; i++) {
+      var body = document.getElementById(ids[i]);
+      if (!body) missing++;
+      else if (!body.dataset.ssDraft) wireCommentDraft(body);
+    }
+    if (missing && (attempt || 0) < 20) setTimeout(function () { bindCommentDraft((attempt || 0) + 1); }, 250);
   }
 
   var quoteThreadingObserver = null;
