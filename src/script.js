@@ -141,7 +141,8 @@
     noPinInCatalog: false,
     smallFont: false,
     expandTW: false,
-    watchOnPost: false,
+    watchOnPost: true,
+    watchOnCreate: true,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -237,6 +238,7 @@
         { key: "smallFont", label: "Smaller font" },
         { key: "expandTW", label: "Auto Expand Thread Watcher" },
         { key: "watchOnPost", label: "Auto Watch Threads You Reply In", title: "Adds the thread to the Thread Watcher when your reply is posted" },
+        { key: "watchOnCreate", label: "Auto Watch Threads You Create", title: "Adds a new thread you make to the Thread Watcher" },
         { head: "Catalog" },
         { key: "catalogImageHover", label: "Catalog Image Hover" },
         { key: "catalogNewTab", label: "Always Open Threads in New Tab" },
@@ -4390,7 +4392,13 @@
     },
     // Feature: Auto Watch Threads You Reply In
     watchOnPost: function (on) {
-      if (on) wireWatchOnPost();
+      if (on) wireOwnPostWatch();
+    },
+    // Feature: Auto Watch Threads You Create
+    watchOnCreate: function (on) {
+      if (!on) return;
+      wireOwnPostWatch();
+      watchCreatedThread();
     },
     // Feature: Quote Threading
     quoteThreading: function (on) {
@@ -4616,28 +4624,66 @@
     } catch (e) { }
   }
 
-  var watchOnPostWired = false;
+  var ownPostWatchWired = false;
+  var CREATED_THREAD_KEY = "8chanSS_createdThread";
 
-  // The site calls posting.setYou(board, post, true) once a reply is posted.
-  // A post already on the page is an old one being re-marked, not a new reply.
-  function wireWatchOnPost(attempt) {
-    if (watchOnPostWired || !pageType.isThread) return;
+  // A new thread opens on a fresh page, so the board page leaves a note for it
+  function rememberCreatedThread(boardUri, threadId) {
+    try {
+      sessionStorage.setItem(CREATED_THREAD_KEY, JSON.stringify({ board: boardUri, thread: String(threadId), at: Date.now() }));
+    } catch (e) { }
+  }
+
+  function watchCreatedThread(attempt) {
+    if (!pageType.isThread || !ssSettings.watchOnCreate) return;
+    var note;
+    try { note = JSON.parse(sessionStorage.getItem(CREATED_THREAD_KEY) || "null"); } catch (e) { }
+    if (!note) return;
     var w = pageWindow();
-    if (!w.posting || typeof w.posting.setYou !== "function" || !w.api) {
-      if ((attempt || 0) < 20) setTimeout(function () { wireWatchOnPost((attempt || 0) + 1); }, 250);
+    if (!w.watcher || !w.watcher.watchedData || !w.api) {
+      if ((attempt || 0) < 20) setTimeout(function () { watchCreatedThread((attempt || 0) + 1); }, 250);
       return;
     }
-    watchOnPostWired = true;
+    try { sessionStorage.removeItem(CREATED_THREAD_KEY); } catch (e) { }
+    if (note.board !== w.api.boardUri || note.thread !== String(w.api.threadId)) return;
+    if (Date.now() - note.at > 10 * 60 * 1000) return;
+    watchThreadIfUnwatched(note.board, w.api.threadId);
+  }
+
+  // The site calls posting.setYou(board, post, true) once a post is made:
+  // a reply on a thread page, a new thread on a board or catalog page.
+  // A post already on the page is an old one being re-marked, not a new post.
+  function wireOwnPostWatch(attempt) {
+    if (ownPostWatchWired) return;
+    var w = pageWindow();
+    if (!w.posting || typeof w.posting.setYou !== "function" || !w.api) {
+      if ((attempt || 0) < 20) setTimeout(function () { wireOwnPostWatch((attempt || 0) + 1); }, 250);
+      return;
+    }
+    // Firefox sandboxes cannot hand the page a plain function; without exportFunction, leave the site alone
+    var canExport = typeof exportFunction === "function";
+    var isXray = false;
+    try { isXray = typeof unsafeWindow !== "undefined" && !!unsafeWindow.wrappedJSObject; } catch (e) { }
+    if (isXray && !canExport) return;
+
     var origSetYou = w.posting.setYou;
-    var wrapped = function (boardUri, postId, add, extra) {
-      var isNewReply = add && !document.getElementById(String(postId));
-      var result = origSetYou.call(w.posting, boardUri, postId, add, extra);
-      if (isNewReply && ssSettings.watchOnPost) watchThreadIfUnwatched(boardUri, w.api.threadId);
+    var wrapped = function (boardUri, postId, add) {
+      var isNewPost = add && !document.getElementById(String(postId));
+      var result = origSetYou.apply(w.posting, arguments);
+      if (isNewPost) {
+        if (pageType.isThread) {
+          if (ssSettings.watchOnPost) watchThreadIfUnwatched(boardUri, w.api.threadId);
+        } else if (ssSettings.watchOnCreate) {
+          rememberCreatedThread(boardUri, postId);
+        }
+      }
       return result;
     };
-    // Firefox userscript sandboxes need exportFunction to hand a function to the page
-    if (typeof exportFunction === "function") exportFunction(wrapped, w.posting, { defineAs: "setYou" });
-    else w.posting.setYou = wrapped;
+    try {
+      if (canExport) exportFunction(wrapped, w.posting, { defineAs: "setYou" });
+      else w.posting.setYou = wrapped;
+      ownPostWatchWired = true;
+    } catch (e) { }
   }
 
   function toggleWatcherMenu() {
