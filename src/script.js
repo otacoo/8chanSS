@@ -144,6 +144,7 @@
     watchOnPost: true,
     watchOnCreate: true,
     watcherBoards: false,
+    watcherPrune404: false,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -240,6 +241,7 @@
         { key: "watchOnPost", label: "Auto Watch Threads You Reply In", title: "Adds the thread to the Thread Watcher when your reply is posted" },
         { key: "watchOnCreate", label: "Auto Watch Threads You Create", title: "Adds a new thread you make to the Thread Watcher" },
         { key: "watcherBoards", label: "Show Board Tag", title: "Shows the board tag before each thread name" },
+        { key: "watcherPrune404", label: "Auto remove 404 threads" },
         { head: "Catalog" },
         { key: "catalogImageHover", label: "Catalog Image Hover" },
         { key: "catalogNewTab", label: "Always Open Threads in New Tab" },
@@ -4344,6 +4346,10 @@
     watcherBoards: function () {
       wireWatchedCells();
     },
+    // Feature: Auto Remove 404 Threads in Thread Watcher
+    watcherPrune404: function () {
+      wireWatchedCells();
+    },
     // Feature: Quote Threading
     quoteThreading: function (on) {
       wireQuoteThreadingShortcut();
@@ -4634,7 +4640,27 @@
     return text;
   }
 
+  function pruneDeadThreads() {
+    var w = pageWindow();
+    if (!w.watcher || !w.watcher.watchedData) return;
+    var data = w.watcher.watchedData;
+    var removed = false;
+    Object.keys(data).forEach(function (board) {
+      var threads = data[board];
+      Object.keys(threads).forEach(function (id) {
+        if (threads[id].dead !== true) return;
+        w.watcher.unWatchThread(board, id);
+        var left = w.watcher.watchedData[board];
+        if (!left || !left[id]) removed = true;
+      });
+    });
+    if (!removed) return;
+    w.watcher.saveWatchedData();
+    w.watcher.updateUi();
+  }
+
   function updateWatchedCells() {
+    if (ssSettings.watcherPrune404) pruneDeadThreads();
     var api = pageWindow().api || {};
     var links = document.querySelectorAll("#watchedMenu .watchedCellAnchor");
     for (var i = 0; i < links.length; i++) {

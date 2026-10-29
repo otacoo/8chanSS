@@ -556,6 +556,14 @@
   font-weight: bold;
 }
 
+#watchedMenu .watchedCellDead {
+  opacity: 0.5;
+}
+
+#watchedMenu .watchedCellDead .watchedCellAnchor {
+  text-decoration: none;
+}
+
 .markAllRead::before {
   content: "\e065";
 }
