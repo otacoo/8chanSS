@@ -143,6 +143,7 @@
     expandTW: false,
     watchOnPost: true,
     watchOnCreate: true,
+    watcherBoards: false,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -238,6 +239,7 @@
         { key: "expandTW", label: "Auto Expand Thread Watcher" },
         { key: "watchOnPost", label: "Auto Watch Threads You Reply In", title: "Adds the thread to the Thread Watcher when your reply is posted" },
         { key: "watchOnCreate", label: "Auto Watch Threads You Create", title: "Adds a new thread you make to the Thread Watcher" },
+        { key: "watcherBoards", label: "Show Board Tag", title: "Shows the board tag before each thread name" },
         { head: "Catalog" },
         { key: "catalogImageHover", label: "Catalog Image Hover" },
         { key: "catalogNewTab", label: "Always Open Threads in New Tab" },
@@ -4309,6 +4311,7 @@
     // Feature: Apply 8chanSS fixes
     applyFixes: function (on) {
       if (on) applyMiscFixes();
+      wireWatchedCells();
     },
     // Feature: Move file uploads below OP title
     moveUploads: function (on) {
@@ -4336,6 +4339,10 @@
       if (!on) return;
       wireOwnPostWatch();
       watchCreatedThread();
+    },
+    // Feature: Show Board in Thread Watcher
+    watcherBoards: function () {
+      wireWatchedCells();
     },
     // Feature: Quote Threading
     quoteThreading: function (on) {
@@ -4613,6 +4620,20 @@
       else w.posting.setYou = wrapped;
       ownPostWatchWired = true;
     } catch (e) { }
+  }
+
+  var watchedCellsObs = null;
+
+  function wireWatchedCells() {
+    updateWatchedCells();
+    var live = ssSettings.applyFixes || ssSettings.watcherBoards;
+    if (live && !watchedCellsObs && document.body) {
+      watchedCellsObs = new MutationObserver(updateWatchedCells);
+      watchedCellsObs.observe(document.body, { childList: true, subtree: true });
+    } else if (!live && watchedCellsObs) {
+      watchedCellsObs.disconnect();
+      watchedCellsObs = null;
+    }
   }
 
   function toggleWatcherMenu() {

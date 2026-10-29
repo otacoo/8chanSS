@@ -537,7 +537,7 @@
   display: none !important;
 }
 
-.watchedCellLabel a::before {
+.watchedCellAnchor[data-board]::before {
   content: attr(data-board);
   color: #aaa;
   margin-right: 4px;
