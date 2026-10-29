@@ -145,6 +145,7 @@
     watchOnCreate: true,
     watcherBoards: false,
     watcherPrune404: false,
+    watcherYouRed: true,
     watcherPages: true,
     catalogImageHover: false,
     threadImageHover: true,
@@ -243,6 +244,7 @@
         { key: "watchOnCreate", label: "Auto Watch Threads You Create", title: "Adds a new thread you make to the Thread Watcher" },
         { key: "watcherBoards", label: "Show Board Tag", title: "Shows the board tag before each thread name" },
         { key: "watcherPrune404", label: "Auto remove 404 threads" },
+        { key: "watcherYouRed", label: "Red row for replies to you" },
         { key: "watcherPages", label: "Show page numbers", title: "One catalog request per watched board after each watcher check" },
         { head: "Catalog" },
         { key: "catalogImageHover", label: "Catalog Image Hover" },
@@ -4409,7 +4411,8 @@
     backlinkIcons: "backlink-icon",
     noPinInCatalog: "ss-nopin-catalog",
     smallFont: "ss-small-font",
-    expandTW: "auto-expand-tw"
+    expandTW: "auto-expand-tw",
+    watcherYouRed: "ss-watcher-you-red"
   };
   Object.keys(CLASS_TOGGLES).forEach(function (key) {
     Features[key] = function (on) { rootToggle(CLASS_TOGGLES[key], on); };

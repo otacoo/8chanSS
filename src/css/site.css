@@ -564,6 +564,20 @@
   text-decoration: none;
 }
 
+:root.ss-watcher-you-red #watchedMenu .watchedCell:has(.watchedNotificationYous:not(.hidden)) *,
+:root.ss-watcher-you-red #watchedMenu .watchedCell:has(.watchedNotificationYous:not(.hidden)) .watchedCellAnchor::before {
+  color: var(--ss-you-color, #d33);
+}
+
+:root.ss-watcher-you-red #watchedMenu .watchedNotificationYous,
+:root.ss-watcher-you-red .watcherButton .watchedNotificationYous {
+  display: none;
+}
+
+:root.ss-watcher-you-red .watcherButton:has(.watchedNotificationYous:not(.hidden)) {
+  color: var(--ss-you-color, #d33);
+}
+
 #watchedMenu .ss-watched-page {
   margin-right: 4px;
   opacity: 0.6;
