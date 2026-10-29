@@ -4624,6 +4624,34 @@
 
   var watchedCellsObs = null;
 
+  function decodeEntities(text) {
+    var doc = new DOMParser();
+    for (var i = 0; i < 3; i++) {
+      var out = doc.parseFromString(text, "text/html").body.textContent;
+      if (out === text) break;
+      text = out;
+    }
+    return text;
+  }
+
+  function updateWatchedCells() {
+    var links = document.querySelectorAll("#watchedMenu .watchedCellAnchor");
+    for (var i = 0; i < links.length; i++) {
+      var a = links[i];
+      if (ssSettings.applyFixes) {
+        var text = a.textContent;
+        var fixed = decodeEntities(text);
+        if (fixed !== text) a.textContent = fixed;
+      }
+      if (ssSettings.watcherBoards) {
+        var m = (a.getAttribute("href") || "").match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
+        if (m) a.dataset.board = "/" + m[1] + "/ -";
+      } else if (a.dataset.board) {
+        delete a.dataset.board;
+      }
+    }
+  }
+
   function wireWatchedCells() {
     updateWatchedCells();
     var live = ssSettings.applyFixes || ssSettings.watcherBoards;
