@@ -4635,6 +4635,7 @@
   }
 
   function updateWatchedCells() {
+    var api = pageWindow().api || {};
     var links = document.querySelectorAll("#watchedMenu .watchedCellAnchor");
     for (var i = 0; i < links.length; i++) {
       var a = links[i];
@@ -4649,18 +4650,18 @@
       } else if (a.dataset.board) {
         delete a.dataset.board;
       }
+      a.title = a.textContent;
+      var cell = a.closest(".watchedCell");
+      if (!cell) continue;
+      cell.classList.toggle("ss-current-thread", cell.dataset.boardUri === api.boardUri && cell.dataset.threadId === String(api.threadId));
     }
   }
 
   function wireWatchedCells() {
     updateWatchedCells();
-    var live = ssSettings.applyFixes || ssSettings.watcherBoards;
-    if (live && !watchedCellsObs && document.body) {
+    if (!watchedCellsObs && document.body) {
       watchedCellsObs = new MutationObserver(updateWatchedCells);
       watchedCellsObs.observe(document.body, { childList: true, subtree: true });
-    } else if (!live && watchedCellsObs) {
-      watchedCellsObs.disconnect();
-      watchedCellsObs = null;
     }
   }
 

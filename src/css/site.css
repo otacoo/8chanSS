@@ -544,6 +544,18 @@
   font-weight: bold;
 }
 
+#watchedMenu .watchedCell > td:first-child {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#watchedMenu .watchedCell.ss-current-thread {
+  font-weight: bold;
+}
+
 .markAllRead::before {
   content: "\e065";
 }
