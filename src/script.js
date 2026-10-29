@@ -141,7 +141,6 @@
     noPinInCatalog: false,
     smallFont: false,
     expandTW: false,
-    watchOnPost: true,
     watchOnCreate: true,
     watcherBoards: false,
     catalogImageHover: false,
@@ -237,7 +236,6 @@
         { key: "noPinInCatalog", label: "Don't pin in Catalog" },
         { key: "smallFont", label: "Smaller font" },
         { key: "expandTW", label: "Auto Expand Thread Watcher" },
-        { key: "watchOnPost", label: "Auto Watch Threads You Reply In", title: "Adds the thread to the Thread Watcher when your reply is posted" },
         { key: "watchOnCreate", label: "Auto Watch Threads You Create", title: "Adds a new thread you make to the Thread Watcher" },
         { key: "watcherBoards", label: "Show Board Tag", title: "Shows the board tag before each thread name" },
         { head: "Catalog" },
@@ -4330,14 +4328,10 @@
     rememberCommentDraft: function (on) {
       if (on) bindCommentDraft();
     },
-    // Feature: Auto Watch Threads You Reply In
-    watchOnPost: function (on) {
-      if (on) wireOwnPostWatch();
-    },
     // Feature: Auto Watch Threads You Create
     watchOnCreate: function (on) {
       if (!on) return;
-      wireOwnPostWatch();
+      if (!pageType.isThread) wireCreationNote();
       watchCreatedThread();
     },
     // Feature: Show Board in Thread Watcher
@@ -4575,7 +4569,7 @@
     } catch (e) { }
   }
 
-  var ownPostWatchWired = false;
+  var creationNoteWired = false;
   var CREATED_THREAD_KEY = "8chanSS_createdThread";
 
   function rememberCreatedThread(boardUri, threadId) {
@@ -4598,27 +4592,21 @@
     setTimeout(function () { watchThreadIfUnwatched(board, threadId); }, 0);
   }
 
-  function wireOwnPostWatch() {
-    if (ownPostWatchWired) return;
+  function wireCreationNote() {
+    if (creationNoteWired) return;
     var w = pageWindow();
-    if (!w.posting || typeof w.posting.setYou !== "function" || !w.api) return;
+    if (!w.posting || typeof w.posting.setYou !== "function") return;
     var origSetYou = w.posting.setYou;
     var wrapped = function (boardUri, postId, add) {
       var isNewPost = add && !document.getElementById(String(postId));
       var result = origSetYou.call(w.posting, boardUri, postId, add);
-      if (isNewPost) {
-        if (pageType.isThread) {
-          if (ssSettings.watchOnPost) watchThreadIfUnwatched(boardUri, w.api.threadId);
-        } else if (ssSettings.watchOnCreate) {
-          rememberCreatedThread(boardUri, postId);
-        }
-      }
+      if (isNewPost) rememberCreatedThread(boardUri, postId);
       return result;
     };
     try {
       if (typeof exportFunction === "function") exportFunction(wrapped, w.posting, { defineAs: "setYou" });
       else w.posting.setYou = wrapped;
-      ownPostWatchWired = true;
+      creationNoteWired = true;
     } catch (e) { }
   }
 
