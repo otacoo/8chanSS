@@ -552,6 +552,19 @@
   text-overflow: ellipsis;
 }
 
+#watchedMenu table {
+  width: 100%;
+}
+
+#watchedMenu .watchedCellRemoveButton::before {
+  line-height: 1;
+  vertical-align: middle;
+}
+
+#watchedMenu:not(.watchedMenu--showRemoveButtons) .watchedCellRemoveButton::before {
+  display: none;
+}
+
 #watchedMenu .watchedCell.ss-current-thread {
   font-weight: bold;
 }
