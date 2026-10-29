@@ -564,6 +564,16 @@
   text-decoration: none;
 }
 
+#watchedMenu .ss-watched-page {
+  margin-right: 4px;
+  opacity: 0.6;
+}
+
+#watchedMenu .ss-watched-page.ss-last-page {
+  color: var(--ss-you-color, #d33);
+  opacity: 1;
+}
+
 .markAllRead::before {
   content: "\e065";
 }
