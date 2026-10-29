@@ -147,6 +147,7 @@
     watcherPrune404: false,
     watcherYouRed: true,
     watcherPages: true,
+    watcherRefreshIcon: true,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -246,6 +247,7 @@
         { key: "watcherPrune404", label: "Auto remove 404 threads" },
         { key: "watcherYouRed", label: "Red row for replies to you" },
         { key: "watcherPages", label: "Show page numbers", title: "One catalog request per watched board after each watcher check" },
+        { key: "watcherRefreshIcon", label: "Refresh icon in the watcher header" },
         { head: "Catalog" },
         { key: "catalogImageHover", label: "Catalog Image Hover" },
         { key: "catalogNewTab", label: "Always Open Threads in New Tab" },
@@ -4358,6 +4360,10 @@
     watcherPages: function () {
       wireWatchedCells();
     },
+    // Feature: Refresh Icon in Thread Watcher
+    watcherRefreshIcon: function () {
+      wireWatchedCells();
+    },
     // Feature: Quote Threading
     quoteThreading: function (on) {
       wireQuoteThreadingShortcut();
@@ -4694,6 +4700,19 @@
   function updateWatchedCells() {
     if (ssSettings.watcherPrune404) pruneDeadThreads();
     if (ssSettings.watcherPages) loadWatcherPages();
+    var close = document.querySelector("#watchedMenu .handle > .close-btn");
+    var refresh = document.querySelector("#watchedMenu .ss-watcher-refresh");
+    if (!ssSettings.watcherRefreshIcon) {
+      if (refresh) refresh.remove();
+    } else if (close && !refresh) {
+      refresh = document.createElement("span");
+      refresh.className = "coloredIcon glowOnHover refreshButton ss-watcher-refresh";
+      refresh.title = "Refresh";
+      refresh.addEventListener("click", function () {
+        pageWindow().watcher.runWatchedThreadsCheck();
+      });
+      close.before(refresh);
+    }
     var api = pageWindow().api || {};
     var links = document.querySelectorAll("#watchedMenu .watchedCellAnchor");
     for (var i = 0; i < links.length; i++) {
