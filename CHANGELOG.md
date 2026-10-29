@@ -1,3 +1,10 @@
+## v2.5.0
+*2026-10-29*
+
+- **New option:** Show Board Tag (General > Thread Watcher)
+- HTML entities in the Thread Watcher will now be correctly decoded again (Styling > Misc > Apply 8chanSS fixes)
+  - E.g. `Imageboard&apos;s` -> `Imageboard's`
+
 ### v2.4.1
 *2026-10-27*
 
