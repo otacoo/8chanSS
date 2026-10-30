@@ -1,3 +1,30 @@
+## v2.6.0
+*2026-10-30*
+
+**New option:** Unread Counter in Tab (General > Thread)
+
+**PR by @Nostramadeus in #16**:
+- Thread Watcher rows are now a single line each, shortened with `...`, with the current thread shown in bold
+- Threads that have 404'd are greyed out
+- **New option:** Auto remove 404 threads (Thread Watcher menu)
+- **New option:** Highlight (You)s in Red (Thread Watcher menu)
+- **New option:** Show Refresh Button (Thread Watcher menu)
+- Removed the hidden remove-button column
+
+**Changes:**
+- Some of the Thread Watcher options now live in the Thread Watcher's own dropdown menu:
+  - Show Refresh Button
+  - Show Board Tag
+  - Auto remove 404 threads
+  - Highlight (You)s in Red
+- Removed *Auto Watch Threads You Reply In* option as it's now a native option in the TW
+- Rounded sub-menu corners too when using the *Rounded Corners* option
+
+**Performance:**
+- Thread Watcher cells do far less work on every page update (skip needless entity decoding, redundant attribute writes, and stop observing the page when no live option is on)
+- Highlighting (You) posts no longer uses costly `:has()` CSS selectors
+- Image Hover reuses its one preview element, so rapidly hovering thumbnails no longer forces a full-page layout on every hover
+
 ## v2.5.0
 *2026-10-29*
 
