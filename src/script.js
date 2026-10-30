@@ -157,6 +157,7 @@
     customTrunc: 15,
     enableScrollSave: true,
     showUnreadLine: true,
+    unreadCounter: true,
     rememberCommentDraft: false,
     quoteThreading: false,
     hashNavigation: false,
@@ -233,6 +234,7 @@
             { key: "showUnreadLine", label: "Show Unread Line" }
           ]
         },
+        { key: "unreadCounter", label: "Unread Counter in Tab", title: "Shows the number of posts left below the fold in the tab title; clears at the bottom" },
         { key: "quoteThreading", label: "Quote Threading", title: "Nests replies under the post they quote instead of showing them in order" },
         { key: "hashNavigation", label: "Hash Navigation", title: "Adds a # link next to quotes and backlinks to jump straight to the post" },
         { head: "Thread Watcher" },
@@ -1641,6 +1643,108 @@
 
   function onBeforeUnloadSave() {
     saveScrollPositionNow();
+  }
+
+  var unreadPosts = null;
+  var unreadPosObs = null;
+  var unreadTitleObs = null;
+  var unreadBase = "";
+  var unreadActive = false;
+  var unreadTicking = false;
+  var unreadRebuildTimer = null;
+  var unreadShown = Infinity;
+
+  // Fold the site's new-post count into ours, then zero it so it stops
+  // overwriting the title; we own the countdown from that point.
+  function absorbSiteCount() {
+    var t = null;
+    try { t = pageWindow().thread; } catch (e) { }
+    var n = t && t.unreadPosts;
+    if (!n) return false;
+    if (unreadShown === Infinity) unreadShown = 0;
+    unreadShown += n;
+    t.unreadPosts = 0;
+    return true;
+  }
+
+  function writeUnreadTitle() {
+    var next = unreadShown > 0 ? "(" + unreadShown + ") " + unreadBase : unreadBase;
+    if (document.title !== next) document.title = next;
+  }
+
+  function unreadTitle() {
+    unreadTicking = false;
+    if (!unreadActive || !unreadPosts) return;
+    absorbSiteCount();
+    var n = unreadPosts.length, lo = 0, hi = n;
+    while (lo < hi) {
+      var mid = (lo + hi) >> 1;
+      if (unreadPosts[mid].getBoundingClientRect().top >= window.innerHeight) hi = mid;
+      else lo = mid + 1;
+    }
+    var left = n - lo;
+    // ratchet down only: scrolling back up must not raise the count
+    if (left < unreadShown) unreadShown = left;
+    writeUnreadTitle();
+  }
+
+  function onTitleMutated() {
+    if (unreadActive && absorbSiteCount()) writeUnreadTitle();
+  }
+
+  function unreadOnScroll() {
+    if (unreadTicking) return;
+    unreadTicking = true;
+    requestAnimationFrame(unreadTitle);
+  }
+
+  function rebuildUnreadPosts() {
+    if (!unreadActive) return;
+    unreadPosts = Array.prototype.slice.call(document.querySelectorAll(".divPosts > .postCell[id]"));
+    unreadTitle();
+  }
+
+  function startUnreadCounter() {
+    if (!pageType.isThread || unreadActive) return;
+    var t = null;
+    try { t = pageWindow().thread; } catch (e) { }
+    unreadBase = ((t && t.originalTitle) || document.title).replace(/^\(\d+\)\s*/, "");
+    unreadActive = true;
+    unreadShown = Infinity;
+    rebuildUnreadPosts();
+    window.addEventListener("scroll", unreadOnScroll, { passive: true });
+    var host = document.querySelector(".divPosts");
+    if (host) {
+      unreadPosObs = new MutationObserver(function () {
+        if (unreadRebuildTimer) return;
+        unreadRebuildTimer = setTimeout(function () {
+          unreadRebuildTimer = null;
+          rebuildUnreadPosts();
+        }, 150);
+      });
+      unreadPosObs.observe(host, { childList: true });
+    }
+    // Watch the title so we can take over whenever the site posts a count.
+    var titleEl = document.querySelector("title");
+    if (titleEl) {
+      unreadTitleObs = new MutationObserver(onTitleMutated);
+      unreadTitleObs.observe(titleEl, { characterData: true, childList: true, subtree: true });
+    }
+  }
+
+  function stopUnreadCounter() {
+    if (!unreadActive) return;
+    unreadActive = false;
+    window.removeEventListener("scroll", unreadOnScroll);
+    if (unreadPosObs) { unreadPosObs.disconnect(); unreadPosObs = null; }
+    if (unreadTitleObs) { unreadTitleObs.disconnect(); unreadTitleObs = null; }
+    if (unreadRebuildTimer) { clearTimeout(unreadRebuildTimer); unreadRebuildTimer = null; }
+    var t = null;
+    try { t = pageWindow().thread; } catch (e) { }
+    if (!(t && t.unreadPosts) && /^\(\d+\)\s*/.test(document.title)) document.title = unreadBase;
+    unreadPosts = null;
+    unreadTicking = false;
+    unreadShown = Infinity;
   }
 
   var apngObserver = null;
@@ -4146,6 +4250,11 @@
         }
       }
       restoreScrollPosition();
+    },
+    // Feature: Unread Counter in Tab
+    unreadCounter: function (on) {
+      if (on) startUnreadCounter();
+      else stopUnreadCounter();
     },
     // Feature: Scroll Arrows
     scrollArrows: function (on) {
