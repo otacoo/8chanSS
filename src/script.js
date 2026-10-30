@@ -144,8 +144,8 @@
     watchOnCreate: true,
     watcherBoards: false,
     watcherPrune404: false,
-    watcherYouRed: true,
-    watcherRefreshIcon: true,
+    watcherYouRed: false,
+    watcherRefreshIcon: false,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -4344,7 +4344,7 @@
     watcherPrune404: function () {
       wireWatchedCells();
     },
-    // Feature: Refresh Icon in Thread Watcher
+    // Feature: Refresh Button in Thread Watcher
     watcherRefreshIcon: function () {
       wireWatchedCells();
     },
