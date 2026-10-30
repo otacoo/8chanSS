@@ -4624,7 +4624,7 @@
   var watchedCellsObs = null;
   var watcherMenuWired = false;
   var WATCHER_MENU_ITEMS = [
-    { key: "watcherRefreshIcon", label: "Show Refresh Icon" },
+    { key: "watcherRefreshIcon", label: "Show Refresh Button" },
     { key: "watcherBoards", label: "Show Board Tag" },
     { key: "watcherYouRed", label: "Highlight (You)s in Red" },
     { key: "watcherPrune404", label: "Auto remove 404 threads" }
