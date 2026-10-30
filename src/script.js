@@ -4717,8 +4717,11 @@
       var a = links[i];
       if (ssSettings.applyFixes) {
         var text = a.textContent;
-        var fixed = decodeEntities(text);
-        if (fixed !== text) a.textContent = fixed;
+        // entities always start with "&", skip the DOMParser round-trip otherwise
+        if (text.indexOf("&") !== -1) {
+          var fixed = decodeEntities(text);
+          if (fixed !== text) a.textContent = text = fixed;
+        }
       }
       if (ssSettings.watcherBoards) {
         var m = (a.getAttribute("href") || "").match(/^(?:https?:\/\/[^\/]+)?\/([^\/]+)\//);
@@ -4726,7 +4729,10 @@
       } else if (a.dataset.board) {
         delete a.dataset.board;
       }
-      a.title = a.textContent;
+      // only write when the text actually changed; rewriting the attribute on
+      // every body mutation (live posts, refresh countdown) invalidates style
+      var title = a.textContent;
+      if (a.title !== title) a.title = title;
       var cell = a.closest(".watchedCell");
       if (!cell) continue;
       cell.classList.toggle("ss-current-thread", cell.dataset.boardUri === api.boardUri && cell.dataset.threadId === String(api.threadId));
@@ -4735,9 +4741,15 @@
 
   function wireWatchedCells() {
     updateWatchedCells();
-    if (!watchedCellsObs && document.body) {
+    var needed = ssSettings.applyFixes || ssSettings.watcherBoards ||
+      ssSettings.watcherPrune404 || ssSettings.watcherRefreshIcon;
+    // no live cell feature active -> don't burn cycles waking on every body mutation
+    if (needed && !watchedCellsObs && document.body) {
       watchedCellsObs = new MutationObserver(updateWatchedCells);
       watchedCellsObs.observe(document.body, { childList: true, subtree: true });
+    } else if (!needed && watchedCellsObs) {
+      watchedCellsObs.disconnect();
+      watchedCellsObs = null;
     }
   }
 
