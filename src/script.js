@@ -976,14 +976,47 @@
     return Math.max(min, Math.min(max, val));
   }
 
+  var previewEl = null;
+  var previewIsVideo = false;
+  var floatingW = 0;
+  var floatingH = 0;
+  var previewScrollbarW = -1;
+
+  // Reuse one preview element instead of appending/removing one per hover.
+  function getPreviewEl(isVideo) {
+    if (previewEl && previewIsVideo === isVideo) return previewEl;
+    if (previewEl) { previewEl.remove(); previewEl = null; }
+    var el = document.createElement(isVideo ? "video" : "img");
+    el.id = "hover-preview-media";
+    el.style.position = "fixed";
+    el.style.left = "0";
+    el.style.top = "0";
+    el.style.zIndex = "9999";
+    el.style.pointerEvents = "none";
+    el.style.opacity = MEDIA_OPACITY_LOADING;
+    el.style.visibility = "hidden";
+    el.style.maxWidth = MEDIA_MAX_WIDTH;
+    el.style.willChange = "transform";
+    previewEl = el;
+    previewIsVideo = isVideo;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function getScrollbarWidth() {
+    if (previewScrollbarW < 0) {
+      previewScrollbarW = window.innerWidth - document.documentElement.clientWidth;
+    }
+    return previewScrollbarW;
+  }
+
   function positionFloatingMedia(event) {
-    if (!floatingMedia) return;
+    if (!floatingMedia || !event) return;
     var vw = window.innerWidth;
     var vh = window.innerHeight;
-    var mw = floatingMedia.offsetWidth || 0;
-    var mh = floatingMedia.offsetHeight || 0;
-    var docElement = document.documentElement;
-    var scrollbarWidth = window.innerWidth - docElement.clientWidth;
+    var mw = floatingW;
+    var mh = floatingH;
+    var scrollbarWidth = getScrollbarWidth();
     var bottomMarginPx = vh * (MEDIA_BOTTOM_MARGIN / 100);
     var x, y;
     var rightX = event.clientX + MEDIA_OFFSET;
@@ -998,8 +1031,7 @@
     y = event.clientY;
     var maxY = vh - mh - bottomMarginPx;
     y = Math.max(0, Math.min(y, maxY));
-    floatingMedia.style.left = x + "px";
-    floatingMedia.style.top = y + "px";
+    floatingMedia.style.transform = "translate(" + x + "px," + y + "px)";
   }
 
   function cleanupFloatingMedia() {
@@ -1019,12 +1051,27 @@
         try {
           if (floatingMedia.dataset && floatingMedia.dataset.blobUrl) {
             URL.revokeObjectURL(floatingMedia.dataset.blobUrl);
+            delete floatingMedia.dataset.blobUrl;
           }
         } catch (e) { }
       }
-      floatingMedia.remove();
+      if (floatingMedia === previewEl) {
+        floatingMedia.onload = null;
+        floatingMedia.onloadeddata = null;
+        floatingMedia.onerror = null;
+        floatingMedia.style.opacity = MEDIA_OPACITY_LOADING;
+        floatingMedia.style.visibility = "hidden";
+        try {
+          floatingMedia.removeAttribute("src");
+          if (floatingMedia.tagName === "VIDEO") floatingMedia.load();
+        } catch (e) { }
+      } else {
+        floatingMedia.remove();
+      }
       floatingMedia = null;
     }
+    floatingW = 0;
+    floatingH = 0;
     if (currentAudioIndicator && currentAudioIndicator.parentNode) {
       currentAudioIndicator.parentNode.removeChild(currentAudioIndicator);
       currentAudioIndicator = null;
@@ -1154,20 +1201,14 @@
         videoSrc = parentLink.getAttribute("href");
       }
     }
-    floatingMedia = isVideo ? document.createElement("video") : document.createElement("img");
-    floatingMedia.dataset.previewSrc = isVideo ? videoSrc : fullSrc;
-    floatingMedia.src = mediaSrcAttr(isVideo ? videoSrc : fullSrc);
-    floatingMedia.id = "hover-preview-media";
-    floatingMedia.style.position = "fixed";
-    floatingMedia.style.zIndex = "9999";
-    floatingMedia.style.pointerEvents = "none";
+    floatingMedia = getPreviewEl(isVideo);
+    floatingW = 0;
+    floatingH = 0;
     floatingMedia.style.opacity = MEDIA_OPACITY_LOADING;
     floatingMedia.style.visibility = isVideo ? "hidden" : "visible";
-    floatingMedia.style.left = "-9999px";
-    floatingMedia.style.top = "-9999px";
-    floatingMedia.style.maxWidth = MEDIA_MAX_WIDTH;
-    var availableHeight = window.innerHeight * (1 - MEDIA_BOTTOM_MARGIN / 100);
-    floatingMedia.style.maxHeight = availableHeight + "px";
+    floatingMedia.style.maxHeight = (window.innerHeight * (1 - MEDIA_BOTTOM_MARGIN / 100)) + "px";
+    floatingMedia.dataset.previewSrc = isVideo ? videoSrc : fullSrc;
+    floatingMedia.src = mediaSrcAttr(isVideo ? videoSrc : fullSrc);
     if (isVideo) {
       floatingMedia.autoplay = false;
       floatingMedia.loop = true;
@@ -1175,13 +1216,9 @@
       floatingMedia.playsInline = true;
       floatingMedia.volume = volume;
     }
-    document.body.appendChild(floatingMedia);
     document.addEventListener("mousemove", mouseMoveHandler, { passive: true });
     thumb.addEventListener("mouseleave", cleanupFloatingMedia, { passive: true, once: true });
     cleanupFns.push(function () { document.removeEventListener("mousemove", mouseMoveHandler); });
-    if (lastMouseEvent) {
-      positionFloatingMedia(lastMouseEvent);
-    }
     if (isVideo) {
       floatingMedia.preload = "auto";
       floatingMedia.onloadeddata = function () {
@@ -1190,9 +1227,11 @@
           var saved = key ? getHoverPlaybackTime(key) : null;
           var revealAndPlay = function () {
             if (!floatingMedia) return;
+            floatingW = floatingMedia.offsetWidth || 0;
+            floatingH = floatingMedia.offsetHeight || 0;
+            if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
             floatingMedia.style.visibility = "visible";
             floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
-            if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
             try { floatingMedia.play().catch(function () { }); } catch (err) { }
           };
           if (typeof saved === "number" && !isNaN(saved) && isFinite(saved) && saved > 0) {
@@ -1216,14 +1255,22 @@
             floatingMedia.addEventListener("canplay", onCanPlay);
           }
         } catch (err) {
-          try { floatingMedia.style.visibility = "visible"; floatingMedia.style.opacity = MEDIA_OPACITY_LOADED; } catch (err2) { }
+          try {
+            floatingW = floatingMedia.offsetWidth || 0;
+            floatingH = floatingMedia.offsetHeight || 0;
+            if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+            floatingMedia.style.visibility = "visible";
+            floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+          } catch (err2) { }
         }
       };
     } else {
       floatingMedia.onload = function () {
         if (floatingMedia) {
-          floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
+          floatingW = floatingMedia.offsetWidth || 0;
+          floatingH = floatingMedia.offsetHeight || 0;
           if (lastMouseEvent) positionFloatingMedia(lastMouseEvent);
+          floatingMedia.style.opacity = MEDIA_OPACITY_LOADED;
         }
       };
     }
@@ -1291,6 +1338,7 @@
     hoverWired = true;
     cacheThumbMime();
     attachThumbListeners();
+    getPreviewEl(false);
     if (!hoverObserver) {
       hoverObserver = new MutationObserver(function (mutations) {
         for (var i = 0; i < mutations.length; i++) {
