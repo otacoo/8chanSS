@@ -145,7 +145,6 @@
     watcherBoards: false,
     watcherPrune404: false,
     watcherYouRed: true,
-    watcherPages: true,
     watcherRefreshIcon: true,
     catalogImageHover: false,
     threadImageHover: true,
@@ -241,11 +240,6 @@
         { key: "smallFont", label: "Smaller font" },
         { key: "expandTW", label: "Auto Expand Thread Watcher" },
         { key: "watchOnCreate", label: "Auto Watch Threads You Create", title: "Adds a new thread you make to the Thread Watcher" },
-        { key: "watcherBoards", label: "Show Board Tag", title: "Shows the board tag before each thread name" },
-        { key: "watcherPrune404", label: "Auto remove 404 threads" },
-        { key: "watcherYouRed", label: "Red row for replies to you" },
-        { key: "watcherPages", label: "Show page numbers", title: "One catalog request per watched board after each watcher check" },
-        { key: "watcherRefreshIcon", label: "Refresh icon in the watcher header" },
         { head: "Catalog" },
         { key: "catalogImageHover", label: "Catalog Image Hover" },
         { key: "catalogNewTab", label: "Always Open Threads in New Tab" },
@@ -4350,10 +4344,6 @@
     watcherPrune404: function () {
       wireWatchedCells();
     },
-    // Feature: Page Numbers in Thread Watcher
-    watcherPages: function () {
-      wireWatchedCells();
-    },
     // Feature: Refresh Icon in Thread Watcher
     watcherRefreshIcon: function () {
       wireWatchedCells();
@@ -4632,8 +4622,13 @@
   }
 
   var watchedCellsObs = null;
-  var watcherPages = {};
-  var watcherPagesCheck;
+  var watcherMenuWired = false;
+  var WATCHER_MENU_ITEMS = [
+    { key: "watcherRefreshIcon", label: "Show Refresh Icon" },
+    { key: "watcherBoards", label: "Show Board Tag" },
+    { key: "watcherYouRed", label: "Highlight (You)s in Red" },
+    { key: "watcherPrune404", label: "Auto remove 404 threads" }
+  ];
 
   function decodeEntities(text) {
     var doc = new DOMParser();
@@ -4664,30 +4659,45 @@
     w.watcher.updateUi();
   }
 
-  function loadWatcherPages() {
+  function watcherMenuToggle(key) {
+    var on = !ssSettings[key];
+    ssSettings[key] = on;
+    saveSetting(key);
+    try {
+      var t = pageWindow().watcher.menuTemplate;
+      var cb = t && t.querySelector("input." + key);
+      if (cb) cb.checked = on;
+    } catch (e) { }
+    if (Features[key]) Features[key](on);
+  }
+
+  function wireWatcherMenu() {
+    if (watcherMenuWired) return;
     var w = pageWindow();
-    var check = localStorage.getItem("lastWatchCheck");
-    if (!w.watcher || !w.watcher.watchedData || check === watcherPagesCheck) return;
-    watcherPagesCheck = check;
-    Object.keys(w.watcher.watchedData).forEach(function (board) {
-      fetch("/" + board + "/catalog.json", { credentials: "same-origin" })
-        .then(function (res) { return res.json(); })
-        .then(function (list) {
-          var info = { last: 0, threads: {} };
-          list.forEach(function (t) {
-            info.threads[t.threadId] = t.page;
-            if (t.page > info.last) info.last = t.page;
-          });
-          watcherPages[board] = info;
-          updateWatchedCells();
-        })
-        .catch(function () { });
+    var t = w.watcher && w.watcher.menuTemplate;
+    if (!t) return;
+    WATCHER_MENU_ITEMS.forEach(function (o) {
+      var li = document.createElement("li");
+      li.setAttribute("data-action", o.key);
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = o.key;
+      cb.checked = !!ssSettings[o.key];
+      li.appendChild(cb);
+      li.appendChild(document.createTextNode(o.label));
+      t.appendChild(li);
+      var fn = watcherMenuToggle.bind(null, o.key);
+      try {
+        if (typeof exportFunction === "function") exportFunction(fn, w.watcher.menuActions, { defineAs: o.key });
+        else w.watcher.menuActions[o.key] = fn;
+      } catch (e) { }
     });
+    watcherMenuWired = true;
   }
 
   function updateWatchedCells() {
+    wireWatcherMenu();
     if (ssSettings.watcherPrune404) pruneDeadThreads();
-    if (ssSettings.watcherPages) loadWatcherPages();
     var close = document.querySelector("#watchedMenu .handle > .close-btn");
     var refresh = document.querySelector("#watchedMenu .ss-watcher-refresh");
     if (!ssSettings.watcherRefreshIcon) {
@@ -4720,21 +4730,6 @@
       var cell = a.closest(".watchedCell");
       if (!cell) continue;
       cell.classList.toggle("ss-current-thread", cell.dataset.boardUri === api.boardUri && cell.dataset.threadId === String(api.threadId));
-      var page = cell.querySelector(".ss-watched-page");
-      var info = ssSettings.watcherPages && watcherPages[cell.dataset.boardUri];
-      var p = info && info.threads[cell.dataset.threadId];
-      if (!p) {
-        if (page) page.remove();
-        continue;
-      }
-      if (!page) {
-        page = document.createElement("span");
-        page.className = "ss-watched-page";
-        a.parentNode.prepend(page);
-      }
-      var label = "[" + p + "]";
-      if (page.textContent !== label) page.textContent = label;
-      page.classList.toggle("ss-last-page", p === info.last);
     }
   }
 
