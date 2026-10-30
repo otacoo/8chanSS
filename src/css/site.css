@@ -400,15 +400,10 @@
 }
 
 /* --- Style (You) posts --- */
-:root.highlight-yous .innerPost:has(> .postInfo.title > .youName),
-:root.highlight-yous .innerOP:has(> .opHead.title > .youName),
 :root.highlight-yous .yourPost {
   border-left: dashed #68b723 2px !important;
 }
 
-:root.highlight-yous .innerPost:has(> .divMessage > .you),
-:root.highlight-yous .innerPost:has(> .divMessage > *:not(div) > .you),
-:root.highlight-yous .innerPost:has(> .divMessage > *:not(div) > *:not(div) > .you),
 :root.highlight-yous .quotesYou {
   border-left: solid var(--subject-color) 2px !important;
 }
