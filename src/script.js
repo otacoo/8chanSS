@@ -143,6 +143,10 @@
     expandTW: false,
     watchOnCreate: true,
     watcherBoards: false,
+    watcherPrune404: false,
+    watcherYouRed: true,
+    watcherPages: true,
+    watcherRefreshIcon: true,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -238,6 +242,10 @@
         { key: "expandTW", label: "Auto Expand Thread Watcher" },
         { key: "watchOnCreate", label: "Auto Watch Threads You Create", title: "Adds a new thread you make to the Thread Watcher" },
         { key: "watcherBoards", label: "Show Board Tag", title: "Shows the board tag before each thread name" },
+        { key: "watcherPrune404", label: "Auto remove 404 threads" },
+        { key: "watcherYouRed", label: "Red row for replies to you" },
+        { key: "watcherPages", label: "Show page numbers", title: "One catalog request per watched board after each watcher check" },
+        { key: "watcherRefreshIcon", label: "Refresh icon in the watcher header" },
         { head: "Catalog" },
         { key: "catalogImageHover", label: "Catalog Image Hover" },
         { key: "catalogNewTab", label: "Always Open Threads in New Tab" },
@@ -4338,6 +4346,18 @@
     watcherBoards: function () {
       wireWatchedCells();
     },
+    // Feature: Auto Remove 404 Threads in Thread Watcher
+    watcherPrune404: function () {
+      wireWatchedCells();
+    },
+    // Feature: Page Numbers in Thread Watcher
+    watcherPages: function () {
+      wireWatchedCells();
+    },
+    // Feature: Refresh Icon in Thread Watcher
+    watcherRefreshIcon: function () {
+      wireWatchedCells();
+    },
     // Feature: Quote Threading
     quoteThreading: function (on) {
       wireQuoteThreadingShortcut();
@@ -4391,7 +4411,8 @@
     backlinkIcons: "backlink-icon",
     noPinInCatalog: "ss-nopin-catalog",
     smallFont: "ss-small-font",
-    expandTW: "auto-expand-tw"
+    expandTW: "auto-expand-tw",
+    watcherYouRed: "ss-watcher-you-red"
   };
   Object.keys(CLASS_TOGGLES).forEach(function (key) {
     Features[key] = function (on) { rootToggle(CLASS_TOGGLES[key], on); };
@@ -4611,6 +4632,8 @@
   }
 
   var watchedCellsObs = null;
+  var watcherPages = {};
+  var watcherPagesCheck;
 
   function decodeEntities(text) {
     var doc = new DOMParser();
@@ -4622,7 +4645,63 @@
     return text;
   }
 
+  function pruneDeadThreads() {
+    var w = pageWindow();
+    if (!w.watcher || !w.watcher.watchedData) return;
+    var data = w.watcher.watchedData;
+    var removed = false;
+    Object.keys(data).forEach(function (board) {
+      var threads = data[board];
+      Object.keys(threads).forEach(function (id) {
+        if (threads[id].dead !== true) return;
+        w.watcher.unWatchThread(board, id);
+        var left = w.watcher.watchedData[board];
+        if (!left || !left[id]) removed = true;
+      });
+    });
+    if (!removed) return;
+    w.watcher.saveWatchedData();
+    w.watcher.updateUi();
+  }
+
+  function loadWatcherPages() {
+    var w = pageWindow();
+    var check = localStorage.getItem("lastWatchCheck");
+    if (!w.watcher || !w.watcher.watchedData || check === watcherPagesCheck) return;
+    watcherPagesCheck = check;
+    Object.keys(w.watcher.watchedData).forEach(function (board) {
+      fetch("/" + board + "/catalog.json", { credentials: "same-origin" })
+        .then(function (res) { return res.json(); })
+        .then(function (list) {
+          var info = { last: 0, threads: {} };
+          list.forEach(function (t) {
+            info.threads[t.threadId] = t.page;
+            if (t.page > info.last) info.last = t.page;
+          });
+          watcherPages[board] = info;
+          updateWatchedCells();
+        })
+        .catch(function () { });
+    });
+  }
+
   function updateWatchedCells() {
+    if (ssSettings.watcherPrune404) pruneDeadThreads();
+    if (ssSettings.watcherPages) loadWatcherPages();
+    var close = document.querySelector("#watchedMenu .handle > .close-btn");
+    var refresh = document.querySelector("#watchedMenu .ss-watcher-refresh");
+    if (!ssSettings.watcherRefreshIcon) {
+      if (refresh) refresh.remove();
+    } else if (close && !refresh) {
+      refresh = document.createElement("span");
+      refresh.className = "coloredIcon glowOnHover refreshButton ss-watcher-refresh";
+      refresh.title = "Refresh";
+      refresh.addEventListener("click", function () {
+        pageWindow().watcher.runWatchedThreadsCheck();
+      });
+      close.before(refresh);
+    }
+    var api = pageWindow().api || {};
     var links = document.querySelectorAll("#watchedMenu .watchedCellAnchor");
     for (var i = 0; i < links.length; i++) {
       var a = links[i];
@@ -4637,18 +4716,33 @@
       } else if (a.dataset.board) {
         delete a.dataset.board;
       }
+      a.title = a.textContent;
+      var cell = a.closest(".watchedCell");
+      if (!cell) continue;
+      cell.classList.toggle("ss-current-thread", cell.dataset.boardUri === api.boardUri && cell.dataset.threadId === String(api.threadId));
+      var page = cell.querySelector(".ss-watched-page");
+      var info = ssSettings.watcherPages && watcherPages[cell.dataset.boardUri];
+      var p = info && info.threads[cell.dataset.threadId];
+      if (!p) {
+        if (page) page.remove();
+        continue;
+      }
+      if (!page) {
+        page = document.createElement("span");
+        page.className = "ss-watched-page";
+        a.parentNode.prepend(page);
+      }
+      var label = "[" + p + "]";
+      if (page.textContent !== label) page.textContent = label;
+      page.classList.toggle("ss-last-page", p === info.last);
     }
   }
 
   function wireWatchedCells() {
     updateWatchedCells();
-    var live = ssSettings.applyFixes || ssSettings.watcherBoards;
-    if (live && !watchedCellsObs && document.body) {
+    if (!watchedCellsObs && document.body) {
       watchedCellsObs = new MutationObserver(updateWatchedCells);
       watchedCellsObs.observe(document.body, { childList: true, subtree: true });
-    } else if (!live && watchedCellsObs) {
-      watchedCellsObs.disconnect();
-      watchedCellsObs = null;
     }
   }
 
