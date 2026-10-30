@@ -197,7 +197,8 @@
 :root.ss-rounded .ss-keys,
 :root.ss-rounded #ssScrollArrows button,
 :root.ss-rounded .ss-storage-btn,
-:root.ss-rounded .imgLink img {
+:root.ss-rounded .imgLink img,
+:root.ss-rounded .floatingList[data-active] {
   border-radius: 5px;
 }
 
