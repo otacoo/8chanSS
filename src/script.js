@@ -26,12 +26,20 @@
   }
 
   function debounce(fn, delay) {
-    var t = 0;
-    return function () {
-      var args = arguments, self = this;
+    var t = 0, lastArgs, lastSelf;
+    function wrapped() {
+      lastArgs = arguments;
+      lastSelf = this;
       clearTimeout(t);
-      t = setTimeout(function () { fn.apply(self, args); }, delay);
+      t = setTimeout(function () { t = 0; fn.apply(lastSelf, lastArgs); }, delay);
+    }
+    wrapped.flush = function () {
+      if (!t) return;
+      clearTimeout(t);
+      t = 0;
+      fn.apply(lastSelf, lastArgs);
     };
+    return wrapped;
   }
 
   /* ================= SECTION: Settings store ================= */
@@ -103,7 +111,6 @@
     autoHideHeaderScroll: false,
     customFavicon: false,
     faviconStyle: "default",
-    unreadFavicon: true,
     enableMascots: false,
     mascotOpacity: 30,
     mascotUrls: "",
@@ -293,7 +300,6 @@
             }
           ]
         },
-        { key: "unreadFavicon", label: "Unread Favicon", title: "Shows an unread or (You) icon in the tab while the tab title shows a count" },
         { head: "Thread Styling" },
         {
           key: "enableSidebar", label: "Enable Sidebar", sub: [
@@ -539,11 +545,9 @@
   };
   var faviconApplied = null;
   var faviconOriginalHref = null;
-  var faviconTitleObs = null;
 
   function setFavicon(style, state) {
     if (FAVICON_STYLES.indexOf(style) === -1) style = "default";
-    state = state || "base";
     if (faviconApplied === style + ":" + state) return;
     if (faviconOriginalHref === null) {
       var cur = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]');
@@ -560,17 +564,13 @@
     faviconApplied = style + ":" + state;
   }
 
-  function faviconState() {
-    var t = pageWindow().thread || {};
-    if (!/^\(\d+\)/.test(document.title)) {
-      if (t.youNotifs) t.youNotifs = 0;
-      return "base";
-    }
-    return t.youNotifs > 0 ? "notif" : "unread";
-  }
-
   function updateFaviconState() {
-    var state = ssSettings.unreadFavicon && pageType.isThread ? faviconState() : "base";
+    var state = "base";
+    if (pageType.isThread) {
+      var t = pageThread() || {};
+      if (/^\(\d+\)/.test(document.title)) state = t.youNotifs > 0 ? "notif" : "unread";
+      else if (t.youNotifs) t.youNotifs = 0;
+    }
     if (state !== "base" || ssSettings.customFavicon) setFavicon(ssSettings.customFavicon ? ssSettings.faviconStyle : "default", state);
     else if (faviconApplied) resetFavicon();
   }
@@ -579,13 +579,14 @@
     var old = document.getElementById("ssFavicon");
     if (old) old.remove();
     faviconApplied = null;
-    if (faviconOriginalHref !== null) {
-      var link = document.querySelector('link[rel="icon"]') || document.createElement("link");
+    if (faviconOriginalHref === null) return;
+    var link = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]');
+    if (!link) {
+      link = document.createElement("link");
       link.rel = "icon";
-      link.type = "image/png";
-      link.href = faviconOriginalHref || "/favicon.ico";
-      document.head.appendChild(link);
     }
+    link.href = faviconOriginalHref || "/favicon.ico";
+    document.head.appendChild(link);
   }
 
   var SUB_APPLY = {
@@ -631,6 +632,14 @@
       }
     } catch (e) { }
     return window;
+  }
+
+  var pageThreadCache = null;
+  function pageThread() {
+    if (!pageThreadCache) {
+      try { pageThreadCache = pageWindow().thread || null; } catch (e) { }
+    }
+    return pageThreadCache;
   }
 
   function openQuickReply() {
@@ -1715,17 +1724,18 @@
   var LAST_READ_KEY = "8chanSS_lastRead";
   var unreadPosts = null;
   var unreadPosObs = null;
-  var unreadTitleObs = null;
   var unreadBase = "";
   var unreadActive = false;
   var unreadTicking = false;
   var unreadRebuildTimer = null;
   var unreadShown = Infinity;
-  var unreadThread = null;
+  var titleObs = null;
   var lastReadPost = 0;
   var lastReadLoaded = false;
+  var lastReadPromise = null;
 
   function readLastRead() {
+    if (typeof GM === "undefined" || !GM.getValue) return Promise.resolve({});
     return GM.getValue(LAST_READ_KEY, null).then(function (raw) {
       var obj = null;
       try { obj = JSON.parse(raw); } catch (e) { }
@@ -1734,6 +1744,7 @@
   }
 
   var saveLastRead = debounce(function () {
+    if (typeof GM === "undefined" || !GM.setValue) return;
     var key = scrollThreadKey();
     if (!key) return;
     readLastRead().then(function (data) {
@@ -1748,13 +1759,18 @@
     }).catch(function () { });
   }, 500);
 
+  window.addEventListener("pagehide", function () { saveLastRead.flush(); });
+
   function loadLastRead() {
     var key = scrollThreadKey();
     if (lastReadLoaded || !key || typeof GM === "undefined" || !GM.getValue) return Promise.resolve();
-    return readLastRead().then(function (data) {
-      lastReadPost = (data[key] && data[key].post) || 0;
-      lastReadLoaded = true;
-    }).catch(function () { });
+    if (!lastReadPromise) {
+      lastReadPromise = readLastRead().then(function (data) {
+        lastReadPost = (data[key] && data[key].post) || 0;
+        lastReadLoaded = true;
+      }).catch(function () { });
+    }
+    return lastReadPromise;
   }
 
   function rememberRead(cell) {
@@ -1767,11 +1783,12 @@
   // Fold the site's new-post count into ours, then zero it so it stops
   // overwriting the title; we own the countdown from that point.
   function absorbSiteCount() {
-    var n = unreadThread && unreadThread.unreadPosts;
+    var t = pageThread();
+    var n = t && t.unreadPosts;
     if (!n) return false;
     if (unreadShown === Infinity) unreadShown = 0;
     unreadShown += n;
-    unreadThread.unreadPosts = 0;
+    t.unreadPosts = 0;
     return true;
   }
 
@@ -1801,6 +1818,11 @@
     if (unreadActive && absorbSiteCount()) writeUnreadTitle();
   }
 
+  function onTitleChanged() {
+    onTitleMutated();
+    updateFaviconState();
+  }
+
   function unreadOnScroll() {
     if (unreadTicking) return;
     unreadTicking = true;
@@ -1817,8 +1839,8 @@
 
   function startUnreadCounter() {
     if (!pageType.isThread || unreadActive) return;
-    try { unreadThread = pageWindow().thread; } catch (e) { }
-    unreadBase = ((unreadThread && unreadThread.originalTitle) || document.title).replace(/^\(\d+\)\s*/, "");
+    var t = pageThread();
+    unreadBase = ((t && t.originalTitle) || document.title).replace(/^\(\d+\)\s*/, "");
     unreadActive = true;
     unreadShown = Infinity;
     loadLastRead().then(rebuildUnreadPosts);
@@ -1834,12 +1856,6 @@
       });
       unreadPosObs.observe(host, { childList: true });
     }
-    // Watch the title so we can take over whenever the site posts a count.
-    var titleEl = document.querySelector("title");
-    if (titleEl) {
-      unreadTitleObs = new MutationObserver(onTitleMutated);
-      unreadTitleObs.observe(titleEl, { characterData: true, childList: true, subtree: true });
-    }
   }
 
   function stopUnreadCounter() {
@@ -1847,13 +1863,12 @@
     unreadActive = false;
     window.removeEventListener("scroll", unreadOnScroll);
     if (unreadPosObs) { unreadPosObs.disconnect(); unreadPosObs = null; }
-    if (unreadTitleObs) { unreadTitleObs.disconnect(); unreadTitleObs = null; }
     if (unreadRebuildTimer) { clearTimeout(unreadRebuildTimer); unreadRebuildTimer = null; }
-    if (!(unreadThread && unreadThread.unreadPosts) && /^\(\d+\)\s*/.test(document.title)) document.title = unreadBase;
+    var t = pageThread();
+    if (!(t && t.unreadPosts) && /^\(\d+\)\s*/.test(document.title)) document.title = unreadBase;
     unreadPosts = null;
     unreadTicking = false;
     unreadShown = Infinity;
-    unreadThread = null;
   }
 
   var apngObserver = null;
@@ -4026,19 +4041,6 @@
     customFavicon: function () {
       updateFaviconState();
     },
-    // Feature: Unread Favicon
-    unreadFavicon: function (on) {
-      if (!pageType.isThread) return;
-      var titleEl = document.querySelector("title");
-      if (on && !faviconTitleObs && titleEl) {
-        faviconTitleObs = new MutationObserver(updateFaviconState);
-        faviconTitleObs.observe(titleEl, { childList: true });
-      } else if (!on && faviconTitleObs) {
-        faviconTitleObs.disconnect();
-        faviconTitleObs = null;
-      }
-      updateFaviconState();
-    },
     // Feature: Mascots
     enableMascots: function (on) {
       var old = document.querySelector(".chSS-mascot");
@@ -5694,6 +5696,14 @@
 
   onDomReady(function () {
     try {
+      loadLastRead();
+      if (pageType.isThread) {
+        var titleEl = document.querySelector("title");
+        if (titleEl) {
+          titleObs = new MutationObserver(onTitleChanged);
+          titleObs.observe(titleEl, { characterData: true, childList: true, subtree: true });
+        }
+      }
       injectPageCss();
       var rootEl = document.documentElement;
       rootEl.classList.toggle("is-catalog", pageType.isCatalog);
