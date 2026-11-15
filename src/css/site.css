@@ -579,21 +579,25 @@
   color: var(--ss-you-color, #d33);
 }
 
+.floatingList .ss-watcher-sub {
+  padding-left: 1.6em;
+}
+
 #watchedMenu .watchedCellDead .watchedCellAnchor {
   text-decoration: none;
 }
 
-:root.ss-watcher-you-red #watchedMenu .watchedCell:has(.watchedNotificationYous:not(.hidden)) *,
-:root.ss-watcher-you-red #watchedMenu .watchedCell:has(.watchedNotificationYous:not(.hidden)) .watchedCellAnchor::before {
+#watchedMenu .watchedCell:has(.watchedNotificationYous:not(.hidden)) *,
+#watchedMenu .watchedCell:has(.watchedNotificationYous:not(.hidden)) .watchedCellAnchor::before {
   color: var(--ss-you-color, #d33);
 }
 
-:root.ss-watcher-you-red #watchedMenu .watchedNotificationYous,
-:root.ss-watcher-you-red .watcherButton .watchedNotificationYous {
+#watchedMenu .watchedNotificationYous,
+.watcherButton .watchedNotificationYous {
   display: none;
 }
 
-:root.ss-watcher-you-red .watcherButton:has(.watchedNotificationYous:not(.hidden)) {
+.watcherButton:has(.watchedNotificationYous:not(.hidden)) {
   color: var(--ss-you-color, #d33);
 }
 

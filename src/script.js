@@ -144,11 +144,9 @@
     watchOnCreate: true,
     watcherBoards: false,
     watcherPrune404: false,
-    watcherYouRed: false,
     watcherRefreshIcon: false,
     watcherPages: false,
     watcherPagesTotal: false,
-    watcherPagesRed: true,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -1704,17 +1702,16 @@
   var unreadTicking = false;
   var unreadRebuildTimer = null;
   var unreadShown = Infinity;
+  var unreadThread = null;
 
   // Fold the site's new-post count into ours, then zero it so it stops
   // overwriting the title; we own the countdown from that point.
   function absorbSiteCount() {
-    var t = null;
-    try { t = pageWindow().thread; } catch (e) { }
-    var n = t && t.unreadPosts;
+    var n = unreadThread && unreadThread.unreadPosts;
     if (!n) return false;
     if (unreadShown === Infinity) unreadShown = 0;
     unreadShown += n;
-    t.unreadPosts = 0;
+    unreadThread.unreadPosts = 0;
     return true;
   }
 
@@ -1757,9 +1754,8 @@
 
   function startUnreadCounter() {
     if (!pageType.isThread || unreadActive) return;
-    var t = null;
-    try { t = pageWindow().thread; } catch (e) { }
-    unreadBase = ((t && t.originalTitle) || document.title).replace(/^\(\d+\)\s*/, "");
+    try { unreadThread = pageWindow().thread; } catch (e) { }
+    unreadBase = ((unreadThread && unreadThread.originalTitle) || document.title).replace(/^\(\d+\)\s*/, "");
     unreadActive = true;
     unreadShown = Infinity;
     rebuildUnreadPosts();
@@ -1790,12 +1786,11 @@
     if (unreadPosObs) { unreadPosObs.disconnect(); unreadPosObs = null; }
     if (unreadTitleObs) { unreadTitleObs.disconnect(); unreadTitleObs = null; }
     if (unreadRebuildTimer) { clearTimeout(unreadRebuildTimer); unreadRebuildTimer = null; }
-    var t = null;
-    try { t = pageWindow().thread; } catch (e) { }
-    if (!(t && t.unreadPosts) && /^\(\d+\)\s*/.test(document.title)) document.title = unreadBase;
+    if (!(unreadThread && unreadThread.unreadPosts) && /^\(\d+\)\s*/.test(document.title)) document.title = unreadBase;
     unreadPosts = null;
     unreadTicking = false;
     unreadShown = Infinity;
+    unreadThread = null;
   }
 
   var apngObserver = null;
@@ -4515,9 +4510,6 @@
     watcherPagesTotal: function () {
       wireWatchedCells();
     },
-    watcherPagesRed: function () {
-      wireWatchedCells();
-    },
     // Feature: Quote Threading
     quoteThreading: function (on) {
       wireQuoteThreadingShortcut();
@@ -4571,8 +4563,7 @@
     backlinkIcons: "backlink-icon",
     noPinInCatalog: "ss-nopin-catalog",
     smallFont: "ss-small-font",
-    expandTW: "auto-expand-tw",
-    watcherYouRed: "ss-watcher-you-red"
+    expandTW: "auto-expand-tw"
   };
   Object.keys(CLASS_TOGGLES).forEach(function (key) {
     Features[key] = function (on) { rootToggle(CLASS_TOGGLES[key], on); };
@@ -4796,16 +4787,15 @@
   var WATCHER_MENU_ITEMS = [
     { key: "watcherRefreshIcon", label: "Show Refresh Button" },
     { key: "watcherBoards", label: "Show Board Tag" },
-    { key: "watcherYouRed", label: "Highlight (You)s in Red" },
     { key: "watcherPrune404", label: "Auto remove 404 threads" },
     { key: "watcherPages", label: "Show Page Numbers" },
-    { key: "watcherPagesTotal", label: "Show Page Count ([3/25])" },
-    { key: "watcherPagesRed", label: "Red Page Number on Last Page" }
+    { key: "watcherPagesTotal", label: "Show Page Count ([3/25])", sub: "watcherPages" }
   ];
 
   // pages come from /<board>/v2/catalog.json, one request per watched board per TTL, shared by tabs
   var WATCHER_PAGES_KEY = "8chanSS_watcherPages";
   var WATCHER_PAGES_TTL = 5 * 60 * 1000;
+  var WATCHER_PAGES_RETRY = 60 * 1000;
   var watcherPages = null;
   var watcherPagesLook = 0;
 
@@ -4813,6 +4803,12 @@
     if (e.key !== WATCHER_PAGES_KEY) return;
     watcherPages = null;
     if (ssSettings.watcherPages) updateWatchedCells();
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden || !ssSettings.watcherPages) return;
+    watcherPagesLook = 0;
+    updateWatchedCells();
   });
 
   function loadWatcherPages() {
@@ -4847,7 +4843,14 @@
       loadWatcherPages()[board] = entry;
       saveWatcherPages();
       updateWatchedCells();
-    }).catch(function () { });
+    }).catch(function () {
+      // no pages yet: retry sooner than the full TTL instead of going blank for 5 minutes
+      var entry = loadWatcherPages()[board];
+      if (!entry.pages) {
+        entry.at = Date.now() - WATCHER_PAGES_TTL + WATCHER_PAGES_RETRY;
+        saveWatcherPages();
+      }
+    });
   }
 
   function refreshWatcherPages() {
@@ -4857,11 +4860,15 @@
     var watched = (pageWindow().watcher || {}).watchedData;
     if (!watched) return;
     var all = loadWatcherPages();
-    Object.keys(all).forEach(function (board) { if (!watched[board]) delete all[board]; });
+    var removed = false;
+    Object.keys(all).forEach(function (board) { if (!watched[board]) { delete all[board]; removed = true; } });
     var due = Object.keys(watched).filter(function (board) {
-      return Object.keys(watched[board] || {}).length && !(now - (all[board] || {}).at < WATCHER_PAGES_TTL);
+      return Object.keys(watched[board]).length && !(now - (all[board] || {}).at < WATCHER_PAGES_TTL);
     });
-    if (!due.length) return;
+    if (!due.length) {
+      if (removed) saveWatcherPages();
+      return;
+    }
     // stamp before fetching so other tabs and failed requests wait for the TTL
     due.forEach(function (board) { all[board] = Object.assign(all[board] || {}, { at: now }); });
     saveWatcherPages();
@@ -4871,8 +4878,8 @@
   function showWatcherPage(cell, a) {
     var span = cell.querySelector(".ss-watched-page");
     var entry = ssSettings.watcherPages && loadWatcherPages()[cell.dataset.boardUri];
-    var page = entry && entry.pages && !cell.classList.contains("watchedCellDead") && entry.pages[cell.dataset.threadId];
-    if (!page) {
+    var page = entry && entry.pages && entry.pages[cell.dataset.threadId];
+    if (!page || cell.classList.contains("watchedCellDead")) {
       if (span) span.remove();
       return;
     }
@@ -4887,7 +4894,7 @@
     if (span.textContent !== label) span.textContent = label;
     var title = warn ? "Last page and the board is full: drops off soon" : "Page " + page + " of " + entry.pageCount;
     if (span.title !== title) span.title = title;
-    span.classList.toggle("ss-last-page", warn && ssSettings.watcherPagesRed);
+    span.classList.toggle("ss-last-page", warn);
   }
 
   function decodeEntities(text) {
@@ -4903,15 +4910,12 @@
   function pruneDeadThreads() {
     var w = pageWindow();
     if (!w.watcher || !w.watcher.watchedData) return;
-    var data = w.watcher.watchedData;
-    var removed = false;
+    var data = w.watcher.watchedData, removed = false;
     Object.keys(data).forEach(function (board) {
-      var threads = data[board];
-      Object.keys(threads).forEach(function (id) {
-        if (threads[id].dead !== true) return;
+      Object.keys(data[board]).forEach(function (id) {
+        if (data[board][id].dead !== true) return;
         w.watcher.unWatchThread(board, id);
-        var left = w.watcher.watchedData[board];
-        if (!left || !left[id]) removed = true;
+        removed = true;
       });
     });
     if (!removed) return;
@@ -4927,6 +4931,8 @@
       var t = pageWindow().watcher.menuTemplate;
       var cb = t && t.querySelector("input." + key);
       if (cb) cb.checked = on;
+      var subs = t && t.querySelectorAll('li[data-subof="' + key + '"]');
+      if (subs) for (var i = 0; i < subs.length; i++) subs[i].style.display = on ? "" : "none";
     } catch (e) { }
     if (Features[key]) Features[key](on);
   }
@@ -4945,6 +4951,11 @@
       cb.checked = !!ssSettings[o.key];
       li.appendChild(cb);
       li.appendChild(document.createTextNode(o.label));
+      if (o.sub) {
+        li.setAttribute("data-subof", o.sub);
+        li.classList.add("ss-watcher-sub");
+        if (!ssSettings[o.sub]) li.style.display = "none";
+      }
       t.appendChild(li);
       var fn = watcherMenuToggle.bind(null, o.key);
       try {
