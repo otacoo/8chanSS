@@ -569,6 +569,14 @@
   opacity: 0.5;
 }
 
+#watchedMenu .ss-watched-page {
+  margin-right: 2px;
+}
+
+#watchedMenu .ss-watched-page.ss-last-page {
+  color: var(--ss-you-color, #d33);
+}
+
 #watchedMenu .watchedCellDead .watchedCellAnchor {
   text-decoration: none;
 }

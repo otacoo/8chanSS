@@ -146,6 +146,9 @@
     watcherPrune404: false,
     watcherYouRed: false,
     watcherRefreshIcon: false,
+    watcherPages: false,
+    watcherPagesTotal: false,
+    watcherPagesRed: true,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -4505,6 +4508,16 @@
     watcherRefreshIcon: function () {
       wireWatchedCells();
     },
+    // Feature: Page Numbers in Thread Watcher
+    watcherPages: function () {
+      wireWatchedCells();
+    },
+    watcherPagesTotal: function () {
+      wireWatchedCells();
+    },
+    watcherPagesRed: function () {
+      wireWatchedCells();
+    },
     // Feature: Quote Threading
     quoteThreading: function (on) {
       wireQuoteThreadingShortcut();
@@ -4784,8 +4797,98 @@
     { key: "watcherRefreshIcon", label: "Show Refresh Button" },
     { key: "watcherBoards", label: "Show Board Tag" },
     { key: "watcherYouRed", label: "Highlight (You)s in Red" },
-    { key: "watcherPrune404", label: "Auto remove 404 threads" }
+    { key: "watcherPrune404", label: "Auto remove 404 threads" },
+    { key: "watcherPages", label: "Show Page Numbers" },
+    { key: "watcherPagesTotal", label: "Show Page Count ([3/25])" },
+    { key: "watcherPagesRed", label: "Red Page Number on Last Page" }
   ];
+
+  // pages come from /<board>/v2/catalog.json, one request per watched board per TTL, shared by tabs
+  var WATCHER_PAGES_KEY = "8chanSS_watcherPages";
+  var WATCHER_PAGES_TTL = 5 * 60 * 1000;
+  var watcherPages = null;
+  var watcherPagesLook = 0;
+
+  window.addEventListener("storage", function (e) {
+    if (e.key !== WATCHER_PAGES_KEY) return;
+    watcherPages = null;
+    if (ssSettings.watcherPages) updateWatchedCells();
+  });
+
+  function loadWatcherPages() {
+    if (!watcherPages) {
+      try { watcherPages = JSON.parse(localStorage.getItem(WATCHER_PAGES_KEY)); } catch (e) { }
+      watcherPages = watcherPages || {};
+    }
+    return watcherPages;
+  }
+
+  function saveWatcherPages() {
+    try { localStorage.setItem(WATCHER_PAGES_KEY, JSON.stringify(watcherPages)); } catch (e) { }
+  }
+
+  function fetchWatcherPages(board) {
+    var w = pageWindow();
+    var url = "/" + board + "/v2/catalog.json";
+    var fetcher = fetch;
+    if (w.api && typeof w.api.fetch === "function") {
+      fetcher = function (u) { return w.api.fetch(u); };
+      // no stored pages: a 304 from api.fetch's own If-Modified-Since would leave the row empty
+      if (!loadWatcherPages()[board].pages) try { delete w.api.lastModified[url]; } catch (e) { }
+    }
+    // adopt the page promise so the handlers run in the sandbox on Firefox
+    new Promise(function (resolve) { resolve(fetcher(url)); }).then(function (res) {
+      return res && res.ok ? res.text() : "";
+    }).then(function (text) {
+      if (!text) return;
+      var data = JSON.parse(text);
+      var entry = { at: Date.now(), pageCount: data.pageCount, full: data.threadCount >= data.maxThreadCount, pages: {} };
+      data.threads.forEach(function (t) { entry.pages[t.threadId] = t.page; });
+      loadWatcherPages()[board] = entry;
+      saveWatcherPages();
+      updateWatchedCells();
+    }).catch(function () { });
+  }
+
+  function refreshWatcherPages() {
+    var now = Date.now();
+    if (document.hidden || now - watcherPagesLook < 10000) return;
+    watcherPagesLook = now;
+    var watched = (pageWindow().watcher || {}).watchedData;
+    if (!watched) return;
+    var all = loadWatcherPages();
+    Object.keys(all).forEach(function (board) { if (!watched[board]) delete all[board]; });
+    var due = Object.keys(watched).filter(function (board) {
+      return Object.keys(watched[board] || {}).length && !(now - (all[board] || {}).at < WATCHER_PAGES_TTL);
+    });
+    if (!due.length) return;
+    // stamp before fetching so other tabs and failed requests wait for the TTL
+    due.forEach(function (board) { all[board] = Object.assign(all[board] || {}, { at: now }); });
+    saveWatcherPages();
+    due.forEach(fetchWatcherPages);
+  }
+
+  function showWatcherPage(cell, a) {
+    var span = cell.querySelector(".ss-watched-page");
+    var entry = ssSettings.watcherPages && loadWatcherPages()[cell.dataset.boardUri];
+    var page = entry && entry.pages && !cell.classList.contains("watchedCellDead") && entry.pages[cell.dataset.threadId];
+    if (!page) {
+      if (span) span.remove();
+      return;
+    }
+    if (!span) {
+      span = document.createElement("span");
+      span.className = "ss-watched-page";
+      a.parentNode.insertBefore(span, a);
+    }
+    var label = "[" + page + (ssSettings.watcherPagesTotal ? "/" + entry.pageCount : "") + "]";
+    // threads past maxThreadCount are pruned last page first
+    var warn = entry.full && page >= entry.pageCount;
+    if (span.textContent !== label) span.textContent = label;
+    var title = warn ? "Last page and the board is full: drops off soon" : "Page " + page + " of " + entry.pageCount;
+    if (span.title !== title) span.title = title;
+    span.classList.toggle("ss-last-page", warn && ssSettings.watcherPagesRed);
+  }
 
   function decodeEntities(text) {
     var doc = new DOMParser();
@@ -4869,6 +4972,7 @@
       close.before(refresh);
     }
     var api = pageWindow().api || {};
+    if (ssSettings.watcherPages) refreshWatcherPages();
     var links = document.querySelectorAll("#watchedMenu .watchedCellAnchor");
     for (var i = 0; i < links.length; i++) {
       var a = links[i];
@@ -4893,13 +4997,14 @@
       var cell = a.closest(".watchedCell");
       if (!cell) continue;
       cell.classList.toggle("ss-current-thread", cell.dataset.boardUri === api.boardUri && cell.dataset.threadId === String(api.threadId));
+      showWatcherPage(cell, a);
     }
   }
 
   function wireWatchedCells() {
     updateWatchedCells();
     var needed = ssSettings.applyFixes || ssSettings.watcherBoards ||
-      ssSettings.watcherPrune404 || ssSettings.watcherRefreshIcon;
+      ssSettings.watcherPrune404 || ssSettings.watcherRefreshIcon || ssSettings.watcherPages;
     // no live cell feature active -> don't burn cycles waking on every body mutation
     if (needed && !watchedCellsObs && document.body) {
       watchedCellsObs = new MutationObserver(updateWatchedCells);
