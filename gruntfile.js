@@ -12,9 +12,11 @@
           };
           var favStyles = ["default", "eight", "eight_dark", "pixel", "pixel_alt"];
           favStyles.forEach(function(style) {
-            var key = "__SS_FAV_" + style.toUpperCase() + "_BASE__";
-            var b64 = grunt.file.read("src/img/fav/" + style + "_base.png", { encoding: "base64" });
-            src = src.split(key).join(JSON.stringify(b64));
+            ["base", "unread", "notif"].forEach(function(state) {
+              var key = "__SS_FAV_" + style.toUpperCase() + "_" + state.toUpperCase() + "__";
+              var b64 = grunt.file.read("src/img/fav/" + style + "_" + state + ".png", { encoding: "base64" });
+              src = src.split(key).join(JSON.stringify(b64));
+            });
           });
           return src
             .replace(/__SS_VERSION__/g, function() { return pkg.version; })
