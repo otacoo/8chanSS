@@ -236,7 +236,7 @@
             { key: "showUnreadLine", label: "Show Unread Line" }
           ]
         },
-        { key: "unreadCounter", label: "Unread Counter in Tab", title: "Shows the number of posts left below the fold in the tab title; clears at the bottom" },
+        { key: "unreadCounter", label: "Unread Counter in Tab", title: "Shows the number of posts left below the fold in the tab title, counted from the last reply you read; clears at the bottom" },
         { key: "quoteThreading", label: "Quote Threading", title: "Nests replies under the post they quote instead of showing them in order" },
         { key: "hashNavigation", label: "Hash Navigation", title: "Adds a # link next to quotes and backlinks to jump straight to the post" },
         { head: "Thread Watcher" },
@@ -1712,6 +1712,7 @@
     saveScrollPositionNow();
   }
 
+  var LAST_READ_KEY = "8chanSS_lastRead";
   var unreadPosts = null;
   var unreadPosObs = null;
   var unreadTitleObs = null;
@@ -1721,6 +1722,47 @@
   var unreadRebuildTimer = null;
   var unreadShown = Infinity;
   var unreadThread = null;
+  var lastReadPost = 0;
+  var lastReadLoaded = false;
+
+  function readLastRead() {
+    return GM.getValue(LAST_READ_KEY, null).then(function (raw) {
+      var obj = null;
+      try { obj = JSON.parse(raw); } catch (e) { }
+      return obj && typeof obj === "object" ? obj : {};
+    });
+  }
+
+  var saveLastRead = debounce(function () {
+    var key = scrollThreadKey();
+    if (!key) return;
+    readLastRead().then(function (data) {
+      if (data[key] && data[key].post >= lastReadPost) return;
+      data[key] = { post: lastReadPost, at: Date.now() };
+      var keys = Object.keys(data);
+      if (keys.length > SCROLL_MAX_THREADS) {
+        keys.sort(function (a, b) { return (data[a].at || 0) - (data[b].at || 0); });
+        for (var i = 0; i < keys.length - SCROLL_MAX_THREADS; i++) delete data[keys[i]];
+      }
+      return GM.setValue(LAST_READ_KEY, JSON.stringify(data));
+    }).catch(function () { });
+  }, 500);
+
+  function loadLastRead() {
+    var key = scrollThreadKey();
+    if (lastReadLoaded || !key || typeof GM === "undefined" || !GM.getValue) return Promise.resolve();
+    return readLastRead().then(function (data) {
+      lastReadPost = (data[key] && data[key].post) || 0;
+      lastReadLoaded = true;
+    }).catch(function () { });
+  }
+
+  function rememberRead(cell) {
+    var id = cell ? +cell.id : 0;
+    if (!lastReadLoaded || document.hidden || !(id > lastReadPost)) return;
+    lastReadPost = id;
+    saveLastRead();
+  }
 
   // Fold the site's new-post count into ours, then zero it so it stops
   // overwriting the title; we own the countdown from that point.
@@ -1751,6 +1793,7 @@
     var left = n - lo;
     // ratchet down only: scrolling back up must not raise the count
     if (left < unreadShown) unreadShown = left;
+    if (lo) rememberRead(unreadPosts[lo - 1]);
     writeUnreadTitle();
   }
 
@@ -1766,7 +1809,9 @@
 
   function rebuildUnreadPosts() {
     if (!unreadActive) return;
-    unreadPosts = Array.prototype.slice.call(document.querySelectorAll(".divPosts > .postCell[id]"));
+    unreadPosts = Array.prototype.slice.call(document.querySelectorAll(".divPosts > .postCell[id]")).filter(function (cell) {
+      return +cell.id > lastReadPost;
+    });
     unreadTitle();
   }
 
@@ -1776,7 +1821,7 @@
     unreadBase = ((unreadThread && unreadThread.originalTitle) || document.title).replace(/^\(\d+\)\s*/, "");
     unreadActive = true;
     unreadShown = Infinity;
-    rebuildUnreadPosts();
+    loadLastRead().then(rebuildUnreadPosts);
     window.addEventListener("scroll", unreadOnScroll, { passive: true });
     var host = document.querySelector(".divPosts");
     if (host) {
