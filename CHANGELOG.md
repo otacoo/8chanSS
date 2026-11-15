@@ -1,6 +1,12 @@
 ## v2.7.0
 *2026-11-15*
 
+- **Highlight (You)s in Red** is now always on; the option was removed
+- Rounded corners now also apply to highlighted menu rows
+
+**Performance:**
+- Link thumbnail previews (Enhanced Links) reuse one element, so hovering YouTube/Twitch links no longer forces a layout per hover
+
 PR by @Nostramadeus in #17:
 
 - **New option:** Show Page Numbers (Thread Watcher menu, off by default)
@@ -8,12 +14,7 @@ PR by @Nostramadeus in #17:
   - **Sub-option:** Show Page Count (`[3/25]`), only shown while page numbers are on
   - Turns red when the thread is on the last page of a full board
   - One `/<board>/v2/catalog.json` request per watched board every 5 minutes, shared across tabs
-- **Highlight (You)s in Red** is now always on; the option was removed
-- Rounded corners now also apply to highlighted menu rows
-
-**Performance:**
-- Link thumbnail previews (Enhanced Links) reuse one element, so hovering YouTube/Twitch links no longer forces a layout per hover
-
+ 
 ## v2.6.0
 *2026-10-30*
 
