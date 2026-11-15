@@ -198,7 +198,9 @@
 :root.ss-rounded #ssScrollArrows button,
 :root.ss-rounded .ss-storage-btn,
 :root.ss-rounded .imgLink img,
-:root.ss-rounded .floatingList[data-active] {
+:root.ss-rounded .floatingList[data-active],
+:root.ss-rounded .floatingList li:hover:not([data-prioritize]),
+:root.ss-rounded .floatingList li[data-active]:not([data-prioritize]) {
   border-radius: 5px;
 }
 
