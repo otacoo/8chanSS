@@ -633,8 +633,7 @@
     return true;
   }
 
-  var spoilerThreadsObserver = null;
-  var spoilerTooltipObserver = null;
+  var spoilerObserver = null;
   var mediaViewerObserver = null;
   var mediaPlayerApplied = false;
   var hoverPlaybackTimes = {};
@@ -2184,90 +2183,75 @@
       });
     }
 
+    var linkThumb = null, linkThumbImg = null, linkThumbW = 290, linkThumbH = 210;
+    var linkThumbToken = 0, linkThumbEvent = null, linkThumbTicking = false;
+
+    function positionLinkThumb(e) {
+      linkThumbTicking = false;
+      if (!linkThumb || !e) return;
+      var top = e.clientY + 12;
+      var left = e.clientX + 12;
+      if (top + linkThumbH > window.innerHeight - 8) top = e.clientY - 12 - linkThumbH;
+      if (top < 8) top = 8;
+      if (left + linkThumbW > window.innerWidth - 8) left = e.clientX - 12 - linkThumbW;
+      if (left < 8) left = 8;
+      linkThumb.style.transform = "translate(" + left + "px," + top + "px)";
+    }
+
+    function moveLinkThumb(e) {
+      linkThumbEvent = e;
+      if (linkThumbTicking) return;
+      linkThumbTicking = true;
+      requestAnimationFrame(function () { positionLinkThumb(linkThumbEvent); });
+    }
+
+    function measureLinkThumb() {
+      if (!linkThumb) return;
+      var rect = linkThumb.getBoundingClientRect();
+      if (rect.width) linkThumbW = rect.width;
+      if (rect.height) linkThumbH = rect.height;
+      positionLinkThumb(linkThumbEvent);
+    }
+
+    function showLinkThumb(e, url, altText) {
+      linkThumbEvent = e;
+      if (!linkThumb) {
+        linkThumb = document.createElement("div");
+        linkThumb.className = "ss-link-thumb";
+        linkThumb.style.left = "0";
+        linkThumb.style.top = "0";
+        linkThumb.style.opacity = "0";
+        linkThumb.style.transform = "translate(-9999px,-9999px)";
+        linkThumb.style.willChange = "transform";
+        linkThumbImg = document.createElement("img");
+        linkThumbImg.style.maxWidth = Math.min(280, window.innerWidth - 20) + "px";
+        linkThumbImg.style.maxHeight = Math.min(200, window.innerHeight - 20) + "px";
+        linkThumbImg.addEventListener("load", measureLinkThumb);
+        linkThumb.appendChild(linkThumbImg);
+        document.body.appendChild(linkThumb);
+      }
+      linkThumbImg.alt = altText;
+      var token = ++linkThumbToken;
+      fetchAsDataURL(url).then(function (dataUrl) {
+        if (token !== linkThumbToken || !linkThumb) return;
+        if (dataUrl) linkThumbImg.src = dataUrl;
+        else { linkThumbImg.removeAttribute("src"); linkThumbImg.alt = "Failed to load thumbnail"; }
+      });
+      linkThumb.style.opacity = "1";
+      positionLinkThumb(e);
+    }
+
+    function hideLinkThumb() {
+      linkThumbToken++;
+      if (linkThumb) linkThumb.style.opacity = "0";
+    }
+
     function addThumbnailHover(link, thumbnailUrl, altText = "Thumbnail") {
       if (link.dataset.thumbHover) return;
       link.dataset.thumbHover = "1";
-      let thumbDiv = null;
-      let lastImg = null;
-      let lastHoverToken = 0;
-      let lastEvent = null;
-      let thumbWidth = 290;
-      let thumbHeight = 210;
-
-      function positionThumb(e) {
-        if (!thumbDiv || !e) return;
-        let top = e.clientY + 12;
-        let left = e.clientX + 12;
-        if (top + thumbHeight > window.innerHeight - 8) top = e.clientY - 12 - thumbHeight;
-        if (top < 8) top = 8;
-        if (left + thumbWidth > window.innerWidth - 8) left = e.clientX - 12 - thumbWidth;
-        if (left < 8) left = 8;
-        thumbDiv.style.top = `${top}px`;
-        thumbDiv.style.left = `${left}px`;
-      }
-
-      function measureThumb(e) {
-        if (!thumbDiv) return;
-        const rect = thumbDiv.getBoundingClientRect();
-        if (rect.width) thumbWidth = rect.width;
-        if (rect.height) thumbHeight = rect.height;
-        positionThumb(e);
-      }
-
-      function showThumb(e) {
-        lastEvent = e;
-        if (!thumbDiv) {
-          thumbDiv = document.createElement('div');
-          thumbDiv.className = 'ss-link-thumb';
-          thumbDiv.style.opacity = '0';
-
-          const img = document.createElement('img');
-          img.style.maxWidth = Math.min(280, window.innerWidth - 20) + 'px';
-          img.style.maxHeight = Math.min(200, window.innerHeight - 20) + 'px';
-          img.alt = altText;
-          img.src = "data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQv///wAAACH5BAEAAAMALAAAAAAQABAAAAIgjI+py+0Po5yUFQA7";
-          img.addEventListener('load', () => measureThumb(lastEvent));
-
-          lastImg = img;
-          const hoverToken = ++lastHoverToken;
-
-          fetchAsDataURL(thumbnailUrl).then(dataUrl => {
-            if (lastImg === img && hoverToken === lastHoverToken) {
-              if (dataUrl) {
-                img.src = dataUrl;
-              } else {
-                img.alt = "Failed to load thumbnail";
-              }
-            }
-          });
-
-          thumbDiv.appendChild(img);
-          document.body.appendChild(thumbDiv);
-
-          setTimeout(() => {
-            if (thumbDiv) thumbDiv.style.opacity = '1';
-          }, 10);
-        }
-        positionThumb(e);
-      }
-
-      function moveThumb(e) {
-        lastEvent = e;
-        positionThumb(e);
-      }
-
-      function hideThumb() {
-        lastHoverToken++;
-        if (thumbDiv && thumbDiv.parentNode) {
-          thumbDiv.parentNode.removeChild(thumbDiv);
-          thumbDiv = null;
-        }
-        lastImg = null;
-      }
-
-      link.addEventListener('mouseenter', showThumb);
-      link.addEventListener('mousemove', moveThumb);
-      link.addEventListener('mouseleave', hideThumb);
+      link.addEventListener("mouseenter", function (e) { showLinkThumb(e, thumbnailUrl, altText); });
+      link.addEventListener("mousemove", moveLinkThumb);
+      link.addEventListener("mouseleave", hideLinkThumb);
     }
 
     function isInsideCodeblock(link) {
@@ -3254,39 +3238,14 @@
     ];
 
     function getImageUrl(detailDiv) {
-      let imgSrc = null;
-      const imageContainer = detailDiv.closest('.uploadCell, .postCell, .opCell');
-
-      if (imageContainer) {
-        const thumbImg = imageContainer.querySelector('.imgLink > img');
-        const thumbSrc = thumbImg?.getAttribute("src");
-        if (thumbImg && thumbSrc?.startsWith('/.media/t_')) {
-          imgSrc = thumbSrc;
-        }
-
-        if (!imgSrc) {
-          const imgLink = imageContainer.querySelector('.imgLink');
-          if (imgLink) {
-            imgSrc = imgLink.getAttribute('href');
-          }
-        }
-      }
-
-      if (!imgSrc) {
-        return null;
-      }
-
-      let origin = window.location.origin;
-
-      if (imgSrc.startsWith("//")) {
-        return window.location.protocol + imgSrc;
-      } else if (imgSrc.startsWith("/")) {
-        return origin + imgSrc;
-      } else if (/^https?:\/\//.test(imgSrc)) {
-        return imgSrc;
-      } else {
-        return origin + "/" + imgSrc;
-      }
+      const imgLink = detailDiv.closest('.uploadCell, .postCell, .opCell')?.querySelector('.imgLink');
+      const thumbSrc = imgLink?.querySelector('img')?.getAttribute('src');
+      const imgSrc = thumbSrc?.startsWith('/.media/t_') ? thumbSrc : imgLink?.getAttribute('href');
+      if (!imgSrc) return null;
+      if (imgSrc.startsWith("//")) return window.location.protocol + imgSrc;
+      if (imgSrc.startsWith("/")) return window.location.origin + imgSrc;
+      if (/^https?:\/\//.test(imgSrc)) return imgSrc;
+      return window.location.origin + "/" + imgSrc;
     }
 
     async function fetchImageBlob(url) {
@@ -4092,18 +4051,19 @@
       if (on && (pageType.isThread || pageType.isIndex)) {
         resetSpoilerLinks();
         processAllSpoilerLinks();
-        if (!spoilerThreadsObserver) {
+        if (!spoilerObserver) {
           var pending = [];
           var pendingTimer = 0;
-          spoilerThreadsObserver = new MutationObserver(function (mutations) {
+          spoilerObserver = new MutationObserver(function (mutations) {
             for (var i = 0; i < mutations.length; i++) {
               var nodes = mutations[i].addedNodes;
               for (var j = 0; j < nodes.length; j++) {
-                if (nodes[j].nodeType !== 1) continue;
-                if (nodes[j].classList && nodes[j].classList.contains("imgLink")) {
-                  pending.push(nodes[j]);
-                } else if (nodes[j].querySelectorAll) {
-                  var found = nodes[j].querySelectorAll(".imgLink");
+                var node = nodes[j];
+                if (node.nodeType !== 1) continue;
+                if (node.classList && node.classList.contains("imgLink")) {
+                  pending.push(node);
+                } else if (node.querySelectorAll) {
+                  var found = node.querySelectorAll(".imgLink");
                   for (var k = 0; k < found.length; k++) pending.push(found[k]);
                 }
               }
@@ -4116,30 +4076,10 @@
               }, 50);
             }
           });
-          var threads = document.getElementById("divThreads");
-          if (threads) spoilerThreadsObserver.observe(threads, { childList: true, subtree: true });
-        }
-        if (!spoilerTooltipObserver) {
-          spoilerTooltipObserver = new MutationObserver(function (mutations) {
-            for (var i = 0; i < mutations.length; i++) {
-              var nodes = mutations[i].addedNodes;
-              for (var j = 0; j < nodes.length; j++) {
-                if (nodes[j].nodeType !== 1) continue;
-                if (nodes[j].classList && nodes[j].classList.contains("quoteTooltip")) {
-                  var links = nodes[j].querySelectorAll("a.imgLink");
-                  for (var k = 0; k < links.length; k++) processSpoilerImgLink(links[k]);
-                } else if (nodes[j].querySelectorAll) {
-                  var tips = nodes[j].querySelectorAll(".quoteTooltip a.imgLink");
-                  for (var t = 0; t < tips.length; t++) processSpoilerImgLink(tips[t]);
-                }
-              }
-            }
-          });
-          spoilerTooltipObserver.observe(document.body, { childList: true, subtree: true });
+          spoilerObserver.observe(document.body, { childList: true, subtree: true });
         }
       } else {
-        if (spoilerThreadsObserver) { spoilerThreadsObserver.disconnect(); spoilerThreadsObserver = null; }
-        if (spoilerTooltipObserver) { spoilerTooltipObserver.disconnect(); spoilerTooltipObserver = null; }
+        if (spoilerObserver) { spoilerObserver.disconnect(); spoilerObserver = null; }
         resetSpoilerLinks();
       }
     },
@@ -5283,8 +5223,8 @@
     return data;
   }
 
-  function saveYousData() {
-    var data = collectYousData();
+  function saveYousData(data) {
+    data = data || collectYousData();
     if (!Object.keys(data).length) return Promise.resolve(false);
     return gmBackup("8chanSS_savedMyPosts", JSON.stringify(data));
   }
@@ -5327,12 +5267,13 @@
 
   var SS_BUTTONS = {
     saveMyPosts: function () {
-      var count = Object.keys(collectYousData()).length;
+      var data = collectYousData();
+      var count = Object.keys(data).length;
       if (!count) {
         showToast("No posts found in localStorage.", "orange", 2500);
         return;
       }
-      saveYousData().then(function (ok) {
+      saveYousData(data).then(function (ok) {
         showToast(ok ? "My posts saved (" + count + " boards)!" : "Failed to save my posts.", ok ? "green" : "red", ok ? 2000 : 2500);
       });
     },
