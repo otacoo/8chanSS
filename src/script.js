@@ -482,6 +482,10 @@
     document.head.appendChild(style);
   }
 
+  function setPixelRatio() {
+    document.documentElement.style.setProperty("--ss-dpr", window.devicePixelRatio || 1);
+  }
+
   /* ================= SECTION: Features ================= */
 
   var catalogObserver = null;
@@ -5709,6 +5713,8 @@
       rootEl.classList.toggle("is-catalog", pageType.isCatalog);
       rootEl.classList.toggle("is-thread", pageType.isThread);
       rootEl.classList.toggle("is-index", pageType.isIndex);
+      setPixelRatio();
+      window.addEventListener("resize", setPixelRatio);
       loadSettings().then(function () {
         applyAll();
         checkUpdateNotif();

@@ -256,6 +256,14 @@
   margin-top: 0.2em;
 }
 
+/* Checkboxes sized in whole device pixels, so all are drawn alike at fractional display scales */
+@supports (width: round(1px, 1px)) {
+  #settingsMenu input[type="checkbox"] {
+    width: round(var(--font-size-control), calc(1px / var(--ss-dpr, 1)));
+    height: round(var(--font-size-control), calc(1px / var(--ss-dpr, 1)));
+  }
+}
+
 .ss-sub {
   margin-left: 1.2em;
 }
