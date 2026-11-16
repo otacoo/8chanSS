@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         8chanSS
-// @version      2.7.0
+// @version      2.7.1
 // @namespace    8chanss
 // @description  A userscript to add functionality to 8chan.
 // @author       otacoo
@@ -41,7 +41,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.7.0";
+  var VERSION = "2.7.1";
 
   var pageType = (function () {
     var path = (location.pathname || "").toLowerCase();
@@ -63,12 +63,20 @@
   }
 
   function debounce(fn, delay) {
-    var t = 0;
-    return function () {
-      var args = arguments, self = this;
+    var t = 0, lastArgs, lastSelf;
+    function wrapped() {
+      lastArgs = arguments;
+      lastSelf = this;
       clearTimeout(t);
-      t = setTimeout(function () { fn.apply(self, args); }, delay);
+      t = setTimeout(function () { t = 0; fn.apply(lastSelf, lastArgs); }, delay);
+    }
+    wrapped.flush = function () {
+      if (!t) return;
+      clearTimeout(t);
+      t = 0;
+      fn.apply(lastSelf, lastArgs);
     };
+    return wrapped;
   }
   var SS_STORE_PREFIX = "8chanSS_";
 
@@ -268,7 +276,7 @@
             { key: "showUnreadLine", label: "Show Unread Line" }
           ]
         },
-        { key: "unreadCounter", label: "Unread Counter in Tab", title: "Shows the number of posts left below the fold in the tab title; clears at the bottom" },
+        { key: "unreadCounter", label: "Unread Counter in Tab", title: "Shows the number of posts left below the fold in the tab title, counted from the last reply you read; clears at the bottom" },
         { key: "quoteThreading", label: "Quote Threading", title: "Nests replies under the post they quote instead of showing them in order" },
         { key: "hashNavigation", label: "Hash Navigation", title: "Adds a # link next to quotes and backlinks to jump straight to the post" },
         { head: "Thread Watcher" },
@@ -558,18 +566,18 @@
 
   var FAVICON_STYLES = ["default", "eight", "eight_dark", "pixel", "pixel_alt"];
   var FAVICON_DATA = {
-    default: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAq1BMVEUAAACKtMV2lqSE1PWZ1Oyr1eaqzNp7udPO7vuc3ffh8vmG0/OB0fKv3e+N0e3B4e693+56x+bb6e6YzeOgydl7wd3L3OOwytS35fjZ8fuQ2feB1Pbo9vyy5Pjm9Pmp4PW85fbW7feO1/S55Pbk8/mq3/TY7fbn9Pnf7/bQ6vWS1fDa7fWH0vCb0+rY6/Pc7POBzezA4/GNz+vJ4+662ebH1958wNzD6vqm4Ph4HvJJAAAAN3RSTlMADwXliF4dGP7949HLn5mUhWllVCglJBf6+fn5+Pjo4N3a2NfV1MzIxb28rayinJKOioB7UzEt0Y3/cQAAAIBJREFUGNOVjsUOhVAMRG97BXcePHd3Q/7/y0hhQWDHrDpJT86wIQHo1t/xHGLb8aNvzHnYFC2KFHh+mu1PNTW6GuVB0vlaJvTsTl2xWjgxw5upCOB3ZLEzXvve5IlE8DdJ5K7QL0nts61cEw9Q8p82kmDGt4ZgbTCwrS/0Rw9IBRlvB34XFuslAAAAAElFTkSuQmCC",
-    eight: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAxV2oFSGADP1Y1Wm0zWW1EY3Q1VmgpU2g2VWYkUGUyUWIiTWEAKUcFSmErU2c5W24zVWghUWckTmIKSmEZTmUxUmMwUWP1+fxcc4HL6f7j9f/g7PWi1fWWprFJZXUeSl7Z7v6Myu7d4OOjt8SKrcOSrsFMa30/YnT////C5v/Q6PmHz/nt7/Gw1e+bzu+Dx+7A1+d7wOa+ztqtx9m5v8Sds8KDn7J0lqqJl6GEkZtJfZlRb4E5Zn1Ybnw0YHc3V2kPSWAAQVqY0vZpstqMu9mIutjO0tV5rcyru8dfm7xTmLthh51TfpcZngh2AAAAGHRSTlMA1cx8MBoH8fHm5s3Kv5qUiFhYUFDxmpptBtYcAAAAzUlEQVQY0zWOVRKDQBBEB4+77OLB4+5B43b/64QU8P76VddMQwpTyWGFbEAGXTjoaLxWqmlmSRnF9HUl7bSwKO49fO+vyURQsvCMiDZGY+Xfb1JlQ9iENcJDCMf3SqetOe8tgzDaIz0HTH43GfD8sLfcGCI6VKD7laamtYqNIIhygQHudj6qarDi54aMSRrA1jSfqKkWb5WpFhv/cBYzlyNUc7ClkgnF1+hh2x9pcmomou5cRtpUknYlFhKqznsxux7zNGTUi77LdZg0/QBWixhGoJiKLQAAAABJRU5ErkJggg==",
-    eight_dark: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA2FBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAmKCkAAAADBAQAAAD1+fxMTEzM6v4vLy7i9f/E6P/v8PKMye2frbiFo7aNpLQ1P0b////Z7/+I0PrQ6Pmk1vab0/bi7PXe6fKfz+6w1O2Cxu15veS/1OPY2dq8ydOrwdKHtdK1traZqbSQmqF8kZ+QlJhshJSBhIZ7fH0+YnY9R09GREMOIiwfJivp+f/X7fyYzO3g4OBmrtTMzMt0pcKnsrpWjq1Ii6xUcIEyZX8ENUgYNkYAKD1NaNryAAAADnRSTlMAzPGY5tV8WFAwGge/iAmaI18AAADKSURBVBjTNY7XFoIwEEQ3CR1NQi/23rsC9q7//0fiAe7bzLlndyBHI5ibSIYCVdgMmTM1SZ51tGQplZOZOwpvt9YRv1SmKCukuXWjIubMMf++IpU8a0bLYuQwnt5Du4U/qI4opWs2xKAJq65tG/XDaOa12IYA2TY6fjA26tW91V4KGuBJ85XaY2PgzTlSAULX/YplGhhBSVL09Efc732wSH17IWUT0L12DcNnp7tTskJOzjX32GyskA4ZJHn0e5OtoEKBjOI3Jlqefl82Et7gg4sWAAAAAElFTkSuQmCC",
-    pixel: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEUAAAAAAAAAAABiam00WmxcZWlFTE4jQE1GTU8jQU4yV2g8QUIbNkE/WGRWYWY9WGUAAAAAAADg8vnY6fB5yOyA0fW95fi23fB+z/PQ4Od0weNoeYFWcoBSXmNFS00jP0wFxP2oAAAAEnRSTlMAIRHe3v3w8Nzc/ezs/u7u7EbfERAsAAAAcUlEQVQY05VP1wqAMAw0de82TYf7//9SOhBFELy3G1wuyQcYYw8OVVHBzYJUokzBW3VZg+MYFMhI0ThMMm9zlIXnVmmzbFy0iHtSkmq63mhtYuJQthO8X40OHSHR0DwO4UrsoAziDq84HudcO15P/MAJxpAGt0Xg7i0AAAAASUVORK5CYII=",
-    pixel_alt: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAY1BMVEUAAAAATHcAIGJii6I0gKFFepYjdJVGepYjdJUAXIFeiaEyf6A8dZIbcJJThZ8/f55WhZ89f58AY4YAQmoAJGjg8/p/0vbY6/R5zPC95vq23/TQ5O10xelolKxWj6tFepUjdJUOfB3LAAAAFXRSTlMAIBHe3vDw3Nwj/f3s7P7+7u7sRkaqQLDYAAAAeUlEQVQY05WP6Q6EMAiES73vYxdKu4e+/1NapTEaExP598FkZlA3o7U+MWRJBocTRAZNBNspT3NYGf2m8Bwz8dB/TFmXaBJVeCay7teO7xpxUilT1XTOWteKYiZqXmP3d1Y8RFHxd+glJXhwDKGHpHgOdfYelycezAI9gweHH0yPzQAAAABJRU5ErkJggg=="
+    default: { base: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAq1BMVEUAAACKtMV2lqSE1PWZ1Oyr1eaqzNp7udPO7vuc3ffh8vmG0/OB0fKv3e+N0e3B4e693+56x+bb6e6YzeOgydl7wd3L3OOwytS35fjZ8fuQ2feB1Pbo9vyy5Pjm9Pmp4PW85fbW7feO1/S55Pbk8/mq3/TY7fbn9Pnf7/bQ6vWS1fDa7fWH0vCb0+rY6/Pc7POBzezA4/GNz+vJ4+662ebH1958wNzD6vqm4Ph4HvJJAAAAN3RSTlMADwXliF4dGP7949HLn5mUhWllVCglJBf6+fn5+Pjo4N3a2NfV1MzIxb28rayinJKOioB7UzEt0Y3/cQAAAIBJREFUGNOVjsUOhVAMRG97BXcePHd3Q/7/y0hhQWDHrDpJT86wIQHo1t/xHGLb8aNvzHnYFC2KFHh+mu1PNTW6GuVB0vlaJvTsTl2xWjgxw5upCOB3ZLEzXvve5IlE8DdJ5K7QL0nts61cEw9Q8p82kmDGt4ZgbTCwrS/0Rw9IBRlvB34XFuslAAAAAElFTkSuQmCC", unread: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAolBMVEUAAACG2vyC1/iH1vaB1/mC1PSC2PuC2fuD2fyE2fyG3P2I3Pqn3vWB1PWO1fKD2fuE2vqE2vyH3Puk4PaK1vSg2/OP1vJ/0fGB0/SF1vaC1faB1vmF2vyy5PiP2PbF6vnK6vjU7/m/5/ao3fKF0/K55PaW2PKK1PGA0/SP2PWA1/mC2fuE2fyD2fyx4vaT1e+S1/PX8PrO7vqb3fjh9Pu25fiNN6jgAAAAMXRSTlMAHK7Kmf6CYlc/EAnrxOt4OSwV/f3y8OrQv7afI/7+/f379/Pz8OLhvLmRb1pK+/PUqRXqEQAAALhJREFUGNN1j8cSgkAAQ7c3dykiSLFTpaiA/v+vCXrAi7klM5nkgUWrFfjVWgrhqMVDnkQREeuPURBCEevjSaNurrmcsYbo4dQ/NYMA7GxTlhinGj/OZ+QAxc1m9DwrRHad91cJXJIdgsDb+5igyxzImGYowf5r76d9TlwgK7qtbRRat+NwwVwBB1EaGutucFFE9m4aYVu6OYwBaRjj7kzQoSmxYjG9U1+IllQm4XDBUI5o5QTxB/wNI78Nh2SdMuEAAAAASUVORK5CYII=", notif: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA4VBMVEUAAACE3vuD1veC1veB2PqB2fuD2/2H2/2I3PqP1vOB1faE2vyN1/WD1PSB2PuE2vzQ7Pak4PaB0/OG0/J/0fGn3vSB1vmC2PqE2vmG2vq54vKf3fWrLzam4PaO1fGD1faP2PWE2fyD2fyD2fzW8PrD5PG11+WXtcW55PVvbnqqOj+XmKaT1e+x3e1+obS4AACBjqGH0/F8vNh5hpuQNj+P2PZyX2+C1/SKEBOC2ftjKjApAAAdAAAJAACD1fXkAADg9Pu05/qb3fi1vsefoq+xhIildHu4PECpMjSkLDDPAQHtACoGAAAAPnRSTlMAEsOumWJVGwnuuT39zIMs/f388erpn3k4I/Tz8/Lmz7laSkH++/v7+vr5+PPv7ezk4M7OzcSdkZFwWTIVCIgxa4YAAADDSURBVBjTdY/VrgJBGIP/cWZm3XE77oLLLm7v/0BAgMANvWuapv3gqlwOboU05wm6esEijClHp1AIwVX49BiSxrFmM8vq0/J8s5yElgDIx/i3Yprl9+zNcUgCiGFj5rqV6n9W+pzUmmBT35DSnRZ/slLhoaZBq9QnkVmcLrK1U6A2NFUadGNSlc/b1UubIdDE80wsP/Df6xeO84cRK0hTYyZpZ9di9pGgQQLP8BUffPfOP+tU4YiJ8XB0wUp4XR/CO+B76XMRs7uqu4cAAAAASUVORK5CYII=" },
+    eight: { base: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAxV2oFSGADP1Y1Wm0zWW1EY3Q1VmgpU2g2VWYkUGUyUWIiTWEAKUcFSmErU2c5W24zVWghUWckTmIKSmEZTmUxUmMwUWP1+fxcc4HL6f7j9f/g7PWi1fWWprFJZXUeSl7Z7v6Myu7d4OOjt8SKrcOSrsFMa30/YnT////C5v/Q6PmHz/nt7/Gw1e+bzu+Dx+7A1+d7wOa+ztqtx9m5v8Sds8KDn7J0lqqJl6GEkZtJfZlRb4E5Zn1Ybnw0YHc3V2kPSWAAQVqY0vZpstqMu9mIutjO0tV5rcyru8dfm7xTmLthh51TfpcZngh2AAAAGHRSTlMA1cx8MBoH8fHm5s3Kv5qUiFhYUFDxmpptBtYcAAAAzUlEQVQY0zWOVRKDQBBEB4+77OLB4+5B43b/64QU8P76VddMQwpTyWGFbEAGXTjoaLxWqmlmSRnF9HUl7bSwKO49fO+vyURQsvCMiDZGY+Xfb1JlQ9iENcJDCMf3SqetOe8tgzDaIz0HTH43GfD8sLfcGCI6VKD7laamtYqNIIhygQHudj6qarDi54aMSRrA1jSfqKkWb5WpFhv/cBYzlyNUc7ClkgnF1+hh2x9pcmomou5cRtpUknYlFhKqznsxux7zNGTUi77LdZg0/QBWixhGoJiKLQAAAABJRU5ErkJggg==", unread: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAtFBMVEUAAAAAYYUAYYQAXIAAW38AYYMAY4YAXYAAYIQAZIcAY4Udc5MAWX8BZogldJQAWn6L2fIRa4xy0faB2/xt0vqI3Ph+0vBdxO1Wp8c/i6l41fhPwO1Ivu1Lo8dEoMYegaYYcZMEa46X5f1NxvZfyfNZyPOI1OxqwuV3w947rttputpdttldq8porscrmcNRnbtEmLpOmLU9krQFb5MHZIVIueY6tuaAyeJOstp1vNRCp9Auh6qJsLovAAAADnRSTlMAWfLRzujVm5EzHAqLiBrNc7IAAADDSURBVBjTNY9XEsIwEEPd0mFtp4d0eocU+v3vRRic9yeNZldCCtsgIBlGI5aWbMX6JE2lHdoEgRDzh1QZDGGYALzmJ/Y3JhfvyHUCYi1/eWzS2Iv5VAchYLhH4ZpvZvue8yTYEmRrbeT7rjvbx8cwSAxklMuoKA6D43lho9mI7FYl5/3B3cQXoBZCkKW1PuWFn7MJdoYf9T3riM5z/6pasvPiXVWfKKrGknK3SNPVsqWO2mHK8y17lpqFRjCrO2LYSn0BV4wQhK3VgFcAAAAASUVORK5CYII=", notif: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABEVBMVEUAAAAAW38AYoUAYoQAYYQAZYgAYYMAZIYAXoEBZom1AwbrAABGAAAALT4AAAAAYYRHAAAAAAAadJTeAAABZohHGymuAABFAACcAAAAAAAAAAAAUnIAZ4oAAAAQao2M2/Qic5Rw0/pKv+1EoscAXoD5AAB31fhfxO0egaYpdpUAa40AWX3/AgK/AAC6AABNAACX5f2B2/xr0fqH2/dNxvZy0fVfyfNZyPN80e+I1OxQv+x7xuA7rttmu9ldttlorsddqsdUpsZLocMrmcNEmLpPm7g+iqkFb5MZcJJYwu1IueY6tuZoweROstp1vNRdsdBCp9Bwt8xAk7U6kbRYnbEuh6oJZYWZdYM1RF0AKDwAHjhOZ3nrAAAAHnRSTlMA0FnyjRzo1psy/v785K2UiVwL+PLu6OPLyL6nm49luDk4AAAA4ElEQVQY0zWP5XLDMBAGT5YpnJRRkiHGOg0zc7lheP8HiTN29t/t7NzMByGCjBlBHFyIiNMWbfRIKryv0KRUojTfImHD2fX6lNm/+R4KBD8p9F0J27RBzj3Ho0FhoPOJw4Iy/x9i4+G30dH3UW+3vgFBXJlFRakY/ffsm3d8Admqfmhat2J0fJFLCIDbNcvVt13l7yyeAJjadCRe15RhPJaNJgHIlzrDkqsVx8/38TQAoFH5fz7fmKZzex27ewXgSLusNmvVJUrnvIeMn6TI6FP9scQIJB8zwRDkzLAsQMAJImsd3S869hIAAAAASUVORK5CYII=" },
+    eight_dark: { base: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA2FBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAmKCkAAAADBAQAAAD1+fxMTEzM6v4vLy7i9f/E6P/v8PKMye2frbiFo7aNpLQ1P0b////Z7/+I0PrQ6Pmk1vab0/bi7PXe6fKfz+6w1O2Cxu15veS/1OPY2dq8ydOrwdKHtdK1traZqbSQmqF8kZ+QlJhshJSBhIZ7fH0+YnY9R09GREMOIiwfJivp+f/X7fyYzO3g4OBmrtTMzMt0pcKnsrpWjq1Ii6xUcIEyZX8ENUgYNkYAKD1NaNryAAAADnRSTlMAzPGY5tV8WFAwGge/iAmaI18AAADKSURBVBjTNY7XFoIwEEQ3CR1NQi/23rsC9q7//0fiAe7bzLlndyBHI5ibSIYCVdgMmTM1SZ51tGQplZOZOwpvt9YRv1SmKCukuXWjIubMMf++IpU8a0bLYuQwnt5Du4U/qI4opWs2xKAJq65tG/XDaOa12IYA2TY6fjA26tW91V4KGuBJ85XaY2PgzTlSAULX/YplGhhBSVL09Efc732wSH17IWUT0L12DcNnp7tTskJOzjX32GyskA4ZJHn0e5OtoEKBjOI3Jlqefl82Et7gg4sWAAAAAElFTkSuQmCC", unread: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAA6lBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEAAADb3NxEQ0IAAAAAAABISEgAAAAAAAAlKCk9NzGurq6cnJwAAAD+/v73+Pi6u7tNTExGREMwLy7N6v61trY1QEfE6P/t7u+dzu6Mye2rwdKForaNpLTy+f/h9f/Z7//S6vuI0Pqk1vbg6/Sw1O2Cxu2+0uCHtdLKzM2qtbycqrV8kaCPl51shJV8f4I+YnYOIiwfJiud1PaY0vbo6Oh+vuR0vOPg4OBmrtS8ydN0pcLAwMBWjq1Ii6yjpaZUcIEyZX88R08ENUgYNkYAKD0sty6hAAAAFXRSTlMAzZjyWeUa1owv/Oe/roh8UAf26MtVcWhmAAAA10lEQVQY0zWP1ZLDMBRDr+04SbkLpjgMZeZ2mfn/f2ebqas3aTQaHTCyMVEaWXBWhW6rIg40Nv4CrTsdIfijNp22Go22nprzAJ2C1rq7YA5RItZlv92qL7tL5lI25+q4h75X+bT3zHQg5QcBm27GUeT3ewuPc8kw4N0wyYvM7089wSW1gcxuvxhjmZ+VQR0gTNM/x2WFX1zGPGgA7B8mv8RhebTCNa8JAOht8BKGn8k4rFXvrlwA6/A0SJOb4QY15et1+Rwf3u8nsx2tQMPQWmj/Q7BtOP8BG/MW/0ZJlAQAAAAASUVORK5CYII=", notif: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABDlBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAQEAAAAAAAAAAAC2AQHrAAA4AAAAAAAAAABIAgIAAAAAAAAlKCneAABDAACuAABFAACcAAADBAQAAAAAAAC8AABNTE3+AQHN6v72+PmKo7QvLy5GAAD+/v/E6P+Myu6rwtLy+f/h9f/Z7//S6vuI0Pqk1vab0/bg6/Sfz+6w1O2Cxu2+0uHc3d2HtdLKzc61tracqrV8kaBshJV8f4I+YnY5R081QUkOIiwfJiv3AADt7u/r7e6YzO1+vuR0vONmrtS8ydN0pcKtucGnsrqQqLeCordWjq1Ii6yjqaqQmqGOk5i3hYhUcIEyZX8ENUgYNkZGREM1PEEAKD1ovUZyAAAAGnRSTlMAzfLlmliSGtYv/v77v66IfFAH+Ozo4suIXxNuy1MAAADcSURBVBjTNY9VjkJBFERvyxMcxud2Pxfc3cfdffa/ESA09VeVk0oOqBicSo9osEuCTbrO+cDTVd8j78Wi4wRdTzEF2WhMfmU/GJDtkH8rPaBJpXPhbfhCPjMsDVFn2A/k+o/MRm6nfIvppPh4pWCwcSsM7Ur53rcsgRz4tNZ8cmO70vHPLMEMoL36FyLGdrwZMgDzKPo3T9C1H9MpK5kFWFy3f6iJbjjiR34OAMhz9W7+99lszQ72U4c6gLa8qUaX9dqY5IQ4PgUAffly1e5NWQKyylYji2/KDeW5AobCG0Lco88iAAAAAElFTkSuQmCC" },
+    pixel: { base: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEUAAAAAAAAAAABiam00WmxcZWlFTE4jQE1GTU8jQU4yV2g8QUIbNkE/WGRWYWY9WGUAAAAAAADg8vnY6fB5yOyA0fW95fi23fB+z/PQ4Od0weNoeYFWcoBSXmNFS00jP0wFxP2oAAAAEnRSTlMAIRHe3v3w8Nzc/ezs/u7u7EbfERAsAAAAcUlEQVQY05VP1wqAMAw0de82TYf7//9SOhBFELy3G1wuyQcYYw8OVVHBzYJUokzBW3VZg+MYFMhI0ThMMm9zlIXnVmmzbFy0iHtSkmq63mhtYuJQthO8X40OHSHR0DwO4UrsoAziDq84HudcO15P/MAJxpAGt0Xg7i0AAAAASUVORK5CYII=", unread: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEUAAAAATHcAIGJii6I0gKFFepYjdJVGepYjdJUAXIFeiaEyf6A8dZIbcJJThZ8/f55WhZ89f58AY4YAM2ng8/p/0vbY6/R5zPC95vq23/TQ5O10xelolKxWj6tFepUjdJUJarSxAAAAFHRSTlMAIBHe3vDw3Nwj/f3s7P7+7u7sRkWW9w4AAAB4SURBVBjTlY/ZDoUwCERL3fcNSnsX/f+/tEpjNCYm8nZgMjOoh9FaXxiyJIPTCSKDJoL9lKc5bIx+U3iOmXjoP6asSzSJKjwTWfdrx6lGnFXKVDWds9a1oliImmns/s6Khygq/g69pAQPjiH0kBTPoc7R4/bEi1kBHCgHTIPhydUAAAAASUVORK5CYII=", notif: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAAAV34AIDg0gKEkdJQjdJUUAAMAAEAyf6AbcJI7dZA/f55MAABAgaBEeZVljaVUhJ4AZIZpkKYAQmp5y/B+0fVrS0224PPf8vnP4uu85vqA0/fY6/NUIivtAABNHynjAAB0xelolKxWj6tNgZpFepUjdJVOTU9fREtAREvaAABiAADosgfnAAAAFHRSTlMAIBHe8NzcIP3s3v7x7u7e7uzeRqhOt1sAAACESURBVBjTlY9ZDoMwDERxCHvp6mASSKH7dv/71YWoAiEh4b83Ho3H3swIIUYchaswGqwgta1N4ccQyABgr4tjoTfA7KPCfKtrFsp63bGqDJ2vloXy5klUcZKRMfRsO8e9Uslhl12IXp8HZ/SOGE+5bN4NX3EZ6IPr0SvMrs6/x+SJBfMF/doItAPX5RIAAAAASUVORK5CYII=" },
+    pixel_alt: { base: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAY1BMVEUAAAAATHcAIGJii6I0gKFFepYjdJVGepYjdJUAXIFeiaEyf6A8dZIbcJJThZ8/f55WhZ89f58AY4YAQmoAJGjg8/p/0vbY6/R5zPC95vq23/TQ5O10xelolKxWj6tFepUjdJUOfB3LAAAAFXRSTlMAIBHe3vDw3Nwj/f3s7P7+7u7sRkaqQLDYAAAAeUlEQVQY05WP6Q6EMAiES73vYxdKu4e+/1NapTEaExP598FkZlA3o7U+MWRJBocTRAZNBNspT3NYGf2m8Bwz8dB/TFmXaBJVeCay7teO7xpxUilT1XTOWteKYiZqXmP3d1Y8RFHxd+glJXhwDKGHpHgOdfYelycezAI9gweHH0yPzQAAAABJRU5ErkJggg==", unread: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAhFBMVEUAAAAjR1sKChFJeZBBa4FAZ3tCbIEVFRYABA9IeI9OaXlReI1MTExSeo9WcYBxh5RjfYw4WGt0ipcdKTh7y+6A0vdqbm/f8fi85fl+0PTY6vK23fDt7OzP4OdVWFlOUlS44PPj4+NZdITR4+t3xefa2tpyj55jiZ1Ba4BgZ2tiYF9ATFKjqzLCAAAAFHRSTlMAIBHe8O3c3CD93v7x7u7e7uzeRvBdAgMAAACFSURBVBjTlY9ZDoMwDERxIKylqwOBlATo3t7/fjVpVIGQkPDfG4/GY29hGGMTjqNNFI9WkOpOpzAwhEEIcGyKc9HsgNhHgfn+UpNQ1lvLlZDtvdcklL0XoEh4pqRUr846nqLip0P2aNXnbSjj50jwmnNzM3TFZaAProdVBnZ1/j1mT6yYLxHCCNKMC/PDAAAAAElFTkSuQmCC", notif: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAdVBMVEUAAAAkSFwKChFAaX9JeZAABBhCbIEVAABIeI9yiJVObnxReI1MAABSeo9WcYBjfYw4WGsdKTiA0vd7y+5rS0233/JSHiPf8vnP4um85fnY6/LtAABZdobjAAB3xedyj55jiZ1Ba4BOTU9gREtAREvaAABiAADFYUIqAAAAEnRSTlMAIRHv3iDc3P3e3v7x7u7u7EYDRb2ZAAAAgklEQVQY05WPWQ7CMAxE67jpSlnsOk1Kyw73PyJJFCEQUqX6741H43G2MEqpH9blptRfK2jMbBoIDAUWoGvbH3tbg+ecibudHb0wjNvIRE7Ok/HCMGXIVGErzsl9jo4rER727UXk8bqFjOio+NSheYYrKYNzSD2iEjjV+fT4e2LFvAFuzge5hY5wYgAAAABJRU5ErkJggg==" }
   };
   var faviconApplied = null;
   var faviconOriginalHref = null;
 
-  function setFavicon(style) {
+  function setFavicon(style, state) {
     if (FAVICON_STYLES.indexOf(style) === -1) style = "default";
-    if (faviconApplied === style) return;
+    if (faviconApplied === style + ":" + state) return;
     if (faviconOriginalHref === null) {
       var cur = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]');
       faviconOriginalHref = (cur && cur.getAttribute("href")) || "";
@@ -580,22 +588,34 @@
     link.id = "ssFavicon";
     link.rel = "icon";
     link.type = "image/png";
-    link.href = "data:image/png;base64," + FAVICON_DATA[style];
+    link.href = "data:image/png;base64," + FAVICON_DATA[style][state];
     document.head.appendChild(link);
-    faviconApplied = style;
+    faviconApplied = style + ":" + state;
+  }
+
+  function updateFaviconState() {
+    var state = "base";
+    if (pageType.isThread) {
+      var t = pageThread() || {};
+      if (/^\(\d+\)/.test(document.title)) state = t.youNotifs > 0 ? "notif" : "unread";
+      else if (t.youNotifs) t.youNotifs = 0;
+    }
+    if (state !== "base" || ssSettings.customFavicon) setFavicon(ssSettings.customFavicon ? ssSettings.faviconStyle : "default", state);
+    else if (faviconApplied) resetFavicon();
   }
 
   function resetFavicon() {
     var old = document.getElementById("ssFavicon");
     if (old) old.remove();
     faviconApplied = null;
-    if (faviconOriginalHref) {
-      var link = document.createElement("link");
+    if (faviconOriginalHref === null) return;
+    var link = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]');
+    if (!link) {
+      link = document.createElement("link");
       link.rel = "icon";
-      link.type = "image/png";
-      link.href = faviconOriginalHref;
-      document.head.appendChild(link);
     }
+    link.href = faviconOriginalHref || "/favicon.ico";
+    document.head.appendChild(link);
   }
 
   var SUB_APPLY = {
@@ -641,6 +661,14 @@
       }
     } catch (e) { }
     return window;
+  }
+
+  var pageThreadCache = null;
+  function pageThread() {
+    if (!pageThreadCache) {
+      try { pageThreadCache = pageWindow().thread || null; } catch (e) { }
+    }
+    return pageThreadCache;
   }
 
   function openQuickReply() {
@@ -1714,21 +1742,71 @@
     saveScrollPositionNow();
   }
 
+  var LAST_READ_KEY = "8chanSS_lastRead";
   var unreadPosts = null;
   var unreadPosObs = null;
-  var unreadTitleObs = null;
   var unreadBase = "";
   var unreadActive = false;
   var unreadTicking = false;
   var unreadRebuildTimer = null;
   var unreadShown = Infinity;
-  var unreadThread = null;
+  var titleObs = null;
+  var lastReadPost = 0;
+  var lastReadLoaded = false;
+  var lastReadPromise = null;
+
+  function readLastRead() {
+    if (typeof GM === "undefined" || !GM.getValue) return Promise.resolve({});
+    return GM.getValue(LAST_READ_KEY, null).then(function (raw) {
+      var obj = null;
+      try { obj = JSON.parse(raw); } catch (e) { }
+      return obj && typeof obj === "object" ? obj : {};
+    });
+  }
+
+  var saveLastRead = debounce(function () {
+    if (typeof GM === "undefined" || !GM.setValue) return;
+    var key = scrollThreadKey();
+    if (!key) return;
+    readLastRead().then(function (data) {
+      if (data[key] && data[key].post >= lastReadPost) return;
+      data[key] = { post: lastReadPost, at: Date.now() };
+      var keys = Object.keys(data);
+      if (keys.length > SCROLL_MAX_THREADS) {
+        keys.sort(function (a, b) { return (data[a].at || 0) - (data[b].at || 0); });
+        for (var i = 0; i < keys.length - SCROLL_MAX_THREADS; i++) delete data[keys[i]];
+      }
+      return GM.setValue(LAST_READ_KEY, JSON.stringify(data));
+    }).catch(function () { });
+  }, 500);
+
+  window.addEventListener("pagehide", function () { saveLastRead.flush(); });
+
+  function loadLastRead() {
+    var key = scrollThreadKey();
+    if (lastReadLoaded || !key || typeof GM === "undefined" || !GM.getValue) return Promise.resolve();
+    if (!lastReadPromise) {
+      lastReadPromise = readLastRead().then(function (data) {
+        lastReadPost = (data[key] && data[key].post) || 0;
+        lastReadLoaded = true;
+      }).catch(function () { });
+    }
+    return lastReadPromise;
+  }
+
+  function rememberRead(cell) {
+    var id = cell ? +cell.id : 0;
+    if (!lastReadLoaded || document.hidden || !(id > lastReadPost)) return;
+    lastReadPost = id;
+    saveLastRead();
+  }
   function absorbSiteCount() {
-    var n = unreadThread && unreadThread.unreadPosts;
+    var t = pageThread();
+    var n = t && t.unreadPosts;
     if (!n) return false;
     if (unreadShown === Infinity) unreadShown = 0;
     unreadShown += n;
-    unreadThread.unreadPosts = 0;
+    t.unreadPosts = 0;
     return true;
   }
 
@@ -1749,11 +1827,17 @@
     }
     var left = n - lo;
     if (left < unreadShown) unreadShown = left;
+    if (lo) rememberRead(unreadPosts[lo - 1]);
     writeUnreadTitle();
   }
 
   function onTitleMutated() {
     if (unreadActive && absorbSiteCount()) writeUnreadTitle();
+  }
+
+  function onTitleChanged() {
+    onTitleMutated();
+    updateFaviconState();
   }
 
   function unreadOnScroll() {
@@ -1764,17 +1848,19 @@
 
   function rebuildUnreadPosts() {
     if (!unreadActive) return;
-    unreadPosts = Array.prototype.slice.call(document.querySelectorAll(".divPosts > .postCell[id]"));
+    unreadPosts = Array.prototype.slice.call(document.querySelectorAll(".divPosts > .postCell[id]")).filter(function (cell) {
+      return +cell.id > lastReadPost;
+    });
     unreadTitle();
   }
 
   function startUnreadCounter() {
     if (!pageType.isThread || unreadActive) return;
-    try { unreadThread = pageWindow().thread; } catch (e) { }
-    unreadBase = ((unreadThread && unreadThread.originalTitle) || document.title).replace(/^\(\d+\)\s*/, "");
+    var t = pageThread();
+    unreadBase = ((t && t.originalTitle) || document.title).replace(/^\(\d+\)\s*/, "");
     unreadActive = true;
     unreadShown = Infinity;
-    rebuildUnreadPosts();
+    loadLastRead().then(rebuildUnreadPosts);
     window.addEventListener("scroll", unreadOnScroll, { passive: true });
     var host = document.querySelector(".divPosts");
     if (host) {
@@ -1787,11 +1873,6 @@
       });
       unreadPosObs.observe(host, { childList: true });
     }
-    var titleEl = document.querySelector("title");
-    if (titleEl) {
-      unreadTitleObs = new MutationObserver(onTitleMutated);
-      unreadTitleObs.observe(titleEl, { characterData: true, childList: true, subtree: true });
-    }
   }
 
   function stopUnreadCounter() {
@@ -1799,13 +1880,12 @@
     unreadActive = false;
     window.removeEventListener("scroll", unreadOnScroll);
     if (unreadPosObs) { unreadPosObs.disconnect(); unreadPosObs = null; }
-    if (unreadTitleObs) { unreadTitleObs.disconnect(); unreadTitleObs = null; }
     if (unreadRebuildTimer) { clearTimeout(unreadRebuildTimer); unreadRebuildTimer = null; }
-    if (!(unreadThread && unreadThread.unreadPosts) && /^\(\d+\)\s*/.test(document.title)) document.title = unreadBase;
+    var t = pageThread();
+    if (!(t && t.unreadPosts) && /^\(\d+\)\s*/.test(document.title)) document.title = unreadBase;
     unreadPosts = null;
     unreadTicking = false;
     unreadShown = Infinity;
-    unreadThread = null;
   }
 
   var apngObserver = null;
@@ -3966,12 +4046,8 @@
         restoreHeaderLinks();
       }
     },
-    customFavicon: function (on) {
-      if (on) {
-        setFavicon(ssSettings.faviconStyle);
-      } else {
-        resetFavicon();
-      }
+    customFavicon: function () {
+      updateFaviconState();
     },
     enableMascots: function (on) {
       var old = document.querySelector(".chSS-mascot");
@@ -5571,6 +5647,14 @@
 
   onDomReady(function () {
     try {
+      loadLastRead();
+      if (pageType.isThread) {
+        var titleEl = document.querySelector("title");
+        if (titleEl) {
+          titleObs = new MutationObserver(onTitleChanged);
+          titleObs.observe(titleEl, { characterData: true, childList: true, subtree: true });
+        }
+      }
       injectPageCss();
       var rootEl = document.documentElement;
       rootEl.classList.toggle("is-catalog", pageType.isCatalog);

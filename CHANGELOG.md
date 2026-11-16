@@ -1,3 +1,10 @@
+### v2.7.1
+*2026-11-15*
+
+**PR by @Nostramadeus in #18:**
+- Favicon will again change to show new posts and (You)s
+- The Unread Counter remembers the last reply you read per thread
+
 ## v2.7.0
 *2026-11-15*
 
