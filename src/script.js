@@ -155,6 +155,7 @@
     watcherRefreshIcon: false,
     watcherPages: false,
     watcherPagesTotal: false,
+    watcherHideMarkRead: false,
     catalogImageHover: false,
     threadImageHover: true,
     catalogFiltering: false,
@@ -4578,7 +4579,8 @@
     backlinkIcons: "backlink-icon",
     noPinInCatalog: "ss-nopin-catalog",
     smallFont: "ss-small-font",
-    expandTW: "auto-expand-tw"
+    expandTW: "auto-expand-tw",
+    watcherHideMarkRead: "ss-hide-markread"
   };
   Object.keys(CLASS_TOGGLES).forEach(function (key) {
     Features[key] = function (on) { rootToggle(CLASS_TOGGLES[key], on); };
@@ -4802,6 +4804,7 @@
   var WATCHER_MENU_ITEMS = [
     { key: "watcherRefreshIcon", label: "Show Refresh Button" },
     { key: "watcherBoards", label: "Show Board Tag" },
+    { key: "watcherHideMarkRead", label: "Hide Mark as Read Buttons" },
     { key: "watcherPrune404", label: "Auto remove 404 threads" },
     { key: "watcherPages", label: "Show Page Numbers" },
     { key: "watcherPagesTotal", label: "Show Page Count ([3/25])", sub: "watcherPages" }
@@ -4901,8 +4904,9 @@
     if (!span) {
       span = document.createElement("span");
       span.className = "ss-watched-page";
-      a.parentNode.insertBefore(span, a);
     }
+    var next = cell.querySelector(".watchedNotification:not(.hidden) > .watchedNotificationReplies") || a;
+    if (span.nextSibling !== next) next.before(span);
     var label = "[" + page + (ssSettings.watcherPagesTotal ? "/" + entry.pageCount : "") + "]";
     // threads past maxThreadCount are pruned last page first
     var warn = entry.full && page >= entry.pageCount;

@@ -556,7 +556,6 @@
 
 #watchedMenu .watchedCellRemoveButton::before {
   line-height: 1;
-  vertical-align: middle;
 }
 
 #watchedMenu:not(.watchedMenu--showRemoveButtons) .watchedCellRemoveButton::before {
@@ -577,6 +576,11 @@
 
 #watchedMenu .ss-watched-page.ss-last-page {
   color: var(--ss-you-color, #d33);
+  font-weight: bold;
+}
+
+:root.ss-hide-markread #watchedMenu .watchedCellDismissButton {
+  display: none;
 }
 
 .floatingList .ss-watcher-sub {
