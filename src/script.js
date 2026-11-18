@@ -4800,6 +4800,7 @@
   }
 
   var watchedCellsObs = null;
+  var watchedMenuObs = null;
   var watcherMenuWired = false;
   var WATCHER_MENU_ITEMS = [
     { key: "watcherRefreshIcon", label: "Show Refresh Button" },
@@ -4985,8 +4986,17 @@
     watcherMenuWired = true;
   }
 
+  function wireWatchedMenuObs() {
+    if (watchedMenuObs) return;
+    var menu = document.getElementById("watchedMenu");
+    if (!menu) return;
+    watchedMenuObs = new MutationObserver(updateWatchedCells);
+    watchedMenuObs.observe(menu, { attributes: true, attributeFilter: ["class"], subtree: true });
+  }
+
   function updateWatchedCells() {
     wireWatcherMenu();
+    if (watchedCellsObs) wireWatchedMenuObs();
     if (ssSettings.watcherPrune404) pruneDeadThreads();
     var close = document.querySelector("#watchedMenu .handle > .close-btn");
     var refresh = document.querySelector("#watchedMenu .ss-watcher-refresh");
@@ -5036,12 +5046,15 @@
     var needed = ssSettings.applyFixes || ssSettings.watcherBoards ||
       ssSettings.watcherPrune404 || ssSettings.watcherRefreshIcon || ssSettings.watcherPages;
     // no live cell feature active -> don't burn cycles waking on every body mutation
-    if (needed && !watchedCellsObs && document.body) {
-      watchedCellsObs = new MutationObserver(updateWatchedCells);
-      watchedCellsObs.observe(document.body, { childList: true, subtree: true });
-    } else if (!needed && watchedCellsObs) {
-      watchedCellsObs.disconnect();
-      watchedCellsObs = null;
+    if (needed) {
+      if (!watchedCellsObs && document.body) {
+        watchedCellsObs = new MutationObserver(updateWatchedCells);
+        watchedCellsObs.observe(document.body, { childList: true, subtree: true });
+      }
+      wireWatchedMenuObs();
+    } else {
+      if (watchedCellsObs) { watchedCellsObs.disconnect(); watchedCellsObs = null; }
+      if (watchedMenuObs) { watchedMenuObs.disconnect(); watchedMenuObs = null; }
     }
   }
 
