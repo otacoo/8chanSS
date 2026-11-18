@@ -1,3 +1,16 @@
+### v2.7.2
+*2026-11-18*
+
+PR by @Nostramadeus in #20:
+
+- **New option:** Hide Mark as Read Buttons (Thread Watcher menu, off by default)
+- The remove (✕) button is vertically centred again
+- Last-page numbers are bold as well as red
+- The page number now comes before the unread count (`[1] (9) title` was `(9) [1] title`)
+
+**Fixes:**
+- Thread Watcher: page numbers no longer disappear when a row's unread count clears
+
 ### v2.7.1
 *2026-11-15*
 
